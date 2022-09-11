@@ -117,7 +117,7 @@ static bool point_in_triangle_2d(double x0, double y0,
 
 void make_level_set3(const std::vector<Vec3ui> &tri, const std::vector<Vec3f> &x,
                      const Vec3f &origin, float dx, int ni, int nj, int nk,
-                     Array3f &phi, const int exact_band)
+                     Array3f &phi, const int& exact_band)
 {
    phi.resize(ni, nj, nk);
    phi.assign((ni+nj+nk)*dx); // upper bound on distance

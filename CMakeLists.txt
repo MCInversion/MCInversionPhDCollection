@@ -105,7 +105,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -195,7 +195,14 @@ else()
     add_subdirectory(tests)
   endif()
 endif()
+# ----------- Shrink wrap executable --------------------
 add_subdirectory(src/sdfgen)
+file(GLOB ShrinkWrap_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
+add_executable(ShrinkWrap ${ShrinkWrap_Src})
+target_link_libraries(ShrinkWrap 
+    pmp
+    SDFGen
+)
 
 if(NOT EMSCRIPTEN AND PMP_INSTALL)
 

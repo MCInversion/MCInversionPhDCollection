@@ -194,12 +194,12 @@ inline T ramp(T r)
 { return smooth_step((r+1)/2)*2-1; }
 
 #ifdef WIN32
-inline int lround(double x)
+inline int iround(double x)
 {
    if(x>0)
       return (x-floor(x)<0.5) ? (int)floor(x) : (int)ceil(x);
-   else
-      return (x-floor(x)<=0.5) ? (int)floor(x) : (int)ceil(x);
+
+   return (x-floor(x)<=0.5) ? (int)floor(x) : (int)ceil(x);
 }
 
 inline double remainder(double x, double y)

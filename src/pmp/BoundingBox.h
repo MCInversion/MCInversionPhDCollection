@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include "pmp/Types.h"
 
 namespace pmp {
@@ -67,6 +69,14 @@ public:
     Scalar size() const
     {
         return is_empty() ? Scalar(0.0) : distance(max_, min_);
+    }
+
+    //! Expand the size of the bounding box.
+    void expand(float x, float y, float z)
+    {
+        assert(x >= 0.0 && y >= 0.0 && z >= 0.0);
+        min_ -= Point(x, y, z);
+        max_ += Point(x, y, z);
     }
 
 private:

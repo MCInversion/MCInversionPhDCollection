@@ -400,7 +400,7 @@ inline Vec<N,int> round(const Vec<N,T> &a)
 { 
    Vec<N,int> rounded;
    for(unsigned int i=0; i<N; ++i)
-      rounded.v[i]=lround(a.v[i]);
+       rounded.v[i] = iround(a.v[i]);
    return rounded; 
 }
 
