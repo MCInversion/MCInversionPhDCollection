@@ -1,9 +1,6 @@
 cmake_policy(SET CMP0048 NEW)
-project(
-  pmp-library
-  VERSION 2.0.1
-  DESCRIPTION "The Polygon Mesh Processing Library"
-  HOMEPAGE_URL "https://www.pmp-library.org")
+project(ImplicitSurfaceWrap
+  VERSION 1.0)
 cmake_minimum_required(VERSION 3.16.3)
 cmake_policy(SET CMP0072 NEW)
 
@@ -195,14 +192,28 @@ else()
     add_subdirectory(tests)
   endif()
 endif()
+# =======================================================
 # ----------- Shrink wrap executable --------------------
-add_subdirectory(src/sdfgen)
+add_subdirectory(src/sdf)
+add_subdirectory(src/geometry)
 file(GLOB ShrinkWrap_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
 add_executable(ShrinkWrap ${ShrinkWrap_Src})
 target_link_libraries(ShrinkWrap 
     pmp
-    SDFGen
+    SDF
+    Geometry
 )
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+set_target_properties(
+    glew
+    imgui
+    pmp_vis
+    rply
+    stb_image
+    pmp
+PROPERTIES FOLDER "PMP_Lib")
+# =======================================================
 
 if(NOT EMSCRIPTEN AND PMP_INSTALL)
 

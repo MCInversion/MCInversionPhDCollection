@@ -10,29 +10,28 @@
 
 namespace pmp {
 
-TriangleKdTree::TriangleKdTree(std::shared_ptr<const SurfaceMesh> mesh,
-                               unsigned int max_faces, unsigned int max_depth)
+TriangleKdTree::TriangleKdTree(const SurfaceMesh& mesh, unsigned int max_faces, unsigned int max_depth)
 {
     // init
     root_ = new Node();
     root_->faces = new Faces();
 
     // collect faces and points
-    root_->faces->reserve(mesh->n_faces());
-    face_points_.reserve(mesh->n_faces());
-    auto points = mesh->get_vertex_property<Point>("v:point");
+    root_->faces->reserve(mesh.n_faces());
+    face_points_.reserve(mesh.n_faces());
+    auto points = mesh.get_vertex_property<Point>("v:point");
 
-    for (const auto& f : mesh->faces())
+    for (const auto& f : mesh.faces())
     {
         root_->faces->push_back(f);
 
-        auto v = mesh->vertices(f);
+        auto v = mesh.vertices(f);
         const auto& p0 = points[*v];
         ++v;
         const auto& p1 = points[*v];
         ++v;
         const auto& p2 = points[*v];
-        face_points_.push_back({p0, p1, p2});
+        face_points_.push_back({ p0, p1, p2 });
     }
 
     // call recursive helper

@@ -56,6 +56,12 @@ public:
     //! Get max point.
     Point& max() { return max_; }
 
+    //! Get min point.
+    [[nodiscard]] const Point& min() const { return min_; }
+
+    //! Get max point.
+    [[nodiscard]] const Point& max() const { return max_; }
+
     //! Get center point.
     Point center() const { return 0.5f * (min_ + max_); }
 
@@ -71,10 +77,28 @@ public:
         return is_empty() ? Scalar(0.0) : distance(max_, min_);
     }
 
-    //! Expand the size of the bounding box.
-    void expand(float x, float y, float z)
+    //! Get the intersection value of this box with another.
+    [[nodiscard]] bool Intersects(const BoundingBox& other) const
     {
-        assert(x >= 0.0 && y >= 0.0 && z >= 0.0);
+        /*
+        if (other.max_[0] < min_[0] || other.min_[0] > max_[0])
+            return false;
+
+        if (other.max_[1] < min_[1] || other.min_[1] > max_[1])
+            return false;
+
+        return (other.max_[2] >= min_[2] && other.min_[2] <= max_[2]);*/
+
+        return !(
+            other.max_[0] < min_[0] || other.min_[0] > max_[0] ||
+            other.max_[1] < min_[1] || other.min_[1] > max_[1] ||
+            other.max_[2] < min_[2] || other.min_[2] > max_[2]);
+    }
+
+    //! Expand the size of the bounding box.
+    void expand(const float& x, const float& y, const float& z)
+    {
+        assert(x >= 0.0f && y >= 0.0f && z >= 0.0f);
         min_ -= Point(x, y, z);
         max_ += Point(x, y, z);
     }

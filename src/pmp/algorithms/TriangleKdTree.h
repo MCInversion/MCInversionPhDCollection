@@ -16,8 +16,15 @@ class TriangleKdTree
 {
 public:
     //! Construct with mesh.
+    TriangleKdTree(const SurfaceMesh& mesh,
+        unsigned int max_faces = 10, unsigned int max_depth = 30);
+
+    //! Construct with mesh.
     TriangleKdTree(std::shared_ptr<const SurfaceMesh> mesh,
-                   unsigned int max_faces = 10, unsigned int max_depth = 30);
+        unsigned int max_faces = 10, unsigned int max_depth = 30)
+        : TriangleKdTree(*mesh, max_faces, max_depth)
+    {
+    }
 
     //! destructor
     ~TriangleKdTree() { delete root_; }
@@ -57,7 +64,7 @@ private:
     };
 
     // Recursive part of build()
-    void build_recurse(Node* node, unsigned int max_handles,
+    void build_recurse(Node* node, unsigned int max_faces,
                        unsigned int depth);
 
     // Recursive part of nearest()
