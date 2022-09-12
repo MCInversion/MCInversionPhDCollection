@@ -387,6 +387,8 @@ namespace SDF
 	void CollisionKdTree::BuildRecurse(Node* node, const pmp::BoundingBox& box, const std::vector<unsigned int>& triangleIds, unsigned int remainingDepth)
 	{
 		assert(node != nullptr);
+		assert(!box.is_empty());
+		node->box = box;
 
 		if (remainingDepth == 0 || triangleIds.size() <= MIN_NODE_TRIANGLE_COUNT)
 		{
@@ -511,14 +513,20 @@ namespace SDF
 
 			if (currentNode->left_child)
 			{
+				assert(!currentNode->left_child->box.is_empty());
 				if (box.Intersects(currentNode->left_child->box))
+				{
 					nodeStack.push(currentNode->left_child);
+				}
 			}
 
 			if (currentNode->right_child)
 			{
+				assert(!currentNode->right_child->box.is_empty());
 				if (box.Intersects(currentNode->right_child->box))
-					nodeStack.push(currentNode->right_child);
+				{
+					nodeStack.push(currentNode->right_child);	
+				}
 			}
 		}
 
