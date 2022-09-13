@@ -83,11 +83,25 @@ namespace SDF
 		void GetTrianglesInABox(const pmp::BoundingBox& box, std::vector<unsigned int>& foundTriangleIds) const;
 
 		/**
+		 * \brief A stackless approach to fill a buffer of indices of triangles intersecting a given box.
+		 * \param box                  a box whose contents are to be queried.
+		 * \param foundTriangleIds     buffer to be filled.
+		 */
+		void GetTrianglesInABox_Stackless(const pmp::BoundingBox& box, std::vector<unsigned int>& foundTriangleIds) const;
+
+		/**
 		 * \brief Performs an intersection test between a given box and any triangle.
 		 * \param box    a box to be queried.
 		 * \return true if an intersection was detected.
 		 */
 		[[nodiscard]] bool BoxIntersectsATriangle(const pmp::BoundingBox& box) const;
+
+		/**
+		 * \brief A stackless approach for performing an intersection test between a given box and any triangle.
+		 * \param box    a box to be queried.
+		 * \return true if an intersection was detected.
+		 */
+		[[nodiscard]] bool BoxIntersectsATriangle_Stackless(const pmp::BoundingBox& box) const;
 
 	private:
 

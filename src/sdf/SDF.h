@@ -22,5 +22,8 @@ namespace SDF
 	 * \return the computed distance field's ScalarGrid.
 	 */
 	[[nodiscard]] Geometry::ScalarGrid ComputeDistanceField(
-		const pmp::SurfaceMesh& inputMesh, const float& cellSize, const KDTreeSplitType& splitType = KDTreeSplitType::Center, const float& volumeExpansion = 1.0f, const bool& computeSign = true);
+		const pmp::SurfaceMesh& inputMesh, const float& cellSize, 
+		const KDTreeSplitType& splitType = KDTreeSplitType::Center,
+		const float& volumeExpansion = 1.0f, 
+		const bool& computeSign = true);
 }

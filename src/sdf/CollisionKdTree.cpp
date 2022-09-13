@@ -165,7 +165,7 @@ namespace SDF
 	//
 	float AdaptiveSplitFunction(const BoxSplitData& splitData, const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut)
 	{
-		const unsigned int nFaces = facesIn.size();
+		const auto nFaces = static_cast<unsigned int>(facesIn.size());
 		const auto& box = *splitData.box;
 		const unsigned int axisId = (splitData.axis == SplitAxisPreference::XAxis ? 0 : (splitData.axis == SplitAxisPreference::YAxis ? 1 : 2));
 		const auto& vertices = splitData.kdTree->VertexPositions();
@@ -186,7 +186,8 @@ namespace SDF
 
 		// splits:
 		std::vector<float> bCutPos = std::vector<float>(BOX_CUTS + 2);
-		for (i = 0; i <= BOX_CUTS + 1; i++) bCutPos[i] = a * (1.0 - ((float)i / (float)(BOX_CUTS + 1))) + b * ((float)i / (float)(BOX_CUTS + 1));
+		for (i = 0; i <= BOX_CUTS + 1; i++) 
+			bCutPos[i] = a * (1.0f - (static_cast<float>(i) / static_cast<float>(BOX_CUTS + 1))) + b * (static_cast<float>(i) / static_cast<float>(BOX_CUTS + 1));
 
 		// set C_L(x) = 0, C_R(x) = 0
 		auto C_L = std::vector<unsigned int>(BOX_CUTS + 2);
@@ -195,10 +196,10 @@ namespace SDF
 		auto faceMins = std::vector<float>(nFaces);
 		auto faceMaxes = std::vector<float>(nFaces);
 
-		for (const auto& fId : facesIn)
+		for (i = 0; i < nFaces; i++)
 		{
-			faceMins[i] = TriangleMin(triVertexIds[fId], vertices, axisId);
-			faceMaxes[i] = TriangleMax(triVertexIds[fId], vertices, axisId);
+			faceMins[i] = TriangleMin(triVertexIds[i], vertices, axisId);
+			faceMaxes[i] = TriangleMax(triVertexIds[i], vertices, axisId);
 
 			for (j = 1; j <= BOX_CUTS; j++) 
 			{
@@ -218,39 +219,43 @@ namespace SDF
 
 		for (i = 0; i < BOX_CUTS; i++) 
 		{
-			ran_s = (float)(i + 1) / (float)(BOX_CUTS + 1) * nFaces;
+			ran_s = static_cast<float>(i + 1) / static_cast<float>(BOX_CUTS + 1) * static_cast<float>(nFaces);
 
 			for (j = 0; j <= BOX_CUTS; j++) 
 			{
-				S_L[j] += (ran_s > C_L[j] && ran_s < C_L[j + 1] ? 1 : 0);
-				S_R[j] += (ran_s > C_R[j] && ran_s < C_R[j + 1] ? 1 : 0);
+				S_L[j] += (ran_s > static_cast<float>(C_L[j]) && ran_s < static_cast<float>(C_L[j + 1]) ? 1 : 0);
+				S_R[j] += (ran_s > static_cast<float>(C_R[j]) && ran_s < static_cast<float>(C_R[j + 1]) ? 1 : 0);
 			}
 		}
-		std::reverse(S_R.begin(), S_R.end());
+		std::ranges::reverse(S_R);
 
 		// ==== Stage 3: add more sampling positions to subdivided segments ===========================================
 
 		auto all_splt_L = std::vector<float>(2 * BOX_CUTS);
 		auto all_splt_R = std::vector<float>(2 * BOX_CUTS);
-		float segLen = (float)(b - a) / (float)(BOX_CUTS + 1);
+		float segLen = (b - a) / static_cast<float>(BOX_CUTS + 1);
 		unsigned int nSeg_L = 0, nSeg_R = 0;
 
-		for (i = 0; i <= BOX_CUTS; i++) {
-			if (i > 0) {
+		for (i = 0; i <= BOX_CUTS; i++)
+		{
+			if (i > 0) 
+			{
 				all_splt_L[nSeg_L++] = bCutPos[i];
 				all_splt_R[nSeg_R++] = bCutPos[i];
 			}
-			for (j = 0; j < S_L[i]; j++) {
-				all_splt_L[nSeg_L++] = bCutPos[i] + (j + 1) / (S_L[i] + 1) * segLen;
+
+			for (j = 0; j < S_L[i]; j++) 
+			{
+				all_splt_L[nSeg_L++] = bCutPos[i] + static_cast<float>(j + 1) / (S_L[i] + 1) * segLen;
 			}
-			for (j = 0; j < S_R[i]; j++) {
-				all_splt_R[nSeg_R++] = bCutPos[i] + (j + 1) / (S_R[i] + 1) * segLen;
+			for (j = 0; j < S_R[i]; j++) 
+			{
+				all_splt_R[nSeg_R++] = bCutPos[i] + static_cast<float>(j + 1) / (S_R[i] + 1) * segLen;
 			}
 		}
 
 		// Compute surface area heuristic SAH:
 		// remaining two dimensions of the child box candidates
-		// TODO: verify with SurfaceEvolver
 		const float boxDim0 = box.max()[(axisId + 1) % 3] - box.min()[(axisId + 1) % 3];
 		const float boxDim1 = box.max()[(axisId + 2) % 3] - box.min()[(axisId + 2) % 3];
 
@@ -262,8 +267,8 @@ namespace SDF
 
 		for (i = 0; i < 2 * BOX_CUTS; i++) 
 		{
-			SA_L[i] = ((all_splt_L[i] - a) + boxDim0 + boxDim1) * 2.0 / tot_BoxArea;
-			SA_R[i] = ((b - all_splt_R[i]) + boxDim0 + boxDim1) * 2.0 / tot_BoxArea;
+			SA_L[i] = ((all_splt_L[i] - a) + boxDim0 + boxDim1) * 2.0f / tot_BoxArea;
+			SA_R[i] = ((b - all_splt_R[i]) + boxDim0 + boxDim1) * 2.0f / tot_BoxArea;
 		}
 
 		// ==== Stage 4: RESAMPLE C_L and C_R on all sample points & construct an approximation of cost(x) to minimize
@@ -271,13 +276,14 @@ namespace SDF
 		auto cost = std::vector<float>(2 * BOX_CUTS);
 
 		// cost(x) = C_L(x) * SA_L(x) + C_R(x) * SA_R(x):
-		for (const auto& fId : facesIn)
+		for (i = 0; i < nFaces; i++)
 		{
-			min = faceMins[fId];
-			max = faceMaxes[fId];
+			min = faceMins[i];
+			max = faceMaxes[i];
 
-			for (j = 0; j < 2 * BOX_CUTS; j++) {
-				cost[j] += (min < all_splt_L[j] ? 1 : 0) * SA_L[j] + (max > all_splt_R[j] ? 1 : 0) * SA_R[j];
+			for (j = 0; j < 2 * BOX_CUTS; j++) 
+			{
+				cost[j] += static_cast<float>(min < all_splt_L[j] ? 1 : 0) * SA_L[j] + static_cast<float>(max > all_splt_R[j] ? 1 : 0) * SA_R[j];
 			}
 		}
 
@@ -286,28 +292,30 @@ namespace SDF
 		float bestSplit = 0.5f * (a + b); // if this loop fails to initialize bestSplit, set it to middle
 		float minCost = FLT_MAX;
 
-		for (i = 1; i < 2 * BOX_CUTS; i++) {
-			if (cost[i] < minCost) {
-				minCost = cost[i];
-				bestSplit = all_splt_L[i];
-			}
+		for (i = 1; i < 2 * BOX_CUTS; i++) 
+		{
+			if (cost[i] >= minCost)
+				continue;
+
+			minCost = cost[i];
+			bestSplit = all_splt_L[i];
 		}
 
 		// fill left and right arrays now that best split position is known:
 		leftFacesOut.reserve(nFaces);
 		rightFacesOut.reserve(nFaces);
-		for (const auto& fId : facesIn)
+		for (i = 0; i < nFaces; i++)
 		{
-			min = faceMins[fId];
-			max = faceMaxes[fId];
+			min = faceMins[i];
+			max = faceMaxes[i];
 
 			if (min <= bestSplit) 
 			{
-				leftFacesOut.push_back(fId);
+				leftFacesOut.push_back(facesIn[i]);
 			}
 			if (max >= bestSplit) 
 			{
-				rightFacesOut.push_back(fId);
+				rightFacesOut.push_back(facesIn[i]);
 			}
 		}
 		leftFacesOut.shrink_to_fit();
@@ -347,19 +355,19 @@ namespace SDF
 		const pmp::vec3 boxHalfSize = (box.max() - box.min()) * 0.5;
 
 		std::vector<unsigned int> result{};
-		result.reserve(triangles.size());
-		for (const auto& tri : triangleIds)
+		result.reserve(triangleIds.size());
+		for (const auto& triId : triangleIds)
 		{
 			const std::vector triVertices{
-				vertexPositions[triangles[tri].v0Id],
-				vertexPositions[triangles[tri].v1Id],
-				vertexPositions[triangles[tri].v2Id]
+				vertexPositions[triangles[triId].v0Id],
+				vertexPositions[triangles[triId].v1Id],
+				vertexPositions[triangles[triId].v2Id]
 			};
 
 			if (!Geometry::TriangleIntersectsBox(triVertices, boxCenter, boxHalfSize))
 				continue;
 
-			result.emplace_back(tri);
+			result.emplace_back(triId);
 		}
 
 		result.shrink_to_fit();
@@ -388,6 +396,12 @@ namespace SDF
 	{
 		assert(node != nullptr);
 		assert(!box.is_empty());
+		/*if (box.is_empty())
+		{
+		    // TODO: fix adaptive resampling!
+			std::cout << "CollisionKdTree::BuildRecurse: empty box!\n";
+		}*/
+
 		node->box = box;
 
 		if (remainingDepth == 0 || triangleIds.size() <= MIN_NODE_TRIANGLE_COUNT)
@@ -451,7 +465,8 @@ namespace SDF
 		return std::round(2.0 * sqrt(M_PI * nNodes));
 	}
 
-	/*void CollisionKdTree::GetTrianglesInABox(const pmp::BoundingBox& box, std::vector<unsigned int>& foundTriangleIds) const
+	/**/
+	void CollisionKdTree::GetTrianglesInABox_Stackless(const pmp::BoundingBox& box, std::vector<unsigned int>& foundTriangleIds) const
 	{
 		assert(foundTriangleIds.empty());
 
@@ -488,7 +503,7 @@ namespace SDF
 		}
 
 		foundTriangleIds.shrink_to_fit();
-	}*/
+	}
 
 	void CollisionKdTree::GetTrianglesInABox(const pmp::BoundingBox& box, std::vector<unsigned int>& foundTriangleIds) const
 	{
@@ -579,6 +594,61 @@ namespace SDF
 				if (box.Intersects(currentNode->right_child->box))
 				{
 					nodeStack.push(currentNode->right_child);
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool CollisionKdTree::BoxIntersectsATriangle_Stackless(const pmp::BoundingBox& box) const
+	{
+		const auto center = box.center();
+		const pmp::vec3 halfSize{
+			0.5f * (box.max()[0] - box.min()[0]),
+			0.5f * (box.max()[1] - box.min()[1]),
+			0.5f * (box.max()[2] - box.min()[2])
+		};
+		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
+		const size_t expectedStackHeight = GetAverageStackHeight(m_NodeCount);
+		std::vector<Node*> nodeStack{};
+		nodeStack.reserve(expectedStackHeight);
+		nodeStack.emplace_back(m_Root);
+
+		while (!nodeStack.empty())
+		{
+			Node* currentNode = nodeStack[nodeStack.size() - 1];
+			nodeStack.erase(std::prev(nodeStack.end()));
+
+			if (currentNode->IsALeaf())
+			{
+				for (const auto& triId : currentNode->triangleIds)
+				{
+					triVerts[0] = m_VertexPositions[m_Triangles[triId].v0Id];
+					triVerts[1] = m_VertexPositions[m_Triangles[triId].v1Id];
+					triVerts[2] = m_VertexPositions[m_Triangles[triId].v2Id];
+					if (Geometry::TriangleIntersectsBox(triVerts, center, halfSize))
+						return true;
+				}
+
+				continue;
+			}
+
+			if (currentNode->left_child)
+			{
+				assert(!currentNode->left_child->box.is_empty());
+				if (box.Intersects(currentNode->left_child->box))
+				{
+					nodeStack.emplace_back(currentNode->left_child);
+				}
+			}
+
+			if (currentNode->right_child)
+			{
+				assert(!currentNode->right_child->box.is_empty());
+				if (box.Intersects(currentNode->right_child->box))
+				{
+					nodeStack.emplace_back(currentNode->right_child);
 				}
 			}
 		}

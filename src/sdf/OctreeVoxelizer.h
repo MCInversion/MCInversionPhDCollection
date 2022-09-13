@@ -54,7 +54,7 @@ namespace SDF
 
 			~Node()
 			{
-				delete octreeEnvironment;
+				//delete octreeEnvironment;
 				for (const auto& ch : children)
 					delete ch;
 			}

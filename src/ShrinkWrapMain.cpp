@@ -7,10 +7,13 @@
 
 
 const std::string dataDirPath =
-    "C:\\Users\\Martin\\source\\repos\\ImplicitSurfaceWrap\\data\\"; //"..\\..\\data\\";
+    "D:\\mcava\\Repos\\ImplicitSurfaceWrap\\data\\"; //"..\\..\\data\\";
+
+// D:\\mcava\\Repos\\ImplicitSurfaceWrap\\data
+// C:\\Users\\Martin\\source\\repos\\ImplicitSurfaceWrap
 
 const std::string dataOutPath =
-	"C:\\Users\\Martin\\source\\repos\\ImplicitSurfaceWrap\\output\\";
+	"D:\\mcava\\Repos\\ImplicitSurfaceWrap\\output\\";
 
 int main()
 {
@@ -18,7 +21,7 @@ int main()
     mesh.read(dataDirPath + "bunny.obj");
 
     const auto startSDF = std::chrono::high_resolution_clock::now();
-    constexpr float cellSize = 0.1207f / 10.0f;
+    constexpr float cellSize = 0.1207f / 40.0f;
     const auto sdf = SDF::ComputeDistanceField(mesh, cellSize);
 
     const auto endSDF = std::chrono::high_resolution_clock::now();

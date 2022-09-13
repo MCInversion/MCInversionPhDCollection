@@ -192,25 +192,23 @@ namespace Geometry
 	 * \return true if the plane intersects the box.
 	 */
 	[[nodiscard]] bool PlaneIntersectsBox(const pmp::vec3& normal, const pmp::vec3& refPt, const pmp::vec3& boxMax) {
-		int q;
 		pmp::vec3 vmin, vmax;
 
-		for (q = 0; q <= 2; q++) 
+		for (int q = 0; q <= 2; q++) 
 		{
-			if (normal[q] > 0.0) 
+			if (normal[q] > 0.0f) 
 			{
-				vmin[q] = -boxMax[q];
+				vmin[q] = -boxMax[q] - refPt[q];
 				vmax[q] = boxMax[q] - refPt[q];
+				continue;
 			}
-			else 
-			{
-				vmin[q] = boxMax[q] - refPt[q];
-				vmax[q] = -boxMax[q] - refPt[q];
-			}
+
+			vmin[q] = boxMax[q] - refPt[q];
+			vmax[q] = -boxMax[q] - refPt[q];
 		}
 
-		if (DOT(normal, vmin) > 0.0) return false;
-		if (DOT(normal, vmax) >= 0.0) return true;
+		if (DOT(normal, vmin) > 0.0f) return false;
+		if (DOT(normal, vmax) >= 0.0f) return true;
 		return false;
 	}
 
@@ -238,7 +236,7 @@ namespace Geometry
 			p2 = -(a) * v2[0] + (b) * v2[2];				       			   \
 			if (p0 < p2) {min = p0; max = p2;} else {min = p2; max = p0;}      \
 			rad = (fa) * boxHalfSize[0] + (fb) * boxHalfSize[2];		       \
-			if (min > rad || max <- rad) return false
+			if (min > rad || max < -rad) return false
 
 	#define AXISTEST_Y1(a, b, fa, fb)							    	       \
 			p0 = -(a) * v0[0] + (b) * v0[2];		      				       \
