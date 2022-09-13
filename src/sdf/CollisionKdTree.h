@@ -82,8 +82,16 @@ namespace SDF
 		 */
 		void GetTrianglesInABox(const pmp::BoundingBox& box, std::vector<unsigned int>& foundTriangleIds) const;
 
+		/**
+		 * \brief Performs an intersection test between a given box and any triangle.
+		 * \param box    a box to be queried.
+		 * \return true if an intersection was detected.
+		 */
+		[[nodiscard]] bool BoxIntersectsATriangle(const pmp::BoundingBox& box) const;
+
 	private:
 
+		/// \brief a node object of this tree.
 		struct Node
 		{
 			Node() = default;

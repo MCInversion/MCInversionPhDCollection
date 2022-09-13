@@ -533,4 +533,57 @@ namespace SDF
 		foundTriangleIds.shrink_to_fit();
 	}
 
+	bool CollisionKdTree::BoxIntersectsATriangle(const pmp::BoundingBox& box) const
+	{
+		const auto center = box.center();
+		const pmp::vec3 halfSize{
+			0.5f * (box.max()[0] - box.min()[0]),
+			0.5f * (box.max()[1] - box.min()[1]),
+			0.5f * (box.max()[2] - box.min()[2])
+		};
+		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
+		std::stack<Node*> nodeStack{};
+		nodeStack.push(m_Root);
+
+		while (!nodeStack.empty())
+		{
+			const Node* currentNode = nodeStack.top();
+			nodeStack.pop();
+
+			if (currentNode->IsALeaf())
+			{
+				for (const auto& triId : currentNode->triangleIds)
+				{
+					triVerts[0] = m_VertexPositions[m_Triangles[triId].v0Id];
+					triVerts[1] = m_VertexPositions[m_Triangles[triId].v1Id];
+					triVerts[2] = m_VertexPositions[m_Triangles[triId].v2Id];
+					if (Geometry::TriangleIntersectsBox(triVerts, center, halfSize))
+						return true;
+				}
+
+				continue;
+			}
+
+			if (currentNode->left_child)
+			{
+				assert(!currentNode->left_child->box.is_empty());
+				if (box.Intersects(currentNode->left_child->box))
+				{
+					nodeStack.push(currentNode->left_child);
+				}
+			}
+
+			if (currentNode->right_child)
+			{
+				assert(!currentNode->right_child->box.is_empty());
+				if (box.Intersects(currentNode->right_child->box))
+				{
+					nodeStack.push(currentNode->right_child);
+				}
+			}
+		}
+
+		return false;
+	}
+
 } // namespace SDF

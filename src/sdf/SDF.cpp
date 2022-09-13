@@ -1,11 +1,13 @@
 #include "SDF.h"
 
 #include "CollisionKdTree.h"
+#include "OctreeVoxelizer.h"
 #include "geometry/GeometryUtil.h"
 
 namespace SDF
 {
-	void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	// this one's painfully slow!
+	/*void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
 	{
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
@@ -73,6 +75,41 @@ namespace SDF
 				}
 			}
 		}
+	}*/
+
+	void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	{
+		auto& gridVals = grid.Values();
+		auto& gridFrozenVals = grid.FrozenValues();
+
+		const auto kdTree = CollisionKdTree(inputMesh, spltFunc);
+		const float cellSize = grid.CellSize();
+		const auto octreeVox = OctreeVoxelizer(kdTree, grid.Box(), cellSize);
+
+		// extract leaf boxes and distance values from their centroids
+		std::vector<pmp::BoundingBox*> boxBuffer{};
+		std::vector<double> valueBuffer{};
+		octreeVox.GetLeafBoxesAndValues(boxBuffer, valueBuffer);
+		const size_t nOutlineVoxels = boxBuffer.size();
+		const auto& oBox = octreeVox.GetRootBox();
+		const float oBoxMinX = oBox.min()[0]; const float oBoxMinY = oBox.min()[1];	const float oBoxMinZ = oBox.min()[2];
+
+		const auto& dims = grid.Dimensions();
+		const size_t Nx = dims.Nx; const size_t Ny = dims.Ny; const size_t Nz = dims.Nz;
+
+		unsigned int ix, iy, iz, gridPos;
+
+		for (size_t i = 0; i < nOutlineVoxels; i++)
+		{
+			// transform from real space to grid index space
+			ix = static_cast<unsigned int>(std::floor(0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - oBoxMinX) / cellSize);
+			iy = static_cast<unsigned int>(std::floor(0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - oBoxMinY) / cellSize);
+			iz = static_cast<unsigned int>(std::floor(0.5f * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - oBoxMinZ) / cellSize);
+
+			gridPos = Nx * Ny * iz + Nx * iy + ix;
+			gridVals[gridPos] = valueBuffer[i];
+			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
+		}
 	}
 
 	/**
@@ -87,6 +124,10 @@ namespace SDF
 
 		return AdaptiveSplitFunction;
 	}
+
+	//
+	// ===============================================================================================
+	//
 
 
 	Geometry::ScalarGrid ComputeDistanceField(

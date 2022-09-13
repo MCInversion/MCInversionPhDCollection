@@ -19,8 +19,8 @@ namespace Geometry
 		const float nZPlus = std::ceil(box.max()[2] / m_CellSize);
 
 		// adjust box
-		const auto maxVec = pmp::vec3(nXPlus, nYPlus, nZPlus) * m_CellSize;
 		const auto minVec = pmp::vec3(nXMinus, nYMinus, nZMinus) * m_CellSize;
+		const auto maxVec = pmp::vec3(nXPlus, nYPlus, nZPlus) * m_CellSize;
 		m_Box = pmp::BoundingBox(minVec, maxVec);
 
 		m_Dimensions = GridDimensions{

@@ -9,24 +9,21 @@ namespace Geometry
 	#define CROSS(dest, v1, v2)						     \
 	          dest[0] = v1[1] * v2[2] - v1[2] * v2[1];   \
 	          dest[1] = v1[2] * v2[0] - v1[0] * v2[2];	 \
-	          dest[2] = v1[0] * v2[1] - v1[1] * v2[0];   \
-	/**/
+	          dest[2] = v1[0] * v2[1] - v1[1] * v2[0]
 
 	#define DOT(v1, v2) (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2])
 
 	#define SUB(dest, v1, v2)						\
 	          dest[0] = v1[0] - v2[0];				\
 	          dest[1] = v1[1] - v2[1];				\
-	          dest[2] = v1[2] - v2[2];              \
-	/**/
+	          dest[2] = v1[2] - v2[2]
 
 	#define FINDMINMAX(x0, x1, x2, min, max)		\
 			  min = max = x0;						\
 			  if (x1 < min) min = x1;				\
 			  if (x1 > max) max = x1;				\
 			  if (x2 < min) min = x2;				\
-			  if (x2 > max) max = x2;               \
-	/**/
+			  if (x2 > max) max = x2
 
 	double GetDistanceToTriangleSq(const std::vector<pmp::vec3>& vertices, const pmp::vec3& point)
 	{
@@ -225,16 +222,14 @@ namespace Geometry
 			p2 = (a) * v2[1] - (b) * v2[2];			       					   \
 	        if (p0 < p2) {min = p0; max = p2;} else {min = p2; max = p0;}      \
 			rad = (fa) * boxHalfSize[1] + (fb) * boxHalfSize[2];		       \
-			if (min > rad || max < -rad) return false;                         \
-	/**/
+			if (min > rad || max < -rad) return false
 
 	#define AXISTEST_X2(a, b, fa, fb)									       \
 			p0 = (a) * v0[1] - (b) * v0[2];									   \
 			p1 = (a) * v1[1] - (b) * v1[2];		       						   \
 	        if (p0 < p1) {min = p0; max = p1;} else {min = p1; max = p0;}      \
 			rad = (fa) * boxHalfSize[1] + (fb) * boxHalfSize[2];			   \
-			if (min > rad || max < -rad) return false;                         \
-	/**/
+			if (min > rad || max < -rad) return false
 
 	// Y-tests:
 
@@ -243,16 +238,14 @@ namespace Geometry
 			p2 = -(a) * v2[0] + (b) * v2[2];				       			   \
 			if (p0 < p2) {min = p0; max = p2;} else {min = p2; max = p0;}      \
 			rad = (fa) * boxHalfSize[0] + (fb) * boxHalfSize[2];		       \
-			if (min > rad || max <- rad) return false;                         \
-	/**/
+			if (min > rad || max <- rad) return false
 
 	#define AXISTEST_Y1(a, b, fa, fb)							    	       \
 			p0 = -(a) * v0[0] + (b) * v0[2];		      				       \
 			p1 = -(a) * v1[0] + (b) * v1[2];					               \
 			if (p0 < p1) {min = p0; max = p1;} else {min = p1; max = p0;}      \
 			rad = (fa) * boxHalfSize[0] + (fb) * boxHalfSize[2];			   \
-			if (min > rad || max < -rad) return false;                         \
-	/**/
+			if (min > rad || max < -rad) return false
 
 	// Z-tests:
 
@@ -261,16 +254,14 @@ namespace Geometry
 			p2 = (a) * v2[0] - (b) * v2[1];			       	                   \
 			if (p2 < p1) {min = p2; max = p1;} else {min = p1; max = p2;}      \
 			rad = (fa) * boxHalfSize[0] + (fb) * boxHalfSize[1];			   \
-			if (min > rad || max < -rad) return false;                         \
-	/**/
+			if (min > rad || max < -rad) return false
 
 	#define AXISTEST_Z0(a, b, fa, fb)									       \
 			p0 = (a) * v0[0] - (b) * v0[1];									   \
 			p1 = (a) * v1[0] - (b) * v1[1];									   \
 			if (p0 < p1) {min = p0; max = p1;} else {min = p1; max = p0;}      \
 			rad = (fa) * boxHalfSize[0] + (fb) * boxHalfSize[1];			   \
-			if (min > rad || max < -rad) return false;                         \
-	/**/
+			if (min > rad || max < -rad) return false
 
 	// =====================================================
 
@@ -279,7 +270,7 @@ namespace Geometry
 		assert(vertices.size() == 3); // only vertex triples allowed
 
 		pmp::vec3 v0, v1, v2;
-		double min, max, p0, p1, p2, rad, fex, fey, fez;
+		float min, max, p0, p1, p2, rad, fex, fey, fez;
 		pmp::vec3 normal, e0, e1, e2;
 
 		SUB(v0, vertices[0], boxCenter);

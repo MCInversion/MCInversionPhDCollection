@@ -18,7 +18,7 @@ int main()
     mesh.read(dataDirPath + "bunny.obj");
 
     const auto startSDF = std::chrono::high_resolution_clock::now();
-    constexpr float cellSize = 0.1207f / 20.0f;
+    constexpr float cellSize = 0.1207f / 10.0f;
     const auto sdf = SDF::ComputeDistanceField(mesh, cellSize);
 
     const auto endSDF = std::chrono::high_resolution_clock::now();
