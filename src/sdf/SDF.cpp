@@ -1,9 +1,11 @@
 #include "SDF.h"
 
+#include "geometry/GeometryUtil.h"
+#include "geometry/GridUtil.h"
+
 #include "CollisionKdTree.h"
 #include "FastSweep.h"
 #include "OctreeVoxelizer.h"
-#include "geometry/GeometryUtil.h"
 
 namespace SDF
 {
@@ -147,6 +149,30 @@ namespace SDF
 		return AdaptiveSplitFunction;
 	}
 
+	using BlurFunction = std::function<void(Geometry::ScalarGrid&)>;
+
+	/**
+	 * \brief Provides a blur functor according to the given setting.
+	 * \param blurType      blur type identifier.
+	 * \return the blur function identified by splitType.
+	 */
+	[[nodiscard]] BlurFunction GetBlurFunction(const BlurPostprocessingType& blurType)
+	{
+		if (blurType == BlurPostprocessingType::ThreeCubedVoxelAveraging)
+			return Geometry::ApplyNarrowAveragingBlur;
+
+		if (blurType == BlurPostprocessingType::FiveCubedVoxelAveraging)
+			return Geometry::ApplyWideAveragingBlur;
+
+		if (blurType == BlurPostprocessingType::ThreeCubedVoxelGaussian)
+			return Geometry::ApplyNarrowGaussianBlur;
+
+		if (blurType == BlurPostprocessingType::FiveCubedVoxelGaussian)
+			return Geometry::ApplyWideGaussianBlur;
+
+		return {}; // empty blur function
+	}
+
 	//
 	// ===============================================================================================
 	//
@@ -180,6 +206,12 @@ namespace SDF
 			FastSweep(resultGrid, fsSettings);			
 		}
 
+		// blur postprocessing
+		if (settings.BlurType != BlurPostprocessingType::None)
+		{
+			const auto blurFunction = GetBlurFunction(settings.BlurType);
+			blurFunction(resultGrid);
+		}
 		return resultGrid;
 	}
 } // namespace SDF
