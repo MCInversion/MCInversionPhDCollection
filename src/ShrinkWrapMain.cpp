@@ -23,7 +23,7 @@ int main()
         SDF::KDTreeSplitType::Center,
         1.0f,
         0.2,
-        SDF::SignComputation::None,
+        SDF::SignComputation::VoxelFloodFill,
         SDF::BlurPostprocessingType::None,
         SDF::PreprocessingType::Octree
     };
@@ -37,6 +37,5 @@ int main()
     const auto endSDF = std::chrono::high_resolution_clock::now();
     const std::chrono::duration<double> timeDiff = endSDF - startSDF;
     std::cout << "SDF Time: " << timeDiff.count() << "s\n";
-
     ExportToVTI(dataOutPath + "bunnySDF", sdf);
 }

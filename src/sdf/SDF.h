@@ -70,7 +70,7 @@ namespace SDF
 		 * \return the computed distance field's ScalarGrid.
 		 */
 		static [[nodiscard]] Geometry::ScalarGrid Generate(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings);
-
+		
 	private:
 		inline static pmp::SurfaceMesh m_Mesh; //>! mesh to be (pre)processed.
 		inline static std::unique_ptr<CollisionKdTree> m_KdTree{ nullptr }; //>! mesh kd tree.

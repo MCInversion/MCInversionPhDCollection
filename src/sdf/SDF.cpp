@@ -178,7 +178,7 @@ namespace SDF
 		pmp::HoleFilling hf(mesh);
 		for (const auto& h : mesh.halfedges())
 		{
-			if (!mesh.is_boundary(h))
+			if (!mesh.is_boundary(h) || !mesh.is_manifold(mesh.to_vertex(h)))
 				continue;
 			hf.fill_hole(h);
 		}
@@ -194,8 +194,10 @@ namespace SDF
 		assert(settings.VolumeExpansionFactor >= 0.0f);
 
 		m_Mesh = inputMesh;
-		if (settings.SignMethod == SignComputation::RayFromAHoleFilledMesh)
-			FillMeshHoles(m_Mesh);
+		if (settings.SignMethod != SignComputation::None)
+		{
+			FillMeshHoles(m_Mesh); // make mesh watertight
+		}
 
 		auto sdfBBox = m_Mesh.bounds();
 		const auto size = sdfBBox.max() - sdfBBox.min();
@@ -211,7 +213,7 @@ namespace SDF
 		const double truncationValue = (settings.TruncationFactor < DBL_MAX ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : DBL_MAX);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, sdfBBox, truncationValue);
 
-		m_KdTree = std::make_unique<CollisionKdTree>(inputMesh, GetSplitFunction(settings.KDTreeSplit));
+		m_KdTree = std::make_unique<CollisionKdTree>(m_Mesh, GetSplitFunction(settings.KDTreeSplit));
 		const auto preprocessGrid = GetPreprocessingFunction(settings.PreprocType);
 		preprocessGrid(resultGrid, m_Mesh, GetSplitFunction(settings.KDTreeSplit));
 
