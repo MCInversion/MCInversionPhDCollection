@@ -32,7 +32,7 @@ int main()
     mesh.read(dataDirPath + "bunny.obj");
 
     const auto startSDF = std::chrono::high_resolution_clock::now();
-    const auto sdf = SDF::ComputeDistanceField(mesh, sdfSettings);
+    const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
 
     const auto endSDF = std::chrono::high_resolution_clock::now();
     const std::chrono::duration<double> timeDiff = endSDF - startSDF;

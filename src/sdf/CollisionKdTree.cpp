@@ -414,7 +414,7 @@ namespace SDF
 
 		std::vector<unsigned int> leftTriangleIds{};
 		std::vector<unsigned int> rightTriangleIds{};
-		const float splitPosition = m_FindSplitAndClassify({ this, &box, axisPreference }, triangleIds, leftTriangleIds, rightTriangleIds);
+		node->splitPosition = m_FindSplitAndClassify({ this, &box, axisPreference }, triangleIds, leftTriangleIds, rightTriangleIds);
 
 		if (ShouldStopBranching(leftTriangleIds.size(), rightTriangleIds.size(), triangleIds.size()))
 		{
@@ -424,7 +424,7 @@ namespace SDF
 
 		if (!leftTriangleIds.empty())
 		{
-			const auto leftBox = GetChildBox(box, splitPosition, axisPreference, true);
+			const auto leftBox = GetChildBox(box, node->splitPosition, axisPreference, true);
 			node->left_child = new Node();
 			m_NodeCount++;
 			BuildRecurse(node->left_child, leftBox, leftTriangleIds, remainingDepth - 1);
@@ -439,7 +439,7 @@ namespace SDF
 
 		if (!rightTriangleIds.empty())
 		{
-			const auto rightBox = GetChildBox(box, splitPosition, axisPreference, false);
+			const auto rightBox = GetChildBox(box, node->splitPosition, axisPreference, false);
 			node->right_child = new Node();
 			m_NodeCount++;
 			BuildRecurse(node->right_child, rightBox, rightTriangleIds, remainingDepth - 1);
@@ -653,6 +653,79 @@ namespace SDF
 			}
 		}
 
+		return false;
+	}
+
+	bool CollisionKdTree::RayIntersectsATriangle(const Ray& ray) const
+	{
+		Node* nearNode = nullptr;
+		Node* farNode = nullptr;
+		float t_split;
+		bool leftIsNear, force_near, force_far, t_splitAtInfinity;
+		int axisId;
+		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
+
+		std::stack<Node*> stack = {};
+		stack.push(m_Root);
+
+		while (!stack.empty()) 
+		{
+			Node* currentNode = stack.top();
+			stack.pop();
+
+			if (currentNode->IsALeaf())
+			{
+				for (const auto& triId : currentNode->triangleIds)
+				{
+					triVerts[0] = m_VertexPositions[m_Triangles[triId].v0Id];
+					triVerts[1] = m_VertexPositions[m_Triangles[triId].v1Id];
+					triVerts[2] = m_VertexPositions[m_Triangles[triId].v2Id];
+					if (Geometry::RayIntersectsTriangle(ray.StartPt, ray.Direction, triVerts))
+						return true;
+				}
+
+				continue;
+			}
+
+			axisId = static_cast<int>(currentNode->axis);
+			leftIsNear = ray.StartPt[axisId] < currentNode->splitPosition;
+			nearNode = currentNode->left_child;
+			farNode = currentNode->right_child;
+			if (!leftIsNear)
+			{
+				nearNode = currentNode->right_child;
+				farNode = currentNode->left_child;
+			}
+
+			t_split = (currentNode->splitPosition - ray.StartPt[axisId]) * ray.InvDirection[axisId];
+			force_near = false;
+			force_far = false;
+			t_splitAtInfinity = t_split > FLT_MAX || t_split < -FLT_MAX;
+			if (t_splitAtInfinity) 
+			{
+				if (ray.StartPt[axisId] <= currentNode->splitPosition &&
+					ray.StartPt[axisId] >= currentNode->box.min()[axisId]) 
+				{
+					if (leftIsNear) force_near = true;
+					else force_far = true;
+				}
+				if (ray.StartPt[axisId] >= currentNode->splitPosition &&
+					ray.StartPt[axisId] <= currentNode->box.max()[axisId])
+				{
+					if (leftIsNear) force_near = true;
+					else force_far = true;
+				}
+			}
+
+			if (farNode && ((!t_splitAtInfinity && ray.ParamMax >= t_split) || force_far))
+			{
+				stack.push(farNode);
+			}
+			if (nearNode && ((!t_splitAtInfinity && ray.ParamMin <= t_split) || force_near))
+			{
+				stack.push(nearNode);
+			}
+		}
 		return false;
 	}
 

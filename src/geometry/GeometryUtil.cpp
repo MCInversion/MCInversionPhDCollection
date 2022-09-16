@@ -326,4 +326,48 @@ namespace Geometry
 
 		return true;
 	}
+
+	// TODO: Implement hitCount!
+	bool RayIntersectsTriangle(
+		const pmp::vec3& rayStart, const pmp::vec3& rayDir,
+		const std::vector<pmp::vec3>& triVertices, const float& minParam, const float& maxParam)
+	{
+		constexpr float eps = 1e-8f;
+		pmp::vec3 h, s, q;
+		float a, f, u, v;
+		pmp::vec3 edge1 = triVertices[1] - triVertices[0];
+		pmp::vec3 edge2 = triVertices[2] - triVertices[0];
+		CROSS(h, rayDir, edge2);
+		a = DOT(edge1, h);
+		if (a > -eps && a < eps)
+		{
+			return false;    // This ray is parallel to this triangle.
+		}
+
+		f = 1.0f / a;
+		s = rayStart - triVertices[0];
+		u = f * DOT(s, h);
+		if (u < 0.0 || u > 1.0)
+		{
+			return false;
+		}
+		q = cross(s, edge1);
+		v = f * DOT(rayDir, q);
+		if (v < 0.0 || u + v > 1.0) 
+		{
+			return false;
+		}
+
+		// At this stage we can compute t to find out where the intersection point is on the line.
+		float t = f * DOT(edge2, q);
+		//bool inOrNoRange = t < minParam;
+		//bool outOrNoRange = t > maxParam;
+		if (t > eps && t < (1.0f / eps)) 
+		{
+			return true;
+		}
+
+		// This means that there is a line intersection but not a ray intersection.
+		return false;
+	}
 } // namespace Geometry

@@ -57,6 +57,17 @@ namespace SDF
 
 	// ======================================================================
 
+	/// \brief a wrapper for the parameters of a ray intersecting KD-tree boxes.
+	struct Ray
+	{
+		pmp::vec3 StartPt{};
+		pmp::vec3 Direction{ 1.0f, 0.0f, 0.0f };
+		pmp::vec3 InvDirection{ 1.0f, FLT_MAX, FLT_MAX };
+		float ParamMin{ 0.0f };
+		float ParamMax{ FLT_MAX };
+		unsigned int HitCount{ 0 };
+	};
+
 	//! \brief A k-d tree for collision detection with pmp::SurfaceMesh triangles
 	class CollisionKdTree
 	{
@@ -103,6 +114,13 @@ namespace SDF
 		 */
 		[[nodiscard]] bool BoxIntersectsATriangle_Stackless(const pmp::BoundingBox& box) const;
 
+        /**
+         * \brief Performs an intersection test between a given ray and any triangle.
+         * \param ray    ray to intersect a triangle.
+         * \return true if an intersection was detected.
+         */
+        [[nodiscard]] bool RayIntersectsATriangle(const Ray& ray) const;
+
 	private:
 
 		/// \brief a node object of this tree.
@@ -122,7 +140,7 @@ namespace SDF
             }
 
 			SplitAxisPreference axis{0};
-
+			float splitPosition{ 0.0f };
 			pmp::BoundingBox box{};
 			std::vector<unsigned int> triangleIds{};
             Node* left_child{ nullptr };

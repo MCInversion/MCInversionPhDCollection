@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CollisionKdTree.h"
 #include "geometry/Grid.h"
 #include "pmp/SurfaceMesh.h"
 
@@ -49,13 +50,65 @@ namespace SDF
 		PreprocessingType PreprocType{ PreprocessingType::Octree }; //>! function type for the preprocessing of distance field scalar grid.
 	};
 
-	/**
-	 * \brief Computes the signed distance field of given input mesh.
-	 * \param inputMesh               evaluated mesh.
-	 * \param settings                settings for the distance field.
-	 * \return the computed distance field's ScalarGrid.
-	 */
-	[[nodiscard]] Geometry::ScalarGrid ComputeDistanceField(
-		const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings);
+	/// \brief a functor for computing the sign of the distance field.
+	using SignFunction = std::function<void(Geometry::ScalarGrid&)> const;
+
+	/// \brief a functor for preprocessing the scalar grid for distance field.
+	using PreprocessingFunction = std::function<void(Geometry::ScalarGrid&, const pmp::SurfaceMesh&, const SplitFunction&)>;
+
+	/// \brief A singleton object for computing distance fields to triangle meshes.
+	class DistanceFieldGenerator
+	{
+	public:
+		/// \brief a deleted default constructor because m_KdTree is not default-constructable.
+		DistanceFieldGenerator() = delete;
+
+		/**
+		 * \brief Compute the signed distance field of given input mesh.
+		 * \param inputMesh               evaluated mesh.
+		 * \param settings                settings for the distance field.
+		 * \return the computed distance field's ScalarGrid.
+		 */
+		static [[nodiscard]] Geometry::ScalarGrid Generate(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings);
+
+	private:
+		inline static pmp::SurfaceMesh m_Mesh; //>! mesh to be (pre)processed.
+		inline static std::unique_ptr<CollisionKdTree> m_KdTree{ nullptr }; //>! mesh kd tree.
+
+		/**
+		 * \brief provides the SignFunction, a function from this generator's private interface that computes the sign of the distance field.
+		 * \param signCompType      sign computation function type identifier.
+		 * \return the sign function identified by signCompType.
+		 */
+		static [[nodiscard]] SignFunction GetSignFunction(const SignComputation& signCompType);
+
+		/**
+		 * \brief Provides a preprocessing functor according to the given setting.
+		 * \param preprocType      preprocessing type identifier.
+		 * \return the preprocessing function identified by preprocType.
+		 */
+		static [[nodiscard]] PreprocessingFunction GetPreprocessingFunction(const PreprocessingType& preprocType);
+
+		/**
+		 * \brief A preprocessing approach for distance grid using CollisionKdTree to create "voxel outline" of inputMesh.
+		 * \param grid         modifiable input grid.
+		 * \param inputMesh    input mesh.
+		 * \param spltFunc     split function used in CollisionKdTree.
+		 */
+		static void PreprocessGridNoOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc);
+
+		/**
+		 * \brief A preprocessing approach for distance grid using CollisionKdTree and OctreeVoxelizer to create "voxel outline" of inputMesh.
+		 * \param grid         modifiable input grid.
+		 * \param inputMesh    input mesh.
+		 * \param spltFunc     split function used in CollisionKdTree.
+		 */
+		static void PreprocessGridWithOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc);
+
+		/// \brief computes sign of the distance field by negating and applying a recursive flood-fill algorithm for non-frozen voxels.
+		static void ComputeSignUsingFloodFill(Geometry::ScalarGrid& grid);
+		/// \brief after applying a pmp::HoleFilling, then all voxels whose outgoing ray intersects the mesh are interior.
+		static void ComputeSignUsingRays(Geometry::ScalarGrid& grid);
+	};
 
 } // namespace SDF

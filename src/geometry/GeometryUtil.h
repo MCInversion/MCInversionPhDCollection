@@ -20,5 +20,19 @@ namespace Geometry
 	 * \return true if the box intersects the triangle.
 	 */
 	[[nodiscard]] bool TriangleIntersectsBox(const std::vector<pmp::vec3>& vertices, const pmp::vec3& boxCenter, const pmp::vec3& boxHalfSize);
-	
+
+	/**
+	 * \brief An intersection test between a triangle and a ray. [Moller, Trumbore, 1997].
+	 * \param rayStart      start point of a ray.
+	 * \param rayDir        normalized direction vector of a ray.
+	 * \param triVertices   list of (three) vertices of a triangle.
+	 * \param minParam      minimum ray parameter.
+	 * \param maxParam      maximum ray parameter.
+	 * \return true if the ray intersects the triangle.
+	 */
+	[[nodiscard]] bool RayIntersectsTriangle(
+		const pmp::vec3& rayStart, const pmp::vec3& rayDir,
+		const std::vector<pmp::vec3>& triVertices,
+		const float& minParam = 0.0f, const float& maxParam = FLT_MAX);
+
 } // namespace Geometry
