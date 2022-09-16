@@ -10,9 +10,14 @@ namespace Geometry
 	/// \brief dimensions wrapper item for any grid object.
 	struct GridDimensions
 	{
-		size_t Nx;
-		size_t Ny;
-		size_t Nz;
+		size_t Nx{ 0 };
+		size_t Ny{ 0 };
+		size_t Nz{ 0 };
+
+		[[nodiscard]] bool Valid() const
+		{
+			return Nx > 0 && Ny > 0 && Nz > 0;
+		}
 	};
 
 	/// \brief A 3D grid object containing scalar values and additional flags for individual voxels.
@@ -74,6 +79,31 @@ namespace Geometry
 		{
 			return m_FrozenValues;
 		}
+
+		// ====== Operators ======================
+
+		bool operator==(const ScalarGrid& other) const;
+		bool operator!=(const ScalarGrid& other) const;
+		ScalarGrid& operator*= (const double& scalar);
+		ScalarGrid& operator*= (const ScalarGrid& other);
+		ScalarGrid& operator/= (const double& scalar);
+		ScalarGrid& operator/= (const ScalarGrid& other);
+		ScalarGrid& operator+= (const double& scalar);
+		ScalarGrid& operator+= (const ScalarGrid& other);
+		ScalarGrid& operator-= (const double& scalar);
+		ScalarGrid& operator-= (const ScalarGrid& other);
+		ScalarGrid operator* (const double& scalar) const;
+		ScalarGrid operator* (const ScalarGrid& other) const;
+		ScalarGrid operator/ (const double& scalar) const;
+		ScalarGrid operator/ (const ScalarGrid& other) const;
+		ScalarGrid operator+ (const double& scalar) const;
+		ScalarGrid operator+ (const ScalarGrid& other) const;
+		ScalarGrid operator- (const double& scalar) const;
+		ScalarGrid operator- (const ScalarGrid& other) const;
+
+		// ====== Validity ======================
+
+		[[nodiscard]] bool IsValid() const;
 
 	private:
 		pmp::BoundingBox m_Box{};
@@ -162,6 +192,31 @@ namespace Geometry
 		{
 			return m_FrozenValues;
 		}
+
+		// ====== Operators ======================
+
+		bool operator==(const VectorGrid& other) const;
+		bool operator!=(const VectorGrid& other) const;
+		VectorGrid& operator*= (const double& scalar);
+		VectorGrid& operator*= (const VectorGrid& other);
+		VectorGrid& operator/= (const double& scalar);
+		VectorGrid& operator/= (const VectorGrid& other);
+		VectorGrid& operator+= (const double& scalar);
+		VectorGrid& operator+= (const VectorGrid& other);
+		VectorGrid& operator-= (const double& scalar);
+		VectorGrid& operator-= (const VectorGrid& other);
+		VectorGrid operator* (const double& scalar) const;
+		VectorGrid operator* (const VectorGrid& other) const;
+		VectorGrid operator/ (const double& scalar) const;
+		VectorGrid operator/ (const VectorGrid& other) const;
+		VectorGrid operator+ (const double& scalar) const;
+		VectorGrid operator+ (const VectorGrid& other) const;
+		VectorGrid operator- (const double& scalar) const;
+		VectorGrid operator- (const VectorGrid& other) const;
+
+		// ====== Validity ======================
+
+		[[nodiscard]] bool IsValid() const;
 
 	private:
 		pmp::BoundingBox m_Box{};

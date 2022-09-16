@@ -17,12 +17,22 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 int main()
 {
+    constexpr float cellSize = 0.1207f / 40.0f;
+    constexpr SDF::DistanceFieldSettings sdfSettings{
+        cellSize,
+        SDF::KDTreeSplitType::Center,
+        1.0f,
+        0.2,
+        SDF::SignComputation::None,
+        SDF::BlurPostprocessingType::None,
+        SDF::PreprocessingType::Octree
+    };
+
     pmp::SurfaceMesh mesh;
     mesh.read(dataDirPath + "bunny.obj");
 
     const auto startSDF = std::chrono::high_resolution_clock::now();
-    constexpr float cellSize = 0.1207f / 40.0f;
-    const auto sdf = SDF::ComputeDistanceField(mesh, { cellSize });
+    const auto sdf = SDF::ComputeDistanceField(mesh, sdfSettings);
 
     const auto endSDF = std::chrono::high_resolution_clock::now();
     const std::chrono::duration<double> timeDiff = endSDF - startSDF;

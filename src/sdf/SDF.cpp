@@ -7,8 +7,13 @@
 
 namespace SDF
 {
-	// this one's painfully slow!
-	/*void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	/**
+	 * \brief A preprocessing approach for distance grid using CollisionKdTree to create "voxel outline" of inputMesh.
+	 * \param grid         modifiable input grid.
+	 * \param inputMesh    input mesh.
+	 * \param spltFunc     split function used in CollisionKdTree.
+	 */
+	void PreprocessGridNoOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
 	{
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
@@ -22,6 +27,7 @@ namespace SDF
 		const float cellSize = grid.CellSize();
 
 		std::vector triangle{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
+		pmp::vec3 voxelCenter, voxelMin, voxelMax;
 
 		for (unsigned int iz = 0; iz < dims.Nz; iz++)
 		{
@@ -29,23 +35,17 @@ namespace SDF
 			{
 				for (unsigned int ix = 0; ix < dims.Nx; ix++)
 				{
-					const pmp::vec3 voxelCenter{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
-					};
+					voxelCenter[0] = orig[0] + (static_cast<float>(ix) + 0.5f) * cellSize;
+					voxelCenter[1] = orig[1] + (static_cast<float>(iy) + 0.5f) * cellSize;
+					voxelCenter[2] = orig[2] + (static_cast<float>(iz) + 0.5f) * cellSize;
 
-					const pmp::vec3 voxelMin{
-						voxelCenter[0] - 0.5f * cellSize,
-						voxelCenter[1] - 0.5f * cellSize,
-						voxelCenter[2] - 0.5f * cellSize
-					};
+					voxelMin[0] = voxelCenter[0] - 0.5f * cellSize;
+					voxelMin[1] = voxelCenter[1] - 0.5f * cellSize;
+					voxelMin[2] = voxelCenter[2] - 0.5f * cellSize;
 
-					const pmp::vec3 voxelMax{
-						voxelCenter[0] + 0.5f * cellSize,
-						voxelCenter[1] + 0.5f * cellSize,
-						voxelCenter[2] + 0.5f * cellSize
-					};
+					voxelMax[0] = voxelCenter[0] + 0.5f * cellSize;
+					voxelMax[1] = voxelCenter[1] + 0.5f * cellSize;
+					voxelMax[2] = voxelCenter[2] + 0.5f * cellSize;
 
 					const pmp::BoundingBox voxelBox{ voxelMin , voxelMax };
 					std::vector<unsigned int> voxelTriangleIds{};
@@ -76,9 +76,15 @@ namespace SDF
 				}
 			}
 		}
-	}*/
+	}
 
-	void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	/**
+	 * \brief A preprocessing approach for distance grid using CollisionKdTree and OctreeVoxelizer to create "voxel outline" of inputMesh.
+	 * \param grid         modifiable input grid.
+	 * \param inputMesh    input mesh.
+	 * \param spltFunc     split function used in CollisionKdTree.
+	 */
+	void PreprocessGridWithOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
 	{
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
@@ -111,6 +117,21 @@ namespace SDF
 			gridVals[gridPos] = valueBuffer[i];
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
+	}
+
+	using PreprocessingFunction = std::function<void(Geometry::ScalarGrid&, const pmp::SurfaceMesh&, const SplitFunction&)>;
+
+	/**
+	 * \brief Provides a preprocessing functor according to the given setting.
+	 * \param preprocType      preprocessing type identifier.
+	 * \return the preprocessing function identified by preprocType.
+	 */
+	[[nodiscard]] PreprocessingFunction GetPreprocessingFunction(const PreprocessingType& preprocType)
+	{
+		if (preprocType == PreprocessingType::Octree)
+			return PreprocessGridWithOctree;
+
+		return PreprocessGridNoOctree;
 	}
 
 	/**
@@ -149,7 +170,9 @@ namespace SDF
 		// percentage of the minimum half-size of the mesh's bounding box.
 		const double truncationValue = (settings.TruncationFactor < DBL_MAX ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : DBL_MAX);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, sdfBBox, truncationValue);
-		PreprocessGrid(resultGrid, inputMesh, GetSplitFunction(settings.KDTreeSplit));
+
+		const auto preprocessGrid = GetPreprocessingFunction(settings.PreprocType);
+		preprocessGrid(resultGrid, inputMesh, GetSplitFunction(settings.KDTreeSplit));
 
 		if (truncationValue > 0.0)
 		{

@@ -5,6 +5,13 @@
 
 namespace SDF
 {
+	/// \brief enumerator for grid preprocessing function type for distance field.
+	enum class [[nodiscard]] PreprocessingType
+	{
+		Octree = 0,  //>! preprocess ScalarGrid using an OctreeVoxelizer.
+		NoOctree = 1 //>! preprocess ScalarGrid without using an OctreeVoxelizer.
+	};
+
 	/// \brief enumerator for split function type for Kd tree.
 	enum class [[nodiscard]] KDTreeSplitType
 	{
@@ -39,6 +46,7 @@ namespace SDF
 		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of mesh's bounding box gives rise to a truncation (cutoff) value for the distance field.
 		SignComputation SignMethod{ SignComputation::None }; //>! method by which the sign of the distance field should be computed.
 		BlurPostprocessingType BlurType{ BlurPostprocessingType::None }; //>! type of blur filter to be used for post-processing.
+		PreprocessingType PreprocType{ PreprocessingType::Octree }; //>! function type for the preprocessing of distance field scalar grid.
 	};
 
 	/**
@@ -49,4 +57,5 @@ namespace SDF
 	 */
 	[[nodiscard]] Geometry::ScalarGrid ComputeDistanceField(
 		const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings);
-}
+
+} // namespace SDF
