@@ -1,6 +1,7 @@
 #include "SDF.h"
 
 #include "CollisionKdTree.h"
+#include "FastSweep.h"
 #include "OctreeVoxelizer.h"
 #include "geometry/GeometryUtil.h"
 
@@ -77,7 +78,7 @@ namespace SDF
 		}
 	}*/
 
-	/**/void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	void PreprocessGrid(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
 	{
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
@@ -92,7 +93,6 @@ namespace SDF
 		std::vector<double> valueBuffer{};
 		octreeVox.GetLeafBoxesAndValues(boxBuffer, valueBuffer);
 		const size_t nOutlineVoxels = boxBuffer.size();
-		const auto& oBox = octreeVox.GetRootBox();
 		const float gBoxMinX = gridBox.min()[0]; const float gBoxMinY = gridBox.min()[1];	const float gBoxMinZ = gridBox.min()[2];
 
 		const auto& dims = grid.Dimensions();
@@ -130,25 +130,32 @@ namespace SDF
 	// ===============================================================================================
 	//
 
-
 	Geometry::ScalarGrid ComputeDistanceField(
-		const pmp::SurfaceMesh& inputMesh, const float& cellSize, const KDTreeSplitType& splitType,
-		const float& volumeExpansion, const bool& computeSign)
+		const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings)
 	{
-		assert(cellSize > 0.0f);
-		assert(volumeExpansion >= 0.0f);
+		assert(settings.CellSize > 0.0f);
+		assert(settings.VolumeExpansionFactor >= 0.0f);
 
 		auto sdfBBox = inputMesh.bounds();
-		if (volumeExpansion > 0.0f)
+		const auto size = sdfBBox.max() - sdfBBox.min();
+		const float minSize = std::min({ size[0], size[1], size[2] });
+
+		if (settings.VolumeExpansionFactor > 0.0f)
 		{
-			const auto size = sdfBBox.max() - sdfBBox.min();
-			const float minSize = std::min({ size[0], size[1], size[2] });
-			const float expansion = volumeExpansion * minSize;
+			const float expansion = settings.VolumeExpansionFactor * minSize;
 			sdfBBox.expand(expansion, expansion, expansion);
 		}
 
-		Geometry::ScalarGrid resultGrid(cellSize, sdfBBox);
-		PreprocessGrid(resultGrid, inputMesh, GetSplitFunction(splitType));
+		// percentage of the minimum half-size of the mesh's bounding box.
+		const double truncationValue = (settings.TruncationFactor < DBL_MAX ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : DBL_MAX);
+		Geometry::ScalarGrid resultGrid(settings.CellSize, sdfBBox, truncationValue);
+		PreprocessGrid(resultGrid, inputMesh, GetSplitFunction(settings.KDTreeSplit));
+
+		if (truncationValue > 0.0)
+		{
+			constexpr SweepSolverSettings fsSettings{};
+			FastSweep(resultGrid, fsSettings);			
+		}
 
 		return resultGrid;
 	}

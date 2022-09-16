@@ -213,6 +213,18 @@ set_target_properties(
     stb_image
     pmp
 PROPERTIES FOLDER "PMP_Lib")
+
+# ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
+#
+# VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
+# so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
+#
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(ShrinkWrap PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
+# Set ShrinkWrap the startup project
+if (MSVC)
+	set_property(DIRECTORY ${ROOT_DIR} PROPERTY VS_STARTUP_PROJECT ShrinkWrap)
+endif()
 # =======================================================
 
 if(NOT EMSCRIPTEN AND PMP_INSTALL)
