@@ -1153,6 +1153,9 @@ public:
     void write(const std::string& filename,
                const IOFlags& flags = IOFlags()) const;
 
+    //! get the name of this surface mesh.
+    [[nodiscard]] std::string name() const { return name_; }
+
     //!@}
     //! \name Add new elements by hand
     //!@{
@@ -2102,6 +2105,8 @@ private:
     std::vector<bool> add_face_is_new_;
     std::vector<bool> add_face_needs_adjust_;
     NextCache add_face_next_cache_;
+
+    std::string name_;
 };
 
 //!@}

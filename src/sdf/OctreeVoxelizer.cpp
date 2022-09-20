@@ -12,6 +12,7 @@ namespace SDF
 	 * \param startBox         bounding box to start from.
 	 * \param targetLeafSize   preferred leaf size for the octree voxelizer.
 	 * \return cube bounding box for octree voxelizer.
+	 * \throw std::logic error if targetLeafSize <= 0.0f.
 	 */
 	[[nodiscard]] pmp::BoundingBox ComputeCubeBoxFromTargetLeafSize(const pmp::BoundingBox& startBox, const float& targetLeafSize)
 	{
@@ -44,6 +45,11 @@ namespace SDF
 			cubeBoxCenter[1] + cubeBoxHalfDim,
 			cubeBoxCenter[2] + cubeBoxHalfDim
 		};
+
+		std::cout << "OctreeVoxelizer:\n";
+		std::cout << "       expectedDepth = " << expectedDepth << "\n";
+		std::cout << "       cubeBoxCenter = " << cubeBoxCenter << "\n";
+		std::cout << "       cubeBoxHalfDim = " << cubeBoxHalfDim << "\n";
 
 		return { cubeBoxMin, cubeBoxMax };
 	}

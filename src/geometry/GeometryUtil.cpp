@@ -194,7 +194,8 @@ namespace Geometry
 	 * \param boxMax     max point of a box.
 	 * \return true if the plane intersects the box.
 	 */
-	[[nodiscard]] bool PlaneIntersectsBox(const pmp::vec3& normal, const pmp::vec3& refPt, const pmp::vec3& boxMax) {
+	[[nodiscard]] bool PlaneIntersectsBox(const pmp::vec3& normal, const pmp::vec3& refPt, const pmp::vec3& boxMax) 
+	{
 		pmp::vec3 vmin, vmax;
 
 		for (int q = 0; q <= 2; q++) 

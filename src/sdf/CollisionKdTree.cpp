@@ -21,8 +21,19 @@ namespace SDF
 	pmp::SurfaceMesh GetTriangulatedSurfaceMesh(const pmp::SurfaceMesh& mesh)
 	{
 		pmp::SurfaceMesh result(mesh);
-		pmp::Triangulation tri(result);
-		tri.triangulate();
+		/*pmp::Triangulation tri(result);
+		tri.triangulate();*/
+		// TODO: Use Poly2Tri
+
+		for (const auto f : result.faces())
+		{
+			if (result.valence(f) == 3)
+				continue;
+
+			const auto vBegin = *result.vertices(f).begin();
+			result.split(f, vBegin);
+		}
+
 		return result;
 	}
 

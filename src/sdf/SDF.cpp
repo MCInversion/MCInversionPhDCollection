@@ -14,7 +14,7 @@
 
 namespace SDF
 {
-	void DistanceFieldGenerator::PreprocessGridNoOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	void DistanceFieldGenerator::PreprocessGridNoOctree(Geometry::ScalarGrid& grid)
 	{
 		assert(m_KdTree);
 		auto& gridVals = grid.Values();
@@ -78,7 +78,7 @@ namespace SDF
 		}
 	}
 
-	void DistanceFieldGenerator::PreprocessGridWithOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc)
+	void DistanceFieldGenerator::PreprocessGridWithOctree(Geometry::ScalarGrid& grid)
 	{
 		assert(m_KdTree);
 		auto& gridVals = grid.Values();
@@ -92,12 +92,19 @@ namespace SDF
 		std::vector<double> valueBuffer{};
 		octreeVox.GetLeafBoxesAndValues(boxBuffer, valueBuffer);
 		const size_t nOutlineVoxels = boxBuffer.size();
-		const float gBoxMinX = gridBox.min()[0]; const float gBoxMinY = gridBox.min()[1];	const float gBoxMinZ = gridBox.min()[2];
+		const float gBoxMinX = gridBox.min()[0];
+		const float gBoxMinY = gridBox.min()[1];
+		const float gBoxMinZ = gridBox.min()[2];
 
 		const auto& dims = grid.Dimensions();
-		const unsigned int Nx = dims.Nx; const unsigned int Ny = dims.Ny;
-
+		const auto Nx = static_cast<unsigned int>(dims.Nx);
+		const auto Ny = static_cast<unsigned int>(dims.Ny);
 		unsigned int ix, iy, iz, gridPos;
+
+		float outlineXMin = FLT_MAX;
+		float outlineXMax = -FLT_MAX;
+		float outlineIndexedXMin = FLT_MAX;
+		float outlineIndexedXMax = -FLT_MAX;
 
 		for (size_t i = 0; i < nOutlineVoxels; i++)
 		{
@@ -106,10 +113,23 @@ namespace SDF
 			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 			iz = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
 
+			const float xPos = gBoxMinX + ix * cellSize;
+			if (xPos < outlineIndexedXMin)
+				outlineIndexedXMin = xPos;
+			if (xPos > outlineIndexedXMax)
+				outlineIndexedXMax = xPos;
+			if (boxBuffer[i]->min()[0] < outlineXMin)
+				outlineXMin = boxBuffer[i]->min()[0];
+			if (boxBuffer[i]->max()[0] > outlineXMax)
+				outlineXMax = boxBuffer[i]->max()[0];
+
 			gridPos = Nx * Ny * iz + Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
+
+		std::cout << "boxes reach from: " << outlineXMin << " to " << outlineXMax << "\n";
+		std::cout << "indices reach from: " << outlineIndexedXMin << " to " << outlineIndexedXMax << "\n";
 	}
 
 	PreprocessingFunction DistanceFieldGenerator::GetPreprocessingFunction(const PreprocessingType& preprocType)
@@ -184,19 +204,107 @@ namespace SDF
 		}
 	}
 
+#define REPORT_SDF_STEPS true // Note: may affect performance
+
+	[[nodiscard]] std::string PrintKDTreeSplitType(const KDTreeSplitType& type)
+	{
+		if (type == KDTreeSplitType::Adaptive)
+			return "KDTreeSplitType::Adaptive";
+
+		return "KDTreeSplitType::Center";
+	}
+
+	[[nodiscard]] std::string PrintSignMethod(const SignComputation& type)
+	{
+		if (type == SignComputation::VoxelFloodFill)
+			return "SignComputation::VoxelFloodFill";
+		if (type == SignComputation::RayFromAHoleFilledMesh)
+			return "SignComputation::RayFromAHoleFilledMesh";
+
+		return "SignComputation::None";
+	}
+
+	[[nodiscard]] std::string PrintBlurType(const BlurPostprocessingType& type)
+	{
+		if (type == BlurPostprocessingType::ThreeCubedVoxelAveraging)
+			return "BlurPostprocessingType::ThreeCubedVoxelAveraging";
+		if (type == BlurPostprocessingType::FiveCubedVoxelAveraging)
+			return "BlurPostprocessingType::FiveCubedVoxelAveraging";
+		if (type == BlurPostprocessingType::ThreeCubedVoxelGaussian)
+			return "BlurPostprocessingType::ThreeCubedVoxelGaussian";
+		if (type == BlurPostprocessingType::FiveCubedVoxelGaussian)
+			return "BlurPostprocessingType::FiveCubedVoxelGaussian";
+
+		return "BlurPostprocessingType::None";
+	}
+
+	[[nodiscard]] std::string PrintPreprocessingType(const PreprocessingType& type)
+	{
+		if (type == PreprocessingType::Octree)
+			return "PreprocessingType::Octree";
+
+		return "PreprocessingType::NoOctree";
+	}
+
+	/**
+	 * \brief Reports DistanceFieldGenerator's input to a given stream.
+	 * \param inputMesh   input mesh for DistanceFieldGenerator.
+	 * \param settings    input settings for DistanceFieldGenerator.
+	 * \param os          output stream.
+	 */
+	void ReportInput(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings, std::ostream& os)
+	{
+		const auto bbox = inputMesh.bounds();
+		os << "======================================================================\n";
+		os << "> > > > > Initiating DistanceFieldGenerator::Generate for: < < < < < <\n";
+		os << "inputMesh: " << inputMesh.name() << "\n";
+		os << "           NVertices: " << inputMesh.n_vertices() << ",\n";
+		os << "           NFaces: " << inputMesh.n_faces() << ",\n";
+		os << "           Min: {" << bbox.min()[0] << ", " << bbox.min()[1] << ", " << bbox.min()[2] << "},\n";
+		os << "           Max: {" << bbox.max()[0] << ", " << bbox.max()[1] << ", " << bbox.max()[2] << "},\n";
+		os << "           Size: {"
+			<< (bbox.max()[0] - bbox.min()[0]) << ", "
+			<< (bbox.max()[1] - bbox.min()[1]) << ", "
+			<< (bbox.max()[2] - bbox.min()[2]) << "},\n";
+		os << "           Center: {"
+			<< 0.5f * (bbox.max()[0] + bbox.min()[0]) << ", "
+		    << 0.5f * (bbox.max()[1] + bbox.min()[1]) << ", "
+		    << 0.5f * (bbox.max()[2] + bbox.min()[2]) << "},\n";
+		os << "----------------------------------------------------------------------\n";
+		os << "CellSize: " << settings.CellSize << "\n";
+		os << "VolumeExpansionFactor: " << settings.VolumeExpansionFactor << "\n";
+		os << "TruncationFactor: " << settings.TruncationFactor << "\n";
+		os << "......................................................................\n";
+		os << "PreprocessingType: " << PrintKDTreeSplitType(settings.KDTreeSplit) << "\n";
+		os << "KDTreeSplit: " << PrintKDTreeSplitType(settings.KDTreeSplit) << "\n";
+		os << "SignMethod: " << PrintSignMethod(settings.SignMethod) << "\n";
+		os << "BlurType: " << PrintPreprocessingType(settings.PreprocType) << "\n";
+		os << "----------------------------------------------------------------------\n";
+	}
+
 	//
 	// ===============================================================================================
 	//
 
 	Geometry::ScalarGrid DistanceFieldGenerator::Generate(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings)
 	{
+		Clear();
+#if REPORT_SDF_STEPS
+		ReportInput(inputMesh, settings, std::cout);
+#endif
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
 
 		m_Mesh = inputMesh;
 		if (settings.SignMethod != SignComputation::None)
 		{
+#if REPORT_SDF_STEPS
+			std::cout << "FillMeshHoles ... ";
+#endif
 			FillMeshHoles(m_Mesh); // make mesh watertight
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
 		}
 
 		auto sdfBBox = m_Mesh.bounds();
@@ -212,28 +320,58 @@ namespace SDF
 		// percentage of the minimum half-size of the mesh's bounding box.
 		const double truncationValue = (settings.TruncationFactor < DBL_MAX ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : DBL_MAX);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, sdfBBox, truncationValue);
-
+#if REPORT_SDF_STEPS
+		std::cout << "truncationValue: " << truncationValue << "\n";
+		std::cout << "CollisionKdTree ... ";
+#endif
 		m_KdTree = std::make_unique<CollisionKdTree>(m_Mesh, GetSplitFunction(settings.KDTreeSplit));
+#if REPORT_SDF_STEPS
+		std::cout << "done\n";
+#endif
+#if REPORT_SDF_STEPS
+		std::cout << "preprocessGrid ... ";
+#endif
 		const auto preprocessGrid = GetPreprocessingFunction(settings.PreprocType);
-		preprocessGrid(resultGrid, m_Mesh, GetSplitFunction(settings.KDTreeSplit));
+		preprocessGrid(resultGrid);
+#if REPORT_SDF_STEPS
+		std::cout << "done\n";
+#endif
 
 		if (truncationValue > 0.0)
 		{
+#if REPORT_SDF_STEPS
+			std::cout << "FastSweep ... ";
+#endif
 			constexpr SweepSolverSettings fsSettings{};
 			FastSweep(resultGrid, fsSettings);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
 		}
 
 		if (settings.SignMethod != SignComputation::None)
 		{
+#if REPORT_SDF_STEPS
+			std::cout << "signFunction ... ";
+#endif
 			const auto signFunction = GetSignFunction(settings.SignMethod);
 			signFunction(resultGrid);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
 		}
 
 		// blur postprocessing
 		if (settings.BlurType != BlurPostprocessingType::None)
 		{
+#if REPORT_SDF_STEPS
+			std::cout << "blurFunction ... ";
+#endif
 			const auto blurFunction = GetBlurFunction(settings.BlurType);
 			blurFunction(resultGrid);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
 		}
 		return resultGrid;
 	}
@@ -280,6 +418,8 @@ namespace SDF
 
 			ix = ids[0]; iy = ids[1]; iz = ids[2];
 			gridPos = dim.Nx * dim.Ny * iz + dim.Nx * iy + ix;
+			//if (gridPos >= gridFrozenVals.size())
+			//	continue;
 
 			if (!gridFrozenVals[gridPos]) {
 				val = -1.0 * gridVals[gridPos];
@@ -369,6 +509,12 @@ namespace SDF
 			}
 		}
 		grid.FrozenValues() = origFrozenFlags;
+	}
+
+	void DistanceFieldGenerator::Clear()
+	{
+		m_Mesh.clear();
+		m_KdTree = nullptr;
 	}
 
 } // namespace SDF

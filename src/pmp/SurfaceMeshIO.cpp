@@ -47,6 +47,8 @@ void SurfaceMeshIO::read(SurfaceMesh& mesh)
     std::string ext = filename_.substr(dot + 1, filename_.length() - dot - 1);
     std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
 
+    mesh.name_ = filename_.substr(filename_.find_last_of("/\\") + 1);
+
     // extension determines reader
     if (ext == "off")
         read_off(mesh);

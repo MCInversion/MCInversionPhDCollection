@@ -42,9 +42,9 @@ namespace SDF
 	struct DistanceFieldSettings
 	{
 		float CellSize{ 1.0f }; //>! size of a single distance voxel.
-		KDTreeSplitType KDTreeSplit{ KDTreeSplitType::Center }; //>! the choice of a split function for KD-tree.
 		float VolumeExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of mesh's bounding box) for the resulting scalar grid volume.
 		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of mesh's bounding box gives rise to a truncation (cutoff) value for the distance field.
+		KDTreeSplitType KDTreeSplit{ KDTreeSplitType::Center }; //>! the choice of a split function for KD-tree.
 		SignComputation SignMethod{ SignComputation::None }; //>! method by which the sign of the distance field should be computed.
 		BlurPostprocessingType BlurType{ BlurPostprocessingType::None }; //>! type of blur filter to be used for post-processing.
 		PreprocessingType PreprocType{ PreprocessingType::Octree }; //>! function type for the preprocessing of distance field scalar grid.
@@ -54,7 +54,7 @@ namespace SDF
 	using SignFunction = std::function<void(Geometry::ScalarGrid&)> const;
 
 	/// \brief a functor for preprocessing the scalar grid for distance field.
-	using PreprocessingFunction = std::function<void(Geometry::ScalarGrid&, const pmp::SurfaceMesh&, const SplitFunction&)>;
+	using PreprocessingFunction = std::function<void(Geometry::ScalarGrid&)>;
 
 	/// \brief A singleton object for computing distance fields to triangle meshes.
 	class DistanceFieldGenerator
@@ -92,23 +92,21 @@ namespace SDF
 		/**
 		 * \brief A preprocessing approach for distance grid using CollisionKdTree to create "voxel outline" of inputMesh.
 		 * \param grid         modifiable input grid.
-		 * \param inputMesh    input mesh.
-		 * \param spltFunc     split function used in CollisionKdTree.
 		 */
-		static void PreprocessGridNoOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc);
+		static void PreprocessGridNoOctree(Geometry::ScalarGrid& grid);
 
 		/**
 		 * \brief A preprocessing approach for distance grid using CollisionKdTree and OctreeVoxelizer to create "voxel outline" of inputMesh.
 		 * \param grid         modifiable input grid.
-		 * \param inputMesh    input mesh.
-		 * \param spltFunc     split function used in CollisionKdTree.
 		 */
-		static void PreprocessGridWithOctree(Geometry::ScalarGrid& grid, const pmp::SurfaceMesh& inputMesh, const SplitFunction& spltFunc);
+		static void PreprocessGridWithOctree(Geometry::ScalarGrid& grid);
 
 		/// \brief computes sign of the distance field by negating and applying a recursive flood-fill algorithm for non-frozen voxels.
 		static void ComputeSignUsingFloodFill(Geometry::ScalarGrid& grid);
 		/// \brief after applying a pmp::HoleFilling, then all voxels whose outgoing ray intersects the mesh are interior.
 		static void ComputeSignUsingRays(Geometry::ScalarGrid& grid);
+		/// \brief clear before use.
+		static void Clear();
 	};
 
 } // namespace SDF
