@@ -16,6 +16,13 @@ namespace Geometry
 	}
 
 	/**
+	 * \brief Negates the relevant sub-volume of the scalar grid.
+	 * \param grid        input scalar grid.
+	 * \param subBox      box which should be the sub-box of the grid's box.
+	 */
+	void NegateGridSubVolume(ScalarGrid& grid, const pmp::BoundingBox& subBox);
+
+	/**
 	 * \brief Apply a 3x3x3 averaging kernel onto a given grid
 	 * \param grid    input grid.
 	 */

@@ -2,8 +2,11 @@
 
 #include "geometry/GeometryUtil.h"
 
+#include "pmp/algorithms/Triangulation.h"
+
 #include <numeric>
 #include <stack>
+
 
 namespace SDF
 {
@@ -18,18 +21,8 @@ namespace SDF
 	pmp::SurfaceMesh GetTriangulatedSurfaceMesh(const pmp::SurfaceMesh& mesh)
 	{
 		pmp::SurfaceMesh result(mesh);
-
-		// TODO: Use Poly2Tri
-
-		for (const auto f : result.faces())
-		{
-			if (result.valence(f) == 3)
-				continue;
-
-			const auto vBegin = *result.vertices(f).begin();
-			result.split(f, vBegin);
-		}
-
+		pmp::Triangulation tri(result);
+		tri.triangulate();
 		return result;
 	}
 
@@ -73,21 +66,22 @@ namespace SDF
 	/**
 	 * \brief Computes the preference for split axis during KD tree construction.
 	 * \param box    evaluated bounding box.
+	 * \return index of the preferred axis.
 	 */
-	[[nodiscard]] SplitAxisPreference GetSplitAxisPreference(const pmp::BoundingBox& box)
+	[[nodiscard]] unsigned int GetSplitAxisPreference(const pmp::BoundingBox& box)
 	{
 		if ((box.max()[0] - box.min()[0]) > (box.max()[1] - box.min()[1]) &&
 			(box.max()[0] - box.min()[0]) > (box.max()[2] - box.min()[2]))
 		{
-			return SplitAxisPreference::XAxis;
+			return 0; // X-axis;
 		}
 
 		if ((box.max()[1] - box.min()[1]) > (box.max()[2] - box.min()[2]))
 		{
-			return SplitAxisPreference::YAxis;
+			return 1; //  Y-axis;
 		}
 
-		return SplitAxisPreference::ZAxis;
+		return 2; // Z-axis;
 	}
 
 	//
@@ -133,7 +127,7 @@ namespace SDF
 		const size_t nFaces = facesIn.size();
 
 		const auto center = splitData.box->center();
-		const unsigned int axisId = (splitData.axis == SplitAxisPreference::XAxis ? 0 : (splitData.axis == SplitAxisPreference::YAxis ? 1 : 2));
+		const unsigned int axisId = splitData.axis;
 
 		const auto& vertices = splitData.kdTree->VertexPositions();
 		const auto& triVertexIds = splitData.kdTree->TriVertexIds();
@@ -167,7 +161,7 @@ namespace SDF
 	{
 		const auto nFaces = static_cast<unsigned int>(facesIn.size());
 		const auto& box = *splitData.box;
-		const unsigned int axisId = (splitData.axis == SplitAxisPreference::XAxis ? 0 : (splitData.axis == SplitAxisPreference::YAxis ? 1 : 2));
+		const unsigned int axisId = splitData.axis;
 		const auto& vertices = splitData.kdTree->VertexPositions();
 		const auto& triVertexIds = splitData.kdTree->TriVertexIds();
 
@@ -375,9 +369,8 @@ namespace SDF
 	}
 
 	[[nodiscard]] pmp::BoundingBox GetChildBox(
-		const pmp::BoundingBox& parentBox, const float& splitPos, const SplitAxisPreference& axisPreference, const bool& isLeft)
+		const pmp::BoundingBox& parentBox, const float& splitPos, const unsigned int& axisId, const bool& isLeft)
 	{
-		const unsigned int axisId = (axisPreference == SplitAxisPreference::XAxis ? 0 : (axisPreference == SplitAxisPreference::YAxis ? 1 : 2));
 		pmp::BoundingBox childBox(parentBox);
 		if (isLeft)
 			childBox.max()[axisId] = splitPos;
@@ -656,13 +649,12 @@ namespace SDF
 		return false;
 	}
 
-	bool CollisionKdTree::RayIntersectsATriangle(const Ray& ray) const
+	bool CollisionKdTree::RayIntersectsATriangle(Geometry::Ray& ray) const
 	{
 		Node* nearNode = nullptr;
 		Node* farNode = nullptr;
 		float t_split;
 		bool leftIsNear, force_near, force_far, t_splitAtInfinity;
-		int axisId;
 		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 
 		std::stack<Node*> stack = {};
@@ -680,15 +672,14 @@ namespace SDF
 					triVerts[0] = m_VertexPositions[m_Triangles[triId].v0Id];
 					triVerts[1] = m_VertexPositions[m_Triangles[triId].v1Id];
 					triVerts[2] = m_VertexPositions[m_Triangles[triId].v2Id];
-					if (Geometry::RayIntersectsTriangle(ray.StartPt, ray.Direction, triVerts))
+					if (Geometry::RayIntersectsTriangle(ray, triVerts))
 						return true;
 				}
 
 				continue;
 			}
 
-			axisId = static_cast<int>(currentNode->axis);
-			leftIsNear = ray.StartPt[axisId] < currentNode->splitPosition;
+			leftIsNear = ray.StartPt[currentNode->axis] < currentNode->splitPosition;
 			nearNode = currentNode->left_child;
 			farNode = currentNode->right_child;
 			if (!leftIsNear)
@@ -697,20 +688,20 @@ namespace SDF
 				farNode = currentNode->left_child;
 			}
 
-			t_split = (currentNode->splitPosition - ray.StartPt[axisId]) * ray.InvDirection[axisId];
+			t_split = (currentNode->splitPosition - ray.StartPt[currentNode->axis]) * ray.InvDirection[currentNode->axis];
 			force_near = false;
 			force_far = false;
 			t_splitAtInfinity = t_split > FLT_MAX || t_split < -FLT_MAX;
 			if (t_splitAtInfinity) 
 			{
-				if (ray.StartPt[axisId] <= currentNode->splitPosition &&
-					ray.StartPt[axisId] >= currentNode->box.min()[axisId]) 
+				if (ray.StartPt[currentNode->axis] <= currentNode->splitPosition &&
+					ray.StartPt[currentNode->axis] >= currentNode->box.min()[currentNode->axis])
 				{
 					if (leftIsNear) force_near = true;
 					else force_far = true;
 				}
-				if (ray.StartPt[axisId] >= currentNode->splitPosition &&
-					ray.StartPt[axisId] <= currentNode->box.max()[axisId])
+				if (ray.StartPt[currentNode->axis] >= currentNode->splitPosition &&
+					ray.StartPt[currentNode->axis] <= currentNode->box.max()[currentNode->axis])
 				{
 					if (leftIsNear) force_near = true;
 					else force_far = true;
@@ -727,6 +718,58 @@ namespace SDF
 			}
 		}
 		return false;
+	}
+
+	unsigned int CollisionKdTree::GetRayTriangleIntersectionCount(Geometry::Ray& ray) const
+	{
+		unsigned int hitCount = 0;
+		if (!Geometry::RayIntersectsABox(ray, m_Root->box))
+			return hitCount;
+
+		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
+		std::stack<Node*> stack = {};
+		stack.push(m_Root);
+
+		while (!stack.empty())
+		{
+			const Node* currentNode = stack.top();
+			stack.pop();
+
+			if (currentNode->IsALeaf())
+			{
+				for (const auto& triId : currentNode->triangleIds)
+				{
+					triVerts[0] = m_VertexPositions[m_Triangles[triId].v0Id];
+					triVerts[1] = m_VertexPositions[m_Triangles[triId].v1Id];
+					triVerts[2] = m_VertexPositions[m_Triangles[triId].v2Id];
+					if (Geometry::RayIntersectsTriangle(ray, triVerts))
+					{
+						hitCount++;
+					}
+				}
+				continue;
+			}
+
+			// currentNode is not a leaf
+
+			if (currentNode->left_child)
+			{
+				if (Geometry::RayIntersectsABox(ray, currentNode->left_child->box))
+				{
+					stack.push(currentNode->left_child);
+				}				
+			}
+
+			if (currentNode->right_child)
+			{
+				if (Geometry::RayIntersectsABox(ray, currentNode->right_child->box))
+				{
+					stack.push(currentNode->right_child);
+				}				
+			}
+		}
+
+		return hitCount;
 	}
 
 } // namespace SDF

@@ -3,18 +3,14 @@
 #include "pmp/SurfaceMesh.h"
 #include <vector>
 
+// forward decl
+namespace Geometry
+{
+	struct Ray;
+}
+
 namespace SDF
 {
-	/**
-	 * \brief Preference for split axis during KD tree construction.
-	 */
-	enum class [[nodiscard]] SplitAxisPreference
-	{
-		XAxis = 0, //>! the node's box is longest in the x direction, it should be split along the x-axis.
-		YAxis = 1, //>! the node's box is longest in the y direction, it should be split along the y-axis.
-		ZAxis = 2  //>! the node's box is longest in the z direction, it should be split along the z-axis.
-	};
-
 	// forward decl
 	class CollisionKdTree;
 
@@ -23,9 +19,9 @@ namespace SDF
 	 */
 	struct BoxSplitData
 	{
-		CollisionKdTree* kdTree;
-		const pmp::BoundingBox* box;
-		SplitAxisPreference axis;
+		CollisionKdTree* kdTree{ nullptr };
+		const pmp::BoundingBox* box{ nullptr };
+		unsigned int axis{0};
 	};
 
 	/**
@@ -56,17 +52,6 @@ namespace SDF
 		const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut);
 
 	// ======================================================================
-
-	/// \brief a wrapper for the parameters of a ray intersecting KD-tree boxes.
-	struct Ray
-	{
-		pmp::vec3 StartPt{};
-		pmp::vec3 Direction{ 1.0f, 0.0f, 0.0f };
-		pmp::vec3 InvDirection{ 1.0f, FLT_MAX, FLT_MAX };
-		float ParamMin{ 0.0f };
-		float ParamMax{ FLT_MAX };
-		unsigned int HitCount{ 0 };
-	};
 
 	//! \brief A k-d tree for collision detection with pmp::SurfaceMesh triangles
 	class CollisionKdTree
@@ -119,7 +104,14 @@ namespace SDF
          * \param ray    ray to intersect a triangle.
          * \return true if an intersection was detected.
          */
-        [[nodiscard]] bool RayIntersectsATriangle(const Ray& ray) const;
+        [[nodiscard]] bool RayIntersectsATriangle(Geometry::Ray& ray) const;
+
+        /**
+         * \brief Counts the number of intersections between a given ray and triangles in this kd-tree.
+         * \param ray    intersecting ray.
+         * \return the number of intersections.
+         */
+        [[nodiscard]] unsigned int GetRayTriangleIntersectionCount(Geometry::Ray& ray) const;
 
 	private:
 
@@ -139,7 +131,7 @@ namespace SDF
 				return (left_child == nullptr && right_child == nullptr);
             }
 
-			SplitAxisPreference axis{0};
+			unsigned int axis{0};
 			float splitPosition{ 0.0f };
 			pmp::BoundingBox box{};
 			std::vector<unsigned int> triangleIds{};

@@ -1,6 +1,9 @@
 #include "GeometryUtil.h"
 
+#include "sdf/CollisionKdTree.h"
+
 #include "pmp/MatVec.h"
+#include "pmp/BoundingBox.h"
 
 namespace Geometry
 {
@@ -327,47 +330,217 @@ namespace Geometry
 		return true;
 	}
 
-	// TODO: Implement hitCount!
-	bool RayIntersectsTriangle(
-		const pmp::vec3& rayStart, const pmp::vec3& rayDir,
-		const std::vector<pmp::vec3>& triVertices, const float& minParam, const float& maxParam)
+	/// \brief intersection tolerance for Moller-Trumbore algorithm.
+	constexpr float MT_INTERSECTION_EPSILON = 1e-6f;
+
+	bool RayIntersectsTriangle(Ray& ray, const std::vector<pmp::vec3>& triVertices)
 	{
-		constexpr float eps = 1e-8f;
-		pmp::vec3 h, s, q;
-		float a, f, u, v;
 		pmp::vec3 edge1 = triVertices[1] - triVertices[0];
 		pmp::vec3 edge2 = triVertices[2] - triVertices[0];
-		CROSS(h, rayDir, edge2);
-		a = DOT(edge1, h);
-		if (a > -eps && a < eps)
+		pmp::vec3 cross1;
+		CROSS(cross1, ray.Direction, edge2);
+		const float det = DOT(edge1, cross1);
+		if (det > -MT_INTERSECTION_EPSILON && det < MT_INTERSECTION_EPSILON)
 		{
-			return false;    // This ray is parallel to this triangle.
+			return false; // This ray is parallel to this triangle.
 		}
 
-		f = 1.0f / a;
-		s = rayStart - triVertices[0];
-		u = f * DOT(s, h);
-		if (u < 0.0 || u > 1.0)
+		const float invDet = 1.0f / det;
+		const auto startToTri0 = ray.StartPt - triVertices[0];
+		const float u = invDet * DOT(startToTri0, cross1);
+		if (u < 0.0f || u > 1.0f)
 		{
 			return false;
 		}
-		q = cross(s, edge1);
-		v = f * DOT(rayDir, q);
-		if (v < 0.0 || u + v > 1.0) 
+		pmp::vec3 cross2;
+		CROSS(cross2, startToTri0, edge1);
+		const float v = invDet * DOT(ray.Direction, cross2);
+		if (v < 0.0f || u + v > 1.0f) 
 		{
 			return false;
 		}
 
 		// At this stage we can compute t to find out where the intersection point is on the line.
-		float t = f * DOT(edge2, q);
-		//bool inOrNoRange = t < minParam;
-		//bool outOrNoRange = t > maxParam;
-		if (t > eps && t < (1.0f / eps)) 
+		const float t = invDet * DOT(edge2, cross2);
+		if (t > MT_INTERSECTION_EPSILON && t < 1.0f / MT_INTERSECTION_EPSILON &&
+			t >= ray.ParamMin && t <= ray.ParamMax)
 		{
+			ray.HitParam = t;
 			return true;
 		}
-
-		// This means that there is a line intersection but not a ray intersection.
+		// there is a line intersection but not a ray intersection.
 		return false;
 	}
+
+	//
+	// =========================================================================
+	//
+
+	/**
+	 * \brief Computes the preference for ray abs direction during ray-triangle intersection.
+	 * \param absDir    evaluated direction vector.
+	 * \return index of the preferred axis.
+	 */
+	[[nodiscard]] unsigned int MaxDim(const pmp::vec3& absDir)
+	{
+		if ((absDir[0] > absDir[1]) && (absDir[0] > absDir[2]))
+		{
+			return 0; // X-axis;
+		}
+
+		if (absDir[1] > absDir[2])
+		{
+			return 1; //  Y-axis;
+		}
+
+		return 2; // Z-axis;
+	}
+
+	Ray::Ray(const pmp::vec3& startPt, const pmp::vec3& dir)
+		: StartPt(startPt), Direction(dir)
+	{
+		// dir vector must be normalized.
+		const float dirLenSq = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+		if (dirLenSq >= 1.0f + FLT_EPSILON || dirLenSq <= 1.0f - FLT_EPSILON)
+		{
+			throw std::logic_error("Ray::Ray: ||dir|| != 1 ! Ray direction vector must be normalized!\n");
+		}
+
+		InvDirection[0] = 1.0f / dir[0];
+		InvDirection[1] = 1.0f / dir[1];
+		InvDirection[2] = 1.0f / dir[2];
+
+		// calculate id of max dimension of ray direction.
+		const pmp::vec3 absDir{ std::fabs(dir[0]), std::fabs(dir[1]), std::fabs(dir[2]) };
+		kz = MaxDim(absDir);
+		//kx = kz + 1; if (kx == 3) kx = 0;
+		//ky = kx + 1; if (ky == 3) ky = 0;
+		kx = (kz + 1) % 3;
+		ky = (kx + 1) % 3;
+		// swap kx and ky dims to preserve winding direction of triangles.
+		if (dir[kz] < 0.0f) std::swap(kx, ky);
+		// calculate shear constants
+		Sx = dir[kx] / dir[kz];
+		Sy = dir[ky] / dir[kz];
+		Sz = 1.0f / dir[kz];
+	}
+
+	/// \brief if true, we use backface-culling (i.e. skipping triangles whose normals point away from the ray).
+#define BACKFACE_CULLING false
+	
+	bool RayIntersectsTriangleWatertight(Ray& ray, const std::vector<pmp::vec3>& triVertices)
+	{
+		// actual alg
+		const pmp::vec3 A = triVertices[0] - ray.StartPt;
+		const pmp::vec3 B = triVertices[1] - ray.StartPt;
+		const pmp::vec3 C = triVertices[2] - ray.StartPt;
+		const float Ax = A[ray.kx] - ray.Sx * A[ray.kz];
+		const float Ay = A[ray.ky] - ray.Sy * A[ray.kz];
+		const float Bx = B[ray.kx] - ray.Sx * B[ray.kz];
+		const float By = B[ray.ky] - ray.Sy * B[ray.kz];
+		const float Cx = C[ray.kx] - ray.Sx * C[ray.kz];
+		const float Cy = C[ray.ky] - ray.Sy * C[ray.kz];
+		float U = Cx * By - Cy * Bx;
+		float V = Ax * Cy - Ay * Cx;
+		float W = Bx * Ay - By * Ax;
+		if (U == 0.0f || V == 0.0f || W == 0.0f) 
+		{
+			const double CxBy = static_cast<double>(Cx) * static_cast<double>(By);
+			const double CyBx = static_cast<double>(Cy) * static_cast<double>(Bx);
+			U = static_cast<float>(CxBy - CyBx);
+			const double AxCy = static_cast<double>(Ax) * static_cast<double>(Cy);
+			const double AyCx = static_cast<double>(Ay) * static_cast<double>(Cx);
+			V = static_cast<float>(AxCy - AyCx);
+			const double BxAy = static_cast<double>(Bx) * static_cast<double>(Ay);
+			const double ByAx = static_cast<double>(By) * static_cast<double>(Ax);
+			W = static_cast<float>(BxAy - ByAx);
+		}
+#if BACKFACE_CULLING
+		if (U < 0.0f || V < 0.0f || W < 0.0f) return false;
+#else
+		if ((U < 0.0f || V < 0.0f || W < 0.0f) &&
+		   (U > 0.0f || V > 0.0f || W > 0.0f)) return false;
+#endif
+		const float det = U + V + W;
+		if (det == 0.0f) return false;
+		const float Az = ray.Sz * A[ray.kz];
+		const float Bz = ray.Sz * B[ray.kz];
+		const float Cz = ray.Sz * C[ray.kz];
+		const float T = U * Az + V * Bz + W * Cz;
+		if (T < 0.0f || T > ray.HitParam * det)
+			return false;
+		
+		const float rcpDet = 1.0f / det; // reciprocal det
+		/*const float hitBCoordU = U * rcpDet;
+		const float hitBCoordV = V * rcpDet;
+		const float hitBCoordW = W * rcpDet;*/
+		ray.HitParam = T * rcpDet;
+		
+		return true;
+	}
+
+	// =========================================================================
+
+	constexpr unsigned int idVec[3] = { 0, 1, 2 };
+
+	// accelerated roundoff for watertightness [Woop, Benthin, Wald, 2013, p. 70]
+	float p = 1.0f + 2e-23f;
+	float m = 1.0f - 2e-23f;
+	[[nodiscard]] float up(const float a) { return a > 0.0f ? a * p : a * m; }
+	[[nodiscard]] float dn(const float a) { return a > 0.0f ? a * m : a * p; }
+	[[nodiscard]] float Up(const float a) { return a * p; }
+	[[nodiscard]] float Dn(const float a) { return a * m; }
+	constexpr float eps = 5.0f * 2e-24f;
+
+	bool RayIntersectsABox(const Ray& ray, const pmp::BoundingBox& box)
+	{
+		int nearX = static_cast<int>(idVec[ray.kx]), farX = static_cast<int>(idVec[ray.kx]);
+		int nearY = static_cast<int>(idVec[ray.ky]), farY = static_cast<int>(idVec[ray.ky]);
+		int nearZ = static_cast<int>(idVec[ray.kz]), farZ = static_cast<int>(idVec[ray.kz]);
+		if (ray.Direction[ray.kx] < 0.0f) std::swap(nearX, farX);
+		if (ray.Direction[ray.ky] < 0.0f) std::swap(nearY, farY);
+		if (ray.Direction[ray.kz] < 0.0f) std::swap(nearZ, farZ);
+
+		const pmp::vec3 absDMin{
+			std::fabs(ray.StartPt[0] - box.min()[0]),
+			std::fabs(ray.StartPt[1] - box.min()[1]),
+			std::fabs(ray.StartPt[2] - box.min()[2])
+		};
+		const pmp::vec3 absDMax{
+			std::fabs(ray.StartPt[0] - box.max()[0]),
+			std::fabs(ray.StartPt[1] - box.max()[1]),
+			std::fabs(ray.StartPt[2] - box.max()[2])
+		};
+		pmp::vec3 lower{Dn(absDMin[0]),	Dn(absDMin[1]),	Dn(absDMin[2])};
+		pmp::vec3 upper{Up(absDMax[0]),	Up(absDMax[1]),	Up(absDMax[2])};
+		const float max_z = std::max(lower[ray.kz], upper[ray.kz]);
+		const float err_near_x = Up(lower[ray.kx] + max_z);
+		const float err_near_y = Up(lower[ray.ky] + max_z);
+		float start_near_x = up(ray.StartPt[ray.kx] + Up(eps * err_near_x));
+		float start_near_y = up(ray.StartPt[ray.ky] + Up(eps * err_near_y));
+		const float start_near_z = ray.StartPt[ray.kz];
+		const float err_far_x = Up(upper[ray.kx] + max_z);
+		const float err_far_y = Up(upper[ray.ky] + max_z);
+		float start_far_x = dn(ray.StartPt[ray.kx] - Up(eps * err_far_x));
+		float start_far_y = dn(ray.StartPt[ray.ky] - Up(eps * err_far_y));
+		const float start_far_z = ray.StartPt[ray.kz];
+		if (ray.Direction[ray.kx] < 0.0f) std::swap(start_near_x, start_far_x);
+		if (ray.Direction[ray.ky] < 0.0f) std::swap(start_near_y, start_far_y);
+		const float rdir_near_x = Dn(Dn(ray.InvDirection[ray.kx]));
+		const float rdir_near_y = Dn(Dn(ray.InvDirection[ray.ky]));
+		const float rdir_near_z = Dn(Dn(ray.InvDirection[ray.kz]));
+		const float rdir_far_x = Up(Up(ray.InvDirection[ray.kx]));
+		const float rdir_far_y = Up(Up(ray.InvDirection[ray.ky]));
+		const float rdir_far_z = Up(Up(ray.InvDirection[ray.kz]));
+		float tNearX = (box.min()[nearX] - start_near_x) * rdir_near_x;
+		float tNearY = (box.min()[nearY] - start_near_y) * rdir_near_y;
+		float tNearZ = (box.min()[nearZ] - start_near_z) * rdir_near_z;
+		float tFarX = (box.max()[farX] - start_far_x) * rdir_far_x;
+		float tFarY = (box.max()[farY] - start_far_y) * rdir_far_y;
+		float tFarZ = (box.max()[farZ] - start_far_z) * rdir_far_z;
+		const float tNear = std::max({ tNearX, tNearY, tNearZ, ray.ParamMin });
+		const float tFar = std::min({ tFarX, tFarY, tFarZ, ray.ParamMax });
+		return tNear <= tFar;
+	}
+
 } // namespace Geometry

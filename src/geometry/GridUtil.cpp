@@ -112,7 +112,40 @@ namespace Geometry
 		}
 	}
 
-    void ApplyNarrowAveragingBlur(ScalarGrid& grid)
+	void NegateGridSubVolume(ScalarGrid& grid, const pmp::BoundingBox& subBox)
+	{
+		const auto& gridBox = grid.Box();
+		const auto dMin = subBox.min() - gridBox.min();
+		const auto dMax = subBox.max() - gridBox.min();
+		assert(dMin[0] >= 0.0f && dMin[1] >= 0.0f && dMin[2] >= 0.0f);
+		assert(dMax[0] >= 0.0f && dMax[1] >= 0.0f && dMax[2] >= 0.0f);
+
+		// compute sub-grid bounds
+		const auto& cellSize = grid.CellSize();
+		const unsigned int iXStart = std::floor(dMin[0] / cellSize);
+		const unsigned int iYStart = std::floor(dMin[1] / cellSize);
+		const unsigned int iZStart = std::floor(dMin[2] / cellSize);
+
+		const unsigned int iXEnd = std::floor(dMax[0] / cellSize);
+		const unsigned int iYEnd = std::floor(dMax[1] / cellSize);
+		const unsigned int iZEnd = std::floor(dMax[2] / cellSize);
+		const auto& dims = grid.Dimensions();
+		auto& values = grid.Values();
+		
+		for (unsigned int iz = iZStart; iz < iZEnd; iz++)
+		{
+			for (unsigned int iy = iYStart; iy < iYEnd; iy++)
+			{
+				for (unsigned int ix = iXStart; ix < iXEnd; ix++)
+				{
+					const unsigned int gridPos = dims.Nx * dims.Ny * iz + dims.Nx * iy + ix;
+					values[gridPos] *= -1.0;
+				}
+			}
+		}
+	}
+
+	void ApplyNarrowAveragingBlur(ScalarGrid& grid)
     {
 		constexpr int rad = static_cast<int>(NARROW_KERNEL_RADIUS);
 		const auto kernel = GetAveragingKernel(rad);

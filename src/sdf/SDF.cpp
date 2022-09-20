@@ -161,10 +161,10 @@ namespace SDF
 	SignFunction DistanceFieldGenerator::GetSignFunction(const SignComputation& signCompType)
 	{
 		if (signCompType == SignComputation::VoxelFloodFill)
-			return ComputeSignUsingFloodFill; // [&](auto& g) { ComputeSignUsingFloodFill(g); };
+			return ComputeSignUsingFloodFill;
 
 		if (signCompType == SignComputation::RayFromAHoleFilledMesh)
-			return ComputeSignUsingRays; //[&](auto& g) { ComputeSignUsingRays(g); };
+			return ComputeSignUsingRays;
 
 		return {}; // empty sign function
 	}
@@ -316,34 +316,59 @@ namespace SDF
 
 	void DistanceFieldGenerator::ComputeSignUsingRays(Geometry::ScalarGrid& grid)
 	{
+		const auto origFrozenFlags = grid.FrozenValues();
+		//Geometry::NegateGrid(grid);
+		const auto origMeshBox = m_Mesh.bounds();
+		Geometry::NegateGridSubVolume(grid, origMeshBox);
+		const auto& gridBox = grid.Box();
+
+		// grid sub-bounds
+		const auto dMin = origMeshBox.min() - gridBox.min();
+		const auto dMax = origMeshBox.max() - gridBox.min();
+		assert(dMin[0] >= 0.0f && dMin[1] >= 0.0f && dMin[2] >= 0.0f);
+		assert(dMax[0] >= 0.0f && dMax[1] >= 0.0f && dMax[2] >= 0.0f);
+
+		// compute sub-grid bounds
+		const auto& cellSize = grid.CellSize();
+		const unsigned int iXStart = std::floor(dMin[0] / cellSize);
+		const unsigned int iYStart = std::floor(dMin[1] / cellSize);
+		const unsigned int iZStart = std::floor(dMin[2] / cellSize);
+
+		const unsigned int iXEnd = std::floor(dMax[0] / cellSize);
+		const unsigned int iYEnd = std::floor(dMax[1] / cellSize);
+		const unsigned int iZEnd = std::floor(dMax[2] / cellSize);
+
 		auto& gridVals = grid.Values();
 		const auto& dims = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
 
-		Ray ray{};
-		std::vector triangle{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		pmp::vec3 gridPt;
+		const pmp::vec3 rayXDir{ 1.0f, 0.0, 0.0 };
+		Geometry::Ray ray{ gridPt, rayXDir };
 
-		for (unsigned int iz = 0; iz < dims.Nz; iz++)
+		for (unsigned int iz = iZStart; iz < iZEnd; iz++)
 		{
-			for (unsigned int iy = 0; iy < dims.Ny; iy++)
+			for (unsigned int iy = iYStart; iy < iYEnd; iy++)
 			{
-				for (unsigned int ix = 0; ix < dims.Nx; ix++) 
+				for (unsigned int ix = iXStart; ix < iXEnd; ix++)
 				{
 					gridPt[0] = orig[0] + ix * cellSize;
 					gridPt[1] = orig[1] + iy * cellSize;
 					gridPt[2] = orig[2] + iz * cellSize;
 
 					ray.StartPt = gridPt;
-					if (!m_KdTree->RayIntersectsATriangle(ray))
-						continue;
+					ray.HitParam = FLT_MAX;
+					const unsigned int nRayTriIntersections = m_KdTree->GetRayTriangleIntersectionCount(ray);
+					if (nRayTriIntersections % 2 == 1)
+						continue; // skip negated values of interior grid points
 
+					// negate negated values for exterior grid points
 					const unsigned int gridPos = dims.Nx * dims.Ny * iz + dims.Nx * iy + ix;
 					gridVals[gridPos] *= -1.0;
 				}
 			}
 		}
+		grid.FrozenValues() = origFrozenFlags;
 	}
 
 } // namespace SDF
