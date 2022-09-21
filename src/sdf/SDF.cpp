@@ -1,6 +1,5 @@
 #include "SDF.h"
 
-
 #include "geometry/GeometryUtil.h"
 #include "geometry/GridUtil.h"
 
@@ -101,13 +100,6 @@ namespace SDF
 		const auto Ny = static_cast<unsigned int>(dims.Ny);
 		unsigned int ix, iy, iz, gridPos;
 
-		// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
-		float outlineXMin = FLT_MAX;
-		float outlineXMax = -FLT_MAX;
-		float outlineIndexedXMin = FLT_MAX;
-		float outlineIndexedXMax = -FLT_MAX;
-		// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
-
 		for (size_t i = 0; i < nOutlineVoxels; i++)
 		{
 			// transform from real space to grid index space
@@ -115,26 +107,10 @@ namespace SDF
 			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 			iz = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
 
-			// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
-			const float xPos = gBoxMinX + ix * cellSize;
-			if (xPos < outlineIndexedXMin)
-				outlineIndexedXMin = xPos;
-			if (xPos > outlineIndexedXMax)
-				outlineIndexedXMax = xPos;
-			if (boxBuffer[i]->min()[0] < outlineXMin)
-				outlineXMin = boxBuffer[i]->min()[0];
-			if (boxBuffer[i]->max()[0] > outlineXMax)
-				outlineXMax = boxBuffer[i]->max()[0];
-			// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
-
 			gridPos = Nx * Ny * iz + Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
-		// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
-		std::cout << "boxes reach from: " << outlineXMin << " to " << outlineXMax << "\n";
-		std::cout << "indices reach from: " << outlineIndexedXMin << " to " << outlineIndexedXMax << "\n";
-		// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
 	}
 
 	PreprocessingFunction DistanceFieldGenerator::GetPreprocessingFunction(const PreprocessingType& preprocType)
@@ -209,7 +185,7 @@ namespace SDF
 		}
 	}
 
-#define REPORT_SDF_STEPS true // Note: may affect performance
+#define REPORT_SDF_STEPS false // Note: may affect performance
 
 	[[nodiscard]] std::string PrintKDTreeSplitType(const KDTreeSplitType& type)
 	{
@@ -251,12 +227,6 @@ namespace SDF
 		return "PreprocessingType::NoOctree";
 	}
 
-	/**
-	 * \brief Reports DistanceFieldGenerator's input to a given stream.
-	 * \param inputMesh   input mesh for DistanceFieldGenerator.
-	 * \param settings    input settings for DistanceFieldGenerator.
-	 * \param os          output stream.
-	 */
 	void ReportInput(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings, std::ostream& os)
 	{
 		const auto bbox = inputMesh.bounds();
@@ -287,16 +257,32 @@ namespace SDF
 		os << "----------------------------------------------------------------------\n";
 	}
 
+	void ReportOutput(const Geometry::ScalarGrid& grid, std::ostream& os)
+	{
+		os << "----------------------------------------------------------------------\n";
+		os << "> > > > > > > > > > > > Exporting ScalarGrid < < < < < < < < < < < < <\n";
+		const auto& dim = grid.Dimensions();
+		os << "Dimensions: " << dim.Nx << " x " << dim.Ny << " x " << dim.Nz << "\n";
+		os << "Cell Size: " << grid.CellSize() << "\n";
+		double maxVal = -DBL_MAX, minVal = DBL_MAX;
+		for (const auto& val : grid.Values())
+		{
+			if (val > maxVal) maxVal = val;
+			if (val < minVal) minVal = val;
+		}
+		os << "Min value: " << minVal << ", Max value: " << maxVal << "\n";
+		const auto& box = grid.Box();
+		os << "Bounds:    Min: {" << box.min()[0] << ", " << box.min()[1] << ", " << box.min()[2] << "},\n";
+		os << "           Max: {" << box.max()[0] << ", " << box.max()[1] << ", " << box.max()[2] << "},\n";
+		os << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+	}
+
 	//
 	// ===============================================================================================
 	//
 
 	Geometry::ScalarGrid DistanceFieldGenerator::Generate(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings)
 	{
-		Clear();
-#if REPORT_SDF_STEPS
-		ReportInput(inputMesh, settings, std::cout);
-#endif
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
 
@@ -574,12 +560,6 @@ namespace SDF
 			}
 		}
 		grid.FrozenValues() = origFrozenFlags;
-	}
-
-	void DistanceFieldGenerator::Clear()
-	{
-		m_Mesh.clear();
-		m_KdTree = nullptr;
 	}
 
 } // namespace SDF

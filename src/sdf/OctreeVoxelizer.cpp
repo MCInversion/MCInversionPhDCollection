@@ -26,8 +26,6 @@ namespace SDF
 		const unsigned int expectedDepth = std::floor(log2(maxDim / targetLeafSize));
 		const float cubeBoxHalfDim = pow(2.0f, expectedDepth) * targetLeafSize;
 
-		// TODO: this math does not make sense!
-
 		const auto startBoxCenter = startBox.center();
 		const pmp::vec3 cubeBoxCenter{
 			std::round(startBoxCenter[0] / targetLeafSize) * targetLeafSize,
@@ -45,13 +43,6 @@ namespace SDF
 			cubeBoxCenter[1] + cubeBoxHalfDim,
 			cubeBoxCenter[2] + cubeBoxHalfDim
 		};
-
-		// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
-		std::cout << "OctreeVoxelizer:\n";
-		std::cout << "       expectedDepth = " << expectedDepth << "\n";
-		std::cout << "       cubeBoxCenter = " << cubeBoxCenter << "\n";
-		std::cout << "       cubeBoxHalfDim = " << cubeBoxHalfDim << "\n";
-		// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
 
 		return { cubeBoxMin, cubeBoxMax };
 	}

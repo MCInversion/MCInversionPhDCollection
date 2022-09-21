@@ -105,8 +105,21 @@ namespace SDF
 		static void ComputeSignUsingFloodFill(Geometry::ScalarGrid& grid);
 		/// \brief after applying a pmp::HoleFilling, then all voxels whose outgoing ray intersects the mesh are interior.
 		static void ComputeSignUsingRays(Geometry::ScalarGrid& grid);
-		/// \brief clear before use.
-		static void Clear();
 	};
+
+	/**
+	 * \brief Reports DistanceFieldGenerator's input to a given stream.
+	 * \param inputMesh   input mesh for DistanceFieldGenerator.
+	 * \param settings    input settings for DistanceFieldGenerator.
+	 * \param os          output stream.
+	 */
+	void ReportInput(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings, std::ostream& os);
+
+	/**
+	 * \brief Reports DistanceFieldGenerator's output to a given stream.
+	 * \param grid    resulting grid.
+	 * \param os      output stream.
+	 */
+	void ReportOutput(const Geometry::ScalarGrid& grid, std::ostream& os);
 
 } // namespace SDF

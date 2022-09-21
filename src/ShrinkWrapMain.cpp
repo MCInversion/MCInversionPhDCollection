@@ -19,17 +19,17 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
+        "armadillo",
+        "BentChair",
         "blub",
-        //"bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        //"ogre",
-        //"spot"
+        "bunny",
+        "maxPlanck",
+        "nefertiti",
+        "ogre",
+        "spot"
     };
 
-    constexpr unsigned int nVoxelsPerMinDimension = 40;
+    constexpr unsigned int nVoxelsPerMinDimension = 50;
 
     for (const auto& name : meshNames)
     {
@@ -48,13 +48,16 @@ int main()
 	        SDF::BlurPostprocessingType::None,
 	        SDF::PreprocessingType::Octree
 	    };
+		SDF::ReportInput(mesh, sdfSettings, std::cout);
 
 	    const auto startSDF = std::chrono::high_resolution_clock::now();
 	    const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
 	    const auto endSDF = std::chrono::high_resolution_clock::now();
 
+		SDF::ReportOutput(sdf, std::cout);
 	    const std::chrono::duration<double> timeDiff = endSDF - startSDF;
 	    std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+		std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 	    ExportToVTI(dataOutPath + name + "SDF", sdf);
     }
 }
