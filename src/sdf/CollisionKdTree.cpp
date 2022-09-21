@@ -10,7 +10,10 @@
 
 namespace SDF
 {
+	//! \brief the amount by which boxes of kd-tree nodes are inflated to account for round-off errors.
 	constexpr float BOX_INFLATION = 1e-6f;
+
+	//! \brief maximum allowed depth of the CollisionKdTree.
 	constexpr unsigned int MAX_DEPTH = 20;
 
 	/**
@@ -166,6 +169,7 @@ namespace SDF
 	/// \brief default number of box sampling points
 	constexpr unsigned int BOX_CUTS = 4;
 
+	// TODO: fix this & add a version with intrinsics
 	// Fast kd-tree Construction with an Adaptive Error-Bounded Heuristic (Hunt, Mark, Stoll)
 	//
 	float AdaptiveSplitFunction(const BoxSplitData& splitData, const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut)

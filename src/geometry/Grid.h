@@ -117,6 +117,12 @@ namespace Geometry
 	class VectorGrid
 	{
 	public:
+		/**
+		 * \brief Constructor. Initializes from a scalar grid with default initialization vector value.
+		 * \param scalarGrid      scalar grid to initialize from.
+		 */
+		explicit VectorGrid(const ScalarGrid& scalarGrid);
+
 		VectorGrid(const float& cellSize, const pmp::BoundingBox& box);
 
 		VectorGrid(const float& cellSize, const pmp::BoundingBox& box, const pmp::vec3& initVal);

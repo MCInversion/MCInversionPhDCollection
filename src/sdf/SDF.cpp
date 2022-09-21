@@ -250,10 +250,10 @@ namespace SDF
 		os << "VolumeExpansionFactor: " << settings.VolumeExpansionFactor << "\n";
 		os << "TruncationFactor: " << settings.TruncationFactor << "\n";
 		os << "......................................................................\n";
-		os << "PreprocessingType: " << PrintKDTreeSplitType(settings.KDTreeSplit) << "\n";
+		os << "PreprocessingType: " << PrintPreprocessingType(settings.PreprocType) << "\n";
 		os << "KDTreeSplit: " << PrintKDTreeSplitType(settings.KDTreeSplit) << "\n";
 		os << "SignMethod: " << PrintSignMethod(settings.SignMethod) << "\n";
-		os << "BlurType: " << PrintPreprocessingType(settings.PreprocType) << "\n";
+		os << "BlurType: " << PrintBlurType(settings.BlurType) << "\n";
 		os << "----------------------------------------------------------------------\n";
 	}
 

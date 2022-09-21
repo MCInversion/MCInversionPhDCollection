@@ -225,4 +225,160 @@ namespace Geometry
 		ApplyBlurKernelInternal(grid, kernel);
     }
 
+	VectorGrid ComputeGradient(const ScalarGrid& scalarGrid)
+	{
+		if (!scalarGrid.IsValid())
+			throw std::invalid_argument("ComputeGradient: scalarGrid to be processed is invalid!\n");
+
+		VectorGrid result(scalarGrid);
+		const auto cellSize = static_cast<double>(result.CellSize());
+		const auto& dim = result.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		const auto& gridValues = scalarGrid.Values();
+
+		auto& gradValsX = result.ValuesX();
+		auto& gradValsY = result.ValuesY();
+		auto& gradValsZ = result.ValuesZ();
+
+		for (unsigned int iz = 1; iz < Nz - 1; iz++) {
+			for (unsigned int iy = 1; iy < Ny - 1; iy++) {
+				for (unsigned int ix = 1; ix < Nx - 1; ix++) {
+
+					const unsigned int gridPosPrevX = Nx * Ny * iz + Nx * iy + (ix - 1);
+					const unsigned int gridPosNextX = Nx * Ny * iz + Nx * iy + (ix + 1);
+
+					const unsigned int gridPosPrevY = Nx * Ny * iz + Nx * (iy - 1) + ix;
+					const unsigned int gridPosNextY = Nx * Ny * iz + Nx * (iy + 1) + ix;
+
+					const unsigned int gridPosPrevZ = Nx * Ny * (iz - 1) + Nx * iy + ix;
+					const unsigned int gridPosNextZ = Nx * Ny * (iz + 1) + Nx * iy + ix;
+
+					const unsigned int gradPos = Nx * Ny * iz + Nx * iy + ix;
+
+					// central difference for non-boundary voxels
+					gradValsX[gradPos] = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+					gradValsY[gradPos] = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+					gradValsZ[gradPos] = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	//! tolerance for gradient vector norms
+	constexpr double NORM_EPSILON = 1e-6;
+
+	VectorGrid ComputeNormalizedGradient(const ScalarGrid& scalarGrid)
+	{
+		if (!scalarGrid.IsValid())
+			throw std::invalid_argument("ComputeGradient: scalarGrid to be processed is invalid!\n");
+
+		VectorGrid result(scalarGrid);
+		const auto cellSize = static_cast<double>(result.CellSize());
+		const auto& dim = result.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		const auto& gridValues = scalarGrid.Values();
+
+		auto& gradValsX = result.ValuesX();
+		auto& gradValsY = result.ValuesY();
+		auto& gradValsZ = result.ValuesZ();
+
+		for (unsigned int iz = 1; iz < Nz - 1; iz++) {
+			for (unsigned int iy = 1; iy < Ny - 1; iy++) {
+				for (unsigned int ix = 1; ix < Nx - 1; ix++) {
+
+					const unsigned int gridPosPrevX = Nx * Ny * iz + Nx * iy + (ix - 1);
+					const unsigned int gridPosNextX = Nx * Ny * iz + Nx * iy + (ix + 1);
+
+					const unsigned int gridPosPrevY = Nx * Ny * iz + Nx * (iy - 1) + ix;
+					const unsigned int gridPosNextY = Nx * Ny * iz + Nx * (iy + 1) + ix;
+
+					const unsigned int gridPosPrevZ = Nx * Ny * (iz - 1) + Nx * iy + ix;
+					const unsigned int gridPosNextZ = Nx * Ny * (iz + 1) + Nx * iy + ix;
+
+					const unsigned int gradPos = Nx * Ny * iz + Nx * iy + ix;
+
+					// central difference for non-boundary voxels
+					const double grad_x = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+					const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+					const double grad_z = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
+
+					const double norm = sqrt(grad_x * grad_x + grad_y * grad_y + grad_z * grad_z);
+
+					if (norm < NORM_EPSILON)
+						continue; // keep zero init val
+
+					gradValsX[gradPos] = grad_x / norm;
+					gradValsY[gradPos] = grad_y / norm;
+					gradValsZ[gradPos] = grad_z / norm;
+				}
+			}
+		}
+
+		return result;
+	}
+
+	VectorGrid ComputeNormalizedNegativeGradient(const ScalarGrid& scalarGrid)
+	{
+		if (!scalarGrid.IsValid())
+			throw std::invalid_argument("ComputeGradient: scalarGrid to be processed is invalid!\n");
+
+		VectorGrid result(scalarGrid);
+		const auto cellSize = static_cast<double>(result.CellSize());
+		const auto& dim = result.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		const auto& gridValues = scalarGrid.Values();
+
+		auto& gradValsX = result.ValuesX();
+		auto& gradValsY = result.ValuesY();
+		auto& gradValsZ = result.ValuesZ();
+
+		for (unsigned int iz = 1; iz < Nz - 1; iz++) {
+			for (unsigned int iy = 1; iy < Ny - 1; iy++) {
+				for (unsigned int ix = 1; ix < Nx - 1; ix++) {
+
+					const unsigned int gridPosPrevX = Nx * Ny * iz + Nx * iy + (ix - 1);
+					const unsigned int gridPosNextX = Nx * Ny * iz + Nx * iy + (ix + 1);
+
+					const unsigned int gridPosPrevY = Nx * Ny * iz + Nx * (iy - 1) + ix;
+					const unsigned int gridPosNextY = Nx * Ny * iz + Nx * (iy + 1) + ix;
+
+					const unsigned int gridPosPrevZ = Nx * Ny * (iz - 1) + Nx * iy + ix;
+					const unsigned int gridPosNextZ = Nx * Ny * (iz + 1) + Nx * iy + ix;
+
+					const unsigned int gradPos = Nx * Ny * iz + Nx * iy + ix;
+
+					// central difference for non-boundary voxels
+					const double grad_x = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+					const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+					const double grad_z = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
+
+					const double norm = -1.0 * sqrt(grad_x * grad_x + grad_y * grad_y + grad_z * grad_z);
+
+					if (norm > -NORM_EPSILON)
+						continue; // keep zero init val
+
+					gradValsX[gradPos] = grad_x / norm;
+					gradValsY[gradPos] = grad_y / norm;
+					gradValsZ[gradPos] = grad_z / norm;
+				}
+			}
+		}
+
+		return result;
+	}
+
 } // namespace Geometry

@@ -240,6 +240,16 @@ namespace Geometry
 		return m_Dimensions.Valid();
 	}
 
+	VectorGrid::VectorGrid(const ScalarGrid& scalarGrid)
+		: m_CellSize(scalarGrid.CellSize()), m_Box(scalarGrid.Box()), m_Dimensions(scalarGrid.Dimensions())
+	{
+		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny * m_Dimensions.Nz;
+		m_ValuesX = std::vector(nValues, DEFAULT_VECTOR_GRID_INIT_VAL);
+		m_ValuesY = std::vector(nValues, DEFAULT_VECTOR_GRID_INIT_VAL);
+		m_ValuesZ = std::vector(nValues, DEFAULT_VECTOR_GRID_INIT_VAL);
+		m_FrozenValues = std::vector(nValues, false);
+	}
+
 	VectorGrid::VectorGrid(const float& cellSize, const pmp::BoundingBox& box)
 		: m_CellSize(cellSize)
 	{
