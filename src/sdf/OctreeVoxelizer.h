@@ -12,6 +12,9 @@ namespace SDF
 	//! \brief maximum octree depth.
 	constexpr size_t MAX_OCTREE_DEPTH = 50;
 
+	//! \brief tolerance for leaf size verification.
+	constexpr float LEAF_SIZE_EPSILON = 1e-5f;
+
 	//! \brief An Octree for generating a "voxel outline" of a mesh using its KD-tree.
 	class OctreeVoxelizer
 	{
@@ -61,7 +64,7 @@ namespace SDF
 			[[nodiscard]] bool IsALeaf() const
 			{
 				const float size = cubeBox.max()[0] - cubeBox.min()[0];
-				return (children.empty() && octreeEnvironment->m_LeafSize <= size);
+				return (children.empty() && octreeEnvironment->m_LeafSize < size + LEAF_SIZE_EPSILON);
 			}
 
 			pmp::BoundingBox cubeBox{};

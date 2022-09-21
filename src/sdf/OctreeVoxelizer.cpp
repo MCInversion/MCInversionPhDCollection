@@ -46,10 +46,12 @@ namespace SDF
 			cubeBoxCenter[2] + cubeBoxHalfDim
 		};
 
+		// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
 		std::cout << "OctreeVoxelizer:\n";
 		std::cout << "       expectedDepth = " << expectedDepth << "\n";
 		std::cout << "       cubeBoxCenter = " << cubeBoxCenter << "\n";
 		std::cout << "       cubeBoxHalfDim = " << cubeBoxHalfDim << "\n";
+		// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
 
 		return { cubeBoxMin, cubeBoxMax };
 	}
@@ -83,7 +85,7 @@ namespace SDF
 
 		const float boxSize = box.max()[0] - box.min()[0];
 
-		if (remainingDepth == 0 || boxSize <= m_LeafSize)
+		if (remainingDepth == 0 || boxSize < m_LeafSize + LEAF_SIZE_EPSILON)
 		{
 			// ============  process a leaf node ==================
 

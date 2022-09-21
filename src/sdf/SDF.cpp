@@ -101,10 +101,12 @@ namespace SDF
 		const auto Ny = static_cast<unsigned int>(dims.Ny);
 		unsigned int ix, iy, iz, gridPos;
 
+		// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
 		float outlineXMin = FLT_MAX;
 		float outlineXMax = -FLT_MAX;
 		float outlineIndexedXMin = FLT_MAX;
 		float outlineIndexedXMax = -FLT_MAX;
+		// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
 
 		for (size_t i = 0; i < nOutlineVoxels; i++)
 		{
@@ -113,6 +115,7 @@ namespace SDF
 			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 			iz = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
 
+			// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
 			const float xPos = gBoxMinX + ix * cellSize;
 			if (xPos < outlineIndexedXMin)
 				outlineIndexedXMin = xPos;
@@ -122,14 +125,16 @@ namespace SDF
 				outlineXMin = boxBuffer[i]->min()[0];
 			if (boxBuffer[i]->max()[0] > outlineXMax)
 				outlineXMax = boxBuffer[i]->max()[0];
+			// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
 
 			gridPos = Nx * Ny * iz + Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
-
+		// >>>>>>>>> Debugging In progress >>>>>>>>>>>>>>>>>
 		std::cout << "boxes reach from: " << outlineXMin << " to " << outlineXMax << "\n";
 		std::cout << "indices reach from: " << outlineIndexedXMin << " to " << outlineIndexedXMax << "\n";
+		// <<<<<<<<<< Remove Afterwards <<<<<<<<<<<<<<<<<<<<
 	}
 
 	PreprocessingFunction DistanceFieldGenerator::GetPreprocessingFunction(const PreprocessingType& preprocType)
@@ -376,6 +381,9 @@ namespace SDF
 		return resultGrid;
 	}
 
+	//! \brief if true __m128i avx buffers will be used for iterating through the field.
+#define USE_INTRINSICS false
+
 	void DistanceFieldGenerator::ComputeSignUsingFloodFill(Geometry::ScalarGrid& grid)
 	{
 		const auto origFrozenFlags = grid.FrozenValues();
@@ -383,47 +391,54 @@ namespace SDF
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
 		const auto& dim = grid.Dimensions();
-		unsigned int nx = dim.Nx - 1;
-		unsigned int ny = dim.Ny - 1;
-		unsigned int nz = dim.Nz - 1;
 
-		double val; unsigned int gridPos;
-		unsigned int iz = 0, iy = 0, ix = 0;
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const int nx = static_cast<int>(dim.Nx) - 1;
+		const int ny = static_cast<int>(dim.Ny) - 1;
+		const int nz = static_cast<int>(dim.Nz) - 1;
 
-		union { __m128i idsTriple; unsigned int ids[3]; };
-		union { __m128i idsMask; unsigned int imask[3]; };
+		unsigned int gridPos;
+		int iz = 0, iy = 0, ix = 0;
+
+#if USE_INTRINSICS
+		// TODO: some distance fields remain negated (when using intrinsics) even though they're closed.
+		union { __m128i idsTriple; int ids[3]; };
+		union { __m128i idsMask; int imask[3]; };
 		std::stack<__m128i> stack = {};
 
 		idsTriple = _mm_setr_epi32(ix, iy, iz, INT_MAX);
 
 		// find the first unfrozen cell
 		gridPos = 0;
-		while (gridFrozenVals[gridPos]) {
+		while (gridFrozenVals[gridPos]) 
+		{
 			idsMask = _mm_cmplt_epi32(idsTriple, _mm_setr_epi32(nx, ny, nz, INT_MAX));
 			idsTriple = _mm_add_epi32(
 				idsTriple, _mm_setr_epi32(
 					(imask[0] > 0) * 1, (imask[1] > 0) * 1, (imask[2] > 0) * 1, 0)
 			);
 			ix = ids[0]; iy = ids[1]; iz = ids[2];
-			gridPos = dim.Nx * dim.Ny * iz + dim.Nx * iy + ix;
+			gridPos = Nx * Ny * iz + Nx * iy + ix;
 		}
 
-		ids[0] = ix; ids[1] = iy; ids[2] = iz;
+		ids[0] = ix;
+		ids[1] = iy;
+		ids[2] = iz;
 		stack.push(idsTriple);
 
 		// a simple voxel flood
-		while (!stack.empty()) {
+		while (!stack.empty()) 
+		{
 			idsTriple = stack.top();
 			stack.pop();
 
 			ix = ids[0]; iy = ids[1]; iz = ids[2];
-			gridPos = dim.Nx * dim.Ny * iz + dim.Nx * iy + ix;
-			//if (gridPos >= gridFrozenVals.size())
-			//	continue;
+			gridPos = Nx * Ny * iz + Nx * iy + ix;
 
-			if (!gridFrozenVals[gridPos]) {
-				val = -1.0 * gridVals[gridPos];
-				gridVals[gridPos] = val;
+			if (!gridFrozenVals[gridPos])
+			{
+				gridVals[gridPos] = -1.0 * gridVals[gridPos];
 				gridFrozenVals[gridPos] = true; // freeze cell when done
 
 				idsMask = _mm_cmpgt_epi32(idsTriple, _mm_set1_epi32(0)); // lower bounds
@@ -438,7 +453,7 @@ namespace SDF
 					stack.push(_mm_setr_epi32(ix, iy, iz - 1, INT_MAX));
 				}
 
-				idsMask = _mm_cmplt_epi32(idsTriple, _mm_setr_epi32(nx, dim.Ny, nz, INT_MAX)); // upper bounds
+				idsMask = _mm_cmplt_epi32(idsTriple, _mm_setr_epi32(nx, ny, nz, INT_MAX)); // upper bounds
 
 				if (imask[0] > 0) {
 					stack.push(_mm_setr_epi32(ix + 1, iy, iz, INT_MAX));
@@ -451,6 +466,56 @@ namespace SDF
 				}
 			}
 		}
+#else
+		std::stack<std::tuple<int, int, int>> stack = {};
+		std::tuple<int, int, int> idsTriple{};
+		// find the first unfrozen cell
+		gridPos = 0;
+		while (gridFrozenVals[gridPos])
+		{
+			ix += (ix < nx ? 1 : 0);
+			iy += (iy < ny ? 1 : 0);
+			iz += (iz < nz ? 1 : 0);
+			gridPos = Nx * Ny * iz + Nx * iy + ix;
+		}
+
+		stack.push({ ix, iy, iz });
+		// a simple voxel flood
+		while (!stack.empty())
+		{
+			idsTriple = stack.top();
+			stack.pop();
+			ix = std::get<0>(idsTriple);
+			iy = std::get<1>(idsTriple);
+			iz = std::get<2>(idsTriple);
+			gridPos = Nx * Ny * iz + Nx * iy + ix;
+			if (!gridFrozenVals[gridPos])
+			{
+				gridVals[gridPos] = -1.0 * gridVals[gridPos];
+				gridFrozenVals[gridPos] = true; // freeze cell when done
+
+				if (ix > 0) {
+					stack.push({ ix - 1, iy, iz });
+				}
+				if (ix < nx) {
+					stack.push({ ix + 1, iy, iz });
+				}
+				if (iy > 0) {
+					stack.push({ ix, iy - 1, iz });
+				}
+				if (iy < ny) {
+					stack.push({ ix, iy + 1, iz });
+				}
+				if (iz > 0) {
+					stack.push({ ix, iy, iz - 1 });
+				}
+				if (iz < nz) {
+					stack.push({ ix, iy, iz + 1 });
+				}
+			}
+		}
+#endif
+
 		grid.FrozenValues() = origFrozenFlags;
 	}
 
@@ -474,9 +539,9 @@ namespace SDF
 		const unsigned int iYStart = std::floor(dMin[1] / cellSize);
 		const unsigned int iZStart = std::floor(dMin[2] / cellSize);
 
-		const unsigned int iXEnd = std::floor(dMax[0] / cellSize);
-		const unsigned int iYEnd = std::floor(dMax[1] / cellSize);
-		const unsigned int iZEnd = std::floor(dMax[2] / cellSize);
+		const unsigned int iXEnd = std::ceil(dMax[0] / cellSize);
+		const unsigned int iYEnd = std::ceil(dMax[1] / cellSize);
+		const unsigned int iZEnd = std::ceil(dMax[2] / cellSize);
 
 		auto& gridVals = grid.Values();
 		const auto& dims = grid.Dimensions();

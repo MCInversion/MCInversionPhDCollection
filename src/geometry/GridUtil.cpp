@@ -126,9 +126,9 @@ namespace Geometry
 		const unsigned int iYStart = std::floor(dMin[1] / cellSize);
 		const unsigned int iZStart = std::floor(dMin[2] / cellSize);
 
-		const unsigned int iXEnd = std::floor(dMax[0] / cellSize);
-		const unsigned int iYEnd = std::floor(dMax[1] / cellSize);
-		const unsigned int iZEnd = std::floor(dMax[2] / cellSize);
+		const unsigned int iXEnd = std::ceil(dMax[0] / cellSize);
+		const unsigned int iYEnd = std::ceil(dMax[1] / cellSize);
+		const unsigned int iZEnd = std::ceil(dMax[2] / cellSize);
 		const auto& dims = grid.Dimensions();
 		auto& values = grid.Values();
 		
