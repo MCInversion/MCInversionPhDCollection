@@ -241,7 +241,7 @@ namespace Geometry
 	}
 
 	VectorGrid::VectorGrid(const ScalarGrid& scalarGrid)
-		: m_CellSize(scalarGrid.CellSize()), m_Box(scalarGrid.Box()), m_Dimensions(scalarGrid.Dimensions())
+		: m_Box(scalarGrid.Box()), m_Dimensions(scalarGrid.Dimensions()), m_CellSize(scalarGrid.CellSize())
 	{
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny * m_Dimensions.Nz;
 		m_ValuesX = std::vector(nValues, DEFAULT_VECTOR_GRID_INIT_VAL);
