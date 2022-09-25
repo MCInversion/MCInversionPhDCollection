@@ -101,6 +101,8 @@ namespace Geometry
 		ScalarGrid operator- (const double& scalar) const;
 		ScalarGrid operator- (const ScalarGrid& other) const;
 
+		ScalarGrid& operator*= (const pmp::mat4& mat);
+
 		// ====== Validity ======================
 
 		[[nodiscard]] bool IsValid() const;

@@ -226,6 +226,14 @@ namespace Geometry
 		return result;
 	}
 
+	ScalarGrid& ScalarGrid::operator*=(const pmp::mat4& mat)
+	{
+		// assuming mat is a uniform scaling + translation matrix only.
+		m_CellSize = mat(0, 0);
+		m_Box *= mat;
+		return *this;
+	}
+
 	bool ScalarGrid::IsValid() const
 	{
 		if (m_CellSize <= 0.0f)

@@ -1110,6 +1110,9 @@ public:
     //! assign \p rhs to \p *this. performs a deep copy of all properties.
     SurfaceMesh& operator=(const SurfaceMesh& rhs);
 
+    //! transform all points of this surface mesh with a given 4x4 matrix.
+    SurfaceMesh& operator*=(const mat4& mat);
+
     //! assign \p rhs to \p *this. does not copy custom properties.
     SurfaceMesh& assign(const SurfaceMesh& rhs);
 
@@ -1928,7 +1931,7 @@ public:
     //!@{
 
     //! position of a vertex (read only)
-    const Point& position(Vertex v) const { return vpoint_[v]; }
+    [[nodiscard]] const Point& position(Vertex v) const { return vpoint_[v]; }
 
     //! position of a vertex
     Point& position(Vertex v) { return vpoint_[v]; }

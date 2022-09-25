@@ -97,6 +97,13 @@ public:
         max_ += Point(x, y, z);
     }
 
+    BoundingBox& operator*= (const mat4& mat)
+    {
+        min_ = affine_transform(mat, min_);
+        max_ = affine_transform(mat, max_);
+        return *this;
+    }
+
 private:
     Point min_, max_;
 };

@@ -4,7 +4,7 @@
 #include "pmp/algorithms/DifferentialGeometry.h"
 
 #include <cmath>
-
+#include <ranges>
 #include <limits>
 
 namespace pmp {
@@ -280,6 +280,34 @@ Point laplace(const SurfaceMesh& mesh, Vertex v)
     }
 
     return laplace;
+}
+
+ImplicitLaplaceInfo laplace_implicit(const SurfaceMesh& mesh, Vertex v)
+{
+    ImplicitLaplaceInfo result{};
+    if (mesh.is_isolated(v))
+        return result;
+
+    Scalar sum_weights(0.0);
+
+    const unsigned int nVertices = std::distance(mesh.vertices(v).begin(), mesh.vertices(v).end());
+    result.vertexWeights.reserve(nVertices);
+
+    for (const auto h : mesh.halfedges(v))
+    {
+        const auto weight = static_cast<Scalar>(cotan_weight(mesh, mesh.edge(h)));
+        sum_weights += weight;
+        result.vertexWeights.emplace_back(std::pair{ mesh.to_vertex(h), weight });
+    }
+
+    const auto vorArea = static_cast<Scalar>(voronoi_area(mesh, v));
+    const auto areaNorm = static_cast<Scalar>(2.0 * vorArea);
+    for (auto& weight : result.vertexWeights | std::views::values)
+        weight /= areaNorm;
+
+    result.weightSum = sum_weights / areaNorm;
+
+    return result;
 }
 
 Scalar angle_sum(const SurfaceMesh& mesh, Vertex v)

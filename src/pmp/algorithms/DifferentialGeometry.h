@@ -88,6 +88,16 @@ double voronoi_area_barycentric(const SurfaceMesh& mesh, Vertex v);
 //! compute Laplace vector for vertex v (normalized by Voronoi area)
 Point laplace(const SurfaceMesh& mesh, Vertex v);
 
+//! wrapper for implicit mesh Laplacian
+struct ImplicitLaplaceInfo
+{
+    std::vector<std::pair<Vertex, Scalar>> vertexWeights{};
+    Scalar weightSum{ 0.0 };
+};
+
+//! compute weights for implicit Laplacian (normalized by Voronoi area).
+[[nodiscard]] ImplicitLaplaceInfo laplace_implicit(const SurfaceMesh& mesh, Vertex v);
+
 //! compute the sum of angles around vertex v (used for Gaussian curvature)
 Scalar angle_sum(const SurfaceMesh& mesh, Vertex v);
 

@@ -60,6 +60,14 @@ SurfaceMesh& SurfaceMesh::operator=(const SurfaceMesh& rhs)
     return *this;
 }
 
+SurfaceMesh& SurfaceMesh::operator*=(const mat4& mat)
+{
+    for (const auto& v : vertices())
+        position(v) = affine_transform(mat, position(v));
+
+    return *this;
+}
+
 SurfaceMesh& SurfaceMesh::assign(const SurfaceMesh& rhs)
 {
     if (this != &rhs)
