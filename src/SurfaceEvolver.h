@@ -56,6 +56,7 @@ private:
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).
 
 	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
+	float m_StabilizationScalingFactor{ 1.0f }; //>! scaling factor value for stabilization of numerical method.
 };
 
 /**

@@ -414,13 +414,13 @@ namespace Geometry
 		const auto& boxMin = grid.Box().min();
 		const float cellSize = grid.CellSize();
 
-		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) * cellSize)), Nx - 1), ZERO_CELL_ID);
-		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) * cellSize)), Ny - 1), ZERO_CELL_ID);
-		const auto iz = std::max(std::min(static_cast<size_t>(std::floor((samplePt[2] - boxMin[2]) * cellSize)), Nz - 1), ZERO_CELL_ID);
+		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+		const auto iz = std::max(std::min(static_cast<size_t>(std::floor((samplePt[2] - boxMin[2]) / cellSize)), Nz - 1), ZERO_CELL_ID);
 
-		const auto ix1 = std::max(std::min(ix + 1, Nx - 1), ZERO_CELL_ID);
-		const auto iy1 = std::max(std::min(iy + 1, Ny - 1), ZERO_CELL_ID);
-		const auto iz1 = std::max(std::min(iz + 1, Nz - 1), ZERO_CELL_ID);
+		const auto ix1 = std::min(ix + 1, Nx - 1);
+		const auto iy1 = std::min(iy + 1, Ny - 1);
+		const auto iz1 = std::min(iz + 1, Nz - 1);
 
 		const auto i000 = Nx * Ny * iz + Nx * iy + ix;
 		const auto i100 = Nx * Ny * iz + Nx * iy + ix1;
@@ -434,14 +434,14 @@ namespace Geometry
 		const auto& values = grid.Values();
 		return {
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix) / static_cast<float>(Nx) * cellSize,
-				boxMin[1] + static_cast<float>(iy) / static_cast<float>(Ny) * cellSize,
-				boxMin[2] + static_cast<float>(iz) / static_cast<float>(Nz) * cellSize
+				boxMin[0] + static_cast<float>(ix) * cellSize,
+				boxMin[1] + static_cast<float>(iy) * cellSize,
+				boxMin[2] + static_cast<float>(iz) * cellSize
 			},
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix + 1) / static_cast<float>(Nx) * cellSize,
-				boxMin[1] + static_cast<float>(iy + 1) / static_cast<float>(Ny) * cellSize,
-				boxMin[2] + static_cast<float>(iz + 1) / static_cast<float>(Nz) * cellSize
+				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<float>(iy + 1) * cellSize,
+				boxMin[2] + static_cast<float>(iz + 1) * cellSize
 			},
 			values[i000], values[i100], values[i010], values[i110],
 			values[i001], values[i101], values[i011], values[i111]
@@ -527,13 +527,13 @@ namespace Geometry
 		const auto& boxMin = grid.Box().min();
 		const float cellSize = grid.CellSize();
 
-		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) * cellSize)), Nx - 1), ZERO_CELL_ID);
-		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) * cellSize)), Ny - 1), ZERO_CELL_ID);
-		const auto iz = std::max(std::min(static_cast<size_t>(std::floor((samplePt[2] - boxMin[2]) * cellSize)), Nz - 1), ZERO_CELL_ID);
+		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+		const auto iz = std::max(std::min(static_cast<size_t>(std::floor((samplePt[2] - boxMin[2]) / cellSize)), Nz - 1), ZERO_CELL_ID);
 
-		const auto ix1 = std::max(std::min(ix + 1, Nx - 1), ZERO_CELL_ID);
-		const auto iy1 = std::max(std::min(iy + 1, Ny - 1), ZERO_CELL_ID);
-		const auto iz1 = std::max(std::min(iz + 1, Nz - 1), ZERO_CELL_ID);
+		const auto ix1 = std::min(ix + 1, Nx - 1);
+		const auto iy1 = std::min(iy + 1, Ny - 1);
+		const auto iz1 = std::min(iz + 1, Nz - 1);
 
 		const auto i000 = Nx * Ny * iz + Nx * iy + ix;
 		const auto i100 = Nx * Ny * iz + Nx * iy + ix1;
@@ -549,14 +549,14 @@ namespace Geometry
 		const auto& valuesZ = grid.ValuesZ();
 		return {
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix) / static_cast<float>(Nx) * cellSize,
-				boxMin[1] + static_cast<float>(iy) / static_cast<float>(Ny) * cellSize,
-				boxMin[2] + static_cast<float>(iz) / static_cast<float>(Nz) * cellSize
+				boxMin[0] + static_cast<float>(ix) * cellSize,
+				boxMin[1] + static_cast<float>(iy) * cellSize,
+				boxMin[2] + static_cast<float>(iz) * cellSize
 			},
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix + 1) / static_cast<float>(Nx) * cellSize,
-				boxMin[1] + static_cast<float>(iy + 1) / static_cast<float>(Ny) * cellSize,
-				boxMin[2] + static_cast<float>(iz + 1) / static_cast<float>(Nz) * cellSize
+				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<float>(iy + 1) * cellSize,
+				boxMin[2] + static_cast<float>(iz + 1) * cellSize
 			},
 			pmp::dvec3{valuesX[i000], valuesY[i000], valuesZ[i000]},
 			pmp::dvec3{valuesX[i100], valuesY[i100], valuesZ[i100]},

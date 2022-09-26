@@ -57,6 +57,7 @@ void SurfaceEvolver::Preprocess()
 		0.0f, 0.0f, scalingFactor, -origin[2],
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
+	m_StabilizationScalingFactor = scalingFactor;
 	m_TransformToOriginal = inverse(transfMatrix);
 
 	(*m_EvolvingSurface) *= transfMatrix;
@@ -88,11 +89,13 @@ using SparseMatrix = Eigen::SparseMatrix<double>;
  */
 [[nodiscard]] double LaplacianDistanceWeightFunction(const double& distanceAtVertex)
 {
+	if (distanceAtVertex < 0.0)
+		return 0.0;
 	return (1.0 - exp(-(distanceAtVertex * distanceAtVertex)));
 }
 
 /// \brief tolerance value for point norm.
-constexpr float NORM_EPSILON = 1e-6f;
+constexpr float NORM_EPSILON = 1e-4f;
 
 /**
  * \brief Weight function for advection flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
@@ -104,7 +107,9 @@ constexpr float NORM_EPSILON = 1e-6f;
 [[nodiscard]] double AdvectionDistanceWeightFunction(const double& distanceAtVertex, 
 	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal)
 {
-	assert(std::fabs(pmp::norm(vertexNormal) - 1.0f) < NORM_EPSILON);
+	//assert(std::fabs(pmp::norm(vertexNormal) - 1.0f) < NORM_EPSILON);
+	if (distanceAtVertex < 0.0)
+		return 0.0;
 	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
 	return distanceAtVertex * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 }
@@ -131,6 +136,7 @@ void SurfaceEvolver::Evolve()
 		<< (bds.max()[0] - bds.min()[0]) << ", "
 		<< (bds.max()[1] - bds.min()[1]) << ", "
 		<< (bds.max()[2] - bds.min()[2]) << "},\n";
+	std::cout << "Stabilization Scaling Factor: " << m_StabilizationScalingFactor << "\n";
 #endif
 
 	const auto& fieldBox = m_Field->Box();
@@ -140,13 +146,14 @@ void SurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// TODO: properly stabilize edge length
-	const auto minEdgeLength = static_cast<pmp::Scalar>(sqrt(tStep));
-	const auto maxEdgeLength = 5 * minEdgeLength;
+	const auto minEdgeLength = 1.5 * static_cast<pmp::Scalar>(sqrt(tStep));
+	const auto maxEdgeLength = 4 * minEdgeLength;
 
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vCoAreas = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:neighborhoodArea"); // vertex property for co-areas.
+	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -159,6 +166,7 @@ void SurfaceEvolver::Evolve()
 			const auto vPos = m_EvolvingSurface->position(v);
 
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+			vDistance[v] = vDistanceToTarget;
 			const auto vNegGradDistanceToTarget = Geometry::TrilinearInterpolateVectorValue(vPos, fieldNegGradient);
 
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
@@ -188,6 +196,15 @@ void SurfaceEvolver::Evolve()
 	// write initial surface
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 	{
+		// set initial surface vertex properties
+		for (const auto v : m_EvolvingSurface->vertices())
+		{
+			const auto vPos = m_EvolvingSurface->position(v);
+			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+			vDistance[v] = vDistanceToTarget;
+			const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
+			vCoAreas[v] = coArea;
+		}
 		auto exportedSurface = *m_EvolvingSurface;
 		exportedSurface *= m_TransformToOriginal;
 		exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_Evol_0" + m_OutputMeshExtension);
@@ -215,12 +232,13 @@ void SurfaceEvolver::Evolve()
 		std::cout << "Solving linear system ... ";
 #endif
 		// solve
-		Eigen::SimplicialLDLT solver(sysMat);
+		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
 		Eigen::MatrixXd x = solver.solve(sysRhs);
 		if (solver.info() != Eigen::Success)
 		{
-			const std::string msg = "SurfaceEvolver::Evolve: solver.info() != Eigen::Success for time step id: "
+			const std::string msg = "\nSurfaceEvolver::Evolve: solver.info() != Eigen::Success for time step id: "
 				+ std::to_string(ti) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
+			std::cerr << msg;
 			throw std::runtime_error(msg);
 		}
 #if REPORT_EVOL_STEPS
@@ -259,6 +277,16 @@ void SurfaceEvolver::Evolve()
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
 		{
+			// set surface vertex properties
+			// TODO: re-use them
+			for (const auto v : m_EvolvingSurface->vertices())
+			{
+				const auto vPos = m_EvolvingSurface->position(v);
+				const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+				vDistance[v] = vDistanceToTarget;
+				const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
+				vCoAreas[v] = coArea;
+			}
 			auto exportedSurface = *m_EvolvingSurface;
 			exportedSurface *= m_TransformToOriginal;
 			exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_Evol_" + std::to_string(ti) + m_OutputMeshExtension);

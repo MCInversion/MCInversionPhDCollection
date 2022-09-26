@@ -103,7 +103,7 @@ int main()
 
 	if (performEvolverTests)
 	{
-		constexpr unsigned int nVoxelsPerMinDimension = 20;
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
 
 		for (const auto& name : meshNames)
 		{
@@ -116,9 +116,9 @@ int main()
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
 				1.0f,
-				0.2,
+				DBL_MAX,
 				SDF::KDTreeSplitType::Center,
-				SDF::SignComputation::None,
+				SDF::SignComputation::VoxelFloodFill,
 				SDF::BlurPostprocessingType::None,
 				SDF::PreprocessingType::Octree
 			};
@@ -132,12 +132,13 @@ int main()
 			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
 			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			ExportToVTI(dataOutPath + name + "SDF", sdf);
 
 			SurfaceEvolutionSettings seSettings{
 				name,
-				20,
-				0.05,
-				0.0,
+				30,
+				0.001,
+				0.05 * minSize,
 				3,
 				true,
 				dataOutPath
