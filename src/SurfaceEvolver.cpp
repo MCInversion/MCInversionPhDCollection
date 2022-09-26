@@ -103,7 +103,7 @@ void SurfaceEvolver::Evolve()
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
-	const auto fieldGradient = Geometry::ComputeGradient(*m_Field);
+	const auto fieldGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
@@ -127,6 +127,8 @@ void SurfaceEvolver::Evolve()
 			sysRhs.row(v.idx()) = vertexRhs;
 
 			// TODO: matrix fill
+
+
 		}
 	};
 	// -----------------------------------------------------------------

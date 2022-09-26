@@ -73,4 +73,24 @@ namespace Geometry
 	 */
 	[[nodiscard]] VectorGrid ComputeNormalizedNegativeGradient(const ScalarGrid& scalarGrid);
 
+	/**
+	 * \brief Trilinearly interpolates from the surrounding cell values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated scalar grid.
+	 * \return interpolated value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] double TrilinearInterpolateScalarValue(const pmp::vec3& samplePt, const ScalarGrid& grid);
+
+	/**
+	 * \brief Trilinearly interpolates from the surrounding cell vector values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated vector grid.
+	 * \return interpolated vector value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] pmp::dvec3 TrilinearInterpolateVectorValue(const pmp::vec3& samplePt, const VectorGrid& grid);
+
 } // namespace Geometry
