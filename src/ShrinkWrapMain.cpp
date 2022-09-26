@@ -103,8 +103,7 @@ int main()
 
 	if (performEvolverTests)
 	{
-		constexpr unsigned int nVoxelsPerMinDimension = 40;
-		constexpr bool computeGradients = false;
+		constexpr unsigned int nVoxelsPerMinDimension = 20;
 
 		for (const auto& name : meshNames)
 		{
@@ -134,7 +133,16 @@ int main()
 			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
-			SurfaceEvolver evolver(sdf, {});
+			SurfaceEvolutionSettings seSettings{
+				20,
+				0.05,
+				0.0,
+				3,
+				true,
+				dataOutPath
+			};
+			ReportInput(seSettings, std::cout);
+			SurfaceEvolver evolver(sdf, seSettings);
 			evolver.Evolve();
 		}
 	} // endif performSDFTests

@@ -91,7 +91,8 @@ using SparseMatrix = Eigen::SparseMatrix<double>;
 	return (1.0 - exp(-(distanceAtVertex * distanceAtVertex)));
 }
 
-constexpr float NORM_EPSILON = 1e-9f;
+/// \brief tolerance value for point norm.
+constexpr float NORM_EPSILON = 1e-6f;
 
 /**
  * \brief Weight function for advection flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
@@ -103,10 +104,14 @@ constexpr float NORM_EPSILON = 1e-9f;
 [[nodiscard]] double AdvectionDistanceWeightFunction(const double& distanceAtVertex, 
 	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal)
 {
-	assert(std::fabs(pmp::norm(vertexNormal)) < 1.0f + NORM_EPSILON);
+	assert(std::fabs(pmp::norm(vertexNormal) - 1.0f) < NORM_EPSILON);
 	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
 	return distanceAtVertex * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 }
+
+// ================================================================================================
+
+#define REPORT_EVOL_STEPS true // Note: may affect performance
 
 void SurfaceEvolver::Evolve()
 {
@@ -120,12 +125,22 @@ void SurfaceEvolver::Evolve()
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
+#if REPORT_EVOL_STEPS
+	const auto bds = m_EvolvingSurface->bounds();
+	std::cout << "IcoSphere Bounds Size: {"
+		<< (bds.max()[0] - bds.min()[0]) << ", "
+		<< (bds.max()[1] - bds.min()[1]) << ", "
+		<< (bds.max()[2] - bds.min()[2]) << "},\n";
+#endif
+
 	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
+	const auto minEdgeLength = static_cast<pmp::Scalar>(sqrt(tStep));
+	const auto maxEdgeLength = 5 * minEdgeLength;
 
-	const auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
+	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 
@@ -166,12 +181,24 @@ void SurfaceEvolver::Evolve()
 	// main loop
 	for (unsigned int ti = 0; ti < NSteps; ti++)
 	{
+#if REPORT_EVOL_STEPS
+		std::cout << "time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << "/" << tStep * NSteps << "\n";
+		std::cout << "pmp::Normals::compute_vertex_normals ... ";
+#endif
 		pmp::Normals::compute_vertex_normals(*m_EvolvingSurface);
 		vNormalsProp = m_EvolvingSurface->vertex_property<pmp::Point>("v:normal");
+#if REPORT_EVOL_STEPS
+		std::cout << "done\n";
+		std::cout << "fillMatrixAndRHSTriplesFromMesh for " << NVertices << " vertices ... ";
+#endif
 
 		// prepare matrix & rhs
 		fillMatrixAndRHSTriplesFromMesh();
 
+#if REPORT_EVOL_STEPS
+		std::cout << "done\n";
+		std::cout << "Solving linear system ... ";
+#endif
 		// solve
 		Eigen::SimplicialLDLT solver(sysMat);
 		Eigen::MatrixXd x = solver.solve(sysRhs);
@@ -181,6 +208,10 @@ void SurfaceEvolver::Evolve()
 				+ std::to_string(ti) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
 			throw std::runtime_error(msg);
 		}
+#if REPORT_EVOL_STEPS
+		std::cout << "done\n";
+		std::cout << "Updating vertex positions ... ";
+#endif
 
 		// update vertex positions
 		for (unsigned int i = 0; i < NVertices; i++)
@@ -188,9 +219,46 @@ void SurfaceEvolver::Evolve()
 			m_EvolvingSurface->position(pmp::Vertex(i)) = x.row(i);
 		}
 
+#if REPORT_EVOL_STEPS
+		std::cout << "done\n";
+		std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
+#endif
+
 		// remeshing
 		pmp::Remeshing remeshing(*m_EvolvingSurface);
-		const auto targetEdgeLength = static_cast<pmp::Scalar>(sqrt(tStep));
-		remeshing.uniform_remeshing(targetEdgeLength);
-	}
+		remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, minEdgeLength);
+
+		if (m_EvolSettings.ExportSurfacePerTimeStep)
+		{
+			m_EvolvingSurface->write(m_EvolSettings.OutputPath + "Evol_" + std::to_string(ti) + ".obj");
+		}
+
+		// update linear system dims:
+		if (ti < NSteps - 1)
+		{
+			NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
+			sysMat = SparseMatrix(NVertices, NVertices);
+			sysRhs = Eigen::MatrixXd(NVertices, 3);
+		}
+
+#if REPORT_EVOL_STEPS
+		std::cout << "done\n";
+		std::cout << ">>> Time step " << ti << " finished.\n";
+		std::cout << "----------------------------------------------------------------------\n";
+#endif
+
+	} // end main loop
+
+
+}
+
+void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)
+{
+	os << "======================================================================\n";
+	os << "> > > > > > > > > > Initiating SurfaceEvolver: < < < < < < < < < < < <\n";
+	os << "NSteps: " << evolSettings.NSteps << ",\n";
+	os << "TimeStep: " << evolSettings.TimeStep << ",\n";
+	os << "FieldIsoLevel: " << evolSettings.FieldIsoLevel << ",\n";
+	os << "IcoSphereSubdivisionLevel: " << evolSettings.IcoSphereSubdivisionLevel << ",\n";
+	os << "----------------------------------------------------------------------\n";
 }

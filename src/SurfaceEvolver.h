@@ -10,10 +10,13 @@
  */
 struct SurfaceEvolutionSettings
 {
-	unsigned int NSteps{ 50 };   //>! number of time steps for surface evolution.
+	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
-	unsigned int IcoSphereSubdivisionLevel{ 2 }; //>! subdivision level of an evolving ico sphere surface.
+	unsigned int IcoSphereSubdivisionLevel{ 3 }; //>! subdivision level of an evolving ico sphere surface.
+
+	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
+	std::string OutputPath{}; //>! path where output surfaces are to be exported.
 };
 
 /**
@@ -50,3 +53,10 @@ private:
 
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).
 };
+
+/**
+ * \brief Reports SurfaceEvolver's input to a given stream.
+ * \param evolSettings    settings for SurfaceEvolver.
+ * \param os              output stream.
+ */
+void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os);
