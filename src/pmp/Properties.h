@@ -163,6 +163,12 @@ public:
         return parray_->vector();
     }
 
+    [[nodiscard]] const std::vector<T>& vector() const
+    {
+        assert(parray_ != nullptr);
+        return parray_->vector();
+    }
+
 private:
     PropertyArray<T>& array()
     {

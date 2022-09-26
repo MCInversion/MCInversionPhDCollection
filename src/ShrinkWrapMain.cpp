@@ -134,6 +134,7 @@ int main()
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
 			SurfaceEvolutionSettings seSettings{
+				name,
 				20,
 				0.05,
 				0.0,

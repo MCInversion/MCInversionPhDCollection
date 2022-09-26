@@ -25,21 +25,22 @@ public:
     void write(const SurfaceMesh& mesh);
 
 private:
-    void read_off(SurfaceMesh& mesh);
-    void read_obj(SurfaceMesh& mesh);
-    void read_stl(SurfaceMesh& mesh);
-    void read_ply(SurfaceMesh& mesh);
-    void read_pmp(SurfaceMesh& mesh);
-    void read_xyz(SurfaceMesh& mesh);
-    void read_agi(SurfaceMesh& mesh);
+    void read_off(SurfaceMesh& mesh) const;
+    void read_obj(SurfaceMesh& mesh) const;
+    void read_stl(SurfaceMesh& mesh) const;
+    void read_ply(SurfaceMesh& mesh) const;
+    void read_pmp(SurfaceMesh& mesh) const;
+    void read_xyz(SurfaceMesh& mesh) const;
+    void read_agi(SurfaceMesh& mesh) const;
 
-    void write_off(const SurfaceMesh& mesh);
-    void write_off_binary(const SurfaceMesh& mesh);
-    void write_obj(const SurfaceMesh& mesh);
-    void write_stl(const SurfaceMesh& mesh);
-    void write_ply(const SurfaceMesh& mesh);
-    void write_pmp(const SurfaceMesh& mesh);
-    void write_xyz(const SurfaceMesh& mesh);
+    void write_off(const SurfaceMesh& mesh) const;
+    void write_off_binary(const SurfaceMesh& mesh) const;
+    void write_obj(const SurfaceMesh& mesh) const;
+    void write_vtk(const SurfaceMesh& mesh) const;
+    void write_stl(const SurfaceMesh& mesh) const;
+    void write_ply(const SurfaceMesh& mesh) const;
+    void write_pmp(const SurfaceMesh& mesh) const;
+    void write_xyz(const SurfaceMesh& mesh) const;
 
     std::string filename_;
     IOFlags flags_;

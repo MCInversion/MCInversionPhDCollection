@@ -133,17 +133,20 @@ void SurfaceEvolver::Evolve()
 		<< (bds.max()[2] - bds.min()[2]) << "},\n";
 #endif
 
-	const auto fieldBox = m_Field->Box();
+	const auto& fieldBox = m_Field->Box();
 	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
+
+	// TODO: properly stabilize edge length
 	const auto minEdgeLength = static_cast<pmp::Scalar>(sqrt(tStep));
 	const auto maxEdgeLength = 5 * minEdgeLength;
 
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
+	auto vCoAreas = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:neighborhoodArea"); // vertex property for co-areas.
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -168,6 +171,9 @@ void SurfaceEvolver::Evolve()
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;
 			sysRhs.row(v.idx()) = vertexRhs;
 
+			const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
+			vCoAreas[v] = coArea;
+
 			const auto laplaceWeightInfo = pmp::laplace_implicit(*m_EvolvingSurface, v); // Laplacian weights
 			sysMat.coeffRef(v.idx(), v.idx()) = 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum);
 
@@ -184,7 +190,7 @@ void SurfaceEvolver::Evolve()
 	{
 		auto exportedSurface = *m_EvolvingSurface;
 		exportedSurface *= m_TransformToOriginal;
-		exportedSurface.write(m_EvolSettings.OutputPath + "Evol_0.obj");
+		exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_Evol_0" + m_OutputMeshExtension);
 	}
 
 	// main loop
@@ -255,7 +261,7 @@ void SurfaceEvolver::Evolve()
 		{
 			auto exportedSurface = *m_EvolvingSurface;
 			exportedSurface *= m_TransformToOriginal;
-			exportedSurface.write(m_EvolSettings.OutputPath + "Evol_" + std::to_string(ti) + ".obj");
+			exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_Evol_" + std::to_string(ti) + m_OutputMeshExtension);
 		}
 
 		// update linear system dims:

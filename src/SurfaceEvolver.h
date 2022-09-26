@@ -10,6 +10,8 @@
  */
 struct SurfaceEvolutionSettings
 {
+	std::string ProcedureName = "";    //>! name for the evolution procedure.
+
 	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
@@ -52,6 +54,8 @@ private:
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).
+
+	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
 };
 
 /**
