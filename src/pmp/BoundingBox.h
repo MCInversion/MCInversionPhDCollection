@@ -89,6 +89,27 @@ public:
         return (other.max_[2] >= min_[2] && other.min_[2] <= max_[2]);
     }
 
+    //! Verifies whether a point is contained within this bounding box.
+    [[nodiscard]] bool Contains(const Point& pt) const
+    {
+        if (pt[0] < min_[0])
+            return false;
+
+        if (pt[0] > max_[0])
+            return false;
+
+        if (pt[1] < min_[1])
+            return false;
+
+        if (pt[1] > max_[1])
+            return false;
+
+        if (pt[2] < min_[2])
+            return false;
+
+        return (pt[2] <= max_[2]);
+    }
+
     //! Expand the size of the bounding box.
     void expand(const float& x, const float& y, const float& z)
     {

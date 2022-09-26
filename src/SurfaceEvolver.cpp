@@ -133,6 +133,7 @@ void SurfaceEvolver::Evolve()
 		<< (bds.max()[2] - bds.min()[2]) << "},\n";
 #endif
 
+	const auto fieldBox = m_Field->Box();
 	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
@@ -178,8 +179,16 @@ void SurfaceEvolver::Evolve()
 	};
 	// -----------------------------------------------------------------
 
+	// write initial surface
+	if (m_EvolSettings.ExportSurfacePerTimeStep)
+	{
+		auto exportedSurface = *m_EvolvingSurface;
+		exportedSurface *= m_TransformToOriginal;
+		exportedSurface.write(m_EvolSettings.OutputPath + "Evol_0.obj");
+	}
+
 	// main loop
-	for (unsigned int ti = 0; ti < NSteps; ti++)
+	for (unsigned int ti = 1; ti <= NSteps; ti++)
 	{
 #if REPORT_EVOL_STEPS
 		std::cout << "time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << "/" << tStep * NSteps << "\n";
@@ -213,11 +222,25 @@ void SurfaceEvolver::Evolve()
 		std::cout << "Updating vertex positions ... ";
 #endif
 
-		// update vertex positions
+		// update vertex positions & verify mesh within bounds
+		size_t nVertsOutOfBounds = 0;
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
+			const auto newPos = x.row(i);
+			if (!fieldBox.Contains(newPos))
+			{
+				if (nVertsOutOfBounds == 0) std::cerr << "\n";
+				std::cerr << "SurfaceEvolver::Evolve: vertex " << i << " out of field bounds!\n";
+				nVertsOutOfBounds++;
+			}
 			m_EvolvingSurface->position(pmp::Vertex(i)) = x.row(i);
 		}
+		if (nVertsOutOfBounds > 0)
+		{
+			std::cerr << "SurfaceEvolver::Evolve: found " << nVertsOutOfBounds << " vertices out of bounds! Terminating!\n";
+			break;
+		}
+
 
 #if REPORT_EVOL_STEPS
 		std::cout << "done\n";
@@ -226,15 +249,17 @@ void SurfaceEvolver::Evolve()
 
 		// remeshing
 		pmp::Remeshing remeshing(*m_EvolvingSurface);
-		remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, minEdgeLength);
+		remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, minEdgeLength, 3);
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
 		{
-			m_EvolvingSurface->write(m_EvolSettings.OutputPath + "Evol_" + std::to_string(ti) + ".obj");
+			auto exportedSurface = *m_EvolvingSurface;
+			exportedSurface *= m_TransformToOriginal;
+			exportedSurface.write(m_EvolSettings.OutputPath + "Evol_" + std::to_string(ti) + ".obj");
 		}
 
 		// update linear system dims:
-		if (ti < NSteps - 1)
+		if (ti < NSteps - 1 && NSteps != m_EvolvingSurface->n_vertices())
 		{
 			NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 			sysMat = SparseMatrix(NVertices, NVertices);
