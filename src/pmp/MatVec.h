@@ -1145,6 +1145,16 @@ inline Scalar dot(const Vector<Scalar, N>& v0, const Vector<Scalar, N>& v1)
     return p;
 }
 
+//! compute dot product of double vector with a Scalar vector.
+template <typename Scalar, int N>
+[[nodiscard]] double ddot(const Vector<double, N>& v0, const Vector<Scalar, N>& v1)
+{
+    double p = v0[0] * static_cast<double>(v1[0]);
+    for (int i = 1; i < N; ++i)
+        p += v0[i] * static_cast<double>(v1[i]);
+    return p;
+}
+
 //! compute the Euclidean distance between two points
 template <typename Scalar, int N>
 inline Scalar distance(const Vector<Scalar, N>& v0, const Vector<Scalar, N>& v1)

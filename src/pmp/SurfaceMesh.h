@@ -50,6 +50,14 @@ private:
     IndexType idx_;
 };
 
+//! hash function for handles.
+class HandleHashFunction
+{
+public:
+    size_t operator()(const Handle& h) const { return std::hash<IndexType>()(h.idx()); }
+};
+
+
 //! this type represents a vertex (internally it is basically an index)
 class Vertex : public Handle
 {

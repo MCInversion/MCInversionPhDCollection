@@ -82,13 +82,30 @@ using SparseMatrix = Eigen::SparseMatrix<double>;
 }
 
 /**
- * \brief Weight function inspired by [Huska, Medla, Mikula, Morigi 2021]. 
+ * \brief Weight function for Laplacian flow term, inspired by [Huska, Medla, Mikula, Morigi 2021]. 
  * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
  * \return weight function value.
  */
 [[nodiscard]] double LaplacianDistanceWeightFunction(const double& distanceAtVertex)
 {
 	return (1.0 - exp(-(distanceAtVertex * distanceAtVertex)));
+}
+
+constexpr float NORM_EPSILON = 1e-9f;
+
+/**
+ * \brief Weight function for advection flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
+ * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
+ * \param negDistanceGradient       negative gradient vector of distance field at vertex position.
+ * \param vertexNormal              unit normal to vertex.
+ * \return weight function value.
+ */
+[[nodiscard]] double AdvectionDistanceWeightFunction(const double& distanceAtVertex, 
+	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal)
+{
+	assert(std::fabs(pmp::norm(vertexNormal)) < 1.0f + NORM_EPSILON);
+	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
+	return distanceAtVertex * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 }
 
 void SurfaceEvolver::Evolve()
@@ -103,7 +120,7 @@ void SurfaceEvolver::Evolve()
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
-	const auto fieldGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
+	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
@@ -112,23 +129,36 @@ void SurfaceEvolver::Evolve()
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 
+	// property container for surface vertex normals
+	pmp::VertexProperty<pmp::Point> vNormalsProp{};
+
 	// ----------- System fill function --------------------------------
 	const auto fillMatrixAndRHSTriplesFromMesh = [&]()
 	{
 		for (const auto v : m_EvolvingSurface->vertices())
 		{
-			const auto laplaceWeightInfo = pmp::laplace_implicit(*m_EvolvingSurface, v);
+			const auto vPos = m_EvolvingSurface->position(v);
 
-			// TODO: trilinear interpolation for distance & distance gradient
+			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+			const auto vNegGradDistanceToTarget = Geometry::TrilinearInterpolateVectorValue(vPos, fieldNegGradient);
 
-			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(0.0);
+			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
-			const Eigen::Vector3d vertexRhs = m_EvolvingSurface->position(v);
+			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(vDistanceToTarget - m_EvolSettings.FieldIsoLevel);
+			const double etaCtrlWeight = AdvectionDistanceWeightFunction(vDistanceToTarget - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
+
+			const auto vPosToUpdate = m_EvolvingSurface->position(v);
+
+			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;
 			sysRhs.row(v.idx()) = vertexRhs;
 
-			// TODO: matrix fill
+			const auto laplaceWeightInfo = pmp::laplace_implicit(*m_EvolvingSurface, v); // Laplacian weights
+			sysMat.coeffRef(v.idx(), v.idx()) = 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum);
 
-
+			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
+			{
+				sysMat.coeffRef(v.idx(), w.idx()) = -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight);
+			}
 		}
 	};
 	// -----------------------------------------------------------------
@@ -137,18 +167,14 @@ void SurfaceEvolver::Evolve()
 	for (unsigned int ti = 0; ti < NSteps; ti++)
 	{
 		pmp::Normals::compute_vertex_normals(*m_EvolvingSurface);
-		const auto vNormals = m_EvolvingSurface->vertex_property<pmp::Point>("v:normal");
+		vNormalsProp = m_EvolvingSurface->vertex_property<pmp::Point>("v:normal");
 
-		// matrix & rhs
+		// prepare matrix & rhs
 		fillMatrixAndRHSTriplesFromMesh();
 
-		// TODO: WIP
-		continue;
-
+		// solve
 		Eigen::SimplicialLDLT solver(sysMat);
-		Eigen::MatrixXd X = solver.solve(sysRhs);
-
-
+		Eigen::MatrixXd x = solver.solve(sysRhs);
 		if (solver.info() != Eigen::Success)
 		{
 			const std::string msg = "SurfaceEvolver::Evolve: solver.info() != Eigen::Success for time step id: "
@@ -156,9 +182,15 @@ void SurfaceEvolver::Evolve()
 			throw std::runtime_error(msg);
 		}
 
+		// update vertex positions
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
-			m_EvolvingSurface->position(pmp::Vertex(i)) = X.row(i);
+			m_EvolvingSurface->position(pmp::Vertex(i)) = x.row(i);
 		}
+
+		// remeshing
+		pmp::Remeshing remeshing(*m_EvolvingSurface);
+		const auto targetEdgeLength = static_cast<pmp::Scalar>(sqrt(tStep));
+		remeshing.uniform_remeshing(targetEdgeLength);
 	}
 }

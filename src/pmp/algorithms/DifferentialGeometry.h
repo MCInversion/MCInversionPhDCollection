@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
 
@@ -91,7 +93,7 @@ Point laplace(const SurfaceMesh& mesh, Vertex v);
 //! wrapper for implicit mesh Laplacian
 struct ImplicitLaplaceInfo
 {
-    std::vector<std::pair<Vertex, Scalar>> vertexWeights{};
+    std::unordered_map<Vertex, Scalar, HandleHashFunction> vertexWeights{};
     Scalar weightSum{ 0.0 };
 };
 
