@@ -19,6 +19,7 @@ struct SurfaceEvolutionSettings
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	std::string OutputPath{}; //>! path where output surfaces are to be exported.
+	bool DoRemeshing{ true };
 };
 
 /**

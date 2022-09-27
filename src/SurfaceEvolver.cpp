@@ -9,9 +9,11 @@
 
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
+#include "pmp/algorithms/Decimation.h"
+#include "pmp/algorithms/Features.h"
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
-constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
+constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.48f;
 
 constexpr unsigned int N_ICO_VERTS_0 = 12; // number of vertices in an icosahedron.
 constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
@@ -146,10 +148,13 @@ void SurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// TODO: properly stabilize edge length
-	const auto minEdgeLength = 1.5 * static_cast<pmp::Scalar>(sqrt(tStep));
-	const auto maxEdgeLength = 4 * minEdgeLength;
+	auto minEdgeLength = 0.1f * (bds.max()[0] - bds.min()[0]);
+	auto maxEdgeLength = 3.0f * minEdgeLength;
+	//const auto targetEdgeLength = static_cast<pmp::Scalar>(4.0 * sqrt(tStep));
+	std::cout << "minEdgeLength = " << minEdgeLength << "\n";
 
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
+	const auto NOrigVertices = NVertices;
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vCoAreas = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:neighborhoodArea"); // vertex property for co-areas.
@@ -164,15 +169,12 @@ void SurfaceEvolver::Evolve()
 		for (const auto v : m_EvolvingSurface->vertices())
 		{
 			const auto vPos = m_EvolvingSurface->position(v);
-
-			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
-			vDistance[v] = vDistanceToTarget;
 			const auto vNegGradDistanceToTarget = Geometry::TrilinearInterpolateVectorValue(vPos, fieldNegGradient);
 
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
-			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(vDistanceToTarget - m_EvolSettings.FieldIsoLevel);
-			const double etaCtrlWeight = AdvectionDistanceWeightFunction(vDistanceToTarget - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
+			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(vDistance[v] - m_EvolSettings.FieldIsoLevel);
+			const double etaCtrlWeight = AdvectionDistanceWeightFunction(vDistance[v] - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
 
 			const auto vPosToUpdate = m_EvolvingSurface->position(v);
 
@@ -201,7 +203,7 @@ void SurfaceEvolver::Evolve()
 		{
 			const auto vPos = m_EvolvingSurface->position(v);
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
-			vDistance[v] = vDistanceToTarget;
+			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 			const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
 			vCoAreas[v] = coArea;
 		}
@@ -265,15 +267,33 @@ void SurfaceEvolver::Evolve()
 			break;
 		}
 
-
+		if (m_EvolSettings.DoRemeshing && ti > NSteps / 10)
+		{
 #if REPORT_EVOL_STEPS
-		std::cout << "done\n";
-		std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
+			std::cout << "done\n";
+			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
+			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
 #endif
+			// remeshing
+			if (ti % 2 == 1)
+			{
+				// detect features for every odd step
+				pmp::Features feat(*m_EvolvingSurface);
+				feat.detect_angle(0.6 * M_PI_2 * 180.0);				
+			}
+			pmp::Remeshing remeshing(*m_EvolvingSurface);
+			remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, 2.0 * minEdgeLength, 1, false);
+			//remeshing.uniform_remeshing(targetEdgeLength);
+#if REPORT_EVOL_STEPS
+			std::cout << "done\n";
+#endif
+		}
 
-		// remeshing
-		pmp::Remeshing remeshing(*m_EvolvingSurface);
-		remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, minEdgeLength, 3);
+		if (ti % 5 == 0 && ti > NSteps / 5)
+		{
+			minEdgeLength *= 0.97f;
+			maxEdgeLength *= 0.97f;
+		}
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
 		{
@@ -283,7 +303,7 @@ void SurfaceEvolver::Evolve()
 			{
 				const auto vPos = m_EvolvingSurface->position(v);
 				const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
-				vDistance[v] = vDistanceToTarget;
+				vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 				const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
 				vCoAreas[v] = coArea;
 			}
@@ -293,7 +313,7 @@ void SurfaceEvolver::Evolve()
 		}
 
 		// update linear system dims:
-		if (ti < NSteps - 1 && NSteps != m_EvolvingSurface->n_vertices())
+		if (ti < NSteps - 1 && NVertices != m_EvolvingSurface->n_vertices())
 		{
 			NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 			sysMat = SparseMatrix(NVertices, NVertices);
@@ -301,7 +321,6 @@ void SurfaceEvolver::Evolve()
 		}
 
 #if REPORT_EVOL_STEPS
-		std::cout << "done\n";
 		std::cout << ">>> Time step " << ti << " finished.\n";
 		std::cout << "----------------------------------------------------------------------\n";
 #endif

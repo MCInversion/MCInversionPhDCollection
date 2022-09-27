@@ -40,10 +40,10 @@ int main()
 
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
+        //"armadillo",
         //"BentChair",
         //"blub",
-        //"bunny",
+        "bunny",
         //"maxPlanck",
         //"nefertiti",
         //"ogre",
@@ -136,9 +136,9 @@ int main()
 
 			SurfaceEvolutionSettings seSettings{
 				name,
-				30,
+				80,
 				0.001,
-				0.05 * minSize,
+				0.00 * minSize,
 				3,
 				true,
 				dataOutPath
