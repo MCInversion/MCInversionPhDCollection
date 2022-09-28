@@ -63,4 +63,32 @@ size_t Features::detect_angle(Scalar angle)
     return n_edges;
 }
 
+size_t Features::detect_angle_within_bounds(Scalar minAngle, Scalar maxAngle)
+{
+    const Scalar feature_cosine_min = cos(minAngle / 180.0 * M_PI);
+    const Scalar feature_cosine_max = cos(maxAngle / 180.0 * M_PI);
+    size_t n_edges = 0;
+    for (auto e : mesh_.edges())
+    {
+        if (!mesh_.is_boundary(e))
+        {
+            const auto f0 = mesh_.face(mesh_.halfedge(e, 0));
+            const auto f1 = mesh_.face(mesh_.halfedge(e, 1));
+
+            const Normal n0 = Normals::compute_face_normal(mesh_, f0);
+            const Normal n1 = Normals::compute_face_normal(mesh_, f1);
+
+            const auto dotNormals = dot(n0, n1);
+            if (dotNormals < feature_cosine_min && dotNormals > feature_cosine_max)
+            {
+                efeature_[e] = true;
+                vfeature_[mesh_.vertex(e, 0)] = true;
+                vfeature_[mesh_.vertex(e, 1)] = true;
+                n_edges++;
+            }
+        }
+    }
+    return n_edges;
+}
+
 } // namespace pmp

@@ -206,16 +206,18 @@ void SurfaceEvolver::Evolve()
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
-	
+
+	// ........ evaluate edge lengths for remeshing ....................
 	const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
 	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
 	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
-	constexpr float minEdgeMultiplier = 0.07f;
+	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
 	auto maxEdgeLength = 4.0f * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
+	// .................................................................
 
 	// DISCLAIMER: dhe dimensionality of the system depends on the number of mesh vertices which can change if remeshing is used.
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
@@ -231,15 +233,24 @@ void SurfaceEvolver::Evolve()
 	{
 		for (const auto v : m_EvolvingSurface->vertices())
 		{
-			const auto vPos = m_EvolvingSurface->position(v);
-			const auto vNegGradDistanceToTarget = Geometry::TrilinearInterpolateVectorValue(vPos, fieldNegGradient);
+			const auto vPosToUpdate = m_EvolvingSurface->position(v);
+
+			if (m_EvolvingSurface->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector3d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				sysMat.coeffRef(v.idx(), v.idx()) = 1.0;
+				continue;
+			}
+
+			const auto vNegGradDistanceToTarget = Geometry::TrilinearInterpolateVectorValue(vPosToUpdate, fieldNegGradient);
 
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
 			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(static_cast<double>(vDistance[v]) - m_EvolSettings.FieldIsoLevel);
 			const double etaCtrlWeight = AdvectionDistanceWeightFunction(static_cast<double>(vDistance[v]) - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
 
-			const auto vPosToUpdate = m_EvolvingSurface->position(v);
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -325,27 +336,34 @@ void SurfaceEvolver::Evolve()
 			break;
 		}
 
-		if (m_EvolSettings.DoRemeshing && ti > NSteps / 10)
+		if (m_EvolSettings.DoRemeshing && ti > NSteps * m_EvolSettings.TopoParams.RemeshingStartTimeFactor)
 		{
+			// remeshing
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
 			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
 			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
 #endif
-			// remeshing
-			if (ti % 2 == 1)
+			if (m_EvolSettings.DoFeatureDetection && ti > NSteps * m_EvolSettings.TopoParams.FeatureDetectionStartTimeFactor)
 			{
-				// detect features for every odd step
+				// detect features
 				pmp::Features feat(*m_EvolvingSurface);
-				feat.detect_angle(0.6f * M_PI_2 * 180.0f);				
+				const auto minDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MinDihedralAngle);
+				const auto maxDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MaxDihedralAngle);
+				feat.detect_angle_within_bounds(minDihedralAngle, maxDihedralAngle);
 			}
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
-			remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, 2.0 * minEdgeLength, 1, false);
+			remeshing.adaptive_remeshing(
+				minEdgeLength, maxEdgeLength, 2.0f * minEdgeLength,
+				m_EvolSettings.TopoParams.NRemeshingIters,
+				m_EvolSettings.TopoParams.UseBackProjection
+			);
 			//remeshing.uniform_remeshing(targetEdgeLength);
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
 #endif
-			if (ti % 5 == 0 && ti > NSteps / 5)
+			if (ti % m_EvolSettings.TopoParams.StepStrideForEdgeDecay == 0 &&
+				ti > NSteps * m_EvolSettings.TopoParams.RemeshingSizeDecayStartTimeFactor)
 			{
 				minEdgeLength *= 0.97f;
 				maxEdgeLength *= 0.97f;
@@ -390,6 +408,7 @@ void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)
 {
 	os << "======================================================================\n";
 	os << "> > > > > > > > > > Initiating SurfaceEvolver: < < < < < < < < < < < <\n";
+	os << "Target Name: " << evolSettings.ProcedureName << ",\n";
 	os << "NSteps: " << evolSettings.NSteps << ",\n";
 	os << "TimeStep: " << evolSettings.TimeStep << ",\n";
 	os << "FieldIsoLevel: " << evolSettings.FieldIsoLevel << ",\n";

@@ -36,6 +36,10 @@ public:
     //! \return The number of feature edges detected.
     size_t detect_angle(Scalar angle);
 
+    //! \brief Mark edges with dihedral angle larger than \p minAngle and smaller than \p maxAngle as feature.
+	//! \return The number of feature edges detected.
+    size_t detect_angle_within_bounds(Scalar minAngle, Scalar maxAngle);
+
 private:
     SurfaceMesh& mesh_;
     VertexProperty<bool> vfeature_;

@@ -23,30 +23,16 @@ constexpr bool performEvolverTests = true;
 
 int main()
 {
-	// icosphere test
-	/*
-	for (unsigned int subdiv = 0; subdiv < 6; subdiv++)
-	{
-		Geometry::IcoSphereBuilder icoBuilder({ subdiv, 1.0f });
-		icoBuilder.BuildBaseData();
-		const auto& geom = icoBuilder.GetBaseResult();
-		std::cout << "subdiv:" << subdiv << ", geom.Vertices.size(): " << geom.Vertices.size() << "\n";
-
-		icoBuilder.BuildPMPSurfaceMesh();
-		const auto& pmpGeom = icoBuilder.GetPMPSurfaceMeshResult();
-		pmpGeom.write(dataOutPath + "_ico" + std::to_string(subdiv) + ".obj");
-	}*/
-
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
-        "BentChair",
-        "blub",
+        //"armadillo",
+        //"BentChair",
+        //"blub",
         "bunny",
-        "maxPlanck",
-        "nefertiti", /* <<<< unstable >>>> */
-        "ogre", /* <<<< unstable >>>> */
-        "spot"
+        //"maxPlanck",
+        //"nefertiti", /* <<<< unstable >>>> */
+        //"ogre", /* <<<< unstable >>>> */
+        //"spot"
     };
 
 	if (performSDFTests)
@@ -107,7 +93,7 @@ int main()
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
-			{"blub", 0.05 },
+			{"blub", 0.01 },
 			{"bunny", 0.002 },
 			{"maxPlanck", 0.05 },
 			{"nefertiti", 0.015 },
@@ -147,7 +133,7 @@ int main()
 
 			const auto& sdfBox = sdf.Box();
 			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
-			const double sdfBoxMaxDim = std::max({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
 			const double tau = timeStepSizesForMeshes.at(name); // time step
 			SurfaceEvolutionSettings seSettings{
@@ -157,6 +143,7 @@ int main()
 				0.00 * minSize,
 				3,
 				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
+				{},
 				minSize, maxSize,
 				meshBBox.center(),
 				true, false,
@@ -172,7 +159,7 @@ int main()
 			}
 			catch(...)
 			{
-				std::cerr << "SurfaceEvolver::Evolve has thrown an exception! Continue...\n";
+				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
 		}
 	} // endif performSDFTests

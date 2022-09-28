@@ -4,7 +4,7 @@
 #include "geometry/Grid.h"
 
 /**
- * \brief A wrapper for surface evolution advectoion-diffusion parameters.
+ * \brief A wrapper for surface evolution advection-diffusion parameters.
  * \struct AdvectionDiffusionParameters
  */
 struct AdvectionDiffusionParameters
@@ -24,6 +24,25 @@ struct AdvectionDiffusionParameters
 };
 
 /**
+ * \brief A wrapper for parameters related to mesh topology adjustments (remeshing etc.).
+ * \struct MeshTopologySettings
+ */
+struct MeshTopologySettings
+{
+	double MinEdgeMultiplier{ 0.07 }; //>! multiplier for minimum edge length in adaptive remeshing.
+	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
+	double EdgeLengthDecayFactor{ 0.97 }; //>! decay factor for minimum (and consequently maximum) edge length.
+	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
+	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
+	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
+	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
+	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing
+
+	double MinDihedralAngle{ 0.95 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
+	double MaxDihedralAngle{ 1.8 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
+};
+
+/**
  * \brief A wrapper for surface evolution settings.
  * \struct SurfaceEvolutionSettings
  */
@@ -37,6 +56,7 @@ struct SurfaceEvolutionSettings
 	unsigned int IcoSphereSubdivisionLevel{ 3 }; //>! subdivision level of an evolving ico sphere surface.
 
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
+	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
 	float MinTargetSize{ 1.0f }; //>! minimum size of the target mesh bounding box.
 	float MaxTargetSize{ 1.0f }; //>! maximum size of the target mesh bounding box.
@@ -45,7 +65,8 @@ struct SurfaceEvolutionSettings
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.
 	std::string OutputPath{}; //>! path where output surfaces are to be exported.
-	bool DoRemeshing{ true };
+	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
+	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 };
 
 /**
