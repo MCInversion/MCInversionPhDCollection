@@ -3,14 +3,13 @@
 
 #include "sdf/SDF.h"
 #include "geometry/GridUtil.h"
-#include "geometry/IcoSphereBuilder.h"
 
+#include "SurfaceEvolver.h"
 #include "ConversionUtils.h"
 
 #include <filesystem>
 #include <chrono>
-
-#include "SurfaceEvolver.h"
+#include <map>
 
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
@@ -40,14 +39,14 @@ int main()
 
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
-        //"blub",
+        "armadillo",
+        "BentChair",
+        "blub",
         "bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        //"ogre",
-        //"spot"
+        "maxPlanck",
+        "nefertiti", /* <<<< unstable >>>> */
+        "ogre", /* <<<< unstable >>>> */
+        "spot"
     };
 
 	if (performSDFTests)
@@ -105,6 +104,17 @@ int main()
 	{
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 
+		const std::map<std::string, double> timeStepSizesForMeshes{
+			{"armadillo", 0.05 },
+			{"BentChair", 0.05 },
+			{"blub", 0.05 },
+			{"bunny", 0.002 },
+			{"maxPlanck", 0.05 },
+			{"nefertiti", 0.015 },
+			{"ogre", 0.01 },
+			{"spot", 0.05 }
+		};
+
 		for (const auto& name : meshNames)
 		{
 			pmp::SurfaceMesh mesh;
@@ -112,6 +122,7 @@ int main()
 			const auto meshBBox = mesh.bounds();
 			const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
 			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
 			const float cellSize = minSize / nVoxelsPerMinDimension;
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
@@ -134,18 +145,35 @@ int main()
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 			ExportToVTI(dataOutPath + name + "SDF", sdf);
 
+			const auto& sdfBox = sdf.Box();
+			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+			const double sdfBoxMaxDim = std::max({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+			const double tau = timeStepSizesForMeshes.at(name); // time step
 			SurfaceEvolutionSettings seSettings{
 				name,
 				80,
-				0.001,
+				tau,
 				0.00 * minSize,
 				3,
-				true,
-				dataOutPath
+				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
+				minSize, maxSize,
+				meshBBox.center(),
+				true, false,
+				dataOutPath,
+				true
 			};
 			ReportInput(seSettings, std::cout);
 			SurfaceEvolver evolver(sdf, seSettings);
-			evolver.Evolve();
+
+			try
+			{
+				evolver.Evolve();				
+			}
+			catch(...)
+			{
+				std::cerr << "SurfaceEvolver::Evolve has thrown an exception! Continue...\n";
+			}
 		}
 	} // endif performSDFTests
 }

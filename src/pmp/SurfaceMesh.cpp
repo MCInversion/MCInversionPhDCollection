@@ -62,7 +62,7 @@ SurfaceMesh& SurfaceMesh::operator=(const SurfaceMesh& rhs)
 
 SurfaceMesh& SurfaceMesh::operator*=(const mat4& mat)
 {
-    for (const auto& v : vertices())
+    for (const auto v : vertices())
         position(v) = affine_transform(mat, position(v));
 
     return *this;

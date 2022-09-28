@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+#include "ConversionUtils.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
@@ -13,10 +14,17 @@
 #include "pmp/algorithms/Features.h"
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
-constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.48f;
+constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
 
 constexpr unsigned int N_ICO_VERTS_0 = 12; // number of vertices in an icosahedron.
 constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
+
+#define REPORT_EVOL_STEPS true // Note: may affect performance
+
+/// \brief needs no explanation because it does not have one.
+constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.93f;
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 8.0f;
 
 /**
  * \brief Computes scaling factor for stabilizing the finite volume method on assumed spherical surface meshes based on time step.
@@ -29,20 +37,19 @@ constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
 [[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor = 1.0f)
 {
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, icoSubdiv) - 1) + 3 * N_ICO_VERTS_0) / 3;
-	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * icoRadius * icoRadius / static_cast<float>(expectedVertexCount));
+	const float weighedIcoRadius = icoRadius * UNEXPLAINABLE_MAGIC_CONSTANT;
+	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * weighedIcoRadius * weighedIcoRadius / static_cast<float>(expectedVertexCount));
 	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea, 1.0f / 3.0f);
 }
 
 void SurfaceEvolver::Preprocess()
 {
-	// prepare dimensions & origin
-	const auto& fieldBox = m_Field->Box();
-	const auto origin = fieldBox.center();
-	const auto fieldBoxSize = fieldBox.max() - fieldBox.min();
-	const float minDim = std::min({ fieldBoxSize[0], fieldBoxSize[1], fieldBoxSize[2] });
-
 	// build ico-sphere
-	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * minDim;
+	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (m_EvolSettings.MinTargetSize + 1.5f * m_EvolSettings.MaxTargetSize);
+	m_StartingSurfaceRadius = icoSphereRadius;
+#if REPORT_EVOL_STEPS
+	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
+#endif
 	const unsigned int icoSphereSubdiv = m_EvolSettings.IcoSphereSubdivisionLevel;
 	Geometry::IcoSphereBuilder icoBuilder({ m_EvolSettings.IcoSphereSubdivisionLevel, icoSphereRadius });
 	icoBuilder.BuildBaseData();
@@ -52,19 +59,41 @@ void SurfaceEvolver::Preprocess()
 	// transform mesh and grid
 	// >>> uniform scale to ensure numerical method's stability.
 	// >>> translation to origin for fields not centered at (0,0,0).
+	// >>> scaling factor value is intended for stabilization of the numerical method.
 	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
-	pmp::mat4 transfMatrix{
-		scalingFactor, 0.0f, 0.0f, -origin[0],
-		0.0f, scalingFactor, 0.0f, -origin[1],
-		0.0f, 0.0f, scalingFactor, -origin[2],
+	m_ScalingFactor = scalingFactor;
+	const auto origin = m_EvolSettings.TargetOrigin;
+#if REPORT_EVOL_STEPS
+	std::cout << "Stabilization Scaling Factor: " << scalingFactor << ",\n";
+	std::cout << "Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
+#endif
+	const pmp::mat4 transfMatrixGeomScale{
+		scalingFactor, 0.0f, 0.0f, 0.0f,
+		0.0f, scalingFactor, 0.0f, 0.0f,
+		0.0f, 0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	m_StabilizationScalingFactor = scalingFactor;
-	m_TransformToOriginal = inverse(transfMatrix);
+	const pmp::mat4 transfMatrixGeomMove{
+		1.0f, 0.0f, 0.0f, -origin[0],
+		0.0f, 1.0f, 0.0f, -origin[1],
+		0.0f, 0.0f, 1.0f, -origin[2],
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	m_TransformToOriginal = inverse(transfMatrixFull);
 
-	(*m_EvolvingSurface) *= transfMatrix;
-	(*m_Field) *= transfMatrix;
+	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
+	(*m_Field) *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
+	(*m_Field) *= (static_cast<double>(scalingFactor)); // scale also distance values.
+
+	// >>>>> Scaled geometry & field (use when debugging) <<<<<<
+	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_scaledField", *m_Field);
+	//pmp::SurfaceMesh scaledTargetMesh = *m_EvolSettings.DO_NOT_KEEP_ptrTargetSurface;
+	//scaledTargetMesh *= transfMatrixFull;
+	//scaledTargetMesh.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_stableScale.obj");
 }
+
+// ================================================================================================
 
 /// \brief identifier for sparse matrix.
 using SparseMatrix = Eigen::SparseMatrix<double>;
@@ -84,41 +113,81 @@ using SparseMatrix = Eigen::SparseMatrix<double>;
 	return "Eigen::InvalidInput";
 }
 
-/**
- * \brief Weight function for Laplacian flow term, inspired by [Huska, Medla, Mikula, Morigi 2021]. 
- * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
- * \return weight function value.
- */
-[[nodiscard]] double LaplacianDistanceWeightFunction(const double& distanceAtVertex)
-{
-	if (distanceAtVertex < 0.0)
-		return 0.0;
-	return (1.0 - exp(-(distanceAtVertex * distanceAtVertex)));
-}
+// ================================================================================================
 
-/// \brief tolerance value for point norm.
-constexpr float NORM_EPSILON = 1e-4f;
+/// \brief a stats wrapper for co-volume measures affecting the stability of the finite volume method.
+struct CoVolumeStats
+{
+	double Mean{ 0.0 };
+	double Max{ -DBL_MAX };
+	double Min{ DBL_MAX };
+};
+
+const std::string coVolMeasureVertexPropertyName{ "v:coVolumeMeasure" };
 
 /**
- * \brief Weight function for advection flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
- * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
- * \param negDistanceGradient       negative gradient vector of distance field at vertex position.
- * \param vertexNormal              unit normal to vertex.
- * \return weight function value.
+ * \brief Analyzes the stats of co-volumes around each mesh vertex, and creates a vertex property for the measure values.
+ * \param mesh         input mesh.
+ * \return co-volume stats.
  */
-[[nodiscard]] double AdvectionDistanceWeightFunction(const double& distanceAtVertex, 
-	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal)
+[[nodiscard]] CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh)
 {
-	//assert(std::fabs(pmp::norm(vertexNormal) - 1.0f) < NORM_EPSILON);
-	if (distanceAtVertex < 0.0)
-		return 0.0;
-	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
-	return distanceAtVertex * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	// vertex property for co-volume measures.
+	if (!mesh.has_vertex_property(coVolMeasureVertexPropertyName))
+		mesh.add_vertex_property<pmp::Scalar>(coVolMeasureVertexPropertyName);
+	auto vCoVols = mesh.get_vertex_property<pmp::Scalar>(coVolMeasureVertexPropertyName);
+
+	CoVolumeStats stats{};
+	for (const auto v : mesh.vertices())
+	{
+		const double measure = pmp::voronoi_area(mesh, v);
+		vCoVols[v] = static_cast<pmp::Scalar>(measure);
+
+		if (stats.Max < measure) stats.Max = measure;
+		if (stats.Min > measure) stats.Min = measure;
+		stats.Mean += measure;
+	}
+	stats.Mean /= static_cast<double>(mesh.n_vertices());
+	return stats;
 }
 
 // ================================================================================================
 
-#define REPORT_EVOL_STEPS true // Note: may affect performance
+double SurfaceEvolver::LaplacianDistanceWeightFunction(const double& distanceAtVertex) const
+{
+	if (distanceAtVertex < 0.0 && m_EvolSettings.ADParams.MCFSupportPositive)
+		return 0.0;
+	const auto& c1 = m_EvolSettings.ADParams.MCFMultiplier;
+	const auto& c2 = m_EvolSettings.ADParams.MCFVariance;
+	return c1 * (1.0 - exp(-(distanceAtVertex * distanceAtVertex) / c2));
+}
+
+double SurfaceEvolver::AdvectionDistanceWeightFunction(const double& distanceAtVertex,
+	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal) const
+{
+	if (distanceAtVertex < 0.0 && m_EvolSettings.ADParams.AdvectionSupportPositive)
+		return 0.0;
+	const auto& d1 = m_EvolSettings.ADParams.AdvectionMultiplier;
+	const auto& d2 = m_EvolSettings.ADParams.AdvectionSineMultiplier;
+	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
+	return d1 * distanceAtVertex * (negGradDotNormal - d2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+}
+
+void SurfaceEvolver::ExportSurface(const unsigned int& tId, const bool& isResult, const bool& transformToOriginal) const
+{
+	const std::string connectingName = (isResult ? "_Result" : "_Evol_" + std::to_string(tId));
+	if (!transformToOriginal)
+	{
+		m_EvolvingSurface->write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
+	    return;		
+	}
+	auto exportedSurface = *m_EvolvingSurface;
+	exportedSurface *= m_TransformToOriginal;
+	exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
+}
+
+// ================================================================================================
+
 
 void SurfaceEvolver::Evolve()
 {
@@ -132,32 +201,26 @@ void SurfaceEvolver::Evolve()
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
-#if REPORT_EVOL_STEPS
-	const auto bds = m_EvolvingSurface->bounds();
-	std::cout << "IcoSphere Bounds Size: {"
-		<< (bds.max()[0] - bds.min()[0]) << ", "
-		<< (bds.max()[1] - bds.min()[1]) << ", "
-		<< (bds.max()[2] - bds.min()[2]) << "},\n";
-	std::cout << "Stabilization Scaling Factor: " << m_StabilizationScalingFactor << "\n";
-#endif
-
 	const auto& fieldBox = m_Field->Box();
 	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
+	
+	const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
+	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
+	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
+	constexpr float minEdgeMultiplier = 0.07f;
+	auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
+	auto maxEdgeLength = 4.0f * minEdgeLength;
+#if REPORT_EVOL_STEPS
+	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
+#endif
 
-	// TODO: properly stabilize edge length
-	auto minEdgeLength = 0.1f * (bds.max()[0] - bds.min()[0]);
-	auto maxEdgeLength = 3.0f * minEdgeLength;
-	//const auto targetEdgeLength = static_cast<pmp::Scalar>(4.0 * sqrt(tStep));
-	std::cout << "minEdgeLength = " << minEdgeLength << "\n";
-
+	// DISCLAIMER: dhe dimensionality of the system depends on the number of mesh vertices which can change if remeshing is used.
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
-	const auto NOrigVertices = NVertices;
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
-	auto vCoAreas = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:neighborhoodArea"); // vertex property for co-areas.
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
 
 	// property container for surface vertex normals
@@ -173,16 +236,13 @@ void SurfaceEvolver::Evolve()
 
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
-			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(vDistance[v] - m_EvolSettings.FieldIsoLevel);
-			const double etaCtrlWeight = AdvectionDistanceWeightFunction(vDistance[v] - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
+			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(static_cast<double>(vDistance[v]) - m_EvolSettings.FieldIsoLevel);
+			const double etaCtrlWeight = AdvectionDistanceWeightFunction(static_cast<double>(vDistance[v]) - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
 
 			const auto vPosToUpdate = m_EvolvingSurface->position(v);
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;
 			sysRhs.row(v.idx()) = vertexRhs;
-
-			const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
-			vCoAreas[v] = coArea;
 
 			const auto laplaceWeightInfo = pmp::laplace_implicit(*m_EvolvingSurface, v); // Laplacian weights
 			sysMat.coeffRef(v.idx(), v.idx()) = 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum);
@@ -196,21 +256,19 @@ void SurfaceEvolver::Evolve()
 	// -----------------------------------------------------------------
 
 	// write initial surface
-	if (m_EvolSettings.ExportSurfacePerTimeStep)
+	auto coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface);
+#if REPORT_EVOL_STEPS
+	std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
+#endif
+	// set initial surface vertex properties
+	for (const auto v : m_EvolvingSurface->vertices())
 	{
-		// set initial surface vertex properties
-		for (const auto v : m_EvolvingSurface->vertices())
-		{
-			const auto vPos = m_EvolvingSurface->position(v);
-			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
-			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-			const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
-			vCoAreas[v] = coArea;
-		}
-		auto exportedSurface = *m_EvolvingSurface;
-		exportedSurface *= m_TransformToOriginal;
-		exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_Evol_0" + m_OutputMeshExtension);
+		const auto vPos = m_EvolvingSurface->position(v);
+		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 	}
+	if (m_EvolSettings.ExportSurfacePerTimeStep)
+		ExportSurface(0);
 
 	// main loop
 	for (unsigned int ti = 1; ti <= NSteps; ti++)
@@ -279,7 +337,7 @@ void SurfaceEvolver::Evolve()
 			{
 				// detect features for every odd step
 				pmp::Features feat(*m_EvolvingSurface);
-				feat.detect_angle(0.6 * M_PI_2 * 180.0);				
+				feat.detect_angle(0.6f * M_PI_2 * 180.0f);				
 			}
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing(minEdgeLength, maxEdgeLength, 2.0 * minEdgeLength, 1, false);
@@ -287,33 +345,30 @@ void SurfaceEvolver::Evolve()
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
 #endif
+			if (ti % 5 == 0 && ti > NSteps / 5)
+			{
+				minEdgeLength *= 0.97f;
+				maxEdgeLength *= 0.97f;
+			}
 		}
 
-		if (ti % 5 == 0 && ti > NSteps / 5)
+		coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface);
+#if REPORT_EVOL_STEPS
+		std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
+#endif
+		// set surface vertex properties
+		for (const auto v : m_EvolvingSurface->vertices())
 		{
-			minEdgeLength *= 0.97f;
-			maxEdgeLength *= 0.97f;
+			const auto vPos = m_EvolvingSurface->position(v);
+			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		}
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
-		{
-			// set surface vertex properties
-			// TODO: re-use them
-			for (const auto v : m_EvolvingSurface->vertices())
-			{
-				const auto vPos = m_EvolvingSurface->position(v);
-				const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
-				vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-				const pmp::Scalar coArea = pmp::voronoi_area(*m_EvolvingSurface, v);
-				vCoAreas[v] = coArea;
-			}
-			auto exportedSurface = *m_EvolvingSurface;
-			exportedSurface *= m_TransformToOriginal;
-			exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_Evol_" + std::to_string(ti) + m_OutputMeshExtension);
-		}
+			ExportSurface(ti);
 
-		// update linear system dims:
-		if (ti < NSteps - 1 && NVertices != m_EvolvingSurface->n_vertices())
+		// update linear system dims for next time step:
+		if (ti < NSteps && NVertices != m_EvolvingSurface->n_vertices())
 		{
 			NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 			sysMat = SparseMatrix(NVertices, NVertices);
@@ -327,7 +382,8 @@ void SurfaceEvolver::Evolve()
 
 	} // end main loop
 
-
+	if (m_EvolSettings.ExportResultSurface)
+		ExportSurface(NSteps, true);
 }
 
 void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)
@@ -338,5 +394,32 @@ void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)
 	os << "TimeStep: " << evolSettings.TimeStep << ",\n";
 	os << "FieldIsoLevel: " << evolSettings.FieldIsoLevel << ",\n";
 	os << "IcoSphereSubdivisionLevel: " << evolSettings.IcoSphereSubdivisionLevel << ",\n";
+	os << "......................................................................\n";
+	const auto& c1 = evolSettings.ADParams.MCFMultiplier;
+	const auto& c2 = evolSettings.ADParams.MCFVariance;
+	os << "Curvature diffusion weight: " << c1 << " * (1 - exp(d^2 / " << c2 << ")),\n";
+	const auto& d1 = evolSettings.ADParams.AdvectionMultiplier;
+	const auto& d2 = evolSettings.ADParams.AdvectionSineMultiplier;
+	os << "Advection weight: " << d1 << " * d * ((-grad(d) . N) - " << d2 << " * sqrt(1 - (grad(d) . N)^2)),\n";
+	os << "......................................................................\n";
+	os << "Min. Target Size: " << evolSettings.MinTargetSize << ",\n";
+	os << "Max. Target Size: " << evolSettings.MaxTargetSize << ",\n";
+	os << "Export Surface per Time Step: " << (evolSettings.ExportSurfacePerTimeStep ? "true" : "false") << ",\n";
+	os << "Output Path: " << evolSettings.OutputPath << ",\n";
+	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
 	os << "----------------------------------------------------------------------\n";
+}
+
+/// \brief a unit speed of a shrink-wrapping sphere sufficiently far away from target.
+constexpr double BASE_DISTANCE_MULTIPLIER = 1.0;
+
+/// \brief a factor by which distance field variance is multiplied.
+constexpr double BASE_DISTANCE_VARIANCE = 1.0;
+
+AdvectionDiffusionParameters PreComputeAdvectionDiffusionParams(const double& distanceMax, const double& targetMinDimension)
+{
+	// the radius within which target object starts slowing down shrink wrapping.
+	const double distanceVariance = BASE_DISTANCE_VARIANCE; //* 0.125 * targetMinDimension * targetMinDimension;
+	const double distanceMultiplier = BASE_DISTANCE_MULTIPLIER / (1.0 - exp(-distanceMax * distanceMax / distanceVariance));
+	return { distanceMultiplier, distanceVariance, distanceMultiplier, 1.0 };
 }

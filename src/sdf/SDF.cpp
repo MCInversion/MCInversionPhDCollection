@@ -248,7 +248,7 @@ namespace SDF
 		os << "----------------------------------------------------------------------\n";
 		os << "CellSize: " << settings.CellSize << "\n";
 		os << "VolumeExpansionFactor: " << settings.VolumeExpansionFactor << "\n";
-		os << "TruncationFactor: " << settings.TruncationFactor << "\n";
+		os << "TruncationFactor: " << (settings.TruncationFactor < DBL_MAX ? std::to_string(settings.TruncationFactor) : "DBL_MAX") << "\n";
 		os << "......................................................................\n";
 		os << "PreprocessingType: " << PrintPreprocessingType(settings.PreprocType) << "\n";
 		os << "KDTreeSplit: " << PrintKDTreeSplitType(settings.KDTreeSplit) << "\n";
