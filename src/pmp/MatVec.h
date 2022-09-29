@@ -372,6 +372,9 @@ using ivec4 = Vector<int, 4>;
 //! template specialization for a vector of four unsigned int values
 using uvec4 = Vector<unsigned int, 4>;
 
+//! template specialization for a quaternion of four float values
+using quat = Vector<float, 4>;
+
 //! template specialization for a 2x2 matrix of float values
 using mat2 = Mat2<float>;
 //! template specialization for a 2x2 matrix of double values
@@ -1169,11 +1172,57 @@ inline Scalar distance(const Vector<Scalar, N>& v0, const Vector<Scalar, N>& v1)
     return (Scalar)sqrt(dist);
 }
 
+//! compute quaternion from normalized axis and angle.
+template <typename Scalar>
+[[nodiscard]] quat quat_from_axis_angle(const Vector<Scalar, 3>& axis, const Scalar& angle)
+{
+    assert(std::fabs(norm(axis) - 1.0f) < 1e-3f);
+
+    const float halfAngle = angle / 2.0f;
+    const float sinHalfAngle = sin(halfAngle);
+
+    quat result{};
+    result[0] = axis[0] * sinHalfAngle;
+    result[1] = axis[1] * sinHalfAngle;
+    result[2] = axis[2] * sinHalfAngle;
+    result[3] = cos(halfAngle);
+
+    return result;
+}
+
+//! apply an orientation quaternion onto a 3-vector.
+template <typename Scalar>
+void apply_quaternion(Vector<Scalar, 3>& vec, const quat& q)
+{
+    // compute quat * vector
+    const float ix = q[3] * vec[0] + q[1] * vec[2] - q[2] * vec[1];
+    const float iy = q[3] * vec[1] + q[2] * vec[0] - q[0] * vec[2];
+    const float iz = q[3] * vec[2] + q[0] * vec[1] - q[1] * vec[0];
+    const float iw = -q[0] * vec[0] - q[1] * vec[1] - q[2] * vec[2];
+
+    // compute result * inverse quat
+    vec = {
+        ix * q[3] + iw * (-q[0]) + iy * (-q[2]) - iz * (-q[1]),
+        iy * q[3] + iw * (-q[1]) + iz * (-q[0]) - ix * (-q[2]),
+        iz * q[3] + iw * (-q[2]) + ix * (-q[1]) - iy * (-q[0])
+    };
+}
+
 //! compute perpendicular vector (rotate vector counter-clockwise by 90 degrees)
 template <typename Scalar>
 inline Vector<Scalar, 2> perp(const Vector<Scalar, 2>& v)
 {
     return Vector<Scalar, 2>(-v[1], v[0]);
+}
+
+//! compute perpendicular vector (rotate vector counter-clockwise by 90 degrees)
+template <typename Scalar>
+inline Vector<Scalar, 3> perp(const Vector<Scalar, 3>& v, const Vector<Scalar, 3>& axis)
+{
+    const auto q = quat_from_axis_angle<Scalar>(axis, M_PI_2);
+    Vector<Scalar, 3> result(v);
+    apply_quaternion(result, q);
+    return result;
 }
 
 //! compute the cross product of two vectors (only valid for 3D vectors)

@@ -98,7 +98,10 @@ struct ImplicitLaplaceInfo
 };
 
 //! compute weights for implicit Laplacian (normalized by Voronoi area).
-[[nodiscard]] ImplicitLaplaceInfo laplace_implicit(const SurfaceMesh& mesh, Vertex v);
+[[nodiscard]] ImplicitLaplaceInfo laplace_implicit_voronoi(const SurfaceMesh& mesh, Vertex v);
+
+//! compute weights for implicit Laplacian (normalized by Barycentric Voronoi area).
+[[nodiscard]] ImplicitLaplaceInfo laplace_implicit_barycentric(const SurfaceMesh& mesh, Vertex v);
 
 //! compute the sum of angles around vertex v (used for Gaussian curvature)
 Scalar angle_sum(const SurfaceMesh& mesh, Vertex v);

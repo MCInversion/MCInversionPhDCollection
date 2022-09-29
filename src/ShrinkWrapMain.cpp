@@ -25,10 +25,10 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
+        "armadillo",
         //"BentChair",
         //"blub",
-        "bunny",
+        //"bunny",
         //"maxPlanck",
         //"nefertiti", /* <<<< unstable >>>> */
         //"ogre", /* <<<< unstable >>>> */
@@ -93,11 +93,11 @@ int main()
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
-			{"blub", 0.01 },
+			{"blub", 0.007 },
 			{"bunny", 0.002 },
 			{"maxPlanck", 0.05 },
 			{"nefertiti", 0.015 },
-			{"ogre", 0.01 },
+			{"ogre", 0.02 },
 			{"spot", 0.05 }
 		};
 
@@ -135,12 +135,14 @@ int main()
 			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
 			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
+			const double fieldIsoLevel = 0.707 * static_cast<double>(cellSize);
+
 			const double tau = timeStepSizesForMeshes.at(name); // time step
 			SurfaceEvolutionSettings seSettings{
 				name,
 				80,
 				tau,
-				0.00 * minSize,
+				fieldIsoLevel,
 				3,
 				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
 				{},
@@ -148,6 +150,8 @@ int main()
 				meshBBox.center(),
 				true, false,
 				dataOutPath,
+				MeshLaplacian::Barycentric,
+				{"minAngle", "maxAngle", "jacobianConditionNumber",/* "stiffnessMatrixConditioning" */},
 				true
 			};
 			ReportInput(seSettings, std::cout);

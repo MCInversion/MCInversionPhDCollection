@@ -1,6 +1,8 @@
 #pragma once
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/algorithms/DifferentialGeometry.h"
+
 #include "geometry/Grid.h"
 
 /**
@@ -29,18 +31,29 @@ struct AdvectionDiffusionParameters
  */
 struct MeshTopologySettings
 {
-	double MinEdgeMultiplier{ 0.07 }; //>! multiplier for minimum edge length in adaptive remeshing.
+	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
 	double EdgeLengthDecayFactor{ 0.97 }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
 	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
-	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing
+	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
+	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 
-	double MinDihedralAngle{ 0.95 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	double MaxDihedralAngle{ 1.8 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
+	double MinDihedralAngle{ 0.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
+	double MaxDihedralAngle{ 1.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 };
+
+/// \brief An enumerator for the choice of mesh Laplacian scheme [Meyer, Desbrun, Schroder, Barr, 2003].
+enum class [[nodiscard]] MeshLaplacian
+{
+	Voronoi = 0, //>! the finite volume for mesh Laplacian is generated from a true Voronoi neighborhood of each vertex.
+	Barycentric = 1 //>! the finite volume for mesh Laplacian is generated from face barycenters.
+};
+
+/// \brief a list of triangle metrics to be computed.
+using TriangleMetrics = std::vector<std::string>;
 
 /**
  * \brief A wrapper for surface evolution settings.
@@ -48,7 +61,7 @@ struct MeshTopologySettings
  */
 struct SurfaceEvolutionSettings
 {
-	std::string ProcedureName = "";    //>! name for the evolution procedure.
+	std::string ProcedureName = ""; //>! name for the evolution procedure.
 
 	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.
@@ -65,8 +78,16 @@ struct SurfaceEvolutionSettings
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.
 	std::string OutputPath{}; //>! path where output surfaces are to be exported.
+
+	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
+	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
+
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
+	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.
+	bool IdentityForFeatureVertices{ false }; //>! if true, feature vertices give rise to: updated vertex = previous vertex.
+
+	double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
 };
 
 /**
@@ -83,7 +104,11 @@ public:
 	 */
 	SurfaceEvolver(const Geometry::ScalarGrid& field, const SurfaceEvolutionSettings& settings)
 		: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field))
-	{ }
+	{
+		m_ImplicitLaplacianFunction = 
+			(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ? 
+				pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
+	}
 
 	/**
 	 * \brief Main functionality.
@@ -125,6 +150,11 @@ private:
 	 */
 	void ExportSurface(const unsigned int& tId, const bool& isResult = false, const bool& transformToOriginal = true) const;
 
+	/**
+	 * \brief Computes triangle metrics interpolated to vertices according to list m_EvolSettings.TriMetrics.
+	 */
+	void ComputeTriangleMetrics() const;
+
 	// ----------------------------------------------------------------
 
 	SurfaceEvolutionSettings m_EvolSettings{}; //>! settings.
@@ -137,6 +167,8 @@ private:
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).
 
 	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
+
+	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 };
 
 /**

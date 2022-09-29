@@ -9,6 +9,19 @@
 #include <memory>
 
 namespace pmp {
+/**
+ * \brief A wrapper for adaptive remeshing settings.
+ * \struct AdaptiveRemeshingSettings
+ */
+struct AdaptiveRemeshingSettings
+{
+    Scalar MinEdgeLength{ 1.0f };
+    Scalar MaxEdgeLength{ 2.0f };
+    Scalar ApproxError{ 1.5f };
+    unsigned int NRemeshingIterations{ 10 };
+    unsigned int NTangentialSmoothingIters{ 6 };
+    bool UseProjection{ true };
+};
 
 //! \brief A class for uniform and adaptive surface remeshing.
 //! \details The algorithm implemented here performs incremental remeshing based
@@ -32,14 +45,8 @@ public:
                            bool use_projection = true);
 
     //! \brief Perform adaptive remeshing.
-    //! \param min_edge_length the minimum edge length.
-    //! \param max_edge_length the maximum edge length.
-    //! \param approx_error the maximum approximation error
-    //! \param iterations the number of iterations
-    //! \param use_projection use back-projection to the input surface
-    void adaptive_remeshing(Scalar min_edge_length, Scalar max_edge_length,
-                            Scalar approx_error, unsigned int iterations = 10,
-                            bool use_projection = true);
+    //! \param settings      input settings.
+    void adaptive_remeshing(const AdaptiveRemeshingSettings& settings);
 
 private:
     void preprocessing();

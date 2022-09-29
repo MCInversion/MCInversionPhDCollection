@@ -256,6 +256,9 @@ double voronoi_area_barycentric(const SurfaceMesh& mesh, Vertex v)
         }
     }
 
+    assert(!std::isnan(area));
+    assert(!std::isinf(area));
+
     return area;
 }
 
@@ -281,7 +284,7 @@ Point laplace(const SurfaceMesh& mesh, Vertex v)
     return laplace;
 }
 
-ImplicitLaplaceInfo laplace_implicit(const SurfaceMesh& mesh, Vertex v)
+ImplicitLaplaceInfo laplace_implicit_voronoi(const SurfaceMesh& mesh, Vertex v)
 {
     ImplicitLaplaceInfo result{};
     if (mesh.is_isolated(v))
@@ -297,6 +300,31 @@ ImplicitLaplaceInfo laplace_implicit(const SurfaceMesh& mesh, Vertex v)
     }
 
     const auto vorArea = static_cast<Scalar>(voronoi_area(mesh, v));
+    const Scalar areaNorm = (2.0f * vorArea);
+    for (auto& [v, weight] : result.vertexWeights)
+        weight /= areaNorm;
+
+    result.weightSum = sum_weights / areaNorm;
+
+    return result;
+}
+
+ImplicitLaplaceInfo laplace_implicit_barycentric(const SurfaceMesh& mesh, Vertex v)
+{
+    ImplicitLaplaceInfo result{};
+    if (mesh.is_isolated(v))
+        return result;
+
+    Scalar sum_weights(0.0);
+
+    for (const auto h : mesh.halfedges(v))
+    {
+        const auto weight = static_cast<Scalar>(cotan_weight(mesh, mesh.edge(h)));
+        sum_weights += weight;
+        result.vertexWeights[mesh.to_vertex(h)] = weight;
+    }
+
+    const auto vorArea = static_cast<Scalar>(voronoi_area_barycentric(mesh, v));
     const Scalar areaNorm = (2.0f * vorArea);
     for (auto& [v, weight] : result.vertexWeights)
         weight /= areaNorm;

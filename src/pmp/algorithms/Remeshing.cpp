@@ -59,19 +59,17 @@ void Remeshing::uniform_remeshing(Scalar edge_length, unsigned int iterations,
     postprocessing();
 }
 
-void Remeshing::adaptive_remeshing(Scalar min_edge_length,
-                                   Scalar max_edge_length, Scalar approx_error,
-                                   unsigned int iterations, bool use_projection)
+void Remeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
 {
     uniform_ = false;
-    min_edge_length_ = min_edge_length;
-    max_edge_length_ = max_edge_length;
-    approx_error_ = approx_error;
-    use_projection_ = use_projection;
+    min_edge_length_ = settings.MinEdgeLength;
+    max_edge_length_ = settings.MaxEdgeLength;
+    approx_error_ = settings.ApproxError;
+    use_projection_ = settings.UseProjection;
 
     preprocessing();
 
-    for (unsigned int i = 0; i < iterations; ++i)
+    for (unsigned int i = 0; i < settings.NRemeshingIterations; ++i)
     {
         split_long_edges();
 
@@ -81,7 +79,7 @@ void Remeshing::adaptive_remeshing(Scalar min_edge_length,
 
         flip_edges();
 
-        tangential_smoothing(5);
+        tangential_smoothing(settings.NTangentialSmoothingIters);
     }
 
     remove_caps();

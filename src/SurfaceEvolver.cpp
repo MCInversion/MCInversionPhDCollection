@@ -3,15 +3,16 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
-#include "ConversionUtils.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Normals.h"
-#include "pmp/algorithms/DifferentialGeometry.h"
+#include "pmp/algorithms/Decimation.h"
+#include "pmp/algorithms/Features.h"
 
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
-#include "pmp/algorithms/Decimation.h"
-#include "pmp/algorithms/Features.h"
+#include "geometry/MeshAnalysis.h"
+
+//#include "ConversionUtils.h"
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
 constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
@@ -22,6 +23,7 @@ constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
 
 /// \brief needs no explanation because it does not have one.
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.9f;
 constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
 // constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.93f;
 // constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 8.0f;
@@ -62,6 +64,7 @@ void SurfaceEvolver::Preprocess()
 	// >>> scaling factor value is intended for stabilization of the numerical method.
 	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
 	m_ScalingFactor = scalingFactor;
+	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
 	const auto origin = m_EvolSettings.TargetOrigin;
 #if REPORT_EVOL_STEPS
 	std::cout << "Stabilization Scaling Factor: " << scalingFactor << ",\n";
@@ -186,6 +189,22 @@ void SurfaceEvolver::ExportSurface(const unsigned int& tId, const bool& isResult
 	exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
 }
 
+void SurfaceEvolver::ComputeTriangleMetrics() const
+{
+	for (const auto& metricName : m_EvolSettings.TriMetrics)
+	{
+		if (!Geometry::IsMetricRegistered(metricName))
+			continue;
+
+		const auto metricFunction = Geometry::IdentifyMetricFunction(metricName);
+
+		if (!metricFunction(*m_EvolvingSurface))
+		{
+			std::cerr << "SurfaceEvolver::ComputeTriangleMetrics: [WARNING] Computation of metric " << metricName << " finished with errors!\n";
+		}
+	}
+}
+
 // ================================================================================================
 
 
@@ -224,6 +243,7 @@ void SurfaceEvolver::Evolve()
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
+	auto vFeature = m_EvolvingSurface->vertex_property("v:feature", false);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -235,7 +255,7 @@ void SurfaceEvolver::Evolve()
 		{
 			const auto vPosToUpdate = m_EvolvingSurface->position(v);
 
-			if (m_EvolvingSurface->is_boundary(v))
+			if (m_EvolvingSurface->is_boundary(v) || (m_EvolSettings.IdentityForFeatureVertices && vFeature[v]))
 			{
 				// freeze boundary/feature vertices
 				const Eigen::Vector3d vertexRhs = vPosToUpdate;
@@ -245,17 +265,15 @@ void SurfaceEvolver::Evolve()
 			}
 
 			const auto vNegGradDistanceToTarget = Geometry::TrilinearInterpolateVectorValue(vPosToUpdate, fieldNegGradient);
-
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
 			const double epsilonCtrlWeight = LaplacianDistanceWeightFunction(static_cast<double>(vDistance[v]) - m_EvolSettings.FieldIsoLevel);
 			const double etaCtrlWeight = AdvectionDistanceWeightFunction(static_cast<double>(vDistance[v]) - m_EvolSettings.FieldIsoLevel, vNegGradDistanceToTarget, vNormal);
-
-
+			
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;
 			sysRhs.row(v.idx()) = vertexRhs;
 
-			const auto laplaceWeightInfo = pmp::laplace_implicit(*m_EvolvingSurface, v); // Laplacian weights
+			const auto laplaceWeightInfo = m_ImplicitLaplacianFunction(*m_EvolvingSurface, v); // Laplacian weights
 			sysMat.coeffRef(v.idx(), v.idx()) = 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum);
 
 			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
@@ -278,6 +296,7 @@ void SurfaceEvolver::Evolve()
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 	}
+	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
 
@@ -285,7 +304,8 @@ void SurfaceEvolver::Evolve()
 	for (unsigned int ti = 1; ti <= NSteps; ti++)
 	{
 #if REPORT_EVOL_STEPS
-		std::cout << "time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << "/" << tStep * NSteps << "\n";
+		std::cout << "time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << "/" << tStep * NSteps
+		<< ", Procedure Name: " << m_EvolSettings.ProcedureName << "\n";
 		std::cout << "pmp::Normals::compute_vertex_normals ... ";
 #endif
 		pmp::Normals::compute_vertex_normals(*m_EvolvingSurface);
@@ -330,7 +350,8 @@ void SurfaceEvolver::Evolve()
 			}
 			m_EvolvingSurface->position(pmp::Vertex(i)) = x.row(i);
 		}
-		if (nVertsOutOfBounds > 0)
+		if ((m_EvolSettings.DoRemeshing && nVertsOutOfBounds > static_cast<double>(NVertices) * m_EvolSettings.MaxFractionOfVerticesOutOfBounds) ||
+			(!m_EvolSettings.DoRemeshing && nVertsOutOfBounds > 0))
 		{
 			std::cerr << "SurfaceEvolver::Evolve: found " << nVertsOutOfBounds << " vertices out of bounds! Terminating!\n";
 			break;
@@ -353,11 +374,11 @@ void SurfaceEvolver::Evolve()
 				feat.detect_angle_within_bounds(minDihedralAngle, maxDihedralAngle);
 			}
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
-			remeshing.adaptive_remeshing(
+			remeshing.adaptive_remeshing({
 				minEdgeLength, maxEdgeLength, 2.0f * minEdgeLength,
 				m_EvolSettings.TopoParams.NRemeshingIters,
-				m_EvolSettings.TopoParams.UseBackProjection
-			);
+				m_EvolSettings.TopoParams.NTanSmoothingIters,
+				m_EvolSettings.TopoParams.UseBackProjection });
 			//remeshing.uniform_remeshing(targetEdgeLength);
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
@@ -365,8 +386,9 @@ void SurfaceEvolver::Evolve()
 			if (ti % m_EvolSettings.TopoParams.StepStrideForEdgeDecay == 0 &&
 				ti > NSteps * m_EvolSettings.TopoParams.RemeshingSizeDecayStartTimeFactor)
 			{
-				minEdgeLength *= 0.97f;
-				maxEdgeLength *= 0.97f;
+				// shorter edges are needed for features close to the target.
+				minEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
+				maxEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
 			}
 		}
 
@@ -381,6 +403,7 @@ void SurfaceEvolver::Evolve()
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		}
+		ComputeTriangleMetrics();
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
 			ExportSurface(ti);

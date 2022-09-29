@@ -1962,6 +1962,12 @@ public:
         return norm(vpoint_[vertex(e, 0)] - vpoint_[vertex(e, 1)]);
     }
 
+    //! compute the squared of edge \p e.
+    Scalar edge_length_sq(Edge e) const
+    {
+        return dot(vpoint_[vertex(e, 0)] - vpoint_[vertex(e, 1)], vpoint_[vertex(e, 0)] - vpoint_[vertex(e, 1)]);
+    }
+
     //!@}
 
     //! \name Allocate new elements
