@@ -99,15 +99,19 @@ class SurfaceEvolver
 public:
 	/**
 	 * \brief Constructor. Initialize with a given scalar field environment.
-	 * \param field           pre-computed or loaded scalar field environment.
-	 * \param settings        surface evolution settings.
+	 * \param field                    pre-computed or loaded scalar field environment.
+	 * \param fieldExpansionFactor     the factor by which target bounds are expanded (multiplying original bounds min dimension).
+	 * \param settings                 surface evolution settings.
 	 */
-	SurfaceEvolver(const Geometry::ScalarGrid& field, const SurfaceEvolutionSettings& settings)
-		: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field))
+	SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
+		: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
 	{
 		m_ImplicitLaplacianFunction = 
 			(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ? 
 				pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
+		m_LaplacianAreaFunction = 
+			(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
+			pmp::voronoi_area_barycentric : pmp::voronoi_area);
 	}
 
 	/**
@@ -160,6 +164,7 @@ private:
 	SurfaceEvolutionSettings m_EvolSettings{}; //>! settings.
 
 	std::shared_ptr<Geometry::ScalarGrid> m_Field; //>! scalar field environment.
+	float m_ExpansionFactor{ 0.0 }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
 	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
@@ -169,6 +174,7 @@ private:
 	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
+	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.
 };
 
 /**

@@ -113,6 +113,9 @@ namespace Geometry
 		};
 		const auto JInv = pmp::inverse(J);
 
+		/*const float jNorm1 = norm(J);
+		const float jInvNorm1 = norm(JInv);*/
+
 		// 1-norm of Jacobian and its inverse
 		float jNorm1 = -FLT_MAX;
 		float jInvNorm1 = -FLT_MAX;
@@ -237,16 +240,16 @@ namespace Geometry
 	TriMetricFunction IdentifyMetricFunction(const std::string& metricName)
 	{
 		if (metricName == "minAngle")
-			return Geometry::ComputeTriangleMinAngleVertexValues;
+			return ComputeTriangleMinAngleVertexValues;
 
 		if (metricName == "maxAngle")
-			return Geometry::ComputeTriangleMaxAngleVertexValues;
+			return ComputeTriangleMaxAngleVertexValues;
 
 		if (metricName == "jacobianConditionNumber")
-			return Geometry::ComputeTriangleJacobianConditionNumberVertexValues;
+			return ComputeTriangleJacobianConditionNumberVertexValues;
 
 		if (metricName == "stiffnessMatrixConditioning")
-			return Geometry::ComputeStiffnessMatrixConditioningVertexValues;
+			return ComputeStiffnessMatrixConditioningVertexValues;
 
 		return {};
 	}

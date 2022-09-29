@@ -23,12 +23,14 @@ constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
 
 /// \brief needs no explanation because it does not have one.
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.9f;
-constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.85f;
+//constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
 // constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.93f;
 // constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 8.0f;
 
-/**
+//constexpr float INITIAL_AREA_SHRINK_RATE = 1.0f; //16.0f * M_PI; //>! initial shrink-rate of ico sphere surface area
+
+/*
  * \brief Computes scaling factor for stabilizing the finite volume method on assumed spherical surface meshes based on time step.
  * \param timeStep               time step size.
  * \param icoRadius              radius of an evolving geodesic icosahedron.
@@ -39,15 +41,15 @@ constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
 [[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor = 1.0f)
 {
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, icoSubdiv) - 1) + 3 * N_ICO_VERTS_0) / 3;
-	const float weighedIcoRadius = icoRadius * UNEXPLAINABLE_MAGIC_CONSTANT;
+	const float weighedIcoRadius = icoRadius;
 	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * weighedIcoRadius * weighedIcoRadius / static_cast<float>(expectedVertexCount));
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea, 1.0f / 3.0f);
+	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea, 1.0f / 2.0f);
 }
 
 void SurfaceEvolver::Preprocess()
 {
 	// build ico-sphere
-	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (m_EvolSettings.MinTargetSize + 1.5f * m_EvolSettings.MaxTargetSize);
+	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (m_EvolSettings.MinTargetSize + m_EvolSettings.MaxTargetSize);
 	m_StartingSurfaceRadius = icoSphereRadius;
 #if REPORT_EVOL_STEPS
 	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
@@ -128,12 +130,15 @@ struct CoVolumeStats
 
 const std::string coVolMeasureVertexPropertyName{ "v:coVolumeMeasure" };
 
+using AreaFunction = std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)>;
+
 /**
  * \brief Analyzes the stats of co-volumes around each mesh vertex, and creates a vertex property for the measure values.
- * \param mesh         input mesh.
+ * \param mesh             input mesh.
+ * \param areaFunction     function to evaluate vertex co-volume area.
  * \return co-volume stats.
  */
-[[nodiscard]] CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh)
+[[nodiscard]] CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
 {
 	// vertex property for co-volume measures.
 	if (!mesh.has_vertex_property(coVolMeasureVertexPropertyName))
@@ -143,7 +148,7 @@ const std::string coVolMeasureVertexPropertyName{ "v:coVolumeMeasure" };
 	CoVolumeStats stats{};
 	for (const auto v : mesh.vertices())
 	{
-		const double measure = pmp::voronoi_area(mesh, v);
+		const double measure = areaFunction(mesh, v);
 		vCoVols[v] = static_cast<pmp::Scalar>(measure);
 
 		if (stats.Max < measure) stats.Max = measure;
@@ -285,7 +290,7 @@ void SurfaceEvolver::Evolve()
 	// -----------------------------------------------------------------
 
 	// write initial surface
-	auto coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface);
+	auto coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface, m_LaplacianAreaFunction);
 #if REPORT_EVOL_STEPS
 	std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
 #endif
@@ -392,7 +397,7 @@ void SurfaceEvolver::Evolve()
 			}
 		}
 
-		coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface);
+		coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface, m_LaplacianAreaFunction);
 #if REPORT_EVOL_STEPS
 		std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
 #endif

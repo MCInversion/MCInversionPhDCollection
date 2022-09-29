@@ -26,13 +26,13 @@ int main()
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
         "armadillo",
-        //"BentChair",
-        //"blub",
-        //"bunny",
-        //"maxPlanck",
-        //"nefertiti", /* <<<< unstable >>>> */
-        //"ogre", /* <<<< unstable >>>> */
-        //"spot"
+        "BentChair",
+        "blub",
+        "bunny",
+        "maxPlanck",
+        "nefertiti",
+        //"ogre", /* <<<< does not converge >>>> */
+        "spot"
     };
 
 	if (performSDFTests)
@@ -93,11 +93,11 @@ int main()
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
-			{"blub", 0.007 },
+			{"blub", 0.05 },
 			{"bunny", 0.002 },
 			{"maxPlanck", 0.05 },
-			{"nefertiti", 0.015 },
-			{"ogre", 0.02 },
+			{"nefertiti", 0.05 },
+			{"ogre", 0.05 },
 			{"spot", 0.05 }
 		};
 
@@ -110,9 +110,10 @@ int main()
 			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
 			const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
 			const float cellSize = minSize / nVoxelsPerMinDimension;
+			const float volExpansionFactor = 1.0f;
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
-				1.0f,
+				volExpansionFactor,
 				DBL_MAX,
 				SDF::KDTreeSplitType::Center,
 				SDF::SignComputation::VoxelFloodFill,
@@ -150,16 +151,16 @@ int main()
 				meshBBox.center(),
 				true, false,
 				dataOutPath,
-				MeshLaplacian::Barycentric,
+				MeshLaplacian::Voronoi,
 				{"minAngle", "maxAngle", "jacobianConditionNumber",/* "stiffnessMatrixConditioning" */},
 				true
 			};
 			ReportInput(seSettings, std::cout);
-			SurfaceEvolver evolver(sdf, seSettings);
+			SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
 
 			try
 			{
-				evolver.Evolve();				
+				evolver.Evolve();
 			}
 			catch(...)
 			{
