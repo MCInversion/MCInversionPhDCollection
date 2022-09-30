@@ -10,6 +10,3 @@
 [submodule "external/eigen"]
 	path = external/eigen
 	url = https://gitlab.com/libeigen/eigen.git
-[submodule "external/bet2"]
-	path = external/bet2
-	url = https://github.com/liangfu/bet2.git

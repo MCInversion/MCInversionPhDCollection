@@ -30,4 +30,7 @@ using SparseMatrix = Eigen::SparseMatrix<double>;
 void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, const Eigen::MatrixXd& b);
 
 /// \brief Nifti import utility (using bet2 functionality).
-[[nodiscard]] Geometry::ScalarGrid ImportNiftiAsScalarGrid(const std::string& fileName);
+//[[nodiscard]] Geometry::ScalarGrid ImportNiftiAsScalarGrid(const std::string& fileName);
+
+/// \brief VTI image data import.
+[[nodiscard]] Geometry::ScalarGrid ImportVTI(const std::string& fileName);

@@ -178,10 +178,9 @@ int main()
 
 	if (performNiftiTests)
 	{
-		std::string niftiPathIn = dataDirPath + "talairach.nii";
-		const auto nifGrid = ImportNiftiAsScalarGrid(niftiPathIn);
+		std::string imagePathIn = dataDirPath + "talairach.vti";
 
-		ExportToVTI(dataOutPath + "talairach", nifGrid);
+		const auto gridData = ImportVTI(imagePathIn);
 
 	} // endif performNiftiTests
 }
