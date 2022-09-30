@@ -16,10 +16,37 @@
 
 // ================================================================================================
 
+/// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
+constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
+
+constexpr unsigned int N_ICO_VERTS_0 = 12; // number of vertices in an icosahedron.
+constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
+
+/// \brief if true individual steps of surface evolution will be printed out into a given stream.
+#define REPORT_EVOL_STEPS true // Note: may affect performance
+
+/// \brief if true, upon computing trilinear system solution, new vertices are verified for belonging in the field bounds.
+#define VERIFY_SOLUTION_WITHIN_BOUNDS false // Note: useful for detecting numerical explosions of the solution.
+
+/// \brief repairs infinities and nan values of the input grid.
+#define REPAIR_INPUT_GRID true //Note: very useful! You never know what field we use! Infinities and nans lead to the Eigen::NoConvergence error code whose cause is difficult to find!
+
+/// \brief needs no explanation because it does not have one.
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.85f;
+//constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.93f;
+// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 8.0f;
+
+//constexpr float INITIAL_AREA_SHRINK_RATE = 1.0f; //16.0f * M_PI; //>! initial shrink-rate of ico sphere surface area
+
+// ================================================================================================
+
 SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
 	: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
 {
+#if REPAIR_INPUT_GRID
 	Geometry::RepairScalarGrid(*m_Field); // repair needed in case of invalid cell values.
+#endif
 	m_ImplicitLaplacianFunction =
 		(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
 			pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
@@ -29,22 +56,6 @@ SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& f
 }
 
 // ================================================================================================
-
-/// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
-constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
-
-constexpr unsigned int N_ICO_VERTS_0 = 12; // number of vertices in an icosahedron.
-constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
-
-#define REPORT_EVOL_STEPS true // Note: may affect performance
-
-/// \brief needs no explanation because it does not have one.
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.85f;
-//constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.93f;
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 8.0f;
-
-//constexpr float INITIAL_AREA_SHRINK_RATE = 1.0f; //16.0f * M_PI; //>! initial shrink-rate of ico sphere surface area
 
 /*
  * \brief Computes scaling factor for stabilizing the finite volume method on assumed spherical surface meshes based on time step.
@@ -368,20 +379,24 @@ void SurfaceEvolver::Evolve()
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
+#if VERIFY_SOLUTION_WITHIN_BOUNDS
 			if (!fieldBox.Contains(newPos))
 			{
 				if (nVertsOutOfBounds == 0) std::cerr << "\n";
 				std::cerr << "SurfaceEvolver::Evolve: vertex " << i << " out of field bounds!\n";
 				nVertsOutOfBounds++;
 			}
+#endif
 			m_EvolvingSurface->position(pmp::Vertex(i)) = x.row(i);
 		}
+#if VERIFY_SOLUTION_WITHIN_BOUNDS
 		if ((m_EvolSettings.DoRemeshing && nVertsOutOfBounds > static_cast<double>(NVertices) * m_EvolSettings.MaxFractionOfVerticesOutOfBounds) ||
 			(!m_EvolSettings.DoRemeshing && nVertsOutOfBounds > 0))
 		{
 			std::cerr << "SurfaceEvolver::Evolve: found " << nVertsOutOfBounds << " vertices out of bounds! Terminating!\n";
 			break;
 		}
+#endif
 
 		if (m_EvolSettings.DoRemeshing && ti > NSteps * m_EvolSettings.TopoParams.RemeshingStartTimeFactor)
 		{

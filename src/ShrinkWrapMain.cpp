@@ -25,14 +25,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
-        //"blub",
-        //"bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        "ogre", /* <<<< does not converge >>>> */
-        //"spot"
+        "armadillo",
+        "BentChair",
+        "blub",
+        "bunny",
+        "maxPlanck",
+        "nefertiti",
+        "ogre",
+        "spot"
     };
 
 	if (performSDFTests)
@@ -114,7 +114,7 @@ int main()
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
 				volExpansionFactor,
-				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
 				SDF::KDTreeSplitType::Center,
 				SDF::SignComputation::VoxelFloodFill,
 				SDF::BlurPostprocessingType::None,
