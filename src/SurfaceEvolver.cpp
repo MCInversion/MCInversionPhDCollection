@@ -12,7 +12,7 @@
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MeshAnalysis.h"
 
-//#include "ConversionUtils.h"
+#include "ConversionUtils.h"
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
 constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
@@ -130,6 +130,7 @@ struct CoVolumeStats
 
 const std::string coVolMeasureVertexPropertyName{ "v:coVolumeMeasure" };
 
+/// \brief a co-volume area evaluator.
 using AreaFunction = std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)>;
 
 /**
@@ -211,7 +212,6 @@ void SurfaceEvolver::ComputeTriangleMetrics() const
 }
 
 // ================================================================================================
-
 
 void SurfaceEvolver::Evolve()
 {
@@ -322,6 +322,7 @@ void SurfaceEvolver::Evolve()
 
 		// prepare matrix & rhs
 		fillMatrixAndRHSTriplesFromMesh();
+		if (ti == 6) DumpMatrixAndRHSToFile(m_EvolSettings.OutputPath + "MatOut.txt", sysMat, sysRhs);
 
 #if REPORT_EVOL_STEPS
 		std::cout << "done\n";
@@ -329,6 +330,8 @@ void SurfaceEvolver::Evolve()
 #endif
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
+		solver.setMaxIterations(4 * NVertices);
+		solver.setTolerance(1e-6);
 		Eigen::MatrixXd x = solver.solve(sysRhs);
 		if (solver.info() != Eigen::Success)
 		{

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Eigen/Sparse>
+
 #include "geometry/Grid.h"
 
 #include "pmp/SurfaceMesh.h"
@@ -19,3 +21,10 @@ void ExportToVTI(const std::string& filename, const Geometry::ScalarGrid& scalar
  * \throw std::invalid_argument if vectorGrid is invalid or an empty filename is given.
  */
 void ExportToVTK(const std::string& filename, const Geometry::VectorGrid& vectorGrid);
+
+
+/// \brief identifier for sparse matrix.
+using SparseMatrix = Eigen::SparseMatrix<double>;
+
+/// \brief prints out a trilinear system to a file. For debugging purposes.
+void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, const Eigen::MatrixXd& b);

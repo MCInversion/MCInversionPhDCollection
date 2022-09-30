@@ -92,3 +92,97 @@ void ExportToVTK(const std::string& filename, const Geometry::VectorGrid& vector
 
     vtk.close();
 }
+
+void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, const Eigen::MatrixXd& b)
+{
+	if (A.cols() != A.rows() || A.rows() != b.rows())
+	{
+		throw std::invalid_argument("DumpMatrixAndRHSToFile: invalid matrix dimensions!\n");
+	}
+
+	std::ofstream fileOStream(filename);
+	if (!fileOStream.is_open())
+		return;
+
+	std::vector<double> diagElems(A.outerSize());
+	std::vector<std::vector<double>> offDiagElems(A.outerSize());
+	std::vector<Eigen::Vector3d> rhsElems(b.rows());
+
+	constexpr unsigned int expectedValence = 6;
+	unsigned int maxOffDiagRowLength = 0;
+
+	for (unsigned int i = 0; i < A.outerSize(); i++)
+	{
+		diagElems[i] = A.coeff(i, i);
+		rhsElems[i] = { b.coeff(i, 0), b.coeff(i, 1), b.coeff(i, 2) };
+		offDiagElems[i].reserve(expectedValence);
+		for (SparseMatrix::InnerIterator it(A, i); it; ++it)
+		{
+			if (it.row() <= it.col())
+				continue;
+
+			offDiagElems[i].emplace_back(A.coeff(i, it.col()));
+		}
+
+		if (offDiagElems[i].size() > maxOffDiagRowLength)
+			maxOffDiagRowLength = offDiagElems[i].size();
+	}
+
+	// NOTE: all double values will be written to precision 21 and all columns will need to adjust to that.
+	constexpr unsigned int streamDblPrecisionWSpace = 21;
+	// Table col names header:
+
+	const std::string diagColName = "A[i][i]"; // 7 letters
+	const std::string offDiagColName = "A[i][j != i]"; // 12 letters
+	//const std::string 
+	const std::string spacesDiag = "       "; // 7 spaces
+	const std::string rhsColNames = "|       b[i][0]       ,       b[i][1]       ,       b[i][2]       |"; // 3 * 21 letters + 4 delimiters = 67 letters
+	const auto nRowIndexDigits = static_cast<unsigned int>(std::floor(log10(A.outerSize()) + 1));
+
+	for (unsigned int i = 0; i < nRowIndexDigits / 2 - (nRowIndexDigits % 2 == 1 ? 0 : 1); i++) fileOStream << " ";
+	fileOStream << "i";
+	for (unsigned int i = 0; i < nRowIndexDigits / 2; i++) fileOStream << " ";
+	fileOStream << "|" << spacesDiag << diagColName << spacesDiag << "|";
+
+	const unsigned int nLettersBeforeAfterOffDiag = (maxOffDiagRowLength == 0 ? 0 : streamDblPrecisionWSpace * (maxOffDiagRowLength / 2) - (offDiagColName.size() / 2));
+
+	for (unsigned int i = 0; i < nLettersBeforeAfterOffDiag; i++) fileOStream << " ";
+	fileOStream << offDiagColName;
+	for (unsigned int i = 0; i < nLettersBeforeAfterOffDiag; i++) fileOStream << " ";
+	fileOStream << rhsColNames << "\n";
+
+	const auto strRowSizeTotal = nRowIndexDigits + 1 + 2 * spacesDiag.size() + 1 + diagColName.size() + maxOffDiagRowLength * streamDblPrecisionWSpace + rhsColNames.size();
+	for (unsigned int i = 0; i < strRowSizeTotal; i++) fileOStream << "=";
+	fileOStream << "\n";
+
+	// Values:
+	// set stream precision
+	fileOStream.precision(streamDblPrecisionWSpace - 2);
+
+	for (unsigned int i = 0; i < A.outerSize(); i++)
+	{
+		std::cout << "DumpMatrixAndRHSToFile: writing row " << i << "\n";
+		// index entry
+		const auto iDigits = static_cast<unsigned int>(std::floor(log10(i) + 1));
+		fileOStream << i;
+		const auto nRemainingDigits = (iDigits == nRowIndexDigits ? 0 : nRowIndexDigits - iDigits);
+		for (unsigned int j = 0; j < nRemainingDigits; j++) fileOStream << " ";
+
+		// diag value entry
+		fileOStream << "|" << diagElems[i] << "|";
+
+		// off diag entries
+		unsigned int symbolCount = 0;
+		for (const auto& val : offDiagElems[i])
+		{
+			fileOStream << val << " ";
+			symbolCount += streamDblPrecisionWSpace;
+		}
+		const auto remainingSymbolCount = streamDblPrecisionWSpace * maxOffDiagRowLength - symbolCount;
+		for (unsigned int j = 0; j < remainingSymbolCount; j++) fileOStream << " ";
+		fileOStream << "|" << rhsElems[i][0] << " " << rhsElems[i][1] << " " << rhsElems[i][2] << "|\n";
+	}
+
+
+	fileOStream.close();
+}

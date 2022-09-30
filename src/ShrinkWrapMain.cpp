@@ -25,14 +25,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
-        "BentChair",
-        "blub",
-        "bunny",
-        "maxPlanck",
-        "nefertiti",
-        //"ogre", /* <<<< does not converge >>>> */
-        "spot"
+        //"armadillo",
+        //"BentChair",
+        //"blub",
+        //"bunny",
+        //"maxPlanck",
+        //"nefertiti",
+        "ogre", /* <<<< does not converge >>>> */
+        //"spot"
     };
 
 	if (performSDFTests)
