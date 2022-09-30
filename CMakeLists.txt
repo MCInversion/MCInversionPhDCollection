@@ -68,6 +68,11 @@ endif(PMP_BUILD_VIS)
 set(EIGEN_SOURCE_DIR "external/eigen")
 include_directories(${EIGEN_SOURCE_DIR})
 
+# setup BET2
+set(BET2_SOURCE_DIR "external/bet2")
+include_directories(${BET2_SOURCE_DIR})
+add_subdirectory(${BET2_SOURCE_DIR})
+
 # setup PLY
 set(RPLY_SOURCE_DIR "external/rply")
 include_directories(${RPLY_SOURCE_DIR})
@@ -202,6 +207,7 @@ target_link_libraries(ShrinkWrap
     pmp
     SDF
     Geometry
+    bet2
 )
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -213,6 +219,18 @@ set_target_properties(
     stb_image
     pmp
 PROPERTIES FOLDER "PMP_Lib")
+
+set_target_properties(
+    bet2
+    fslio
+    miscmaths
+    newmat
+    newimage
+    niftiio
+    utils
+    vtkzlib
+    znzlib
+PROPERTIES FOLDER "BET2")
 
 # ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
 #

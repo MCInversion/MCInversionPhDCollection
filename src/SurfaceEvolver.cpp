@@ -337,7 +337,9 @@ void SurfaceEvolver::Evolve()
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
 
-	// main loop
+	// -------------------------------------------------------------------------------------------------------------
+	// ........................................ main loop ..........................................................
+	// -------------------------------------------------------------------------------------------------------------
 	for (unsigned int ti = 1; ti <= NSteps; ti++)
 	{
 #if REPORT_EVOL_STEPS
@@ -463,6 +465,7 @@ void SurfaceEvolver::Evolve()
 #endif
 
 	} // end main loop
+	// -------------------------------------------------------------------------------------------------------------
 
 	if (m_EvolSettings.ExportResultSurface)
 		ExportSurface(NSteps, true);

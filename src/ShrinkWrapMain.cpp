@@ -19,20 +19,22 @@ const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
-constexpr bool performEvolverTests = true;
+constexpr bool performEvolverTests = false;
+constexpr bool performNiftiTests = true;
+constexpr bool performMarchingCubesTests = true;
 
 int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
-        //"blub",
-        //"bunny",
-        //"maxPlanck",
-        //"nefertiti",
+        "armadillo",
+        "BentChair",
+        "blub",
+        "bunny",
+        "maxPlanck",
+        "nefertiti",
         "ogre",
-        //"spot"
+        "spot"
     };
 
 	if (performSDFTests)
@@ -83,7 +85,7 @@ int main()
 				ExportToVTK(dataOutPath + name + "negNormGradSDF", negNormGradSdf);
 				std::cout << "... done\n";			
 			}
-	    }		
+	    }
 	} // endif performSDFTests
 
 	if (performEvolverTests)
@@ -168,4 +170,18 @@ int main()
 			}
 		}
 	} // endif performSDFTests
+
+	if (performMarchingCubesTests)
+	{
+
+	} // endif performMarchingCubesTests
+
+	if (performNiftiTests)
+	{
+		std::string niftiPathIn = dataDirPath + "talairach.nii";
+		const auto nifGrid = ImportNiftiAsScalarGrid(niftiPathIn);
+
+		ExportToVTI(dataOutPath + "talairach", nifGrid);
+
+	} // endif performNiftiTests
 }

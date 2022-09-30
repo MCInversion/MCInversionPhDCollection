@@ -1,5 +1,7 @@
 #include "ConversionUtils.h"
 
+#include "newimage/newimageio.h"
+
 #include <fstream>
 
 void ExportToVTI(const std::string& filename, const Geometry::ScalarGrid& scalarGrid)
@@ -185,4 +187,41 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 
 
 	fileOStream.close();
+}
+
+Geometry::ScalarGrid ImportNiftiAsScalarGrid(const std::string& fileName)
+{
+	// bet2 implementation of nifti I/O
+	NEWIMAGE::volume<float> vol{};
+	NEWIMAGE::read_volume(vol, fileName.c_str());
+
+	// TODO: xdim, ydim and zdim are cell dimensions. Now since ScalarGrid does not support non-cube voxels something has to be done about it
+
+	assert(std::fabs(vol.xdim() - vol.ydim()) < FLT_EPSILON && std::fabs(vol.zdim() - vol.ydim()) < FLT_EPSILON);
+	assert(vol.xdim() > FLT_EPSILON && vol.ydim() > FLT_EPSILON && vol.zdim() > FLT_EPSILON);
+	const float cellSize = vol.xdim(); // assuming cube voxels
+
+	const size_t Nx = vol.xsize();
+	const size_t Ny = vol.ysize();
+	const size_t Nz = vol.zsize();
+
+	const pmp::vec3 volBoxHalfSize{ cellSize * Nx / 2.0f, cellSize * Ny / 2.0f, cellSize * Nz / 2.0f };
+
+	// because we can't extract NEWIMAGE::volume's origin (it's somehow in integer coordinates)
+	// the grid box will be centered at (0,0,0):
+	const pmp::BoundingBox volBox(-volBoxHalfSize, volBoxHalfSize);
+
+	Geometry::ScalarGrid result(cellSize, volBox, 0.0);
+	auto& resultValues = result.Values();
+
+	for (unsigned int iz = 0; iz < Nz; iz++) {
+		for (unsigned int iy = 0; iy < Ny; iy++) {
+			for (unsigned int ix = 0; ix < Nx; ix++) {
+				const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+				resultValues[gridPos] = vol.value(ix, iy, iz);
+			}
+		}
+	}
+
+	return result;
 }
