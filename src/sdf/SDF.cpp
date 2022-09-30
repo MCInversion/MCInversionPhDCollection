@@ -285,6 +285,7 @@ namespace SDF
 	{
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
+		assert(settings.TruncationFactor <= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
 
 		m_Mesh = inputMesh;
 		if (settings.SignMethod != SignComputation::None)
