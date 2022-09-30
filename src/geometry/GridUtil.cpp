@@ -225,6 +225,141 @@ namespace Geometry
 		ApplyBlurKernelInternal(grid, kernel);
     }
 
+	/// \brief a validation helper for scalar grid values. Also increments nanCount and infCount if encountering nan or inf.
+	[[nodiscard]] bool IsGridValueValid(const double& val, size_t& nanCount, size_t& infCount)
+	{
+		if (std::isnan(val) || !std::isnormal(val))
+		{
+			nanCount++;
+			return false;
+		}
+
+		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
+		{
+			infCount++;
+			return false;
+		}
+
+		return true;
+	}
+
+	/// \brief a basic validation helper for scalar grid values.
+	[[nodiscard]] bool IsGridValueValidBasic(const double& val)
+	{
+		if (std::isnan(val) || !std::isnormal(val))
+		{
+			return false;
+		}
+
+		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	/// \brief a boundary validation helper for scalar grid values.
+	[[nodiscard]] bool IsABoundaryCell(
+		const int& gridPosPrevX, const int& gridPosNextX,
+		const int& gridPosPrevY, const int& gridPosNextY,
+		const int& gridPosPrevZ, const int& gridPosNextZ, const size_t& gridSize)
+	{
+		if (gridPosPrevX < 0)
+			return true;
+
+		if (gridPosPrevY < 0)
+			return true;
+
+		if (gridPosPrevZ < 0)
+			return true;
+
+		if (gridPosNextX >= static_cast<int>(gridSize))
+			return true;
+
+		if (gridPosNextY >= static_cast<int>(gridSize))
+			return true;
+
+		if (gridPosNextZ >= static_cast<int>(gridSize))
+			return true;
+
+		return false;
+	}
+
+	void RepairScalarGrid(ScalarGrid& grid)
+	{
+		size_t nanCount = 0;
+		size_t infCount = 0;
+
+		auto& values = grid.Values();
+		const auto nValues = values.size();
+		const auto& dim = grid.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		std::cout << "----------------------------------------------------------\n";
+		std::cout << "RepairScalarGrid: repairing scalar grid...\n";
+
+		for (unsigned int iz = 0; iz < Nz; iz++) 
+		{
+			for (unsigned int iy = 0; iy < Ny; iy++) 
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++)
+				{
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+
+					if (IsGridValueValid(values[gridPos], nanCount, infCount))
+						continue;
+
+					// check neighbors
+					const int gridPosPrevX = Nx * Ny * iz + Nx * iy + (ix - 1);
+					const int gridPosNextX = Nx * Ny * iz + Nx * iy + (ix + 1);
+
+					const int gridPosPrevY = Nx * Ny * iz + Nx * (iy - 1) + ix;
+					const int gridPosNextY = Nx * Ny * iz + Nx * (iy + 1) + ix;
+
+					const int gridPosPrevZ = Nx * Ny * (iz - 1) + Nx * iy + ix;
+					const int gridPosNextZ = Nx * Ny * (iz + 1) + Nx * iy + ix;
+
+					if (IsABoundaryCell(gridPosPrevX, gridPosNextX, gridPosPrevY, gridPosNextY, gridPosPrevZ, gridPosNextZ, nValues))
+					{
+						values[gridPos] = DEFAULT_SCALAR_GRID_INIT_VAL;
+						continue;
+					}
+
+					if (!IsGridValueValidBasic(values[gridPosPrevX]) || !IsGridValueValidBasic(values[gridPosNextX]) ||
+						!IsGridValueValidBasic(values[gridPosPrevY]) || !IsGridValueValidBasic(values[gridPosNextY]) ||
+						!IsGridValueValidBasic(values[gridPosPrevZ]) || !IsGridValueValidBasic(values[gridPosNextZ]))
+					{
+						values[gridPos] = DEFAULT_SCALAR_GRID_INIT_VAL;
+						continue;
+					}
+
+					// all neighbors are valid. Computing average value:
+					values[gridPos] = 
+						(values[gridPosPrevX] + values[gridPosNextX] +
+						 values[gridPosPrevY] + values[gridPosNextY] +
+						 values[gridPosPrevZ] + values[gridPosNextZ]) / 6.0;
+				}
+			}
+		}
+
+		if (nanCount > 0 || infCount > 0)
+		{
+			std::cout << "RepairScalarGrid: [WARNING]: Encountered & repaired invalid cell values! nanCount: " << nanCount << ", infCount: " << infCount << ".\n";
+			std::cout << "----------------------------------------------------------\n";
+			return;
+		}
+
+		std::cout << "RepairScalarGrid: All grid values are valid.\n";
+		std::cout << "----------------------------------------------------------\n";
+	}
+
+	/// \brief if true, additional checks will be performed before writing gradient values.
+#define EXPECT_INVALID_VALUES false
+
 	VectorGrid ComputeGradient(const ScalarGrid& scalarGrid)
 	{
 		if (!scalarGrid.IsValid())
@@ -260,9 +395,25 @@ namespace Geometry
 					const unsigned int gradPos = Nx * Ny * iz + Nx * iy + ix;
 
 					// central difference for non-boundary voxels
-					gradValsX[gradPos] = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
-					gradValsY[gradPos] = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
-					gradValsZ[gradPos] = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
+					const double grad_x = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+					const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+					const double grad_z = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
+
+#if EXPECT_INVALID_VALUES
+					if (std::isnan(grad_x) || std::isinf(grad_x) ||
+						std::isnan(grad_y) || std::isinf(grad_y) ||
+						std::isnan(grad_y) || std::isinf(grad_z))
+					{
+						const std::string msg = "ComputeGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
+						assert(false);
+						std::cerr << msg;
+						continue;
+					}
+#endif
+
+					gradValsX[gradPos] = grad_x;
+					gradValsY[gradPos] = grad_y;
+					gradValsZ[gradPos] = grad_z;
 				}
 			}
 		}
@@ -312,7 +463,21 @@ namespace Geometry
 					const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
 					const double grad_z = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
 
+#if EXPECT_INVALID_VALUES
+					if (std::isnan(grad_x) || std::isinf(grad_x) ||
+						std::isnan(grad_y) || std::isinf(grad_y) ||
+						std::isnan(grad_y) || std::isinf(grad_z))
+					{
+						const std::string msg = "ComputeNormalizedGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
+						assert(false);
+						std::cerr << msg;
+						continue;
+					}
+#endif
+
 					const double norm = sqrt(grad_x * grad_x + grad_y * grad_y + grad_z * grad_z);
+
+					assert(!std::isnan(norm) && !std::isinf(norm));
 
 					if (norm < NORM_EPSILON)
 						continue; // keep zero init val
@@ -366,7 +531,21 @@ namespace Geometry
 					const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
 					const double grad_z = (gridValues[gridPosNextZ] - gridValues[gridPosPrevZ]) / (2.0 * cellSize);
 
+#if EXPECT_INVALID_VALUES
+					if (std::isnan(grad_x) || std::isinf(grad_x) ||
+						std::isnan(grad_y) || std::isinf(grad_y) ||
+						std::isnan(grad_y) || std::isinf(grad_z))
+					{
+						const std::string msg = "ComputeNormalizedNegativeGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
+						assert(false);
+						std::cerr << msg;
+						continue;
+					}
+#endif
+
 					const double norm = -1.0 * sqrt(grad_x * grad_x + grad_y * grad_y + grad_z * grad_z);
+
+					assert(!std::isnan(norm) && !std::isinf(norm));
 
 					if (norm > -NORM_EPSILON)
 						continue; // keep zero init val

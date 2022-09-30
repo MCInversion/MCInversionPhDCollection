@@ -309,7 +309,7 @@ namespace SDF
 		}
 
 		// percentage of the minimum half-size of the mesh's bounding box.
-		const double truncationValue = (settings.TruncationFactor < DBL_MAX ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : DBL_MAX);
+		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, sdfBBox, truncationValue);
 #if REPORT_SDF_STEPS
 		std::cout << "truncationValue: " << truncationValue << "\n";

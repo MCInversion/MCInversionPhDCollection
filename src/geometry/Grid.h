@@ -7,6 +7,11 @@
 
 namespace Geometry
 {
+	/// \brief default value to initialize a scalar grid with.
+	constexpr double DEFAULT_SCALAR_GRID_INIT_VAL = 1e+9;
+	/// \brief default value to initialize a vector grid with.
+	constexpr double DEFAULT_VECTOR_GRID_INIT_VAL = 0.0;
+
 	/// \brief dimensions wrapper item for any grid object.
 	struct GridDimensions
 	{

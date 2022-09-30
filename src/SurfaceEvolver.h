@@ -33,7 +33,7 @@ struct MeshTopologySettings
 {
 	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
-	double EdgeLengthDecayFactor{ 0.97 }; //>! decay factor for minimum (and consequently maximum) edge length.
+	float EdgeLengthDecayFactor{ 0.97f }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
@@ -103,16 +103,7 @@ public:
 	 * \param fieldExpansionFactor     the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	 * \param settings                 surface evolution settings.
 	 */
-	SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
-		: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
-	{
-		m_ImplicitLaplacianFunction = 
-			(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ? 
-				pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
-		m_LaplacianAreaFunction = 
-			(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
-			pmp::voronoi_area_barycentric : pmp::voronoi_area);
-	}
+	SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings);
 
 	/**
 	 * \brief Main functionality.
@@ -163,10 +154,10 @@ private:
 
 	SurfaceEvolutionSettings m_EvolSettings{}; //>! settings.
 
-	std::shared_ptr<Geometry::ScalarGrid> m_Field; //>! scalar field environment.
-	float m_ExpansionFactor{ 0.0 }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
+	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
+	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
 	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).

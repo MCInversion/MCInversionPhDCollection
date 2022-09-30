@@ -47,6 +47,12 @@ namespace Geometry
 	void ApplyWideGaussianBlur(ScalarGrid& grid);
 
 	/**
+	 * \brief Looks for nans and infinities in the grid, if the cell neighbors have valid values, averaged value is written for an invalid cell. Otherwise the cell value is set to default init value.
+	 * \param grid    input grid.
+	 */
+	void RepairScalarGrid(ScalarGrid& grid);
+
+	/**
 	 * \brief Computes a gradient from a given scalar grid.
 	 * \param scalarGrid     input grid.
 	 * \return gradient field.

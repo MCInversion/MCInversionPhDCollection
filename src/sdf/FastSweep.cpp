@@ -30,7 +30,8 @@ namespace SDF
 			{ 0, Nz - 1, 1 }, { 0, Nz - 1, 1 }, { 0, Nz - 1, 1 }, { Nz - 1, 0, -1 },
 			{ Nz - 1, 0, -1 }, { Nz - 1, 0, -1 }, { Nz - 1, 0, -1 }, { 0, Nz - 1, 1 } };
 
-		int s, ix, iy, iz, gridPos;
+		unsigned int s;
+		int ix, iy, iz, gridPos;
 		double aa[3], tmp, eps = 1e-6;
 		double d_curr, d_new, a, b, c, D;
 

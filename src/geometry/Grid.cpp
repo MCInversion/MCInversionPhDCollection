@@ -2,11 +2,6 @@
 
 namespace Geometry
 {
-	/// \brief default value to initialize a scalar grid with.
-	constexpr double DEFAULT_SCALAR_GRID_INIT_VAL = 1e+9;
-	/// \brief default value to initialize a vector grid with.
-	constexpr double DEFAULT_VECTOR_GRID_INIT_VAL = 0.0;
-
 	ScalarGrid::ScalarGrid(const float& cellSize, const pmp::BoundingBox& box)
 		: m_CellSize(cellSize)
 	{
@@ -84,7 +79,7 @@ namespace Geometry
 	ScalarGrid& ScalarGrid::operator*=(const double& scalar)
 	{
 		for (auto& val : m_Values)
-			val *= scalar;
+			val = scalar * val;
 		return *this;
 	}
 

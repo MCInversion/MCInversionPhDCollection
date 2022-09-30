@@ -12,7 +12,23 @@
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MeshAnalysis.h"
 
-#include "ConversionUtils.h"
+//#include "ConversionUtils.h"
+
+// ================================================================================================
+
+SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
+	: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
+{
+	Geometry::RepairScalarGrid(*m_Field); // repair needed in case of invalid cell values.
+	m_ImplicitLaplacianFunction =
+		(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
+			pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
+	m_LaplacianAreaFunction =
+		(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
+			pmp::voronoi_area_barycentric : pmp::voronoi_area);
+}
+
+// ================================================================================================
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
 constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
@@ -48,8 +64,11 @@ constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
 
 void SurfaceEvolver::Preprocess()
 {
+	auto& field = *m_Field;
+
 	// build ico-sphere
-	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (m_EvolSettings.MinTargetSize + m_EvolSettings.MaxTargetSize);
+	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * 
+		(m_EvolSettings.MinTargetSize + (0.5f + m_ExpansionFactor) * m_EvolSettings.MaxTargetSize);
 	m_StartingSurfaceRadius = icoSphereRadius;
 #if REPORT_EVOL_STEPS
 	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
@@ -88,8 +107,8 @@ void SurfaceEvolver::Preprocess()
 	m_TransformToOriginal = inverse(transfMatrixFull);
 
 	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
-	(*m_Field) *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
-	(*m_Field) *= (static_cast<double>(scalingFactor)); // scale also distance values.
+	field *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
+	field *= static_cast<double>(scalingFactor); // scale also distance values.
 
 	// >>>>> Scaled geometry & field (use when debugging) <<<<<<
 	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_scaledField", *m_Field);
@@ -220,13 +239,15 @@ void SurfaceEvolver::Evolve()
 	if (!m_Field->IsValid())
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_Field is invalid! Terminating!\n");
 
+	const auto& field = *m_Field;
+
 	Preprocess();
 
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
-	const auto& fieldBox = m_Field->Box();
-	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(*m_Field);
+	const auto& fieldBox = field.Box();
+	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
 	const auto& tStep = m_EvolSettings.TimeStep;
@@ -298,7 +319,7 @@ void SurfaceEvolver::Evolve()
 	for (const auto v : m_EvolvingSurface->vertices())
 	{
 		const auto vPos = m_EvolvingSurface->position(v);
-		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 	}
 	ComputeTriangleMetrics();
@@ -322,7 +343,6 @@ void SurfaceEvolver::Evolve()
 
 		// prepare matrix & rhs
 		fillMatrixAndRHSTriplesFromMesh();
-		if (ti == 6) DumpMatrixAndRHSToFile(m_EvolSettings.OutputPath + "MatOut.txt", sysMat, sysRhs);
 
 #if REPORT_EVOL_STEPS
 		std::cout << "done\n";
@@ -330,8 +350,6 @@ void SurfaceEvolver::Evolve()
 #endif
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
-		solver.setMaxIterations(4 * NVertices);
-		solver.setTolerance(1e-6);
 		Eigen::MatrixXd x = solver.solve(sysRhs);
 		if (solver.info() != Eigen::Success)
 		{
@@ -408,7 +426,7 @@ void SurfaceEvolver::Evolve()
 		for (const auto v : m_EvolvingSurface->vertices())
 		{
 			const auto vPos = m_EvolvingSurface->position(v);
-			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, *m_Field);
+			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		}
 		ComputeTriangleMetrics();

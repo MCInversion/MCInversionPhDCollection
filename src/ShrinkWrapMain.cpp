@@ -110,11 +110,11 @@ int main()
 			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
 			const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
 			const float cellSize = minSize / nVoxelsPerMinDimension;
-			const float volExpansionFactor = 1.0f;
+			constexpr float volExpansionFactor = 1.0f;
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
 				volExpansionFactor,
-				DBL_MAX,
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 				SDF::KDTreeSplitType::Center,
 				SDF::SignComputation::VoxelFloodFill,
 				SDF::BlurPostprocessingType::None,
