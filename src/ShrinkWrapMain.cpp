@@ -25,14 +25,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
-        "BentChair",
-        "blub",
-        "bunny",
-        "maxPlanck",
-        "nefertiti",
+        //"armadillo",
+        //"BentChair",
+        //"blub",
+        //"bunny",
+        //"maxPlanck",
+        //"nefertiti",
         "ogre",
-        "spot"
+        //"spot"
     };
 
 	if (performSDFTests)
@@ -94,7 +94,7 @@ int main()
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
 			{"blub", 0.05 },
-			{"bunny", 0.002 },
+			{"bunny", 0.0025 },
 			{"maxPlanck", 0.05 },
 			{"nefertiti", 0.05 },
 			{"ogre", 0.05 },
