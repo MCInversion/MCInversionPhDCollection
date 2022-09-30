@@ -4,6 +4,8 @@
 
 #include <fstream>
 
+#include "geometry/GridUtil.h"
+
 void ExportToVTI(const std::string& filename, const Geometry::ScalarGrid& scalarGrid)
 {
     if (!scalarGrid.IsValid())
@@ -214,14 +216,24 @@ Geometry::ScalarGrid ImportNiftiAsScalarGrid(const std::string& fileName)
 	Geometry::ScalarGrid result(cellSize, volBox, 0.0);
 	auto& resultValues = result.Values();
 
-	for (unsigned int iz = 0; iz < Nz; iz++) {
-		for (unsigned int iy = 0; iy < Ny; iy++) {
-			for (unsigned int ix = 0; ix < Nx; ix++) {
-				const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
-				resultValues[gridPos] = vol.value(ix, iy, iz);
+	// TODO: nifti has some weird ordering, unlike our implementation of ScalarGrid!
+
+	/*for (auto it = vol.fbegin(); it != vol.fend(); ++it)
+	{
+		const unsigned int gridPos = std::distance(vol.fbegin(), it);
+		resultValues[gridPos] = static_cast<double>(*it);
+	}*/
+
+	for (int iz = 0; iz < Nz; iz++) {
+		for (int iy = 0; iy < Ny; iy++) {
+			for (int ix = 0; ix < Nx; ix++) {
+				const int gridPos = Nx * Ny * iz + Nx * iy + ix;
+				resultValues[gridPos] = static_cast<double>(vol(ix, iy, iz));
 			}
 		}
 	}
+
+	Geometry::RepairScalarGrid(result);
 
 	return result;
 }
