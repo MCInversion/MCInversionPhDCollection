@@ -178,9 +178,10 @@ int main()
 
 	if (performNiftiTests)
 	{
-		std::string imagePathIn = dataDirPath + "talairach.vti";
+		std::string imagePathIn = dataDirPath + "actual_brain.vti";
 
 		const auto gridData = ImportVTI(imagePathIn);
+		ExportToVTI(dataOutPath + "actual_brain_test", gridData);
 
 	} // endif performNiftiTests
 }

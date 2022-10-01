@@ -189,7 +189,273 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 	fileOStream.close();
 }
 
+//-----------------------------------------------------------------------------
+/*! \brief Verifies whether the given line string begins with a token.
+ *  \param[in] line     evaluated line string.
+ *  \param[in] token    evaluated token.
+*/
+//-----------------------------------------------------------------------------
+static bool LineBeginsWithToken(const std::string& line, const std::string& token)
+{
+	if (line.empty())
+		return false;
+
+	std::stringstream sStream{ line };
+	std::string lineToken;
+	sStream >> lineToken;
+	return lineToken == token;
+}
+
+/**
+ * \brief Loads line beginning with a given token.
+ * \param line           modifiable line ref.
+ * \param fileIStream    file stream.
+ * \param token          searched token.
+ */
+void LoadTokenLine(std::string& line, std::ifstream& fileIStream, const std::string& token)
+{
+	while (!LineBeginsWithToken(line, token))
+	{
+		if (!std::getline(fileIStream, line))
+		{
+			fileIStream.close();
+			std::cerr << "LoadTokenLine: Unexpected end of file!\n";
+			throw std::runtime_error("LoadTokenLine: Unexpected end of file!\n");
+		}
+	}
+}
+
+/// \brief basic utility for verifying whether a given string is numeric.
+bool IsNumber(const std::string& str)
+{
+	for (const auto& c : str)
+	{
+		if (std::isdigit(c) == 0) return false;
+	}
+	return true;
+}
+
+/**
+ * \brief Parses six extent values from a given extent string.
+ * \param valueBuffer    buffer for parsed values.
+ * \param extentStr      input extent string.
+ */
+void ParseExtentValues(std::vector<size_t>& valueBuffer, const std::string& extentStr)
+{
+	if (extentStr.empty())
+		return;
+
+	std::stringstream sStream{ extentStr };
+	std::string token;
+	constexpr size_t extentTokenCount = 6;
+	valueBuffer.reserve(extentTokenCount);
+	size_t iter = 0;
+	do
+	{
+		iter++;
+		sStream >> token;
+		if (!IsNumber(token))
+			break;
+
+		valueBuffer.emplace_back(std::stoi(token));
+		
+	} while (iter < extentTokenCount);
+}
+
+/// \brief verifies the validity of extent value buffer.
+[[nodiscard]] bool AreExtentValuesValid(const std::vector<size_t>& extentValBuffer)
+{
+	if (extentValBuffer.size() != 6)
+		return false;
+
+	if (extentValBuffer[0] > extentValBuffer[1])
+		return false;
+
+	if (extentValBuffer[2] > extentValBuffer[3])
+		return false;
+
+	return extentValBuffer[4] <= extentValBuffer[5];
+}
+
+/// \brief extracts grid dimensions from extent values.
+[[nodiscard]] std::tuple<size_t, size_t, size_t> GetGridDimensions(const std::vector<size_t>& extentValues)
+{
+	assert(AreExtentValuesValid(extentValues));
+	return {
+		extentValues[1] - extentValues[0] + 1,
+		extentValues[3] - extentValues[2] + 1,
+		extentValues[5] - extentValues[4] + 1
+	};
+}
+
+/**
+ * \brief Parses a vector of 3 values.
+ * \param valueBuffer     target value buffer.
+ * \param str             input string.
+ */
+void Parse3DPointValues(std::vector<float>& valueBuffer, const std::string& str)
+{
+	if (str.empty())
+		return;
+
+	std::stringstream sStream{ str };
+	std::string token;
+	constexpr size_t pointTokenCount = 3;
+	valueBuffer.reserve(pointTokenCount);
+	size_t iter = 0;
+	do
+	{
+		iter++;
+		sStream >> token;
+		if (!IsNumber(token))
+			break;
+
+		valueBuffer.emplace_back(std::stof(token));
+
+	} while (iter < pointTokenCount);
+}
+
+/// \brief validates point value buffer size.
+[[nodiscard]] bool ArePointValuesValid(const std::vector<float>& valueBuffer)
+{
+	if (valueBuffer.size() != 3)
+		return false;
+
+	return true;
+}
+
+/// \brief extracts a cell size from the spacing vector. NOTE: currently only regular grids with cube-spacing are supported.
+[[nodiscard]] float GetCellSize(const std::vector<float>& spacingVec)
+{
+	assert(spacingVec.size() == 3);
+	if (spacingVec[0] != spacingVec[1] || spacingVec[1] != spacingVec[2])
+	{
+		std::cerr << "ImportVTI::GetCellSize [WARNING]: >>>>>>>>>> unequal spacing not supported! <<<<<<<<<<<<< \n";
+		std::cerr << "ImportVTI::GetCellSize [WARNING]: unequal spacing values: " << spacingVec[0] << " " << spacingVec[1] << " " << spacingVec[2] << "!\n";
+		std::cerr << "ImportVTI::GetCellSize [WARNING]: only the first spacing value will be chosen for cell size! This may result in unevenly scaled fields!\n";
+	}
+
+	return spacingVec[0];
+}
+
 Geometry::ScalarGrid ImportVTI(const std::string& fileName)
 {
-	return Geometry::ScalarGrid(2, pmp::BoundingBox{});
+	std::ifstream fileIStream(fileName);
+	if (!fileIStream.is_open())
+	{
+		std::cerr << "ImportVTI: file" + fileName + " could not be opened!\n";
+		throw std::invalid_argument("ImportVTI: file" + fileName + " could not be opened!\n");
+	}
+
+	const auto extensionOrig = fileName.substr(fileName.find(".") + 1);
+	std::string extLower = "";
+	std::ranges::transform(extensionOrig, std::back_inserter(extLower), std::tolower);
+	if (extLower != "vti")
+	{
+		std::cerr << "ImportVTI: file" << fileName << " could not be opened!\n";
+		throw std::invalid_argument("ImportVTI: file" + fileName + " could not be opened!\n");
+	}
+
+	// ===================================================
+	// >>>>>>>>>>>>>>>> read header <<<<<<<<<<<<<<<<<<<<<<
+    // ===================================================
+	std::string line;
+	LoadTokenLine(line, fileIStream, "<VTKFile");
+	//  type=\"ImageData\"
+	const auto imageDataId = line.substr(line.find("<VTKFile") + 9, line.find("type=\"ImageData\"") + 7);
+	if (imageDataId != "type=\"ImageData\"")
+	{
+		std::cerr << "ImportVTI: Header part \"type=\"ImageData\"\" not found!\n";
+		throw std::runtime_error("ImportVTI: Header part \"type=\"ImageData\"\" not found!\n");
+	}
+
+	LoadTokenLine(line, fileIStream, "<ImageData");
+
+	// ========== Data extent (index dimensions) ===========
+	const auto extentBeginId = line.find("WholeExtent=\"") + 13;
+	const auto extentEndId = line.find("\" Origin");
+	const auto strExtent = line.substr(extentBeginId, extentEndId - extentBeginId);
+	std::vector<size_t> extentVals{};
+	ParseExtentValues(extentVals, strExtent);
+	if (!AreExtentValuesValid(extentVals))
+	{
+		std::cerr << "ImportVTI: Invalid extent!\n";
+		throw std::runtime_error("ImportVTI: Invalid extent!\n");
+	}
+	const auto [Nx, Ny, Nz] = GetGridDimensions(extentVals);
+	// ========== Data origin (point) =====================
+	const auto originBeginId = extentEndId + 10;
+	const auto originEndId = line.find("\" Spacing=\"");
+	const auto strOrigin = line.substr(originBeginId, originEndId - originBeginId);
+	std::vector<float> originPtCoords{};
+	Parse3DPointValues(originPtCoords, strOrigin);
+	if (!ArePointValuesValid(originPtCoords))
+	{
+		std::cerr << "ImportVTI: Invalid origin!\n";
+		throw std::runtime_error("ImportVTI: Invalid origin!\n");
+	}
+
+	// ========== Spacing (point) =========================
+	const auto spacingBeginId = originEndId + 11;
+	const auto spacingEndId = line.find("\"", spacingBeginId + 1);
+	const auto strSpacing = line.substr(spacingBeginId, spacingEndId - spacingBeginId);
+	std::vector<float> cellSpacing{};
+	Parse3DPointValues(cellSpacing, strSpacing);
+	if (!ArePointValuesValid(cellSpacing))
+	{
+		std::cerr << "ImportVTI: Invalid spacing!\n";
+		throw std::runtime_error("ImportVTI: Invalid spacing!\n");
+	}
+	const float cellSize = GetCellSize(cellSpacing);
+	// ===================================================
+
+	// >>>>>>> compute box <<<<<<<<<<<<<<
+	constexpr float boxEpsilon = 1e-6f; // round-off error for ceil/floor in global grid coords.
+	const pmp::vec3 boxMinVec{
+		originPtCoords[0] + boxEpsilon,// will be floored
+		originPtCoords[1] + boxEpsilon,// will be floored
+		originPtCoords[2] + boxEpsilon // will be floored
+	};
+	const pmp::vec3 boxMaxVec{
+		originPtCoords[0] + cellSize * Nx - boxEpsilon, // will be ceil-ed
+		originPtCoords[1] + cellSize * Ny - boxEpsilon, // will be ceil-ed
+		originPtCoords[2] + cellSize * Nz - boxEpsilon  // will be ceil-ed
+	};
+	const pmp::BoundingBox gridBox(boxMinVec, boxMaxVec);
+
+	// >>>>>>> initialize grid <<<<<<<<<<<<
+	Geometry::ScalarGrid result{ cellSize, gridBox };
+	// >>>>>>> load values <<<<<<<<<<<<<<<<
+	LoadTokenLine(line, fileIStream, "<DataArray");
+	auto& resultValues = result.Values();
+	const size_t gridExtent = Nx * Ny * Nz;
+	unsigned int gridPos = 0;
+	std::string token;
+	while (token != "</DataArray>" && !fileIStream.eof())
+	{
+		// since cell data is not necessarily divided into individual lines, we proceed by streaming the values
+		fileIStream >> token;
+		if (!IsNumber(token))
+			continue;
+
+		if (gridPos > gridExtent - 1)
+		{
+			std::cerr << "ImportVTI [WARNING]: gridPos > gridExtent - 1! There are more values than gridExtent!\n";
+			while (token != "</DataArray>" && !fileIStream.eof()) { fileIStream >> token; gridPos++; } // iterate towards the actual data extent.
+			std::cerr << "ImportVTI [WARNING]: omitting " << gridPos - gridExtent - 1 << " tokens.\n";
+			fileIStream.close();
+			return result;
+		}
+		resultValues[gridPos] = std::stod(token);
+		gridPos++;
+	}
+	if (gridExtent > gridPos + 1)
+	{
+		std::cerr << "ImportVTI [WARNING]: gridExtent > gridPos + 1! Not all values are loaded!\n";
+		std::cerr << "ImportVTI [WARNING]: omitting " << gridExtent - gridPos << " values.\n";
+	}
+
+	fileIStream.close();
+
+	return result;
 }
