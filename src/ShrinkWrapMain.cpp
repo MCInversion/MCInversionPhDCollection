@@ -20,7 +20,8 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
 constexpr bool performEvolverTests = false;
-constexpr bool performNiftiTests = true;
+// constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
+constexpr bool performBrainEvolverTests = true;
 constexpr bool performMarchingCubesTests = true;
 
 int main()
@@ -176,12 +177,18 @@ int main()
 
 	} // endif performMarchingCubesTests
 
-	if (performNiftiTests)
+	/*if (performNiftiTests)
+	{
+		// TODO: nifti import not supported yet
+	} // endif performNiftiTests
+	*/
+
+	if (performBrainEvolverTests)
 	{
 		std::string imagePathIn = dataDirPath + "actual_brain.vti";
 
 		const auto gridData = ImportVTI(imagePathIn);
 		ExportToVTI(dataOutPath + "actual_brain_test", gridData);
-
-	} // endif performNiftiTests
+		
+	} // endif performBrainEvolverTests
 }

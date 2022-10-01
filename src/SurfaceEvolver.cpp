@@ -218,7 +218,7 @@ void SurfaceEvolver::ExportSurface(const unsigned int& tId, const bool& isResult
 	if (!transformToOriginal)
 	{
 		m_EvolvingSurface->write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
-	    return;		
+	    return;
 	}
 	auto exportedSurface = *m_EvolvingSurface;
 	exportedSurface *= m_TransformToOriginal;

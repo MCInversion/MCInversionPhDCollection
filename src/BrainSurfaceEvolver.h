@@ -1,35 +1,48 @@
 #pragma once
 
+#include "geometry/Grid.h"
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 
-#include "geometry/Grid.h"
+// [Smith, 2002]: Smith, S. M., Fast Robust Automated Brain Extraction, Human Brain Mapping, 2002
 
 /**
- * \brief A wrapper for surface evolution advection-diffusion parameters.
- * \struct AdvectionDiffusionParameters
+ * \brief A wrapper for the constants (with some notes of their use) from the model of [Smith, 2002].
+ * \struct BE_ThresholdSettings
  */
-struct AdvectionDiffusionParameters
+struct BE_ThresholdSettings
 {
-	// constants for weight function:
-	// C1 * (1 - exp(d^2 / C2)), where d is distance
-	double MCFMultiplier{ 1.0 }; // C1
-	double MCFVariance{ 1.0 }; // C2
+	unsigned int MinIntensitySearchDepth{ 20 }; //>! (d1) [mm] "determines how far into the brain the minimum intensity is searched for."
+	unsigned int MaxIntensitySearchDepth = MinIntensitySearchDepth / 2; //>! (d2) [mm] "determines how far into the brain the maximum intensity is searched for."
+	// "t2, tm, and t are used to limit the effect of very dark or very bright voxels, and t is included in the maximum intensity search to limit the effect of very bright voxels."
+	double ThresholdIntensity0; // (t2) // TODO: interpret this value
+	double ThresholdIntensity1; // (tm) // TODO: interpret this value
+	double ThresholdIntensity2; // (t) // TODO: interpret this value
 
-	// constants for weight function:
-	// D1 * d * ((-grad(d) . N) - D2 * sqrt(1 - (grad(d) . N)^2)), where d is distance, and N unit normal.
-	double AdvectionMultiplier{ 1.0 }; // D1
-	double AdvectionSineMultiplier{ 1.0 }; // D2
+	double IntensityFraction{ 0.5 }; // (bt) // TODO: interpret this value
 
-	bool MCFSupportPositive{ true }; //>! if true, the diffusion weight function has non-zero support for positive values only.
-	bool AdvectionSupportPositive{ true }; //>! if true, the advection weight function has non-zero support for positive values only.
+	// NOTES:
+	// Imin = max(t2, min(tm, I[0],..., I[d1])), where list { I[0],..., I[d1] } is nearest-neighbor-interpolated from evolving surface normal direction N.
+	// Imax = min(tm, max(t, I[0],..., I[d2])), where list { I[0],..., I[d2] } is nearest-neighbor-interpolated from evolving surface normal direction N.
+	// t1 = (Imax - t2) * bt + t2
+	// f3 = 2 * (Imin - t1) / (Imax - t2)
+};
+
+/**
+ * \brief Curvature bounds for the evolving surface.
+ * \struct BE_CurvatureSettings
+ */
+struct BE_CurvatureSettings
+{
+	double MinCurvature{ -1.0 };
+	double MaxCurvature{ 1.0 };
 };
 
 /**
  * \brief A wrapper for parameters related to mesh topology adjustments (remeshing etc.).
- * \struct MeshTopologySettings
+ * \struct BE_MeshTopologySettings
  */
-struct MeshTopologySettings
+struct BE_MeshTopologySettings
 {
 	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
@@ -46,7 +59,7 @@ struct MeshTopologySettings
 };
 
 /// \brief An enumerator for the choice of mesh Laplacian scheme [Meyer, Desbrun, Schroder, Barr, 2003].
-enum class [[nodiscard]] MeshLaplacian
+enum class [[nodiscard]] BE_MeshLaplacian
 {
 	Voronoi = 0, //>! the finite volume for mesh Laplacian is generated from a true Voronoi neighborhood of each vertex.
 	Barycentric = 1 //>! the finite volume for mesh Laplacian is generated from face barycenters.
@@ -56,30 +69,25 @@ enum class [[nodiscard]] MeshLaplacian
 using TriangleMetrics = std::vector<std::string>;
 
 /**
- * \brief A wrapper for surface evolution settings.
- * \struct SurfaceEvolutionSettings
+ * \brief A wrapper for all settings for BrainSurfaceEvolver.
  */
-struct SurfaceEvolutionSettings
+struct BrainExtractionSettings
 {
 	std::string ProcedureName = ""; //>! name for the evolution procedure.
 
 	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.
-	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
 	unsigned int IcoSphereSubdivisionLevel{ 3 }; //>! subdivision level of an evolving ico sphere surface.
 
-	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
-	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
-
-	float MinTargetSize{ 1.0f }; //>! minimum size of the target mesh bounding box.
-	float MaxTargetSize{ 1.0f }; //>! maximum size of the target mesh bounding box.
-	pmp::vec3 TargetOrigin{}; //>! origin of the evolution's target.
+	BE_CurvatureSettings CurvatureParams{}; //>! evolving surface curvature bounds.
+	BE_ThresholdSettings ThresholdSettings{}; //>! settings for detecting relevant contours
+	BE_MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.
 	std::string OutputPath{}; //>! path where output surfaces are to be exported.
 
-	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
+	BE_MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
@@ -91,19 +99,21 @@ struct SurfaceEvolutionSettings
 };
 
 /**
- * \brief A utility for evolving surfaces within a scalar field.
- * \class SurfaceEvolver
+ * \brief A utility for extracting brain surfaces from CT scans.
+ * \class BrainSurfaceEvolver
  */
-class SurfaceEvolver
+class BrainSurfaceEvolver
 {
 public:
 	/**
 	 * \brief Constructor. Initialize with a given scalar field environment.
 	 * \param field                    pre-computed or loaded scalar field environment.
-	 * \param fieldExpansionFactor     the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	 * \param settings                 surface evolution settings.
 	 */
-	SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings);
+	BrainSurfaceEvolver(const Geometry::ScalarGrid& field, const BrainExtractionSettings& settings)
+		: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field))
+	{
+	}
 
 	/**
 	 * \brief Main functionality.
@@ -115,25 +125,6 @@ private:
 	 * \brief Preprocess for evolution, i.e.: generate m_EvolvingSurface, and transform both m_Field and m_EvolvingSurface for stabilization.
 	 */
 	void Preprocess();
-
-	// ----------------------------------------------------------------
-
-	/**
-	 * \brief Weight function for Laplacian flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
-	 * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
-	 * \return weight function value.
-	 */
-	[[nodiscard]] double LaplacianDistanceWeightFunction(const double& distanceAtVertex) const;
-
-	/**
-	 * \brief Weight function for advection flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
-	 * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
-	 * \param negDistanceGradient       negative gradient vector of distance field at vertex position.
-	 * \param vertexNormal              unit normal to vertex.
-	 * \return weight function value.
-	 */
-	[[nodiscard]] double AdvectionDistanceWeightFunction(const double& distanceAtVertex,
-		const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal) const;
 
 	// ----------------------------------------------------------------
 
@@ -152,35 +143,18 @@ private:
 
 	// ----------------------------------------------------------------
 
-	SurfaceEvolutionSettings m_EvolSettings{}; //>! settings.
+	BrainExtractionSettings m_EvolSettings{}; //>! settings.
 
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
-	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
 	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.
-
+	
 	// export
-	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).
-
+	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
 };
-
-/**
- * \brief Reports SurfaceEvolver's input to a given stream.
- * \param evolSettings    settings for SurfaceEvolver.
- * \param os              output stream.
- */
-void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os);
-
-/**
- * \brief Precomputes parameters for advection-diffusion model within SurfaceEvolver.
- * \param distanceMax             maximum effective distance from target (affects diffusion term weight).
- * \param targetMinDimension      minimum target size (affects diffusion term variance).
- * \return desired advection-diffusion parameters.
- */
-[[nodiscard]] AdvectionDiffusionParameters PreComputeAdvectionDiffusionParams(const double& distanceMax, const double& targetMinDimension);
