@@ -12,20 +12,34 @@
  */
 struct BE_ThresholdSettings
 {
-	unsigned int MinIntensitySearchDepth{ 20 }; //>! (d1) [mm] "determines how far into the brain the minimum intensity is searched for."
-	unsigned int MaxIntensitySearchDepth = MinIntensitySearchDepth / 2; //>! (d2) [mm] "determines how far into the brain the maximum intensity is searched for."
-	// "t2, tm, and t are used to limit the effect of very dark or very bright voxels, and t is included in the maximum intensity search to limit the effect of very bright voxels."
-	double ThresholdIntensity0; // (t2) // TODO: interpret this value
-	double ThresholdIntensity1; // (tm) // TODO: interpret this value
-	double ThresholdIntensity2; // (t) // TODO: interpret this value
+	unsigned int MinIntensitySearchDepth{ 7 }; //>! (d1) [mm] "determines how far into the brain the minimum intensity is searched for."
+	unsigned int MaxIntensitySearchDepth{ 3 }; //>! (d2) [mm] "determines how far into the brain the maximum intensity is searched for."
+	double Threshold2ndPercentile; // (t2) second percentile of image intensities.
+	double Threshold98thPercentile; // (t98) 98th percentile of image intensities.
+	// '[t] ...attempts to distinguish between brain matter and background (because bone appears dark in most MR images, "background" is taken to include bone).'
+	double ThresholdEffective; // (t) 10th of the distance from t2 to t98:  t = t2 + 0.1 * (t98 - t2),
+	double ThresholdEffectiveMedian; // (tm) median intensity value evaluated from the count of voxels within t2 and t98
 
-	double IntensityFraction{ 0.5 }; // (bt) // TODO: interpret this value
+	double BetMainParam{ 0.826450318154212 }; // (bt) magic constant: 'bet_main_parameter' = pow(0.5, 0.275)
 
+	// ===================================================================================================================================================================================
 	// NOTES:
+	// "t2, tm, and t are used to limit the effect of very dark or very bright voxels, and t is included in the maximum intensity search to limit the effect of very bright voxels."
 	// Imin = max(t2, min(tm, I[0],..., I[d1])), where list { I[0],..., I[d1] } is nearest-neighbor-interpolated from evolving surface normal direction N.
 	// Imax = min(tm, max(t, I[0],..., I[d2])), where list { I[0],..., I[d2] } is nearest-neighbor-interpolated from evolving surface normal direction N.
 	// t1 = (Imax - t2) * bt + t2
 	// f3 = 2 * (Imin - t1) / (Imax - t2)
+	// ===================================================================================================================================================================================
+};
+
+/**
+ * \brief A wrapper for (pre-computed) ico sphere parameters
+ * \struct BE_IcoSphereSettings
+ */
+struct BE_IcoSphereSettings
+{
+	pmp::vec3 Center{};
+	float Radius{ 1.0f };
 };
 
 /**
@@ -81,6 +95,7 @@ struct BrainExtractionSettings
 
 	BE_CurvatureSettings CurvatureParams{}; //>! evolving surface curvature bounds.
 	BE_ThresholdSettings ThresholdSettings{}; //>! settings for detecting relevant contours
+	BE_IcoSphereSettings IcoSphereSettings{}; //>! settings for placing the initial ico-sphere surface in space
 	BE_MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
@@ -110,10 +125,7 @@ public:
 	 * \param field                    pre-computed or loaded scalar field environment.
 	 * \param settings                 surface evolution settings.
 	 */
-	BrainSurfaceEvolver(const Geometry::ScalarGrid& field, const BrainExtractionSettings& settings)
-		: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field))
-	{
-	}
+	BrainSurfaceEvolver(const Geometry::ScalarGrid& field, const BrainExtractionSettings& settings);
 
 	/**
 	 * \brief Main functionality.

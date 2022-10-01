@@ -19,9 +19,6 @@
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
 constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
 
-constexpr unsigned int N_ICO_VERTS_0 = 12; // number of vertices in an icosahedron.
-constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
-
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
 

@@ -2,6 +2,12 @@
 
 #include "PrimitiveMeshBuilder.h"
 
+/**
+ * \brief Constants used for estimating vertex counts and edge lengths of ico-sphere meshes.
+ */
+constexpr unsigned int N_ICO_VERTS_0 = 12; // number of vertices in an icosahedron.
+constexpr unsigned int N_ICO_EDGES_0 = 30; // number of edges in an icosahedron.
+
 namespace Geometry
 {
 	/**

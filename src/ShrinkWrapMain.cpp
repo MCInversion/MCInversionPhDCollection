@@ -11,6 +11,8 @@
 #include <chrono>
 #include <map>
 
+#include "BrainSurfaceEvolver.h"
+
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
 const auto fsDataDirPath = fsRootPath / "data\\";
@@ -177,18 +179,102 @@ int main()
 
 	} // endif performMarchingCubesTests
 
+	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.vti)
+	const std::vector<std::string> brainNames{
+		"talairach",
+		//"actual_brain" // TODO: use git lfs to upload ascii vti file of size > 50 MB or implement nifti import
+	};
+
 	/*if (performNiftiTests)
 	{
 		// TODO: nifti import not supported yet
 	} // endif performNiftiTests
 	*/
 
+
 	if (performBrainEvolverTests)
 	{
-		std::string imagePathIn = dataDirPath + "actual_brain.vti";
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// NOTE: these values are copy-pasted from bet2 under the same image data inputs.
+		//       the true evaluation of threshold settings as well as radius and center are
+		//       nearly impossible to reverse-engineer from bet2 (just nasty unreadable code, man).
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// TODO: reverse-engineer bet2 threshold, and ico-sphere params evaluation
 
-		const auto gridData = ImportVTI(imagePathIn);
-		ExportToVTI(dataOutPath + "actual_brain_test", gridData);
+		constexpr BE_ThresholdSettings talairachThresholdSettings{
+			7, 3, // min and max intensity depths for normal search
+			0.0, // 2nd percentile threshold
+			1024.33496, // 98th percentile threshold
+			102.43349, // effective threshold
+			348.0,// effective median threshold
+		};
+		constexpr BE_ThresholdSettings actualBrainThresholdSettings{
+			7, 3, // min and max intensity depths for normal search
+			0.0, // 2nd percentile threshold
+			668.25, // 98th percentile threshold
+			66.825, // effective threshold
+			317.0, // effective median threshold
+		};
+		const std::map<std::string, BE_ThresholdSettings> bet2ThresholdSettings{
+			{"talairach", talairachThresholdSettings},
+			{"actual_brain", actualBrainThresholdSettings },
+		};
+
+		// ico-sphere params
+		const pmp::vec3 talairachCenter{ 69.278477120258884f, 81.210907276033296f, 69.224956401243205f };
+		const pmp::vec3 actualBrainCenter{ 96.536378893717142f, 126.13349816811417f, 116.99736547254018f };
+
+		constexpr float talairachRadius = 66.061572538428337f;
+		constexpr float actualBrainRadius = 102.09133074846271f;
+
+		const BE_IcoSphereSettings talairachIcoSettings{ talairachCenter, talairachRadius };
+		const BE_IcoSphereSettings actualBrainIcoSettings{ actualBrainCenter, actualBrainRadius };
+		const std::map<std::string, BE_IcoSphereSettings> bet2IcoSphereSettings{
+			{"talairach", talairachIcoSettings},
+			{"actual_brain", actualBrainIcoSettings },
+		};
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+		const BE_CurvatureSettings cSettings{
+			// TODO: try values
+		};
+
+		for (const auto& name : brainNames)
+		{
+			std::string imagePathIn = dataDirPath + name + ".vti";
+			const auto gridData = ImportVTI(imagePathIn);
+			// ExportToVTI(dataOutPath + name + "_test", gridData);
+
+			const auto& thresholdSettings = bet2ThresholdSettings.at(name);
+			const auto& icoSphereSettings = bet2IcoSphereSettings.at(name);
+			BrainExtractionSettings beSettings{
+				name,
+				80,
+				0.05,
+				3,
+				cSettings,
+				thresholdSettings,
+				icoSphereSettings,
+				{},
+				true, false,
+				dataOutPath,
+				BE_MeshLaplacian::Voronoi,
+				{"minAngle", "maxAngle", "jacobianConditionNumber",/* "stiffnessMatrixConditioning" */},
+				true
+			};
+
+			BrainSurfaceEvolver evolver(gridData, beSettings);
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > BrainSurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+
 		
 	} // endif performBrainEvolverTests
 }
