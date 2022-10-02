@@ -2,6 +2,8 @@
 // Distributed under a MIT-style license, see LICENSE.txt for details.
 
 #include "pmp/algorithms/Features.h"
+
+#include "Curvature.h"
 #include "pmp/algorithms/Normals.h"
 
 namespace pmp {
@@ -88,6 +90,58 @@ size_t Features::detect_angle_within_bounds(Scalar minAngle, Scalar maxAngle)
             }
         }
     }
+    return n_edges;
+}
+
+size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts)
+{
+    assert(principalCurvatureFactor >= 1.0f);
+    Curvature curvAlg{ mesh_ };
+    curvAlg.analyze_tensor(1);
+
+    size_t n_edges = 0;
+    for (const auto e : mesh_.edges())
+    {
+        if (mesh_.is_boundary(e))
+            continue;
+
+        const auto v0 = mesh_.vertex(e, 0);
+        auto vMinCurvature = curvAlg.min_curvature(v0);
+        auto vMaxCurvature = curvAlg.max_curvature(v0);
+        //if (vMinCurvature > 0.0 && vMaxCurvature < 0.0)
+        //   continue;
+
+	    auto vAbsMinCurvature = std::fabs(vMinCurvature);
+        auto vAbsMaxCurvature = std::fabs(vMaxCurvature);
+        if (vAbsMaxCurvature > principalCurvatureFactor * vAbsMinCurvature)
+            vfeature_[v0] = true;
+
+        const auto v1 = mesh_.vertex(e, 1);
+        vMinCurvature = curvAlg.min_curvature(v1);
+        vMaxCurvature = curvAlg.max_curvature(v1);
+        //if (vMinCurvature > 0.0 && vMaxCurvature < 0.0)
+        //    continue;
+
+        vAbsMinCurvature = std::fabs(vMinCurvature);
+        vAbsMaxCurvature = std::fabs(vMaxCurvature);
+
+        if (vAbsMaxCurvature > principalCurvatureFactor * vAbsMinCurvature)
+            vfeature_[v1] = true;
+
+        if (excludeEdgesWithoutTwoFeatureVerts && (vfeature_[v0] && vfeature_[v1]))
+        {
+            efeature_[e] = true;
+            n_edges++;
+            continue;
+        }
+
+        if (vfeature_[v0] || vfeature_[v1])
+        {
+            efeature_[e] = true;
+            n_edges++;
+        }
+    }
+
     return n_edges;
 }
 

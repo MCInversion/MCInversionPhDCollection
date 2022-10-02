@@ -3,7 +3,6 @@
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Decimation.h"
-#include "pmp/algorithms/Features.h"
 
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
@@ -36,6 +35,29 @@ constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
 
 // ================================================================================================
 
+size_t SurfaceEvolver::DetectFeatures(const FeatureDetectionType& type) const
+{
+	pmp::Features featuresDetector(*m_EvolvingSurface);
+	if (type == FeatureDetectionType::Angle)
+	{
+		const auto maxDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MaxDihedralAngle);
+		return featuresDetector.detect_angle(maxDihedralAngle);
+	}
+
+	if (type == FeatureDetectionType::AngleWithinBounds)
+	{
+		const auto minDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MinDihedralAngle);
+		const auto maxDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MaxDihedralAngle);
+		return featuresDetector.detect_angle_within_bounds(minDihedralAngle, maxDihedralAngle);
+	}
+
+	const auto curvatureFactor = m_EvolSettings.TopoParams.PrincipalCurvatureFactor;
+	const bool exclude = m_EvolSettings.TopoParams.ExcludeEdgesWithoutBothFeaturePts;
+	return featuresDetector.detect_vertices_with_curvatures_imbalance(curvatureFactor, exclude);
+}
+
+// ================================================================================================
+
 SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
 	: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
 {
@@ -48,6 +70,8 @@ SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& f
 	m_LaplacianAreaFunction =
 		(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
 			pmp::voronoi_area_barycentric : pmp::voronoi_area);
+
+	
 }
 
 // ================================================================================================
@@ -327,17 +351,19 @@ void SurfaceEvolver::Evolve()
 			// remeshing
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
-			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
-			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
+			std::cout << "Detecting Features ...";
 #endif
 			if (m_EvolSettings.DoFeatureDetection && ti > NSteps * m_EvolSettings.TopoParams.FeatureDetectionStartTimeFactor)
 			{
-				// detect features
-				pmp::Features feat(*m_EvolvingSurface);
-				const auto minDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MinDihedralAngle);
-				const auto maxDihedralAngle = static_cast<pmp::Scalar>(m_EvolSettings.TopoParams.MaxDihedralAngle);
-				feat.detect_angle_within_bounds(minDihedralAngle, maxDihedralAngle);
+				const auto nEdges = DetectFeatures(m_EvolSettings.TopoParams.FeatureType);
+#if REPORT_EVOL_STEPS
+				std::cout << "done. " << nEdges << " feature edges detected.\n";
+#endif
 			}
+#if REPORT_EVOL_STEPS
+			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
+#endif
+			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing({
 				minEdgeLength, maxEdgeLength, 2.0f * minEdgeLength,

@@ -2,6 +2,7 @@
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
+#include "pmp/algorithms/Features.h"
 
 #include "geometry/Grid.h"
 
@@ -26,6 +27,17 @@ struct AdvectionDiffusionParameters
 };
 
 /**
+ * \brief An enumerator for the type of feature detection function used during evolution.
+ * \enum FeatureDetectionType
+ */
+enum class [[nodiscard]] FeatureDetectionType
+{
+	Angle = 0, //>! edges with dihedral angle larger than a given threshold value are marked as features.
+	AngleWithinBounds = 1, //>! edges with dihedral angle within a given range are marked as features.
+	PrincipalCurvatures = 2 //>! vertices with too much imbalance in principal curvatures are marked as features.
+};
+
+/**
  * \brief A wrapper for parameters related to mesh topology adjustments (remeshing etc.).
  * \struct MeshTopologySettings
  */
@@ -41,8 +53,11 @@ struct MeshTopologySettings
 	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 
+	FeatureDetectionType FeatureType{ FeatureDetectionType::AngleWithinBounds }; //>! type of feature detection function.
 	double MinDihedralAngle{ 0.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 	double MaxDihedralAngle{ 1.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
+	float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 
 /// \brief An enumerator for the choice of mesh Laplacian scheme [Meyer, Desbrun, Schroder, Barr, 2003].
@@ -118,6 +133,13 @@ private:
 
 	// ----------------------------------------------------------------
 
+	/** // TODO: it's a design smell. Try to use a function object with a relevant number of parameters, or a variable-parameter function.
+	 * \brief Performs a feature detection function based on given type.
+	 * \param type    feature detection function type.
+	 * \return number of edges detected as features.
+	 */
+	[[nodiscard]] size_t DetectFeatures(const FeatureDetectionType& type) const;
+
 	/**
 	 * \brief Weight function for Laplacian flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
 	 * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
@@ -163,6 +185,7 @@ private:
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.
+	std::function<size_t(const pmp::Scalar&, const bool&)> m_FeatureFunction{}; //>! a function for detecting mesh features.
 
 	// export
 	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.

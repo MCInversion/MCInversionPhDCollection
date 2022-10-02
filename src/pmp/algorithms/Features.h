@@ -40,6 +40,10 @@ public:
 	//! \return The number of feature edges detected.
     size_t detect_angle_within_bounds(Scalar minAngle, Scalar maxAngle);
 
+    //! \brief Mark edges with principal curvatures |Kmax| > \p principalCurvatureFactor * |Kmin| as feature.
+    //! \return The number of feature edges detected.
+    size_t detect_vertices_with_curvatures_imbalance(const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts = false);
+
 private:
     SurfaceMesh& mesh_;
     VertexProperty<bool> vfeature_;
