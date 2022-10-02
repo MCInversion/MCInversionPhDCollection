@@ -141,6 +141,33 @@ private:
 	// ----------------------------------------------------------------
 
 	/**
+	 * \brief A subroutine which updates radius estimate m_EvolvingSurfaceRadiusEstimate.
+	 */
+	void UpdateRadiusEstimate();
+
+	// ----------------------------------------------------------------
+
+	/**
+	 * \brief Weight function for Laplacian flow term, evaluated from pre-computed radius and current surface bounds.
+	 * \return weight function value.
+	 *
+	 * NOTE: since brain images are not distance fields, the Laplacian term cannot be weighed by a function of
+	 *       distance to target. This weight needs to be high if a surface point is "far-away" from the approximate target.
+	 *		 The simplest available heuristic at the moment is: use the pre-computed effective radius from bet2.
+	 */
+	[[nodiscard]] double LaplacianWeightFunction() const;
+
+	/**
+	 * \brief Weight function for advection flow term, inspired by [Smith, 2002].
+	 * \param vPos              position of the vertex where the weight function is evaluated.
+	 * \param vNormal           normal of the vertex where the weight function is evaluated.
+	 * \return weight function value.
+	 */
+	[[nodiscard]] double NormalIntensityWeightFunction(const pmp::vec3& vPos, const pmp::vec3& vNormal) const;
+
+	// ----------------------------------------------------------------
+
+	/**
 	 * \brief Writes m_EvolvingSurface using m_OutputMeshExtension.
 	 * \param tId                     index of the current time step.
 	 * \paran isResult                if true, a different "connecting name" is chosen for resulting surface after all time steps are completed.
@@ -169,4 +196,6 @@ private:
 	// export
 	pmp::mat4 m_TransformToOriginal{}; //>! transformation matrix from stabilized surface to original size (for export).
 	std::string m_OutputMeshExtension = ".vtk"; //>! extension of the exported mesh geometry.
+
+	double m_EvolvingSurfaceRadiusEstimate{ 0.0 }; //>! estimate of the radius of the evolving surface, computed from bounds and updated for each time step.
 };

@@ -1,8 +1,5 @@
 #include "SurfaceEvolver.h"
 
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Decimation.h"
@@ -12,6 +9,7 @@
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MeshAnalysis.h"
 
+#include "EvolverUtilsCommon.h"
 //#include "ConversionUtils.h"
 
 // ================================================================================================
@@ -53,22 +51,6 @@ SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& f
 }
 
 // ================================================================================================
-
-/*
- * \brief Computes scaling factor for stabilizing the finite volume method on assumed spherical surface meshes based on time step.
- * \param timeStep               time step size.
- * \param icoRadius              radius of an evolving geodesic icosahedron.
- * \param icoSubdiv              subdivision level of an evolving geodesic icosahedron.
- * \param stabilizationFactor    a multiplier for stabilizing mean co-volume area.
- * \return scaling factor for mesh and scalar grid.
- */
-[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor = 1.0f)
-{
-	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, icoSubdiv) - 1) + 3 * N_ICO_VERTS_0) / 3;
-	const float weighedIcoRadius = icoRadius;
-	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * weighedIcoRadius * weighedIcoRadius / static_cast<float>(expectedVertexCount));
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea, 1.0f / 2.0f);
-}
 
 void SurfaceEvolver::Preprocess()
 {
@@ -123,68 +105,6 @@ void SurfaceEvolver::Preprocess()
 	//pmp::SurfaceMesh scaledTargetMesh = *m_EvolSettings.DO_NOT_KEEP_ptrTargetSurface;
 	//scaledTargetMesh *= transfMatrixFull;
 	//scaledTargetMesh.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_stableScale.obj");
-}
-
-// ================================================================================================
-
-/// \brief identifier for sparse matrix.
-using SparseMatrix = Eigen::SparseMatrix<double>;
-
-/// \brief A utility for converting Eigen::ComputationInfo to a string message.
-[[nodiscard]] std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo)
-{
-	if (cInfo == Eigen::Success)
-		return "Eigen::Success";
-
-	if (cInfo == Eigen::NumericalIssue)
-		return "Eigen::NumericalIssue";
-
-	if (cInfo == Eigen::NoConvergence)
-		return "Eigen::NoConvergence";
-
-	return "Eigen::InvalidInput";
-}
-
-// ================================================================================================
-
-/// \brief a stats wrapper for co-volume measures affecting the stability of the finite volume method.
-struct CoVolumeStats
-{
-	double Mean{ 0.0 };
-	double Max{ -DBL_MAX };
-	double Min{ DBL_MAX };
-};
-
-const std::string coVolMeasureVertexPropertyName{ "v:coVolumeMeasure" };
-
-/// \brief a co-volume area evaluator.
-using AreaFunction = std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)>;
-
-/**
- * \brief Analyzes the stats of co-volumes around each mesh vertex, and creates a vertex property for the measure values.
- * \param mesh             input mesh.
- * \param areaFunction     function to evaluate vertex co-volume area.
- * \return co-volume stats.
- */
-[[nodiscard]] CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
-{
-	// vertex property for co-volume measures.
-	if (!mesh.has_vertex_property(coVolMeasureVertexPropertyName))
-		mesh.add_vertex_property<pmp::Scalar>(coVolMeasureVertexPropertyName);
-	auto vCoVols = mesh.get_vertex_property<pmp::Scalar>(coVolMeasureVertexPropertyName);
-
-	CoVolumeStats stats{};
-	for (const auto v : mesh.vertices())
-	{
-		const double measure = areaFunction(mesh, v);
-		vCoVols[v] = static_cast<pmp::Scalar>(measure);
-
-		if (stats.Max < measure) stats.Max = measure;
-		if (stats.Min > measure) stats.Min = measure;
-		stats.Mean += measure;
-	}
-	stats.Mean /= static_cast<double>(mesh.n_vertices());
-	return stats;
 }
 
 // ================================================================================================
@@ -254,7 +174,9 @@ void SurfaceEvolver::Evolve()
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
+#if VERIFY_SOLUTION_WITHIN_BOUNDS
 	const auto& fieldBox = field.Box();
+#endif
 	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
@@ -272,7 +194,7 @@ void SurfaceEvolver::Evolve()
 #endif
 	// .................................................................
 
-	// DISCLAIMER: dhe dimensionality of the system depends on the number of mesh vertices which can change if remeshing is used.
+	// DISCLAIMER: the dimensionality of the system depends on the number of mesh vertices which can change if remeshing is used.
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
@@ -374,7 +296,9 @@ void SurfaceEvolver::Evolve()
 #endif
 
 		// update vertex positions & verify mesh within bounds
+#if VERIFY_SOLUTION_WITHIN_BOUNDS
 		size_t nVertsOutOfBounds = 0;
+#endif
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
