@@ -18,10 +18,11 @@
 // ================================================================================================
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
-constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
+constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.2f;
 
 /// \brief this value is verified for [Smith, 2002]
-constexpr double BET_NORMAL_INTENSITY_FACTOR = 0.05;
+//	constexpr double BET_NORMAL_INTENSITY_FACTOR = 0.05;
+constexpr double BET_NORMAL_INTENSITY_FACTOR = 100.0;
 
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
@@ -59,6 +60,7 @@ void BrainSurfaceEvolver::Preprocess()
 
 	// build ico-sphere
 	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (minDim + maxDim);
+	//const float icoSphereRadius = m_EvolSettings.IcoSphereSettings.Radius;
 	m_StartingSurfaceRadius = icoSphereRadius;
 #if REPORT_EVOL_STEPS
 	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
@@ -75,8 +77,8 @@ void BrainSurfaceEvolver::Preprocess()
 	// >>> scaling factor value is intended for stabilization of the numerical method.
 	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
 	m_ScalingFactor = scalingFactor;
-	m_EvolvingSurfaceRadiusEstimate = static_cast<double>(icoSphereRadius) * scalingFactor;
-	m_EvolSettings.IcoSphereSettings.Radius *= scalingFactor;
+	m_EvolvingSurfaceRadiusEstimate = static_cast<double>(icoSphereRadius * scalingFactor);
+	//m_EvolSettings.IcoSphereSettings.Radius *= scalingFactor;
 
 	// origin needs to be computed from bet2
 	const auto origin = m_EvolSettings.IcoSphereSettings.Center;
@@ -119,14 +121,20 @@ void BrainSurfaceEvolver::UpdateRadiusEstimate()
 	m_EvolvingSurfaceRadiusEstimate = 0.5 * (minDim + maxDim);
 }
 
+void BrainSurfaceEvolver::ComputeNormalIntensities()
+{
+}
+
 // ================================================================================================
 
-constexpr double MAGIC_RADIUS_CONSTANT = 0.5;
+constexpr double MAGIC_RADIUS_CONSTANT = 0.0;
 
 double BrainSurfaceEvolver::LaplacianWeightFunction() const
 {
-	const double bet2Radius = m_EvolSettings.IcoSphereSettings.Radius;
-	return m_EvolvingSurfaceRadiusEstimate - MAGIC_RADIUS_CONSTANT * bet2Radius;
+	return 1.0;
+
+	//const double bet2Radius = m_EvolSettings.IcoSphereSettings.Radius;
+	//return m_EvolvingSurfaceRadiusEstimate - MAGIC_RADIUS_CONSTANT * bet2Radius;
 }
 
 double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos, const pmp::vec3& vNormal) const
@@ -136,6 +144,7 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	const auto fieldOrigin = fieldBox.min();
 	const auto& fieldValues = m_Field->Values();
 	const auto [Nx, Ny, Nz] = m_Field->Dimensions();
+	const auto gridExtent = Nx * Ny * Nz;
 
 	double Imin = m_EvolSettings.ThresholdSettings.ThresholdEffectiveMedian; // tm
 	double Imax = m_EvolSettings.ThresholdSettings.ThresholdEffective; // t
@@ -148,6 +157,11 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	const auto iy0 = static_cast<unsigned int>(std::floor((vShiftedByNormal[1] - fieldOrigin[1]) / cellSize));
 	const auto iz0 = static_cast<unsigned int>(std::floor((vShiftedByNormal[2] - fieldOrigin[2]) / cellSize));
 	const unsigned int gridPos0 = Nx * Ny * iz0 + Nx * iy0 + ix0;
+	if (gridPos0 > gridExtent - 1)
+	{
+		//std::cerr << "BrainSurfaceEvolver::NormalIntensityWeightFunction: unable to evaluate valid index for vShiftedByNormal - fieldOrigin!\n";
+		return 0.0;
+	}
 	const double im0 = fieldValues[gridPos0];
 
 	if (im0 < Imin) Imin = im0;
@@ -165,6 +179,8 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	const auto iy1 = iy0 - (d1 - 1) * iNormalStepY;
 	const auto iz1 = iz0 - (d1 - 1) * iNormalStepZ;
 	const unsigned int gridPos1 = Nx * Ny * iz1 + Nx * iy1 + ix1;
+	if (gridPos1 > gridExtent - 1)
+		return 0.0;
 	const double im1 = fieldValues[gridPos1];
 
 	if (im1 < Imin) Imin = im1;
@@ -180,6 +196,8 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 		iy -= iNormalStepY;
 		iz -= iNormalStepZ;
 		const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+		if (gridPos > gridExtent - 1)
+			continue;
 		const double im = fieldValues[gridPos];
 		if (im1 < Imin) Imin = im1;
 		if (gi >= d2)
@@ -293,8 +311,8 @@ void BrainSurfaceEvolver::Evolve()
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
-	// TODO: add property for intensity values
-	auto vFeature = m_EvolvingSurface->vertex_property("v:feature", false);
+	auto vIntensity = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:normalIntensity", 0.0f);
+	auto vFeature = m_EvolvingSurface->vertex_property<bool>("v:feature", false);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -308,7 +326,8 @@ void BrainSurfaceEvolver::Evolve()
 		{
 			const auto vPosToUpdate = m_EvolvingSurface->position(v);
 
-			if (m_EvolvingSurface->is_boundary(v) || (m_EvolSettings.IdentityForFeatureVertices && vFeature[v]))
+			if ((m_EvolSettings.IdentityForBoundaryVertices && m_EvolvingSurface->is_boundary(v)) ||
+				(m_EvolSettings.IdentityForFeatureVertices && vFeature[v]))
 			{
 				// freeze boundary/feature vertices
 				const Eigen::Vector3d vertexRhs = vPosToUpdate;
@@ -319,8 +338,9 @@ void BrainSurfaceEvolver::Evolve()
 			
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
-			const double epsilonCtrlWeight = LaplacianWeightFunction();
-			const double etaCtrlWeight = BET_NORMAL_INTENSITY_FACTOR * meanInterVertexDistance * NormalIntensityWeightFunction(vPosToUpdate, vNormal);
+			const double absIntensity = std::abs(vIntensity[v]);
+			const double epsilonCtrlWeight = (absIntensity > 0.0 ? absIntensity : 1.0);
+			const double etaCtrlWeight = BET_NORMAL_INTENSITY_FACTOR * meanInterVertexDistance * vIntensity[v];
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -342,6 +362,15 @@ void BrainSurfaceEvolver::Evolve()
 	std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
 #endif
 	// set initial surface vertex properties
+	{
+		pmp::Normals::compute_vertex_normals(*m_EvolvingSurface);
+		vNormalsProp = m_EvolvingSurface->vertex_property<pmp::Point>("v:normal");
+		for (const auto v : m_EvolvingSurface->vertices())
+		{
+			const auto vPos = m_EvolvingSurface->position(v);
+			vIntensity[v] = static_cast<pmp::Scalar>(NormalIntensityWeightFunction(vPos, vNormalsProp[v]));
+		}
+	}
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
@@ -451,6 +480,11 @@ void BrainSurfaceEvolver::Evolve()
 		std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
 #endif
 		// set surface vertex properties
+		for (const auto v : m_EvolvingSurface->vertices())
+		{
+			const auto vPos = m_EvolvingSurface->position(v);
+			vIntensity[v] = static_cast<pmp::Scalar>(NormalIntensityWeightFunction(vPos, vNormalsProp[v]));
+		}
 		ComputeTriangleMetrics();
 		UpdateRadiusEstimate();
 

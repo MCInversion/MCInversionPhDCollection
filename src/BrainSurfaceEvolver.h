@@ -59,7 +59,7 @@ struct BE_CurvatureSettings
 struct BE_MeshTopologySettings
 {
 	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
-	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
+	double RemeshingStartTimeFactor{ 0.0 }; //>! the fraction of total time steps after which remeshing should take place.
 	float EdgeLengthDecayFactor{ 0.97f }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
@@ -144,6 +144,9 @@ private:
 	 * \brief A subroutine which updates radius estimate m_EvolvingSurfaceRadiusEstimate.
 	 */
 	void UpdateRadiusEstimate();
+
+	/// \brief computes f3 values according to [Smith, 2002]
+	void ComputeNormalIntensities();
 
 	// ----------------------------------------------------------------
 

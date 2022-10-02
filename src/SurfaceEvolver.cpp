@@ -199,7 +199,7 @@ void SurfaceEvolver::Evolve()
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
-	auto vFeature = m_EvolvingSurface->vertex_property("v:feature", false);
+	auto vFeature = m_EvolvingSurface->vertex_property<bool>("v:feature", false);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -211,7 +211,8 @@ void SurfaceEvolver::Evolve()
 		{
 			const auto vPosToUpdate = m_EvolvingSurface->position(v);
 
-			if (m_EvolvingSurface->is_boundary(v) || (m_EvolSettings.IdentityForFeatureVertices && vFeature[v]))
+			if ((m_EvolSettings.IdentityForBoundaryVertices && m_EvolvingSurface->is_boundary(v)) ||
+				(m_EvolSettings.IdentityForFeatureVertices && vFeature[v]))
 			{
 				// freeze boundary/feature vertices
 				const Eigen::Vector3d vertexRhs = vPosToUpdate;

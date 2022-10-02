@@ -251,7 +251,7 @@ int main()
 			BrainExtractionSettings beSettings{
 				name,
 				80,
-				0.05,
+				0.01,
 				3, // ico-sphere subdivision level: bet2 uses 5 by default
 				cSettings,
 				thresholdSettings,
