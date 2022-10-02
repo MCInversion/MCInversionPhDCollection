@@ -199,3 +199,10 @@ private:
 
 	double m_EvolvingSurfaceRadiusEstimate{ 0.0 }; //>! estimate of the radius of the evolving surface, computed from bounds and updated for each time step.
 };
+
+/**
+ * \brief Reports BrainSurfaceEvolver's input to a given stream.
+ * \param evolSettings    settings for BrainSurfaceEvolver.
+ * \param os              output stream.
+ */
+void ReportInput(const BrainExtractionSettings& evolSettings, std::ostream& os);

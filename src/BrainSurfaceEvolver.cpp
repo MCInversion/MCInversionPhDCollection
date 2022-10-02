@@ -474,3 +474,20 @@ void BrainSurfaceEvolver::Evolve()
 }
 
 // ================================================================================================
+
+void ReportInput(const BrainExtractionSettings& evolSettings, std::ostream& os)
+{
+	os << "======================================================================\n";
+	os << "> > > > > > > > Initiating BrainSurfaceEvolver: < < < < < < < < < < < \n";
+	os << "Brain Name: " << evolSettings.ProcedureName << ",\n";
+	os << "NSteps: " << evolSettings.NSteps << ",\n";
+	os << "TimeStep: " << evolSettings.TimeStep << ",\n";
+	os << "IcoSphereSubdivisionLevel: " << evolSettings.IcoSphereSubdivisionLevel << ",\n";
+	os << "......................................................................\n";
+	os << "WIP: not printing threshold and ico-sphere BET values ... \n";
+	os << "......................................................................\n";
+	os << "Export Surface per Time Step: " << (evolSettings.ExportSurfacePerTimeStep ? "true" : "false") << ",\n";
+	os << "Output Path: " << evolSettings.OutputPath << ",\n";
+	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
+	os << "----------------------------------------------------------------------\n";
+}

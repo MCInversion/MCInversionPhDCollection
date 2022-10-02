@@ -252,7 +252,7 @@ int main()
 				name,
 				80,
 				0.05,
-				3,
+				3, // ico-sphere subdivision level: bet2 uses 5 by default
 				cSettings,
 				thresholdSettings,
 				icoSphereSettings,
@@ -265,6 +265,7 @@ int main()
 			};
 
 			BrainSurfaceEvolver evolver(gridData, beSettings);
+			ReportInput(beSettings, std::cout);
 			try
 			{
 				evolver.Evolve();
