@@ -3,6 +3,7 @@
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Decimation.h"
+#include "pmp/algorithms/Features.h"
 
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
@@ -58,9 +59,10 @@ size_t SurfaceEvolver::DetectFeatures(const FeatureDetectionType& type) const
 		return featuresDetector.detect_vertices_with_curvatures_imbalance(curvatureFactor, exclude);		
 	}
 
+	const auto curvatureAngle = m_EvolSettings.TopoParams.CriticalMeanCurvatureAngle;
 	const auto curvatureFactor = m_EvolSettings.TopoParams.PrincipalCurvatureFactor;
 	const bool exclude = m_EvolSettings.TopoParams.ExcludeEdgesWithoutBothFeaturePts;
-	return featuresDetector.detect_vertices_with_high_mean_curvature(curvatureFactor, exclude);
+	return featuresDetector.detect_vertices_with_high_curvature(curvatureAngle, curvatureFactor, exclude);
 }
 
 // ================================================================================================

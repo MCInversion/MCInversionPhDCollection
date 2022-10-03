@@ -40,13 +40,13 @@ public:
 	//! \return The number of feature edges detected.
     size_t detect_angle_within_bounds(Scalar minAngle, Scalar maxAngle);
 
-    //! \brief Mark edges with principal curvatures |Kmax| > \p principalCurvatureFactor * |Kmin| as feature.
+    //! \brief Mark edges with principal curvatures |Kmax| > \p principalCurvatureFactor * |Kmin| as feature. If excludeEdgesWithoutTwoFeatureVerts is turned on, only edges with both vertices marked as feature will be feature edges.
     //! \return The number of feature edges detected.
     size_t detect_vertices_with_curvatures_imbalance(const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts = false);
 
-    //! \brief Mark edges with principal curvatures H > \p curvatureThreshold as feature.
+    //! \brief Mark vertices with meanCurvatureAngle < \p curvatureAngle as feature. If excludeEdgesWithoutTwoFeatureVerts is turned on, only edges with both vertices marked as feature will be feature edges.
 	//! \return The number of feature edges detected.
-    size_t detect_vertices_with_high_mean_curvature(const Scalar& curvatureThreshold, const bool& excludeEdgesWithoutTwoFeatureVerts = false);
+    size_t detect_vertices_with_high_curvature(const Scalar& curvatureAngle, const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts = false);
 
 private:
     SurfaceMesh& mesh_;

@@ -2,7 +2,6 @@
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
-#include "pmp/algorithms/Features.h"
 
 #include "geometry/Grid.h"
 
@@ -46,7 +45,7 @@ struct MeshTopologySettings
 {
 	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
-	float EdgeLengthDecayFactor{ 0.97f }; //>! decay factor for minimum (and consequently maximum) edge length.
+	float EdgeLengthDecayFactor{ 0.99f }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
@@ -57,7 +56,8 @@ struct MeshTopologySettings
 	FeatureDetectionType FeatureType{ FeatureDetectionType::MeanCurvature }; //>! type of feature detection function.
 	double MinDihedralAngle{ 0.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 	double MaxDihedralAngle{ 2.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	float PrincipalCurvatureFactor{ 5.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+	float PrincipalCurvatureFactor{ 3.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+	float CriticalMeanCurvatureAngle{ static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
 	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 

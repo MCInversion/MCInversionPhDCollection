@@ -143,9 +143,33 @@ size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& princip
     return n_edges;
 }
 
-size_t Features::detect_vertices_with_high_mean_curvature(const Scalar& curvatureThreshold, const bool& excludeEdgesWithoutTwoFeatureVerts)
+/// \brief computes mean length of an outgoing edge from a given vertex.
+[[nodiscard]] Scalar ComputeMeanArcLengthAtVertex(const SurfaceMesh& mesh, const Vertex& v)
 {
-    assert(principalCurvatureFactor >= 1.0f);
+    Scalar edgeLength = 0.0f;
+    size_t valence = 0;
+	for (const auto w : mesh.vertices(v))
+	{
+        edgeLength += norm(mesh.position(v) - mesh.position(w));
+        valence++;
+	}
+    return edgeLength / static_cast<Scalar>(valence);
+}
+
+/// \brief verifies whether the principal curvatures satisfy the conditions of a concave dominant saddle
+[[nodiscard]] bool IsConcaveDominantSaddle(const Scalar& vMinCurvature, const Scalar& vMaxCurvature, const Scalar& curvatureFactor)
+{
+    const auto vAbsMinCurvature = std::fabs(vMinCurvature);
+    const auto vAbsMaxCurvature = std::fabs(vMaxCurvature);
+
+    const bool isSaddle = (vMinCurvature < 0.0f && vMaxCurvature > 0.0f) || (vMinCurvature > 0.0f && vMaxCurvature < 0.0f);
+
+    return (vAbsMaxCurvature < curvatureFactor* vAbsMinCurvature) && isSaddle;
+}
+
+size_t Features::detect_vertices_with_high_curvature(const Scalar& curvatureAngle, const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts)
+{
+    assert(curvatureAngle >= 0.0f);
     Curvature curvAlg{ mesh_ };
     curvAlg.analyze_tensor(1);
 
@@ -158,27 +182,40 @@ size_t Features::detect_vertices_with_high_mean_curvature(const Scalar& curvatur
         const auto v0 = mesh_.vertex(e, 0);
         auto vMinCurvature = curvAlg.min_curvature(v0);
         auto vMaxCurvature = curvAlg.max_curvature(v0);
-        auto vMeanCurvature = vMinCurvature + vMaxCurvature;
-        if (vMeanCurvature > curvatureThreshold)
-            vfeature_[v0] = true;
+        Scalar vMeanArcLength, vMeanCurvature, vMeanCurvatureAngle;
+        if (!IsConcaveDominantSaddle(vMinCurvature, vMaxCurvature, principalCurvatureFactor))
+        {
+            // only vertices with low principal curvature imbalance are tested for mean curvature angle
+			vMeanCurvature = vMinCurvature + vMaxCurvature;
+	        vMeanArcLength = ComputeMeanArcLengthAtVertex(mesh_, v0);
+	        vMeanCurvatureAngle = vMeanCurvature * vMeanArcLength;
+	        if (vMeanCurvatureAngle < curvatureAngle)
+	            vfeature_[v0] = true;	        
+        }
 
         const auto v1 = mesh_.vertex(e, 1);
         vMinCurvature = curvAlg.min_curvature(v1);
         vMaxCurvature = curvAlg.max_curvature(v1);
-        vMeanCurvature = vMinCurvature + vMaxCurvature;
-        if (vMeanCurvature > curvatureThreshold)
-            vfeature_[v1] = true;
+        if (!IsConcaveDominantSaddle(vMinCurvature, vMaxCurvature, principalCurvatureFactor))
+        {
+            // only vertices with low principal curvature imbalance are tested for mean curvature angle
+	        vMeanCurvature = vMinCurvature + vMaxCurvature;
+	        vMeanArcLength = ComputeMeanArcLengthAtVertex(mesh_, v1);
+	        vMeanCurvatureAngle = vMeanCurvature * vMeanArcLength;
+	        if (vMeanCurvatureAngle < curvatureAngle)
+	            vfeature_[v1] = true;	        
+        }
 
         if (excludeEdgesWithoutTwoFeatureVerts && (vfeature_[v0] && vfeature_[v1]))
         {
-            efeature_[e] = true;
+            //efeature_[e] = true;
             n_edges++;
             continue;
         }
 
         if (vfeature_[v0] || vfeature_[v1])
         {
-            efeature_[e] = true;
+            //efeature_[e] = true;
             n_edges++;
         }
     }
