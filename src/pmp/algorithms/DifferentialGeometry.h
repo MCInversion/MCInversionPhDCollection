@@ -40,7 +40,7 @@ inline Scalar sin(const Point& v0, const Point& v1)
 }
 
 //! compute cosine of angle between two (un-normalized) vectors
-inline Scalar cos(const Point& v0, const Point& v1)
+inline Scalar pcos(const Point& v0, const Point& v1)
 {
     return dot(v0, v1) / (norm(v0) * norm(v1));
 }

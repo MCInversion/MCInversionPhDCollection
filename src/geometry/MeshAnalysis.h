@@ -33,4 +33,10 @@ namespace Geometry
 	/// \brief provides a metric function for a given metricName.
 	[[nodiscard]] TriMetricFunction IdentifyMetricFunction(const std::string& metricName);
 
+	/// \brief Computes dihedral angle for mesh vertices, averaged from mesh edges.
+	void ComputeEdgeDihedralAngles(pmp::SurfaceMesh& mesh);
+
+	/// \brief Computes vertex principal curvatures and mean curvature.
+	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh);
+
 } // namespace Geometry

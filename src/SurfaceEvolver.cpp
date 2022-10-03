@@ -51,9 +51,16 @@ size_t SurfaceEvolver::DetectFeatures(const FeatureDetectionType& type) const
 		return featuresDetector.detect_angle_within_bounds(minDihedralAngle, maxDihedralAngle);
 	}
 
+	if (type == FeatureDetectionType::PrincipalCurvatures)
+	{
+		const auto curvatureFactor = m_EvolSettings.TopoParams.PrincipalCurvatureFactor;
+		const bool exclude = m_EvolSettings.TopoParams.ExcludeEdgesWithoutBothFeaturePts;
+		return featuresDetector.detect_vertices_with_curvatures_imbalance(curvatureFactor, exclude);		
+	}
+
 	const auto curvatureFactor = m_EvolSettings.TopoParams.PrincipalCurvatureFactor;
 	const bool exclude = m_EvolSettings.TopoParams.ExcludeEdgesWithoutBothFeaturePts;
-	return featuresDetector.detect_vertices_with_curvatures_imbalance(curvatureFactor, exclude);
+	return featuresDetector.detect_vertices_with_high_mean_curvature(curvatureFactor, exclude);
 }
 
 // ================================================================================================
@@ -277,6 +284,8 @@ void SurfaceEvolver::Evolve()
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 	}
+	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
+	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
@@ -394,6 +403,8 @@ void SurfaceEvolver::Evolve()
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		}
+		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
+		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
 		ComputeTriangleMetrics();
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)

@@ -34,7 +34,8 @@ enum class [[nodiscard]] FeatureDetectionType
 {
 	Angle = 0, //>! edges with dihedral angle larger than a given threshold value are marked as features.
 	AngleWithinBounds = 1, //>! edges with dihedral angle within a given range are marked as features.
-	PrincipalCurvatures = 2 //>! vertices with too much imbalance in principal curvatures are marked as features.
+	PrincipalCurvatures = 2, //>! vertices with too much imbalance in principal curvatures are marked as features.
+	MeanCurvature = 3 //>! features are preferred for vertices with high positive mean curvature.
 };
 
 /**
@@ -53,10 +54,10 @@ struct MeshTopologySettings
 	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 
-	FeatureDetectionType FeatureType{ FeatureDetectionType::AngleWithinBounds }; //>! type of feature detection function.
+	FeatureDetectionType FeatureType{ FeatureDetectionType::MeanCurvature }; //>! type of feature detection function.
 	double MinDihedralAngle{ 0.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	double MaxDihedralAngle{ 1.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+	double MaxDihedralAngle{ 2.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
+	float PrincipalCurvatureFactor{ 5.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
 	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 
@@ -76,7 +77,7 @@ using TriangleMetrics = std::vector<std::string>;
  */
 struct SurfaceEvolutionSettings
 {
-	std::string ProcedureName = ""; //>! name for the evolution procedure.
+	std::string ProcedureName{}; //>! name for the evolution procedure.
 
 	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.

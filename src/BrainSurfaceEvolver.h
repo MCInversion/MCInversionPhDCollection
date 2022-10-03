@@ -87,7 +87,7 @@ using TriangleMetrics = std::vector<std::string>;
  */
 struct BrainExtractionSettings
 {
-	std::string ProcedureName = ""; //>! name for the evolution procedure.
+	std::string ProcedureName{}; //>! name for the evolution procedure.
 
 	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.

@@ -2,7 +2,9 @@
 
 #include <set>
 
+#include "pmp/algorithms/Curvature.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
+#include "pmp/algorithms/Normals.h"
 
 namespace Geometry
 {
@@ -252,6 +254,63 @@ namespace Geometry
 			return ComputeStiffnessMatrixConditioningVertexValues;
 
 		return {};
+	}
+
+	void ComputeEdgeDihedralAngles(pmp::SurfaceMesh& mesh)
+	{
+		auto eProp = mesh.edge_property<pmp::Scalar>("e:dihedralAngle", 2.0f * M_PI);
+
+		for (const auto e : mesh.edges())
+		{
+			if (mesh.is_boundary(e))
+				continue;
+
+			const auto f0 = mesh.face(mesh.halfedge(e, 0));
+			const auto f1 = mesh.face(mesh.halfedge(e, 1));
+
+			const pmp::Normal n0 = pmp::Normals::compute_face_normal(mesh, f0);
+			const pmp::Normal n1 = pmp::Normals::compute_face_normal(mesh, f1);
+
+			const auto angleBetweenNormals = angle(n0, n1);
+			eProp[e] = angleBetweenNormals;
+		}
+
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:dihedralAngle", 2.0f * M_PI);
+		for (const auto v : mesh.vertices())
+		{
+			if (mesh.is_boundary(v))
+				continue;
+
+			pmp::Scalar dihedralAngleSum = 0.0f;
+			for (const auto w : mesh.vertices(v))
+			{
+				const auto hFrom = mesh.find_halfedge(v, w);
+				const auto e = mesh.edge(hFrom);
+				dihedralAngleSum += eProp[e];
+			}
+			const auto valence = mesh.valence(v);
+			if (valence == 0)
+				continue;
+
+			vProp[v] = dihedralAngleSum / static_cast<pmp::Scalar>(valence);
+		}
+	}
+
+	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh)
+	{
+		pmp::Curvature curvAlg{ mesh };
+		curvAlg.analyze_tensor(1);
+
+		auto vMinCurvature = mesh.vertex_property<pmp::Scalar>("v:minCurvature");
+		auto vMaxCurvature = mesh.vertex_property<pmp::Scalar>("v:maxCurvature");
+		auto vMeanCurvature = mesh.vertex_property<pmp::Scalar>("v:meanCurvature");
+
+		for (const auto v : mesh.vertices())
+		{
+			vMinCurvature[v] = curvAlg.min_curvature(v);
+			vMaxCurvature[v] = curvAlg.max_curvature(v);
+			vMeanCurvature[v] = vMinCurvature[v] + vMaxCurvature[v];
+		}
 	}
 
 } // namespace Geometry

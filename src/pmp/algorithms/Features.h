@@ -44,6 +44,10 @@ public:
     //! \return The number of feature edges detected.
     size_t detect_vertices_with_curvatures_imbalance(const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts = false);
 
+    //! \brief Mark edges with principal curvatures H > \p curvatureThreshold as feature.
+	//! \return The number of feature edges detected.
+    size_t detect_vertices_with_high_mean_curvature(const Scalar& curvatureThreshold, const bool& excludeEdgesWithoutTwoFeatureVerts = false);
+
 private:
     SurfaceMesh& mesh_;
     VertexProperty<bool> vfeature_;
