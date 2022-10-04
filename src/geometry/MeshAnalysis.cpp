@@ -94,15 +94,19 @@ namespace Geometry
 		const auto e1 = mesh.position(v1) - mesh.position(v);
 		const auto e2 = pmp::cross(e0, e1); // tri plane normal
 
+		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
+		const float l0 = pmp::norm(e0);
+		const float l1 = pmp::norm(e1);
+
 		const auto xVector = pmp::normalize(e0);
 		const auto zVector = pmp::normalize(e2);
 		const auto yVector = pmp::perp(xVector, zVector);		
 
-		const float e0X = pmp::norm(e0);
+		const float e0X = pmp::norm(e0 / l0);
 		constexpr float e0Y = 0.0f;
 
-		const float e1X = pmp::dot(e1, xVector);
-		const float e1Y = pmp::dot(e1, yVector);
+		const float e1X = pmp::dot(e1 / l1, xVector);
+		const float e1Y = pmp::dot(e1 / l1, yVector);
 
 		const float detJ = e0X * e1Y - e1X * e0Y;
 		if (std::fabs(detJ) < 1e-5f)
@@ -127,7 +131,77 @@ namespace Geometry
 			float jInvColSum = 0.0f;
 			for (unsigned int j = 0; j < 2; j++)
 			{
-				const unsigned int elementId = 3 * i + j;
+				const unsigned int elementId = 3 * j + i;
+				jColSum += std::fabs(J[elementId]);
+				jInvColSum += std::fabs(JInv[elementId]);
+			}
+			if (jColSum > jNorm1)
+				jNorm1 = jColSum;
+			if (jInvColSum > jInvNorm1)
+				jInvNorm1 = jInvColSum;
+		}
+
+		return jNorm1 * jInvNorm1;
+	}
+
+	/// \brief Computes the condition number of a equilateral Jacobian of this triangle.
+	///        Note: The Jacobian corresponds to the planar transformation from triangle (-0.5, 0), (0.5, 0), (0, 1) to the evaluated triangle.
+	[[nodiscard]] float GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	{
+		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
+		if (nVerts != 3)
+			return -1.0f; // Error, face with three vertices is needed!
+
+		const auto h = mesh.halfedge(face);
+		const auto hPrev = mesh.prev_halfedge(h);
+
+		const auto v = mesh.from_vertex(h);
+		const auto v0 = mesh.from_vertex(hPrev);
+		const auto v1 = mesh.to_vertex(h);
+		const auto e0Midpoint = 0.5f * (mesh.position(v) + mesh.position(v0));
+
+		const auto e0 = mesh.position(v0) - e0Midpoint;
+		const auto e1 = mesh.position(v1) - e0Midpoint;
+		const auto e2 = pmp::cross(e0, e1); // tri plane normal
+
+		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
+		const float l0 = pmp::norm(e0);
+		const float l1 = pmp::norm(e1);
+
+		const auto xVector = 0.5f * pmp::normalize(e0);
+		const auto zVector = pmp::normalize(e2);
+		const auto yVector = pmp::perp(2.0f * xVector, zVector);
+
+		const float e0X = pmp::norm(e0 / l0);
+		constexpr float e0Y = 0.0f;
+
+		const float e1X = pmp::dot(e1 / l1, xVector);
+		const float e1Y = pmp::dot(e1 / l1, yVector);
+
+		const float detJ = (e0X * e1Y - e1X * e0Y);
+		if (std::fabs(detJ) < 1e-5f)
+			return FLT_MAX; // singular Jacobian has an infinite condition number
+
+		const pmp::mat3 J{
+			e0X, e1X, 0.0f,
+			e0Y, e1Y, 0.0f,
+			0.0f, 0.0f, 1.0f
+		};
+		const auto JInv = pmp::inverse(J);
+
+		/*const float jNorm1 = norm(J);
+		const float jInvNorm1 = norm(JInv);*/
+
+		// 1-norm of Jacobian and its inverse
+		float jNorm1 = -FLT_MAX;
+		float jInvNorm1 = -FLT_MAX;
+		for (unsigned int i = 0; i < 2; i++)
+		{
+			float jColSum = 0.0f;
+			float jInvColSum = 0.0f;
+			for (unsigned int j = 0; j < 2; j++)
+			{
+				const unsigned int elementId = 3 * j + i;
 				jColSum += std::fabs(J[elementId]);
 				jInvColSum += std::fabs(JInv[elementId]);
 			}
@@ -170,8 +244,9 @@ namespace Geometry
 		const auto area = area_notNorm / maxLenSq;
 
 		const auto lSqSumSq = (l0Sq + l1Sq + l2Sq) * (l0Sq + l1Sq + l2Sq);
-
-		return (l0Sq + l1Sq + l2Sq + sqrt(lSqSumSq - 48.0f * area)) / (8.0f * area);
+		const auto valReal = (l0Sq + l1Sq + l2Sq) / (8.0f * area);
+		const auto valImag = sqrt(48.0f * area - lSqSumSq) / (8.0f * area);
+		return sqrt(valReal * valReal + valImag * valImag);
 	}
 
 	using FaceMetricFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
@@ -222,13 +297,18 @@ namespace Geometry
 		return ComputeInterpolatedTrianglesMetric(mesh, GetConditionNumberOfTriangleJacobian, "jacobianConditionNumber");
 	}
 
+	bool ComputeEquilateralTriangleJacobianConditionNumbers(pmp::SurfaceMesh& mesh)
+	{
+		return ComputeInterpolatedTrianglesMetric(mesh, GetConditionNumberOfEquilateralTriangleJacobian, "equilateralJacobianCondition");
+	}
+
 	bool ComputeStiffnessMatrixConditioningVertexValues(pmp::SurfaceMesh& mesh)
 	{
 		return ComputeInterpolatedTrianglesMetric(mesh, ComputeStiffnessMatrixConditioningForTriangle, "stiffnessMatrixConditioning");
 	}
 
 	std::set<std::string> REGISTERED_METRIC_FUNCTION_NAMES{
-		"minAngle", "maxAngle", "jacobianConditionNumber", "stiffnessMatrixConditioning"
+		"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition", "stiffnessMatrixConditioning"
 	};
 
 	bool IsMetricRegistered(const std::string& name)
@@ -249,6 +329,9 @@ namespace Geometry
 
 		if (metricName == "jacobianConditionNumber")
 			return ComputeTriangleJacobianConditionNumberVertexValues;
+
+		if (metricName == "equilateralJacobianCondition")
+			return ComputeEquilateralTriangleJacobianConditionNumbers;
 
 		if (metricName == "stiffnessMatrixConditioning")
 			return ComputeStiffnessMatrixConditioningVertexValues;

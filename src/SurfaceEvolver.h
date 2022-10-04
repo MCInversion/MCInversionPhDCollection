@@ -57,7 +57,7 @@ struct MeshTopologySettings
 	double MinDihedralAngle{ 0.9 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 	double MaxDihedralAngle{ 2.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 	float PrincipalCurvatureFactor{ 3.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
-	float CriticalMeanCurvatureAngle{ static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
+	float CriticalMeanCurvatureAngle{ 1.0f * static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
 	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 
@@ -98,6 +98,7 @@ struct SurfaceEvolutionSettings
 	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
+	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.

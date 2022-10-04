@@ -12,6 +12,8 @@
 #include <map>
 
 #include "BrainSurfaceEvolver.h"
+#include "geometry/IcoSphereBuilder.h"
+#include "geometry/MeshAnalysis.h"
 
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
@@ -141,7 +143,7 @@ int main()
 			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
 			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
-			const double fieldIsoLevel = 0.707 * static_cast<double>(cellSize);
+			const double fieldIsoLevel = 1.0 * static_cast<double>(cellSize);
 
 			const double tau = timeStepSizesForMeshes.at(name); // time step
 			SurfaceEvolutionSettings seSettings{
@@ -157,7 +159,8 @@ int main()
 				true, false,
 				dataOutPath,
 				MeshLaplacian::Voronoi,
-				{"minAngle", "maxAngle", "jacobianConditionNumber",/* "stiffnessMatrixConditioning" */},
+				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+				0.25f,
 				true
 			};
 			ReportInput(seSettings, std::cout);
@@ -276,6 +279,14 @@ int main()
 			}
 		}
 
+
 		
 	} // endif performBrainEvolverTests
+	Geometry::IcoSphereBuilder ico({ 0 });
+	ico.BuildBaseData();
+	ico.BuildPMPSurfaceMesh();
+	auto icoMesh = ico.GetPMPSurfaceMeshResult();
+	const auto result = Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(icoMesh);
+	assert(result);
+	icoMesh.write(dataOutPath + "ico0_Metric.vtk");
 }

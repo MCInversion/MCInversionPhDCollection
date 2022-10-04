@@ -45,3 +45,25 @@ std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo)
 
 	return "Eigen::InvalidInput";
 }
+
+pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const pmp::vec3& vNormal, const float& weight)
+{
+	pmp::vec3 result{};
+	if (!mesh.has_vertex_property("v:normal"))
+		return result;
+
+	auto vCirculator = mesh.vertices(v);
+	for (const auto w : vCirculator)
+	{
+		const auto e0 = mesh.position(w) - mesh.position(v);
+		const auto e1 = mesh.position(*(++vCirculator)) - mesh.position(v);
+		--vCirculator;
+		const auto e0Normalized = pmp::normalize(e0);
+		const auto e1Normalized = pmp::normalize(e1);
+		const auto eDot = pmp::dot(e0Normalized, e1Normalized);
+		result += (1.0f + eDot) * (e0 + e1);
+	}
+	result *= weight / static_cast<float>(mesh.valence(v));
+	const auto resultDotNormal = pmp::dot(result, vNormal);
+	return (result - resultDotNormal * vNormal);
+}

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pmp/MatVec.h"
+
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <functional>
@@ -46,3 +48,13 @@ using SparseMatrix = Eigen::SparseMatrix<double>;
 
 /// \brief A utility for converting Eigen::ComputationInfo to a string message.
 [[nodiscard]] std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo);
+
+/**
+ * \brief Computes angle-based tangential update velocity for a mesh vertex with a given weight.
+ * \param mesh       a surface mesh to whom the vertex belongs.
+ * \param v          vertex handle of a vertex where the tangential velocity is to be computed.
+ * \param vNormal    normal to vertex with handle v.
+ * \param weight     weight of the velocity vector.
+ * \return tangential velocity vector.
+ */
+[[nodiscard]] pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const pmp::vec3& vNormal, const float& weight = 1.0f);
