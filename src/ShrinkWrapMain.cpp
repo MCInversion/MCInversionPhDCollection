@@ -12,8 +12,8 @@
 #include <map>
 
 #include "BrainSurfaceEvolver.h"
-#include "geometry/IcoSphereBuilder.h"
-#include "geometry/MeshAnalysis.h"
+//#include "geometry/IcoSphereBuilder.h"
+//#include "geometry/MeshAnalysis.h"
 
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
@@ -32,14 +32,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
-        "BentChair",
-        "blub",
+        //"armadillo",
+        //"BentChair",
+        //"blub",
         "bunny",
-        "maxPlanck",
-        "nefertiti",
-        "ogre",
-        "spot"
+        //"maxPlanck",
+        //"nefertiti",
+        //"ogre",
+        //"spot"
     };
 
 	if (performSDFTests)
@@ -123,7 +123,7 @@ int main()
 				volExpansionFactor,
 				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
 				SDF::KDTreeSplitType::Center,
-				SDF::SignComputation::VoxelFloodFill,
+				SDF::SignComputation::None,
 				SDF::BlurPostprocessingType::None,
 				SDF::PreprocessingType::Octree
 			};

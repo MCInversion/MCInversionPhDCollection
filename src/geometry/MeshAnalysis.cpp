@@ -97,6 +97,8 @@ namespace Geometry
 		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
 		const float l0 = pmp::norm(e0);
 		const float l1 = pmp::norm(e1);
+		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
+			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const auto xVector = pmp::normalize(e0);
 		const auto zVector = pmp::normalize(e2);
@@ -167,6 +169,8 @@ namespace Geometry
 		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
 		const float l0 = pmp::norm(e0);
 		const float l1 = pmp::norm(e1);
+		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
+			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const auto xVector = 0.5f * pmp::normalize(e0);
 		const auto zVector = pmp::normalize(e2);
