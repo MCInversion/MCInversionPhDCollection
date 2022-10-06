@@ -355,7 +355,7 @@ namespace Geometry
 			const pmp::Normal n1 = pmp::Normals::compute_face_normal(mesh, f1);
 
 			const auto angleBetweenNormals = angle(n0, n1);
-			eProp[e] = angleBetweenNormals;
+			eProp[e] = angleBetweenNormals + M_PI_2;
 		}
 
 		auto vProp = mesh.vertex_property<pmp::Scalar>("v:dihedralAngle", 2.0f * M_PI);

@@ -11,6 +11,7 @@
 
 #include "EvolverUtilsCommon.h"
 //#include "ConversionUtils.h"
+#include <fstream>
 
 // ================================================================================================
 
@@ -262,7 +263,7 @@ void SurfaceEvolver::Evolve()
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight;
+			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -284,7 +285,13 @@ void SurfaceEvolver::Evolve()
 	// write initial surface
 	auto coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface, m_LaplacianAreaFunction);
 #if REPORT_EVOL_STEPS
+	std::ofstream fileOStreamMins(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_CoVolMins.txt");
+	std::ofstream fileOStreamMeans(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_CoVolMeans.txt");
+	std::ofstream fileOStreamMaxes(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_CoVolMaxes.txt");
 	std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
+	fileOStreamMins << coVolStats.Min << ", ";
+	fileOStreamMeans << coVolStats.Mean << ", ";
+	fileOStreamMaxes << coVolStats.Max << ", ";
 #endif
 	// set initial surface vertex properties
 	for (const auto v : m_EvolvingSurface->vertices())
@@ -404,6 +411,9 @@ void SurfaceEvolver::Evolve()
 		coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface, m_LaplacianAreaFunction);
 #if REPORT_EVOL_STEPS
 		std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
+		fileOStreamMins << coVolStats.Min << (ti < NSteps ? ", " : "");
+		fileOStreamMeans << coVolStats.Mean << (ti < NSteps ? ", " : "");
+		fileOStreamMaxes << coVolStats.Max << (ti < NSteps ? ", " : "");
 #endif
 		// set surface vertex properties
 		for (const auto v : m_EvolvingSurface->vertices())
@@ -437,6 +447,12 @@ void SurfaceEvolver::Evolve()
 
 	if (m_EvolSettings.ExportResultSurface)
 		ExportSurface(NSteps, true);
+
+#if REPORT_EVOL_STEPS
+	fileOStreamMins.close();
+	fileOStreamMaxes.close();
+	fileOStreamMeans.close();
+#endif
 }
 
 void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)

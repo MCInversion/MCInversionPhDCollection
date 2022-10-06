@@ -32,14 +32,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
-        //"blub",
+        "armadillo",
+        "BentChair",
+        "blub",
         "bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        //"ogre",
-        //"spot"
+        "maxPlanck",
+        "nefertiti",
+        "ogre",
+        "spot"
     };
 
 	if (performSDFTests)
@@ -282,11 +282,11 @@ int main()
 
 		
 	} // endif performBrainEvolverTests
-	Geometry::IcoSphereBuilder ico({ 0 });
+	/*Geometry::IcoSphereBuilder ico({0});
 	ico.BuildBaseData();
 	ico.BuildPMPSurfaceMesh();
 	auto icoMesh = ico.GetPMPSurfaceMeshResult();
 	const auto result = Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(icoMesh);
 	assert(result);
-	icoMesh.write(dataOutPath + "ico0_Metric.vtk");
+	icoMesh.write(dataOutPath + "ico0_Metric.vtk");*/
 }
