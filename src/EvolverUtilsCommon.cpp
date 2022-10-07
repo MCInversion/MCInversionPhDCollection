@@ -24,12 +24,16 @@ CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& a
 	return stats;
 }
 
+/// \brief The power of the stabilizing scale factor.
+constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+constexpr float INV_SHRINK_FACTOR = 5.0f;
+
 float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor)
 {
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, icoSubdiv) - 1) + 3 * N_ICO_VERTS_0) / 3;
 	const float weighedIcoRadius = icoRadius;
 	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * weighedIcoRadius * weighedIcoRadius / static_cast<float>(expectedVertexCount));
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea, 1.0f / 2.0f);
+	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }
 
 std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo)

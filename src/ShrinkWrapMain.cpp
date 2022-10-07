@@ -12,6 +12,7 @@
 #include <map>
 
 #include "BrainSurfaceEvolver.h"
+#include "SphereTest.h"
 //#include "geometry/IcoSphereBuilder.h"
 //#include "geometry/MeshAnalysis.h"
 
@@ -23,6 +24,7 @@ const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
+constexpr bool performSphereTest = true;
 constexpr bool performEvolverTests = true;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
@@ -35,7 +37,7 @@ int main()
         //"armadillo",
         //"BentChair",
         //"blub",
-        "bunny",
+        //"bunny",
         //"maxPlanck",
         //"nefertiti",
         //"ogre",
@@ -92,6 +94,22 @@ int main()
 			}
 	    }
 	} // endif performSDFTests
+
+	if (performSphereTest)
+	{
+		const ST_MeshTopologySettings topoSettings{
+			0.07f, 0.0, 1.0f, 1.0
+		};
+
+		const SphereTestEvolutionSettings stSettings{
+			topoSettings,
+			false, false, dataOutPath,
+			ST_MeshLaplacian::Barycentric, 0.0f, false};
+
+		SphereTest st(stSettings);
+		st.PerformTest(4);
+		
+	} // endif performSphereTest
 
 	if (performEvolverTests)
 	{
@@ -200,7 +218,7 @@ int main()
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// NOTE: these values are copy-pasted from bet2 under the same image data inputs.
 		//       the true evaluation of threshold settings as well as radius and center are
-		//       nearly impossible to reverse-engineer from bet2 (just nasty unreadable code, man).
+		//       nearly impossible to reverse-engineer from bet2.
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// TODO: reverse-engineer bet2 threshold, and ico-sphere params evaluation
 
@@ -282,6 +300,7 @@ int main()
 
 		
 	} // endif performBrainEvolverTests
+
 	/*Geometry::IcoSphereBuilder ico({0});
 	ico.BuildBaseData();
 	ico.BuildPMPSurfaceMesh();

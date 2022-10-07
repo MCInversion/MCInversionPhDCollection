@@ -79,9 +79,7 @@ SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& f
 			pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
 	m_LaplacianAreaFunction =
 		(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
-			pmp::voronoi_area_barycentric : pmp::voronoi_area);
-
-	
+			pmp::voronoi_area_barycentric : pmp::voronoi_area);	
 }
 
 // ================================================================================================
@@ -98,7 +96,7 @@ void SurfaceEvolver::Preprocess()
 	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
 #endif
 	const unsigned int icoSphereSubdiv = m_EvolSettings.IcoSphereSubdivisionLevel;
-	Geometry::IcoSphereBuilder icoBuilder({ m_EvolSettings.IcoSphereSubdivisionLevel, icoSphereRadius });
+	Geometry::IcoSphereBuilder icoBuilder({ icoSphereSubdiv, icoSphereRadius });
 	icoBuilder.BuildBaseData();
 	icoBuilder.BuildPMPSurfaceMesh();
 	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
@@ -370,12 +368,14 @@ void SurfaceEvolver::Evolve()
 			break;
 		}
 #endif
+#if REPORT_EVOL_STEPS
+		std::cout << "done\n";
+#endif
 
 		if (m_EvolSettings.DoRemeshing && ti > NSteps * m_EvolSettings.TopoParams.RemeshingStartTimeFactor)
 		{
 			// remeshing
 #if REPORT_EVOL_STEPS
-			std::cout << "done\n";
 			std::cout << "Detecting Features ...";
 #endif
 			if (m_EvolSettings.DoFeatureDetection && ti > NSteps * m_EvolSettings.TopoParams.FeatureDetectionStartTimeFactor)
@@ -477,6 +477,7 @@ void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)
 	os << "Export Surface per Time Step: " << (evolSettings.ExportSurfacePerTimeStep ? "true" : "false") << ",\n";
 	os << "Output Path: " << evolSettings.OutputPath << ",\n";
 	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
+	os << "Do Feature Detection: " << (evolSettings.DoFeatureDetection ? "true" : "false") << ",\n";
 	os << "----------------------------------------------------------------------\n";
 }
 
