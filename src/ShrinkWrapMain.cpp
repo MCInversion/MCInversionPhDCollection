@@ -25,7 +25,7 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = true;
-constexpr bool performEvolverTests = true;
+constexpr bool performEvolverTests = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performMarchingCubesTests = true;
@@ -34,14 +34,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
-        //"blub",
-        //"bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        //"ogre",
-        //"spot"
+        "armadillo",
+        "BentChair",
+        "blub",
+        "bunny",
+        "maxPlanck",
+        "nefertiti",
+        "ogre",
+        "spot"
     };
 
 	if (performSDFTests)
@@ -97,17 +97,59 @@ int main()
 
 	if (performSphereTest)
 	{
-		const ST_MeshTopologySettings topoSettings{
-			0.07f, 0.0, 1.0f, 1.0
-		};
+		/* { // Setup 1: No remeshing, No tangential redistribution
+			const ST_MeshTopologySettings topoSettings{};
 
-		const SphereTestEvolutionSettings stSettings{
-			topoSettings,
-			false, false, dataOutPath,
-			ST_MeshLaplacian::Barycentric, 0.0f, false};
+			const SphereTestEvolutionSettings stSettings{
+				topoSettings,
+				false, false, dataOutPath,
+				ST_MeshLaplacian::Barycentric, 0.0f, false};
 
-		SphereTest st(stSettings);
-		st.PerformTest(4);
+			SphereTest st(stSettings);
+			st.PerformTest(4);			
+		}
+
+		std::cout << "=====================================================\n";
+
+		{ // Setup 2: No remeshing, tangential redistribution with weight 0.25
+			const ST_MeshTopologySettings topoSettings{};
+
+			const SphereTestEvolutionSettings stSettings{
+				topoSettings,
+				false, false, dataOutPath,
+				ST_MeshLaplacian::Barycentric, 0.25f, false };
+
+			SphereTest st(stSettings);
+			st.PerformTest(4);
+		}*/
+
+		std::cout << "=====================================================\n";
+
+		{ // Setup 3: Remeshing, No tangential redistribution
+			const ST_MeshTopologySettings topoSettings{};
+
+			const SphereTestEvolutionSettings stSettings{
+				topoSettings,
+				false, false, dataOutPath,
+				ST_MeshLaplacian::Barycentric, 0.0f, true };
+
+			SphereTest st(stSettings);
+			st.PerformTest(4);
+		}
+
+		std::cout << "=====================================================\n";
+
+		{ // Setup 4: Remeshing, tangential redistribution with weight 0.25
+			const ST_MeshTopologySettings topoSettings{};
+
+			const SphereTestEvolutionSettings stSettings{
+				topoSettings,
+				false, false, dataOutPath,
+				ST_MeshLaplacian::Barycentric, 0.25f, true };
+
+			SphereTest st(stSettings);
+			st.PerformTest(4);
+		}
 		
 	} // endif performSphereTest
 

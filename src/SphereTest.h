@@ -9,14 +9,10 @@
  */
 struct ST_MeshTopologySettings
 {
-	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
-	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
-	float EdgeLengthDecayFactor{ 0.98f }; //>! decay factor for minimum (and consequently maximum) edge length.
-	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
-	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
-	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
-	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
-	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
+	float MinEdgeMultiplier{ 0.8f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	double RemeshingStartTimeFactor{ 0.0 }; //>! the fraction of total time steps after which remeshing should take place.
+	unsigned int NRemeshingIters{ 1 }; //>! the number of iterations for pmp::Remeshing.
+	unsigned int NTanSmoothingIters{ 2 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 };
 
@@ -68,7 +64,6 @@ public:
 	 */
 	void PerformTest(const unsigned int& nIterations = 4);
 
-
 private:
 	/**
 	 * \brief Preprocess for evolution, i.e.: generate m_EvolvingSurface, and transform both m_Field and m_EvolvingSurface for stabilization.
@@ -92,6 +87,9 @@ private:
 	 */
 	[[nodiscard]] double EvaluateSquaredSurfaceError(const double& time) const;
 
+	/// \brief computes mean edge length in evolving surface.
+	[[nodiscard]] double ComputeMeanEdgeLength() const;
+
 	// ----------------------------------------------------------------
 
 	SphereTestEvolutionSettings m_EvolSettings{}; //>! settings.
@@ -107,6 +105,9 @@ private:
 	// error analysis
 	std::vector<double> m_MeanErrors{}; //>! the mean absolute difference between mesh surface and exact solution for all time steps, for all iterations.
 	std::vector<double> m_EOCs{}; //>! Experimental order of convergence, for all iterations.
+
+	// edge length stats
+	double m_MeanEdgeLength{ 1.0 }; //>! average edge length of m_EvolvingSurface over all time steps.
 };
 
 /**

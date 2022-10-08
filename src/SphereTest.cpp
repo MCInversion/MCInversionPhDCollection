@@ -51,7 +51,7 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 	Preprocess(iter);
 
 	if (!m_EvolvingSurface)
-		throw std::invalid_argument("SurfaceEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
+		throw std::invalid_argument("SphereTest::Evolve: m_EvolvingSurface not set! Terminating!\n");
 
 #if VERIFY_SOLUTION_WITHIN_BOUNDS
 	auto bbox = m_EvolvingSurface->bounds();
@@ -63,8 +63,8 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 	const auto subdiv = static_cast<float>(STARTING_SPHERE_SUBDIVISION + iter);
 	const float r = STARTING_SPHERE_RADIUS;
 	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 4.0f * minEdgeLength;
+	auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0f, subdiv - 1) * sqrt(phi * sqrt(5.0f)))); // from icosahedron edge length
+	auto maxEdgeLength = 1.5f * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -110,11 +110,18 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 	// starting surface error 
 	double totalSurfaceSqError = 0.0;
 
+	if (m_EvolSettings.DoRemeshing)
+	{
+		// init mean edge length
+		m_MeanEdgeLength = ComputeMeanEdgeLength();
+	}
+
 	// -------------------------------------------------------------------------------------------------------------
 	// ........................................ main loop ..........................................................
 	// -------------------------------------------------------------------------------------------------------------
 	for (unsigned int ti = 1; ti <= NSteps; ti++)
 	{
+		std::cout << "\riter" << iter << "[" << ti << "/" << NSteps << "]:";
 #if REPORT_EVOL_STEPS
 		std::cout << "SphereTest: time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << "/" << tStep * NSteps << "\n";
 		std::cout << "pmp::Normals::compute_vertex_normals ... ";
@@ -194,14 +201,9 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
 #endif
-			if (ti % m_EvolSettings.TopoParams.StepStrideForEdgeDecay == 0 &&
-				ti > NSteps * m_EvolSettings.TopoParams.RemeshingSizeDecayStartTimeFactor)
-			{
-				// shorter edges are needed for features close to the target.
-				minEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
-				maxEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
-			}
 
+			m_MeanEdgeLength += ComputeMeanEdgeLength();
+			
 			// update linear system dims for next time step:
 			if (ti < NSteps && NVertices != m_EvolvingSurface->n_vertices())
 			{
@@ -222,7 +224,14 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 	} // end main loop
 	// -------------------------------------------------------------------------------------------------------------
 
+	std::cout << "...done.";
 	m_MeanErrors.push_back(sqrt(tStep * totalSurfaceSqError));
+
+	if (m_EvolSettings.DoRemeshing)
+	{
+		m_MeanEdgeLength /= NSteps;
+		m_EvolvingSurface->write(m_EvolSettings.OutputPath + "SphereTest" + (m_EvolSettings.TangentialVelocityWeight > 0.0 ? "_redist_" : "") + std::to_string(iter) + ".vtk");
+	}
 }
 
 /// \brief exact ground truth solution.
@@ -248,20 +257,53 @@ double SphereTest::EvaluateSquaredSurfaceError(const double& time) const
 
 // ================================================================================================
 
+double SphereTest::ComputeMeanEdgeLength() const
+{
+	if (!m_EvolvingSurface)
+		throw std::invalid_argument("SphereTest::Evolve: m_EvolvingSurface not set! Terminating!\n");
+
+	double result = 0.0;
+	for (const auto e : m_EvolvingSurface->edges())
+		result += static_cast<double>(m_EvolvingSurface->edge_length(e));
+
+	return result / static_cast<double>(m_EvolvingSurface->n_edges());
+}
+
 void SphereTest::PerformTest(const unsigned int& nIterations)
 {
 	std::cout << "......................................................................\n";
 	std::cout << " < < < < < < < < < < < Sphere Test Results: > > > > > > > > > > > > > \n";
 	std::cout << "......................................................................\n";
 	double tStep = STARTING_TIME_STEP_SIZE;
+	// -------------------------------
+	/*
+	const double phi = (1.0 + sqrt(5.0)) / 2.0; /// golden ratio.
+	const auto subdiv = static_cast<double>(STARTING_SPHERE_SUBDIVISION);
+	const auto meanR = sqrt(19.0) / 10.0 * STARTING_SPHERE_RADIUS;
+	double prevMeanEdgeLength = (m_EvolSettings.DoRemeshing ? (meanR / (sqrt(phi * sqrt(5.0)) * pow(2.0, subdiv - 1))) : 2.0);*/
+	double prevMeanEdgeLength{ 1.0 };
 	for (unsigned int i = 0; i < nIterations; i++)
 	{
 		Evolve(i, tStep);
-		std::cout << "iter" << i << ": SurfaceError: " << m_MeanErrors[i];
+		if (m_EvolSettings.DoRemeshing && i == 0)
+			prevMeanEdgeLength = m_MeanEdgeLength;
+
+		const auto nVertices = m_EvolvingSurface->n_vertices();
+		std::cout << ":: SurfaceError: " << m_MeanErrors[i] << ", nVertices : " << nVertices;
 		if (i > 0)
 		{
 			// Evaluate the (experimental) order of convergence: EOC = log2( previousIterMeanError / currentIterMeanError );
 			const double errorRatio = m_MeanErrors[i - 1] / m_MeanErrors[i];
+			if (m_EvolSettings.DoRemeshing)
+			{
+				const double meanLengthRatio = prevMeanEdgeLength / m_MeanEdgeLength;
+				const double baseChangeLog = log2(meanLengthRatio);
+				m_EOCs.push_back(log2(errorRatio) / baseChangeLog);
+				std::cout << ", EOC(" << meanLengthRatio << "): " << m_EOCs[i - 1] << "\n";
+				prevMeanEdgeLength = m_MeanEdgeLength;
+				tStep /= 4.0; // reduce time step by 2^2
+				continue;
+			}
 			m_EOCs.push_back(log2(errorRatio));
 			std::cout << ", EOC: " << m_EOCs[i - 1];
 		}

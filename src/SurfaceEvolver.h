@@ -43,7 +43,7 @@ enum class [[nodiscard]] FeatureDetectionType
  */
 struct MeshTopologySettings
 {
-	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	float MinEdgeMultiplier{ 0.17f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
 	float EdgeLengthDecayFactor{ 0.98f }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.

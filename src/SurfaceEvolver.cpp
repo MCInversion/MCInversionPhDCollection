@@ -219,7 +219,7 @@ void SurfaceEvolver::Evolve()
 	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
 	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
 	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
+	auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0f, subdiv - 1) * sqrt(phi * sqrt(5.0f)))); // from icosahedron edge length
 	auto maxEdgeLength = 4.0f * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
