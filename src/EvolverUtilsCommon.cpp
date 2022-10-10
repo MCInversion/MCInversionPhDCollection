@@ -26,6 +26,7 @@ CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& a
 
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+/// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
 constexpr float INV_SHRINK_FACTOR = 5.0f;
 
 float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor)

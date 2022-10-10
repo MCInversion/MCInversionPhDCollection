@@ -59,12 +59,15 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 #endif
 
 	// ........ evaluate edge lengths for remeshing ....................
-	const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
+	//const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
 	const auto subdiv = static_cast<float>(STARTING_SPHERE_SUBDIVISION + iter);
-	const float r = STARTING_SPHERE_RADIUS;
+	constexpr float r = STARTING_SPHERE_RADIUS;
+	constexpr float baseIcoHalfAngle = 2.0f * M_PI / 10.0f;
 	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0f, subdiv - 1) * sqrt(phi * sqrt(5.0f)))); // from icosahedron edge length
+	//auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0f, subdiv - 1) * sqrt(phi * sqrt(5.0f)))); // from icosahedron edge length
+	auto minEdgeLength = minEdgeMultiplier * 2.0f * r * sin(baseIcoHalfAngle * pow(2.0f, -subdiv)); // from icosahedron edge length
 	auto maxEdgeLength = 1.5f * minEdgeLength;
+	auto approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -193,7 +196,7 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing({
-				minEdgeLength, maxEdgeLength, 2.0f * minEdgeLength,
+				minEdgeLength, maxEdgeLength, approxError,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
 				m_EvolSettings.TopoParams.UseBackProjection });

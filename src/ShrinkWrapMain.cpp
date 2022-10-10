@@ -24,8 +24,8 @@ const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
-constexpr bool performSphereTest = true;
-constexpr bool performEvolverTests = false;
+constexpr bool performSphereTest = false;
+constexpr bool performEvolverTests = true;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performMarchingCubesTests = true;
@@ -34,14 +34,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
-        "BentChair",
-        "blub",
-        "bunny",
-        "maxPlanck",
-        "nefertiti",
-        "ogre",
-        "spot"
+        //"armadillo",
+        //"BentChair",
+    	//"blub",
+    	//"bunny",
+        //"maxPlanck",
+        //"nefertiti",
+        //"ogre",
+        //"spot"
     };
 
 	if (performSDFTests)
@@ -183,7 +183,7 @@ int main()
 				volExpansionFactor,
 				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
 				SDF::KDTreeSplitType::Center,
-				SDF::SignComputation::None,
+				SDF::SignComputation::VoxelFloodFill,
 				SDF::BlurPostprocessingType::None,
 				SDF::PreprocessingType::Octree
 			};
@@ -203,7 +203,7 @@ int main()
 			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
 			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
-			const double fieldIsoLevel = 1.0 * static_cast<double>(cellSize);
+			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 
 			const double tau = timeStepSizesForMeshes.at(name); // time step
 			SurfaceEvolutionSettings seSettings{

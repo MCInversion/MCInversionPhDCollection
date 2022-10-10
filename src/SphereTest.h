@@ -9,10 +9,10 @@
  */
 struct ST_MeshTopologySettings
 {
-	float MinEdgeMultiplier{ 0.8f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	float MinEdgeMultiplier{ 0.7f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.0 }; //>! the fraction of total time steps after which remeshing should take place.
-	unsigned int NRemeshingIters{ 1 }; //>! the number of iterations for pmp::Remeshing.
-	unsigned int NTanSmoothingIters{ 2 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
+	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
+	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ false }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 };
 

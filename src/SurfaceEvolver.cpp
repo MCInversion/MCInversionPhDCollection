@@ -215,12 +215,16 @@ void SurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
 	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
 	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
+	constexpr float baseIcoHalfAngle = 2.0f * M_PI / 10.0f;
 	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0f, subdiv - 1) * sqrt(phi * sqrt(5.0f)))); // from icosahedron edge length
+	//const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
+	//auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
+	auto minEdgeLength = minEdgeMultiplier * 2.0f * r * sin(baseIcoHalfAngle * pow(2.0f, -subdiv)); // from icosahedron edge length
 	auto maxEdgeLength = 4.0f * minEdgeLength;
+	auto approxError = 0.25f * (minEdgeLength + maxEdgeLength);
+	//auto approxError = 2.0f * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -391,7 +395,7 @@ void SurfaceEvolver::Evolve()
 			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing({
-				minEdgeLength, maxEdgeLength, 2.0f * minEdgeLength,
+				minEdgeLength, maxEdgeLength, approxError,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
 				m_EvolSettings.TopoParams.UseBackProjection });
@@ -405,6 +409,7 @@ void SurfaceEvolver::Evolve()
 				// shorter edges are needed for features close to the target.
 				minEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
 				maxEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
+				//approxError *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
 			}
 		}
 
