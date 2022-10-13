@@ -47,6 +47,8 @@ Feel free to import a geometry of your choosing. It should be noted that the mod
 
 ### Distance field computation
 
+![SDFPic](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/SDFsSixMeshes.jpg)
+
 To test distance field, turn boolean flage `performSDFTests` on for your `meshNames`. Then feel free to edit parameters:
 
 ```
@@ -64,6 +66,8 @@ const SDF::DistanceFieldSettings sdfSettings{
 according to your needs. `SDF::DistanceFieldGenerator::Generate` is called afterwards.
 
 ### Surface Evolver
+
+![EvolverResults](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/MeshAnalysisResultsSizing_LowRes.jpg)
 
 The same holds for `SurfaceEvolver` functionality which is turned on by `performEvolverTests` flag. In the for loop for `meshNames` we also pre-compute the distance field using `SDF::DistanceFieldGenerator::Generate`. `SurfaceEvolver` provides a wide range of parameters defined in `SurfaceEvolver.h` (with descriptions). 
 
