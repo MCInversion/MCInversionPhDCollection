@@ -156,15 +156,15 @@ size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& princip
     return 2.0f * edgeLength / static_cast<Scalar>(valence);
 }
 
-/// \brief verifies whether the principal curvatures satisfy the conditions of a concave dominant saddle
-[[nodiscard]] bool IsConcaveDominantSaddle(const Scalar& vMinCurvature, const Scalar& vMaxCurvature, const Scalar& curvatureFactor)
+/// \brief verifies whether the principal curvatures satisfy the conditions of a convex dominant saddle
+[[nodiscard]] bool IsConvexDominantSaddle(const Scalar& vMinCurvature, const Scalar& vMaxCurvature, const Scalar& curvatureFactor)
 {
     const auto vAbsMinCurvature = std::fabs(vMinCurvature);
     const auto vAbsMaxCurvature = std::fabs(vMaxCurvature);
 
     const bool isSaddle = (vMinCurvature < 0.0f && vMaxCurvature > 0.0f) || (vMinCurvature > 0.0f && vMaxCurvature < 0.0f);
 
-    return (vAbsMaxCurvature < curvatureFactor* vAbsMinCurvature) && isSaddle;
+    return (vAbsMaxCurvature < curvatureFactor * vAbsMinCurvature) && isSaddle;
 }
 
 size_t Features::detect_vertices_with_high_curvature(const Scalar& curvatureAngle, const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts)
@@ -184,7 +184,7 @@ size_t Features::detect_vertices_with_high_curvature(const Scalar& curvatureAngl
         auto vMaxCurvature = curvAlg.max_curvature(v0);
         auto valence = mesh_.valence(v0);
         Scalar vMeanArcLength, vMeanCurvature, vMeanCurvatureAngle;
-        if (!IsConcaveDominantSaddle(vMinCurvature, vMaxCurvature, principalCurvatureFactor) && valence < 7)
+        if (!IsConvexDominantSaddle(vMinCurvature, vMaxCurvature, principalCurvatureFactor) && valence < 7)
         {
             // only vertices with low principal curvature imbalance are tested for mean curvature angle
 			vMeanCurvature = vMinCurvature + vMaxCurvature;
@@ -198,7 +198,7 @@ size_t Features::detect_vertices_with_high_curvature(const Scalar& curvatureAngl
         vMinCurvature = curvAlg.min_curvature(v1);
         vMaxCurvature = curvAlg.max_curvature(v1);
         valence = mesh_.valence(v1);
-        if (!IsConcaveDominantSaddle(vMinCurvature, vMaxCurvature, principalCurvatureFactor) && valence < 7)
+        if (!IsConvexDominantSaddle(vMinCurvature, vMaxCurvature, principalCurvatureFactor) && valence < 7)
         {
             // only vertices with low principal curvature imbalance are tested for mean curvature angle
 	        vMeanCurvature = vMinCurvature + vMaxCurvature;

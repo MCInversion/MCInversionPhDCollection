@@ -34,7 +34,7 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
+        "armadillo",
         //"BentChair",
     	//"blub",
     	//"bunny",
@@ -220,7 +220,7 @@ int main()
 				dataOutPath,
 				MeshLaplacian::Voronoi,
 				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-				0.25f,
+				0.05f,
 				true
 			};
 			ReportInput(seSettings, std::cout);
