@@ -1,3 +1,5 @@
+![CoverBunnyEvol](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/BunnyEvolCoverPic.png)
+
 # Introduction
 
 [![build](https://github.com/pmp-library/pmp-library/workflows/build/badge.svg)](https://github.com/pmp-library/pmp-library/actions?query=workflow%3Abuild)
