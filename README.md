@@ -71,6 +71,23 @@ according to your needs. `SDF::DistanceFieldGenerator::Generate` is called after
 
 The same holds for `SurfaceEvolver` functionality which is turned on by `performEvolverTests` flag. In the for loop for `meshNames` we also pre-compute the distance field using `SDF::DistanceFieldGenerator::Generate`. `SurfaceEvolver` provides a wide range of parameters defined in `SurfaceEvolver.h` (with descriptions). 
 
+The deault time step is set to `0.05` but you can map time step sizes to the mesh names using:
+
+```
+const std::map<std::string, double> timeStepSizesForMeshes{
+	{"armadillo", 0.05 },
+	{"BentChair", 0.05 },
+	{"blub", 0.05 },
+	{"bunny", 0.0025 },
+	{"maxPlanck", 0.05 },
+	{"nefertiti", 0.05 },
+	{"ogre", 0.05 },
+	{"spot", 0.05 }
+};
+```
+
+The map contains recommended values for the meshes in `./data` folder.
+
 There is a variant of `SurfaceEvolver` class, called `SphereTest` which verifies the rate of convergence of mean curvature flow with respect to exact solution with radius `r(t) = sqrt(r0 * r0 - 4 * t)`. The test is applicable to remeshed surface, but be careful with the error and sizing settings for adaptive remeshing because it might crash.
 
 ### WIP
