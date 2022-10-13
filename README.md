@@ -1,68 +1,98 @@
+![CoverBunnyEvol](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/BunnyEvolCoverPic.png)
+
+### Article Abstract:
+
+Fairing methods, frequently used for smoothing noisy features of surfaces, evolve a surface towards the simplest shape. The inverse process - shaping a simple surface into a more complex object - requires a field defined in the ambient space driving the surface towards a target shape. Sharp protruding features combined with deep chasms in the target may give rise to severe reduction of triangle quality as the surface stretches to fit into concave regions. Our key contribution is a combination of adaptive remeshing and curvature-based feature detection to mitigate these issues while also maintaining the stability of a semi-implicit formulation of the method. We analyze the results of this approach using triangle quality metrics.
+
+![ISWArchitecture](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/ShrinkWrapMainUML.png)
+
 # Introduction
 
-[![build](https://github.com/pmp-library/pmp-library/workflows/build/badge.svg)](https://github.com/pmp-library/pmp-library/actions?query=workflow%3Abuild)
-[![Coverage Status](https://coveralls.io/repos/github/pmp-library/pmp-library/badge.svg?branch=master)](https://coveralls.io/github/pmp-library/pmp-library?branch=main)
-[![Latest Release](https://img.shields.io/github/v/release/pmp-library/pmp-library?sort=semver)](https://github.com/pmp-library/pmp-library/releases/latest)
+Welcome to **ImplicitSurfaceWrap**! This application is a platform for the research of [Lagrangian surface evolution](chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/http://www.math.sk/mikula/mrss_SISC.pdf) on triangular meshes. Besides the core functionality (`SurfaceEvolver`) the codebase provides a distance field computation functionality in `DistanceFieldGenerator` class.
 
-The Polygon Mesh Processing Library is a modern C++ open-source library for processing and visualizing polygon surface meshes. Its main features are:
-
-- An efficient and easy-to-use mesh data structure
-- Standard algorithms such as decimation, remeshing, subdivision, or smoothing
-- Ready-to-use visualization tools
-- Seamless cross-compilation to JavaScript ([demo](https://www.pmp-library.org/mpview.html))
+This repo is a fork of the PMP Library: https://www.pmp-library.org.
 
 ## Get Started
 
 Clone the repository:
 
 ```sh
-git clone --recursive https://github.com/pmp-library/pmp-library.git
+git clone --recursive https://github.com/MCInversion/ImplicitSurfaceWrap.git
 ```
 
 Configure and build:
 
 ```sh
-cd pmp-library && mkdir build && cd build && cmake .. && make
+cd ImplicitSurfaceWrap && mkdir build && cd build && cmake .. && make
 ```
 
-Run the mesh processing app:
+# Features
 
-```sh
-./mpview ../external/pmp-data/off/bunny.off
+At the moment, there is no argument parsing, so all input is read from `./data` folder, and the application outputs into `./output`. The `main()` function is defined in `ShrinkWrapMain.cpp` with the vector of input *.obj mesh names (without the extension):
+
+```
+const std::vector<std::string> meshNames{
+    "armadillo", // Stanford
+    "BentChair", // custom
+    "blub", // Keenan Crane
+    "bunny", // Stanford
+    "maxPlanck", // Kobbelt
+    "nefertiti", // Cosmo Wenman
+    "ogre", // Keenan Crane
+    "spot" // Keenan Crane
+};
 ```
 
-Build your own tool:
+Feel free to import a geometry of your choosing. It should be noted that the model is tested on the above meshes only. 
 
-```cpp
-#include <pmp/SurfaceMesh.h>
+### Distance field computation
 
-int main(void)
-{
-    pmp::SurfaceMesh mesh;
-    mesh.read("input.obj");
-    // .. do awesome things with your mesh
-    mesh.write("output.obj");
-}
+![SDFPic](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/SDFsSixMeshes.jpg)
+
+To test distance field, turn boolean flage `performSDFTests` on for your `meshNames`. Then feel free to edit parameters:
+
+```
+const SDF::DistanceFieldSettings sdfSettings{
+		 cellSize,
+		 1.0f,
+		 0.2,
+		 SDF::KDTreeSplitType::Center,
+		 SDF::SignComputation::VoxelFloodFill,
+		 SDF::BlurPostprocessingType::None,
+		 SDF::PreprocessingType::Octree
+};
 ```
 
-## Contribute
+according to your needs. `SDF::DistanceFieldGenerator::Generate` is called afterwards.
 
-Contributions to PMP are welcome. See the [contributing](https://www.pmp-library.org/contributing.html) section of the [user guide](https://www.pmp-library.org/userguide.html).
+### Surface Evolver
 
-## Acknowledge
+![EvolverResults](https://github.com/MCInversion/ImplicitSurfaceWrap/blob/main/images/MeshAnalysisResultsSizing_LowRes.jpg)
 
-If you are using PMP for research projects, please acknowledge its use by referencing
+The same holds for `SurfaceEvolver` functionality which is turned on by `performEvolverTests` flag. In the for loop for `meshNames` we also pre-compute the distance field using `SDF::DistanceFieldGenerator::Generate`. `SurfaceEvolver` provides a wide range of parameters defined in `SurfaceEvolver.h` (with descriptions). 
 
-```tex
-@misc{pmp-library,
-title  = {The Polygon Mesh Processing Library},
-author = {Daniel Sieger and Mario Botsch},
-note   = {http://www.pmp-library.org},
-year   = {2019},
-}
+The deault time step is set to `0.05` but you can map time step sizes to the mesh names using:
+
+```
+const std::map<std::string, double> timeStepSizesForMeshes{
+	{"armadillo", 0.05 },
+	{"BentChair", 0.05 },
+	{"blub", 0.05 },
+	{"bunny", 0.0025 },
+	{"maxPlanck", 0.05 },
+	{"nefertiti", 0.05 },
+	{"ogre", 0.05 },
+	{"spot", 0.05 }
+};
 ```
 
-We acknowledge that PMP evolved from our previous work on [Surface_mesh](http://dx.doi.org/10.1007/978-3-642-24734-7_29) and [OpenMesh](https://pub.uni-bielefeld.de/record/1961694).
+The map contains recommended values for the meshes in `./data` folder.
+
+There is a variant of `SurfaceEvolver` class, called `SphereTest` which verifies the rate of convergence of mean curvature flow with respect to exact solution with radius `r(t) = sqrt(r0 * r0 - 4 * t)`. The test is applicable to remeshed surface, but be careful with the error and sizing settings for adaptive remeshing because it might crash.
+
+### WIP
+
+`BrainSurfaceEvolver` does not work yet. It just evolves a sphere and detects no brain. We also prepare `IsosurfaceEvolver` for future research.
 
 ## License
 
