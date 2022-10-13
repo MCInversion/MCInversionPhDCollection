@@ -156,7 +156,7 @@ int main()
 	if (performEvolverTests)
 	{
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
-                constexpr defaultTimeStep = 0.05;
+        constexpr double defaultTimeStep = 0.05;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
