@@ -156,7 +156,7 @@ int main()
 	if (performEvolverTests)
 	{
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
-
+                constexpr defaultTimeStep = 0.05;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
@@ -204,8 +204,8 @@ int main()
 			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
 			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
-
-			const double tau = timeStepSizesForMeshes.at(name); // time step
+                        
+			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
 			SurfaceEvolutionSettings seSettings{
 				name,
 				80,
