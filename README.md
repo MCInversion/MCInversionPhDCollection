@@ -21,7 +21,7 @@ git clone --recursive https://github.com/MCInversion/ImplicitSurfaceWrap.git
 Configure and build:
 
 ```sh
-cd pmp-library && mkdir build && cd build && cmake .. && make
+cd ImplicitSurfaceWrap && mkdir build && cd build && cmake .. && make
 ```
 
 ## License
