@@ -8,6 +8,8 @@ Fairing methods, frequently used for smoothing noisy features of surfaces, evolv
 
 # Introduction
 
+Welcome to **ImplicitSurfaceWrap**! This application is a platform for the research of [Lagrangian surface evolution](chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/http://www.math.sk/mikula/mrss_SISC.pdf) on triangular meshes. Besides the core functionality (`SurfaceEvolver`) the codebase provides a distance field computation functionality in `DistanceFieldGenerator` class.
+
 This repo is a fork of the PMP Library: https://www.pmp-library.org.
 
 ## Get Started
@@ -23,6 +25,53 @@ Configure and build:
 ```sh
 cd ImplicitSurfaceWrap && mkdir build && cd build && cmake .. && make
 ```
+
+# Features
+
+At the moment, there is no argument parsing, so all input is read from `./data` folder, and the application outputs into `./output`. The `main()` function is defined in `ShrinkWrapMain.cpp` with the vector of input *.obj mesh names (without the extension):
+
+```
+const std::vector<std::string> meshNames{
+    "armadillo", // Stanford
+    "BentChair", // custom
+    "blub", // Keenan Crane
+    "bunny", // Stanford
+    "maxPlanck", // Kobbelt
+    "nefertiti", // Cosmo Wenman
+    "ogre", // Keenan Crane
+    "spot" // Keenan Crane
+};
+```
+
+Feel free to import a geometry of your choosing. It should be noted that the model is tested on the above meshes only. 
+
+### Distance field computation
+
+To test distance field, turn boolean flage `performSDFTests` on for your `meshNames`. Then feel free to edit parameters:
+
+```
+const SDF::DistanceFieldSettings sdfSettings{
+		 cellSize,
+		 1.0f,
+		 0.2,
+		 SDF::KDTreeSplitType::Center,
+		 SDF::SignComputation::VoxelFloodFill,
+		 SDF::BlurPostprocessingType::None,
+		 SDF::PreprocessingType::Octree
+};
+```
+
+according to your needs. `SDF::DistanceFieldGenerator::Generate` is called afterwards.
+
+### Surface Evolver
+
+The same holds for `SurfaceEvolver` functionality which is turned on by `performEvolverTests` flag. In the for loop for `meshNames` we also pre-compute the distance field using `SDF::DistanceFieldGenerator::Generate`. `SurfaceEvolver` provides a wide range of parameters defined in `SurfaceEvolver.h` (with descriptions). 
+
+There is a variant of `SurfaceEvolver` class, called `SphereTest` which verifies the rate of convergence of mean curvature flow with respect to exact solution with radius `r(t) = sqrt(r0 * r0 - 4 * t)`. The test is applicable to remeshed surface, but be careful with the error and sizing settings for adaptive remeshing because it might crash.
+
+### WIP
+
+`BrainSurfaceEvolver` does not work yet. It just evolves a sphere and detects no brain. We also prepare `IsosurfaceEvolver` for future research.
 
 ## License
 
