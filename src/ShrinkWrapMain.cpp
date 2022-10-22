@@ -13,7 +13,8 @@
 
 #include "BrainSurfaceEvolver.h"
 #include "SphereTest.h"
-//#include "geometry/IcoSphereBuilder.h"
+#include "geometry/IcoSphereBuilder.h"
+#include "pmp/algorithms/Subdivision.h"
 //#include "geometry/MeshAnalysis.h"
 
 // set up root directory
@@ -25,10 +26,24 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
-constexpr bool performEvolverTests = true;
+constexpr bool performEvolverTests = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performMarchingCubesTests = true;
+constexpr bool performSubdivisionTests = true;
+
+[[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
+{
+	size_t result = 0;
+	for (const auto e : mesh.edges())
+	{
+		if (!mesh.is_boundary(e))
+			continue;
+
+		result++;
+	}
+	return result;
+}
 
 int main()
 {
@@ -343,11 +358,42 @@ int main()
 		
 	} // endif performBrainEvolverTests
 
-	/*Geometry::IcoSphereBuilder ico({0});
-	ico.BuildBaseData();
-	ico.BuildPMPSurfaceMesh();
-	auto icoMesh = ico.GetPMPSurfaceMeshResult();
-	const auto result = Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(icoMesh);
-	assert(result);
-	icoMesh.write(dataOutPath + "ico0_Metric.vtk");*/
+	if (performSubdivisionTests)
+	{
+		Geometry::IcoSphereBuilder ico({0});
+		ico.BuildBaseData();
+		ico.BuildPMPSurfaceMesh();
+		auto icoMesh = ico.GetPMPSurfaceMeshResult();
+		for (unsigned int i = 0; i < 4; i++)
+			icoMesh.delete_face(pmp::Face(i));
+		icoMesh.garbage_collection();
+
+		auto nEdges = icoMesh.n_edges();
+		auto nVerts = icoMesh.n_vertices();
+		auto nFaces = icoMesh.n_faces();
+		int euler = nVerts - nEdges + nFaces;
+		size_t nBdEdgesTheoretical = std::max(0, 2 - euler);
+		auto nBdEdges0 = CountBoundaryEdges(icoMesh);
+		std::cout << "s = 0, nBoundaryEdges = " << nBdEdges0 << ", nBdEdgesTheoretical = " << nBdEdgesTheoretical << "\n";
+
+		pmp::Subdivision subdiv(icoMesh);
+
+		for (unsigned int s = 1; s < 6; s++)
+		{
+			const auto theoreticalCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, s) - 1) + 3 * N_ICO_VERTS_0) / 3;
+			subdiv.loop();
+			const auto actualCount = icoMesh.n_vertices();
+			std::cout << "s = " << s << ", theoreticalCount = " << theoreticalCount << ", actualCount = " << actualCount << "\n";
+
+			nEdges = icoMesh.n_edges();
+			nVerts = icoMesh.n_vertices();
+			nFaces = icoMesh.n_faces();
+			euler = nVerts - nEdges + nFaces;
+			nBdEdgesTheoretical = std::max(0, 2 - euler);
+			nBdEdges0 = CountBoundaryEdges(icoMesh);
+			std::cout << "s = " << s << ", nBoundaryEdges = " << nBdEdges0 << ", nBdEdgesTheoretical = " << nBdEdgesTheoretical << "\n";
+
+			icoMesh.write(dataOutPath + "ico_Loop" + std::to_string(s) + ".vtk"); /**/
+		}		
+	}
 }
