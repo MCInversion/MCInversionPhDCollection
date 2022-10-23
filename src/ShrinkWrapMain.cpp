@@ -14,6 +14,9 @@
 #include "BrainSurfaceEvolver.h"
 #include "SphereTest.h"
 #include "geometry/IcoSphereBuilder.h"
+#include "geometry/TorusBuilder.h"
+#include "pmp/algorithms/Decimation.h"
+#include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Subdivision.h"
 //#include "geometry/MeshAnalysis.h"
 
@@ -30,7 +33,9 @@ constexpr bool performEvolverTests = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performMarchingCubesTests = true;
-constexpr bool performSubdivisionTests = true;
+constexpr bool performSubdivisionTests1 = false;
+constexpr bool performSubdivisionTests2 = false;
+constexpr bool performSubdivisionTests3 = true;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -358,7 +363,7 @@ int main()
 		
 	} // endif performBrainEvolverTests
 
-	if (performSubdivisionTests)
+	if (performSubdivisionTests1)
 	{
 		Geometry::IcoSphereBuilder ico({0});
 		ico.BuildBaseData();
@@ -394,6 +399,82 @@ int main()
 			std::cout << "s = " << s << ", nBoundaryEdges = " << nBdEdges0 << ", nBdEdgesTheoretical = " << nBdEdgesTheoretical << "\n";
 
 			icoMesh.write(dataOutPath + "ico_Loop" + std::to_string(s) + ".vtk"); /**/
-		}		
+		}
+	}
+
+	if (performSubdivisionTests2)
+	{
+		constexpr int targetDecimPercentage = 50;
+		constexpr int normalDeviation = 180;
+		constexpr int aspectRatio = 10;
+
+		Geometry::IcoSphereBuilder ico({ 3 });
+		ico.BuildBaseData();
+		ico.BuildPMPSurfaceMesh();
+		auto icoMesh = ico.GetPMPSurfaceMeshResult();
+
+		const pmp::mat4 matrixGeomScale{
+			2.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		};
+		icoMesh *= matrixGeomScale;
+
+		pmp::Decimation decim(icoMesh);
+		decim.initialize(aspectRatio, 0, 0, normalDeviation,0.0f);
+		decim.decimate(icoMesh.n_vertices() * 0.01 * targetDecimPercentage);
+
+		pmp::Remeshing remeshing(icoMesh);
+		remeshing.uniform_remeshing(0.2f, 3);
+		icoMesh.write(dataOutPath + "ico_Decimated0.vtk");
+
+		// icoMesh is now an elongated decimated ellipsoid
+		const size_t nVerts0 = icoMesh.n_vertices();
+		const size_t nEdges0 = icoMesh.n_edges();
+
+		pmp::Subdivision subdiv(icoMesh);
+
+		for (unsigned int s = 1; s < 6; s++)
+		{
+			const auto theoreticalCount = (nEdges0 * static_cast<unsigned int>(pow(4, s) - 1) + 3 * nVerts0) / 3;
+			subdiv.loop();
+			const auto actualCount = icoMesh.n_vertices();
+			std::cout << "s = " << s << ", theoreticalCount = " << theoreticalCount << ", actualCount = " << actualCount << "\n";
+
+			icoMesh.write(dataOutPath + "ico_Decimated" + std::to_string(s) + ".vtk"); /**/
+		}
+	}
+
+	if (performSubdivisionTests3)
+	{
+		constexpr Geometry::TorusSettings tSettings{
+			1.0f,
+			0.4f,
+			5,
+			3,
+			false
+		};
+		Geometry::TorusBuilder tb(tSettings);
+		tb.BuildBaseData();
+		tb.BuildPMPSurfaceMesh();
+		auto tMesh = tb.GetPMPSurfaceMeshResult();
+
+		tMesh.write(dataOutPath + "torus0.vtk");
+
+		const size_t nVerts0 = tMesh.n_vertices();
+		const size_t nEdges0 = tMesh.n_edges();
+
+		pmp::Subdivision subdiv(tMesh);
+
+		for (unsigned int s = 1; s < 6; s++)
+		{
+			const auto theoreticalCount = (nEdges0 * static_cast<unsigned int>(pow(4, s) - 1) + 3 * nVerts0) / 3;
+			subdiv.loop();
+			const auto actualCount = tMesh.n_vertices();
+			std::cout << "s = " << s << ", theoreticalCount = " << theoreticalCount << ", actualCount = " << actualCount << "\n";
+
+			tMesh.write(dataOutPath + "torus" + std::to_string(s) + ".vtk"); /**/
+		}
 	}
 }

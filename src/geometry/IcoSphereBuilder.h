@@ -18,7 +18,7 @@ namespace Geometry
 	{
 		unsigned int SubdivisionLevel{ 0 }; //! subdivision level. Zero corresponds to a basic icosahedron.
 		float Radius{ 1.0f }; //! ico-sphere radius
-		bool ComputeNormals{ false }; // whether to compute vertex normals
+		bool ComputeNormals{ false }; //! whether to compute vertex normals
 	};
 
 	/**
