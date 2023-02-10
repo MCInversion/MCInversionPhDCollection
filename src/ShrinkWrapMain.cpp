@@ -29,13 +29,14 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
-constexpr bool performEvolverTests = false;
+constexpr bool performEvolverTests = true;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performMarchingCubesTests = true;
 constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
-constexpr bool performSubdivisionTests3 = true;
+constexpr bool performSubdivisionTests3 = false;
+constexpr bool performRemeshingTests = false;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -54,10 +55,10 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
+        //"armadillo",
         //"BentChair",
     	//"blub",
-    	//"bunny",
+    	"bunny",
         //"maxPlanck",
         //"nefertiti",
         //"ogre",
@@ -476,5 +477,29 @@ int main()
 
 			tMesh.write(dataOutPath + "torus" + std::to_string(s) + ".vtk"); /**/
 		}
+	}
+
+	if (performRemeshingTests)
+	{
+		pmp::SurfaceMesh mesh;
+		mesh.read(dataDirPath + "bunny_no_holes2.obj");
+
+		float meanEdgeLength = 0.0f;
+		for (const auto& e : mesh.edges())
+		{
+			meanEdgeLength += mesh.edge_length(e);
+		}
+		meanEdgeLength /= mesh.n_edges();
+
+		/*constexpr int targetDecimPercentage = 10;
+		constexpr int normalDeviation = 180;
+		constexpr int aspectRatio = 10;
+		pmp::Decimation decim(mesh);
+		decim.initialize(aspectRatio, 0.0, 0.0, normalDeviation, 0.0f);
+		decim.decimate(mesh.n_vertices() * 0.01 * targetDecimPercentage);*/
+
+
+		pmp::Remeshing remeshing(mesh);
+		remeshing.uniform_remeshing(8.5, 1, true);
 	}
 }

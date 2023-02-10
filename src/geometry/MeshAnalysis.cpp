@@ -104,11 +104,11 @@ namespace Geometry
 		const auto zVector = pmp::normalize(e2);
 		const auto yVector = pmp::perp(xVector, zVector);		
 
-		const float e0X = pmp::norm(e0 / l0);
+		const float e0X = pmp::norm(e0);
 		constexpr float e0Y = 0.0f;
 
-		const float e1X = pmp::dot(e1 / l1, xVector);
-		const float e1Y = pmp::dot(e1 / l1, yVector);
+		const float e1X = pmp::dot(e1, xVector);
+		const float e1Y = pmp::dot(e1, yVector);
 
 		const float detJ = e0X * e1Y - e1X * e0Y;
 		if (std::fabs(detJ) < 1e-5f)
@@ -172,15 +172,15 @@ namespace Geometry
 		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
-		const auto xVector = 0.5f * pmp::normalize(e0);
+		const auto xVector = pmp::normalize(e0);
 		const auto zVector = pmp::normalize(e2);
-		const auto yVector = pmp::perp(2.0f * xVector, zVector);
+		const auto yVector = pmp::perp(xVector, zVector);
 
-		const float e0X = pmp::norm(e0 / l0);
+		const float e0X = 2.0f * pmp::norm(e0);
 		constexpr float e0Y = 0.0f;
 
-		const float e1X = pmp::dot(e1 / l1, xVector);
-		const float e1Y = pmp::dot(e1 / l1, yVector);
+		const float e1X = pmp::dot(e1, xVector);
+		const float e1Y = pmp::dot(e1, yVector);
 
 		const float detJ = (e0X * e1Y - e1X * e0Y);
 		if (std::fabs(detJ) < 1e-5f)

@@ -45,7 +45,7 @@ struct MeshTopologySettings
 {
 	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
-	float EdgeLengthDecayFactor{ 0.97f }; //>! decay factor for minimum (and consequently maximum) edge length.
+	float EdgeLengthDecayFactor{ 0.98f }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
