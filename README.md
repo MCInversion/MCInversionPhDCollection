@@ -90,7 +90,7 @@ The map contains recommended values for the meshes in `./data` folder.
 
 There is a variant of `SurfaceEvolver` class, called `SphereTest` which verifies the rate of convergence of mean curvature flow with respect to exact solution with radius `r(t) = sqrt(r0 * r0 - 4 * t)`. The test is applicable to remeshed surface, but be careful with the error and sizing settings for adaptive remeshing because it might crash.
 
-### WIP
+### Work In Progress
 
 `BrainSurfaceEvolver` does not work yet. It just evolves a sphere and detects no brain. We also prepare `IsosurfaceEvolver` for future research.
 
