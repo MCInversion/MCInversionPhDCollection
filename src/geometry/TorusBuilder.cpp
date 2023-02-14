@@ -2,25 +2,6 @@
 
 namespace Geometry
 {
-	/// \brief insertion function for quad vertex indices
-	void EmplaceQuadIndexTuple(BaseMeshGeometryData& baseData, const unsigned int& i0, const unsigned int& i1, const unsigned int& i2, const unsigned int& i3)
-	{
-		const std::vector polyIdTuple{ i0, i1, i2, i3 };
-		baseData.PolyIndices.push_back(polyIdTuple);
-	}
-
-	/// \brief insertion function for triangle pair vertex indices
-	void EmplaceTriIndexTuples(BaseMeshGeometryData& baseData, const unsigned int& i0, const unsigned int& i1, const unsigned int& i2, const unsigned int& i3)
-	{
-		const std::vector polyIdTuple0{ i0, i1, i2 };
-		const std::vector polyIdTuple1{ i0, i2, i3 };
-		baseData.PolyIndices.push_back(polyIdTuple0);
-		baseData.PolyIndices.push_back(polyIdTuple1);
-	}
-
-	/// \brief an insertion function for vertex indices.
-	using InsertionFunction = std::function<void(BaseMeshGeometryData&, const unsigned int&, const unsigned int&, const unsigned int&, const unsigned int&)>;
-
 	void TorusBuilder::BuildBaseData()
 	{
 		m_BaseResult = std::make_unique<BaseMeshGeometryData>();

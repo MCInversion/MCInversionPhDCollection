@@ -1,5 +1,8 @@
 #include "GridUtil.h"
 
+#include "pmp/SurfaceMesh.h"
+#include "pmp/algorithms/TriangleKdTree.h"
+
 namespace Geometry
 {
 	/// \brief constant for kernel radius of a "narrow" kernel.
@@ -806,6 +809,50 @@ namespace Geometry
 			interpolateValueFromCoordId(1),
 			interpolateValueFromCoordId(2)
 		);
+	}
+
+	void ComputeInteriorExteriorSignFromMeshNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh)
+	{
+		if (!mesh.has_vertex_property("v:normal"))
+		{
+			return; // nothing to compute from
+		}
+
+		const auto vNormalProp = mesh.get_vertex_property<pmp::Point>("v:normal");
+		const auto ptrMeshKDTree = std::make_unique<pmp::TriangleKdTree>(mesh, 0);
+
+		auto& values = grid.Values();
+		const auto nValues = values.size();
+
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		for (unsigned int iz = 0; iz < Nz; iz++)
+		{
+			for (unsigned int iy = 0; iy < Ny; iy++)
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++)
+				{
+					const auto gridPt = pmp::Point{
+						orig[0] + static_cast<float>(ix) * cellSize,
+						orig[1] + static_cast<float>(iy) * cellSize,
+						orig[2] + static_cast<float>(iz) * cellSize
+					};
+
+					const auto nearestNeighbor = ptrMeshKDTree->nearest(gridPt);
+
+					const auto nearestPt = nearestNeighbor.nearest;
+					const auto nearestFace = nearestNeighbor.face;
+
+
+				}
+			}
+		}
 	}
 
 } // namespace Geometry

@@ -15,6 +15,7 @@
 #include "SphereTest.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/TorusBuilder.h"
+#include "geometry/MobiusStripBuilder.h"
 #include "pmp/algorithms/Decimation.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Subdivision.h"
@@ -29,14 +30,16 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
-constexpr bool performEvolverTests = true;
+constexpr bool performEvolverTests = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performMarchingCubesTests = true;
 constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
+constexpr bool performSubdivisionTest4 = false;
 constexpr bool performRemeshingTests = false;
+constexpr bool performMobiusStripVoxelization = true;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -479,6 +482,17 @@ int main()
 		}
 	}
 
+	if (performSubdivisionTest4)
+	{
+		pmp::SurfaceMesh mesh;
+		mesh.read(dataOutPath + "bunnyToSubdiv.obj");
+
+		pmp::Subdivision subdiv(mesh);
+		subdiv.loop();
+
+		mesh.write(dataOutPath + "bunnySubdiv.vtk");
+	}
+
 	if (performRemeshingTests)
 	{
 		pmp::SurfaceMesh mesh;
@@ -501,5 +515,27 @@ int main()
 
 		pmp::Remeshing remeshing(mesh);
 		remeshing.uniform_remeshing(8.5, 1, true);
+	}
+
+	if (performMobiusStripVoxelization)
+	{
+		constexpr Geometry::MobiusStripSettings mSettings{
+			1.0f,
+			1.0f,
+			25,
+			3,
+			false,
+			true
+		};
+		Geometry::MobiusStripBuilder mb(mSettings);
+		mb.BuildBaseData();
+		mb.BuildPMPSurfaceMesh();
+		auto mMesh = mb.GetPMPSurfaceMeshResult();
+
+		mMesh.write(dataOutPath + "mobius.vtk");
+		const auto bbox = mMesh.bounds();
+		Geometry::ScalarGrid grid(0.1f, bbox);
+
+
 	}
 }

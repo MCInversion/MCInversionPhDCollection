@@ -2,6 +2,11 @@
 
 #include "Grid.h"
 
+namespace pmp
+{
+	class SurfaceMesh;
+}
+
 namespace Geometry
 {
 	/**
@@ -98,5 +103,12 @@ namespace Geometry
 	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
 	 */
 	[[nodiscard]] pmp::dvec3 TrilinearInterpolateVectorValue(const pmp::vec3& samplePt, const VectorGrid& grid);
+
+	/**
+	 * \brief Computes sign values (-1 or 1) for each grid point using mesh normals.
+	 * \param grid       ScalarGrid where values are stored.
+	 * \param mesh       input mesh (needs to have normals).
+	 */
+	void ComputeInteriorExteriorSignFromMeshNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh);
 
 } // namespace Geometry
