@@ -1,6 +1,7 @@
 #include "GridUtil.h"
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/TriangleKdTree.h"
 
 namespace Geometry
@@ -815,14 +816,20 @@ namespace Geometry
 	{
 		if (!mesh.has_vertex_property("v:normal"))
 		{
+			std::cerr << "Geometry::ComputeInteriorExteriorSignFromMeshNormals: Input mesh has no normals!\n";
 			return; // nothing to compute from
 		}
 
-		const auto vNormalProp = mesh.get_vertex_property<pmp::Point>("v:normal");
+		if (!mesh.is_triangle_mesh())
+		{
+			std::cerr << "Geometry::ComputeInteriorExteriorSignFromMeshNormals: Must be a triangle mesh! Triangulate before processing!\n";
+			return; // must be a triangle mesh
+		}
+
+		const auto vNormalProp = mesh.get_vertex_property<pmp::Normal>("v:normal");
 		const auto ptrMeshKDTree = std::make_unique<pmp::TriangleKdTree>(mesh, 0);
 
 		auto& values = grid.Values();
-		const auto nValues = values.size();
 
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
@@ -832,8 +839,18 @@ namespace Geometry
 		const auto Ny = static_cast<unsigned int>(dim.Ny);
 		const auto Nz = static_cast<unsigned int>(dim.Nz);
 
+		const unsigned int progressStep = Nz / 10;
+
 		for (unsigned int iz = 0; iz < Nz; iz++)
 		{
+			// ----------------------------------
+			if (iz % progressStep == 0)
+			{
+				const float progress = static_cast<float>(iz) / static_cast<float>(Nz);
+				std::cout << "Geometry::ComputeInteriorExteriorSignFromMeshNormals: " << progress << " %\n";
+			}
+			// ----------------------------------
+
 			for (unsigned int iy = 0; iy < Ny; iy++)
 			{
 				for (unsigned int ix = 0; ix < Nx; ix++)
@@ -849,7 +866,35 @@ namespace Geometry
 					const auto nearestPt = nearestNeighbor.nearest;
 					const auto nearestFace = nearestNeighbor.face;
 
+					std::vector<pmp::Vertex> vertices{};
+					vertices.reserve(3);
+					for (const auto& v : mesh.vertices(nearestFace))
+					{
+						vertices.push_back(v);
+					}
+					assert(vertices.size() == 3);
 
+					const auto v0 = mesh.position(vertices[0]);
+					const auto v1 = mesh.position(vertices[1]);
+					const auto v2 = mesh.position(vertices[2]);
+
+					const auto v0Normal = vNormalProp[vertices[0]];
+					const auto v1Normal = vNormalProp[vertices[1]];
+					const auto v2Normal = vNormalProp[vertices[2]];
+
+					// get barycentric coordinates
+					pmp::Point b = pmp::barycentric_coordinates(nearestPt, v0, v1, v2);
+
+					// interpolate normal
+					pmp::Point n;
+					n = (v0Normal * b[0]);
+					n += (v1Normal * b[1]);
+					n += (v2Normal * b[2]);
+					n.normalize();
+					assert(!std::isnan(n[0]));
+
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					values[gridPos] = (pmp::dot(n, gridPt - nearestPt) > 0.0f ? 1.0f : -1.0f);
 				}
 			}
 		}

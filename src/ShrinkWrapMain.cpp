@@ -522,8 +522,8 @@ int main()
 		constexpr Geometry::MobiusStripSettings mSettings{
 			1.0f,
 			1.0f,
-			25,
-			3,
+			40,
+			10,
 			false,
 			true
 		};
@@ -532,10 +532,14 @@ int main()
 		mb.BuildPMPSurfaceMesh();
 		auto mMesh = mb.GetPMPSurfaceMeshResult();
 
-		mMesh.write(dataOutPath + "mobius.vtk");
-		const auto bbox = mMesh.bounds();
-		Geometry::ScalarGrid grid(0.1f, bbox);
+		//mMesh.write(dataOutPath + "mobius.vtk");
+		mMesh.write(dataOutPath + "mobius.obj");
+		auto bbox = mMesh.bounds();
+		const auto bboxSize = bbox.max() - bbox.min();
+		bbox.expand(0.1f * bboxSize[0], 0.1f * bboxSize[1], bboxSize[2]);
+		Geometry::ScalarGrid grid(0.02f, bbox);
+		Geometry::ComputeInteriorExteriorSignFromMeshNormals(grid, mMesh);
 
-
+		ExportToVTI(dataOutPath + "MobiusSignVals", grid);
 	}
 }

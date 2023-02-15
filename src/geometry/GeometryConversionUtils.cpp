@@ -24,11 +24,15 @@ namespace Geometry
 		}
 
 		result.reserve(geomData.Vertices.size(), edgeIdsSet.size(), geomData.PolyIndices.size());
-
 		for (const auto& v : geomData.Vertices)
 			result.add_vertex(pmp::Point(v[0], v[1], v[2]));
 
-		// TODO: normals
+		if (!geomData.VertexNormals.empty())
+		{
+			auto vNormal = result.vertex_property<pmp::Normal>("v:normal");
+			for (auto v : result.vertices())
+				vNormal[v] = geomData.VertexNormals[v.idx()];
+		}
 
         for (const auto& indexTuple : geomData.PolyIndices)
         {
