@@ -941,7 +941,7 @@ namespace Geometry
 		const auto ixMax = static_cast<unsigned int>(std::floor((trueROI.max()[0] - orig[0]) / cellSize));
 		const auto iyMax = static_cast<unsigned int>(std::floor((trueROI.max()[1] - orig[1]) / cellSize));
 		const auto izMax = static_cast<unsigned int>(std::floor((trueROI.max()[2] - orig[2]) / cellSize));
-		assert(ixMax < dim.Nx); assert(iyMax < dim.Ny); assert(izMax < dim.Nz);
+		assert(ixMax <= dim.Nx); assert(iyMax <= dim.Ny); assert(izMax <= dim.Nz);
 
 		const auto Nx = static_cast<unsigned int>(dim.Nx);
 		const auto Ny = static_cast<unsigned int>(dim.Ny);
@@ -960,7 +960,7 @@ namespace Geometry
 					const auto posVect = gridPt - center;
 					const auto distSq = static_cast<double>(dot(posVect, posVect) / radiusSq);
 					// Source: [Section III. from Ryan Geiss http://www.geisswerks.com/ryan/BLOBS/blobs.html]
-					const double val = (std::abs(distSq) < DECAY_POLYNOMIAL_ZERO_LVL_SQUARED ? (distSq * distSq - distSq + 0.25): 0.0);
+					const double val = (distSq < DECAY_POLYNOMIAL_ZERO_LVL_SQUARED ? (distSq * distSq - distSq + 0.25): 0.0);
 
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
 					values[gridPos] = std::max<double>(values[gridPos], val);

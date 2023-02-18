@@ -14,6 +14,7 @@
 #include "BrainSurfaceEvolver.h"
 #include "SphereTest.h"
 #include "geometry/IcoSphereBuilder.h"
+#include "geometry/MarchingCubes.h"
 #include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
 #include "pmp/algorithms/Decimation.h"
@@ -547,16 +548,36 @@ int main()
 	if (performMetaballTest)
 	{
 		constexpr double initVal = 0.0;
-		Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0f, 10.0f, 10.0f} }, initVal);
+		// grid containing both balls
+		// Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0f, 10.0f, 10.0f} }, initVal);
+
+		// grid containing a clipped voxel field of the balls
+		Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{
+			pmp::vec3{2.1f, 3.0f, 1.6f},
+			pmp::vec3{7.3f, 8.3f, 6.2f} }, initVal);
+
+		// apply balls
 		const Geometry::MetaBallParams mBall1Params = {
 			pmp::vec3{3.0f, 4.0f, 4.0f}, 4.0f
 		};
 		ApplyMetaBallToGrid(grid, mBall1Params);
 		const Geometry::MetaBallParams mBall2Params = {
-			pmp::vec3{5.0f, 6.0f, 4.0f}, 5.0f
+			pmp::vec3{5.5f, 6.5f, 4.0f}, 5.0f
 		};
 		ApplyMetaBallToGrid(grid, mBall2Params);
 
 		ExportToVTI(dataOutPath + "MetaBallVals", grid);
+
+		/*constexpr double isoLevel = 0.1;
+		const auto mcMesh = GetMarchingCubesMesh<double>(
+			grid.Values().data(),
+			grid.Dimensions().Nx, grid.Dimensions().Ny, grid.Dimensions().Nz,
+			isoLevel);
+		auto mcPMPMesh = Geometry::ConvertMCMeshToPMPSurfaceMesh(mcMesh);
+
+		pmp::Remeshing remeshing(mcPMPMesh);
+		remeshing.uniform_remeshing(1.5, 10, false);
+
+		mcPMPMesh.write(dataOutPath + "MetaBallMC.vtk");*/
 	}
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pmp/SurfaceMesh.h"
+#include "MarchingCubes.h"
 
 namespace Geometry
 {
@@ -21,5 +22,12 @@ namespace Geometry
 	 * \return pmp::SurfaceMesh result.
 	 */
 	[[nodiscard]] pmp::SurfaceMesh ConvertBufferGeomToPMPSurfaceMesh(const BaseMeshGeometryData& geomData);
+
+	/**
+	 * \brief Converts given MC_Mesh to pmp::SurfaceMesh.
+	 * \param mcMesh       Marching cubes mesh to be converted.
+	 * \return pmp::SurfaceMesh result.
+	 */
+	[[nodiscard]] pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MC_Mesh& mcMesh);
 	
 } // namespace Geometry
