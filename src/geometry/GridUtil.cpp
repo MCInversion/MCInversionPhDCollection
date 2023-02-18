@@ -883,7 +883,7 @@ namespace Geometry
 					const auto v2Normal = vNormalProp[vertices[2]];
 
 					// get barycentric coordinates
-					pmp::Point b = pmp::barycentric_coordinates(nearestPt, v0, v1, v2);
+					pmp::Point b = barycentric_coordinates(nearestPt, v0, v1, v2);
 
 					// interpolate normal
 					pmp::Point n;
@@ -892,9 +892,78 @@ namespace Geometry
 					n += (v2Normal * b[2]);
 					n.normalize();
 					assert(!std::isnan(n[0]));
+					const auto dotProd = static_cast<double>(dot(n, gridPt - nearestPt));
 
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
-					values[gridPos] = (pmp::dot(n, gridPt - nearestPt) > 0.0f ? 1.0f : -1.0f);
+					values[gridPos] = (dotProd > 0.0 ? 1.0 : -1.0);
+				}
+			}
+		}
+	}
+
+	// Zero of function g(r) = r^4 - r^2 + 0.25 in interval [0, 1], [Section III. from Ryan Geiss http://www.geisswerks.com/ryan/BLOBS/blobs.html]
+	constexpr double DECAY_POLYNOMIAL_ZERO_LVL_SQUARED = 0.49;
+
+	void ApplyMetaBallToGrid(ScalarGrid& grid, const MetaBallParams& params)
+	{
+		// parameter check
+		if (params.Radius < FLT_EPSILON)
+		{
+			std::cerr << "ApplyMetaBallToGrid: Invalid parameter. params.Radius <= 0.0f!\n";
+			return;
+		}
+
+		// grid
+		auto& values = grid.Values();
+
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		// metaball ROI (region of influence (box))
+		const float radius = params.Radius;
+		const auto& center = params.Center;
+		const auto radiusVec = pmp::vec3(radius, radius, radius);
+		const float radiusSq = radius * radius;
+		const auto roi = pmp::BoundingBox(center - radiusVec, center + radiusVec);
+
+		if (!grid.Box().Intersects(roi))
+		{
+			return; // nothing happens
+		}
+
+		const auto trueROI = grid.Box().Intersect(roi);
+
+		const auto ixMin = static_cast<unsigned int>(std::floor((trueROI.min()[0] - orig[0]) / cellSize));
+		const auto iyMin = static_cast<unsigned int>(std::floor((trueROI.min()[1] - orig[1]) / cellSize));
+		const auto izMin = static_cast<unsigned int>(std::floor((trueROI.min()[2] - orig[2]) / cellSize));
+
+		const auto ixMax = static_cast<unsigned int>(std::floor((trueROI.max()[0] - orig[0]) / cellSize));
+		const auto iyMax = static_cast<unsigned int>(std::floor((trueROI.max()[1] - orig[1]) / cellSize));
+		const auto izMax = static_cast<unsigned int>(std::floor((trueROI.max()[2] - orig[2]) / cellSize));
+		assert(ixMax < dim.Nx); assert(iyMax < dim.Ny); assert(izMax < dim.Nz);
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		for (unsigned int iz = izMin; iz < izMax; iz++)
+		{
+			for (unsigned int iy = iyMin; iy < iyMax; iy++)
+			{
+				for (unsigned int ix = ixMin; ix < ixMax; ix++)
+				{
+					const auto gridPt = pmp::Point{
+						orig[0] + static_cast<float>(ix) * cellSize,
+						orig[1] + static_cast<float>(iy) * cellSize,
+						orig[2] + static_cast<float>(iz) * cellSize
+					};
+					const auto posVect = gridPt - center;
+					const auto distSq = static_cast<double>(dot(posVect, posVect) / radiusSq);
+					// Source: [Section III. from Ryan Geiss http://www.geisswerks.com/ryan/BLOBS/blobs.html]
+					const double val = (std::abs(distSq) < DECAY_POLYNOMIAL_ZERO_LVL_SQUARED ? (distSq * distSq - distSq + 0.25): 0.0);
+
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					values[gridPos] = std::max<double>(values[gridPos], val);
 				}
 			}
 		}

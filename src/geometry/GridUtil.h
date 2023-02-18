@@ -111,4 +111,21 @@ namespace Geometry
 	 */
 	void ComputeInteriorExteriorSignFromMeshNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh);
 
+	/**
+	 * \brief A parameter container for the metaball generator for ScalarGrid.
+	 * \struct MetaBallParams
+	 */
+	struct MetaBallParams
+	{
+		pmp::vec3 Center{}; //! center of the metaball object 
+		float Radius{ 1.0f }; //! effective radius of the metaball object's zero isosurface
+	};
+
+	/**
+	 * \brief Applies a metaball object with given MetaBallParams to a ScalarGrid.
+	 * \param grid      grid, where metaball values are to be applied.
+	 * \param params    parameters of the applied metaball object.
+	 */
+	void ApplyMetaBallToGrid(ScalarGrid& grid, const MetaBallParams& params);
+
 } // namespace Geometry

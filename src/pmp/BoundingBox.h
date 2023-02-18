@@ -89,6 +89,21 @@ public:
         return (other.max_[2] >= min_[2] && other.min_[2] <= max_[2]);
     }
 
+    //! Get the intersection box of this box with another.
+    [[nodiscard]] BoundingBox Intersect(const BoundingBox& other) const
+    {
+        if (!Intersects(other))
+            return {}; // empty intersection
+
+        BoundingBox result;
+        for (int i = 0; i < 3; i++)
+        {
+	        result.min_[i] = std::fmaxf(min_[i], other.min_[i]);
+	        result.max_[i] = std::fminf(max_[i], other.max_[i]);
+        }
+        return result;
+    }
+
     //! Verifies whether a point is contained within this bounding box.
     [[nodiscard]] bool Contains(const Point& pt) const
     {

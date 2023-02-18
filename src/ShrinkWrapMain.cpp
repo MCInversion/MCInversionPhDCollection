@@ -39,7 +39,8 @@ constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
 constexpr bool performSubdivisionTest4 = false;
 constexpr bool performRemeshingTests = false;
-constexpr bool performMobiusStripVoxelization = true;
+constexpr bool performMobiusStripVoxelization = false;
+constexpr bool performMetaballTest = true;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -541,5 +542,21 @@ int main()
 		Geometry::ComputeInteriorExteriorSignFromMeshNormals(grid, mMesh);
 
 		ExportToVTI(dataOutPath + "MobiusSignVals", grid);
+	}
+
+	if (performMetaballTest)
+	{
+		constexpr double initVal = 0.0;
+		Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0f, 10.0f, 10.0f} }, initVal);
+		const Geometry::MetaBallParams mBall1Params = {
+			pmp::vec3{3.0f, 4.0f, 4.0f}, 4.0f
+		};
+		ApplyMetaBallToGrid(grid, mBall1Params);
+		const Geometry::MetaBallParams mBall2Params = {
+			pmp::vec3{5.0f, 6.0f, 4.0f}, 5.0f
+		};
+		ApplyMetaBallToGrid(grid, mBall2Params);
+
+		ExportToVTI(dataOutPath + "MetaBallVals", grid);
 	}
 }
