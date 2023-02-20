@@ -549,20 +549,22 @@ int main()
 	{
 		constexpr double initVal = 0.0;
 		// grid containing both balls
-		// Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0f, 10.0f, 10.0f} }, initVal);
+		//Geometry::ScalarGrid grid(0.05f, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0f, 10.0f, 10.0f} }, initVal);
 
 		// grid containing a clipped voxel field of the balls
-		Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{
+		/**/Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{
 			pmp::vec3{2.1f, 3.0f, 1.6f},
 			pmp::vec3{7.3f, 8.3f, 6.2f} }, initVal);
 
+		const Geometry::ScalarGridBoolOpFunction opFnc = Geometry::SimpleUnion;
+
 		// apply balls
 		const Geometry::MetaBallParams mBall1Params = {
-			pmp::vec3{3.0f, 4.0f, 4.0f}, 4.0f
+			pmp::vec3{3.0f, 4.0f, 4.0f}, 4.0f, opFnc
 		};
 		ApplyMetaBallToGrid(grid, mBall1Params);
 		const Geometry::MetaBallParams mBall2Params = {
-			pmp::vec3{5.5f, 6.5f, 4.0f}, 5.0f
+			pmp::vec3{4.0f, 5.0f, 4.0f}, 5.0f, opFnc
 		};
 		ApplyMetaBallToGrid(grid, mBall2Params);
 

@@ -111,6 +111,62 @@ namespace Geometry
 	 */
 	void ComputeInteriorExteriorSignFromMeshNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh);
 
+	/// \brief a functor for evaluating a new grid value according to a boolean operation.
+	using ScalarGridBoolOpFunction = std::function<double(const double&, const double&)>;
+
+	//
+	// ======= Bool Op Function Gallery =============
+	// see Section 5.1.1 in [Sanchez, M., Continuous Signed Distance Field Representation of Polygonal Meshes, 2011]
+	// https://nccastaff.bournemouth.ac.uk/jmacey/MastersProject/MSc11/Mathieu/msanchez-sdf-thesis.pdf
+
+	/**
+	 * \brief A union operator between functional representations: f1 ^ f2 = max(f1, f2).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double SimpleUnion(const double& f1Val, const double& f2Val);
+
+	/**
+	 * \brief An intersection operator between functional representations: f1 v f2 = min(f1, f2).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double SimpleIntersection(const double& f1Val, const double& f2Val);
+
+	/**
+	 * \brief A difference operator between functional representations: f1 \ f2 = max(f1 - f2, 0.0).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double SimpleDifference(const double& f1Val, const double& f2Val);
+
+	/**
+	 * \brief A blended union operator between functional representations: f1 ^b f2 = f1 + f2 + sqrt(f1^2 + f2^2).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double BlendedUnion(const double& f1Val, const double& f2Val);
+
+	/**
+	 * \brief A blended intersection operator between functional representations: f1 vb f2 = f1 + f2 - sqrt(f1^2 + f2^2).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double BlendedIntersection(const double& f1Val, const double& f2Val);
+
+	/**
+	 * \brief A blended difference operator between functional representations: f1 \b f2 = f1 - f2 - sqrt(f1^2 + f2^2).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double BlendedDifference(const double& f1Val, const double& f2Val);
+
 	/**
 	 * \brief A parameter container for the metaball generator for ScalarGrid.
 	 * \struct MetaBallParams
@@ -119,6 +175,7 @@ namespace Geometry
 	{
 		pmp::vec3 Center{}; //! center of the metaball object 
 		float Radius{ 1.0f }; //! effective radius of the metaball object's zero isosurface
+		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a metaball object.
 	};
 
 	/**
