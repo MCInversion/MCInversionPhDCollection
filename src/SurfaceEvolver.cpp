@@ -9,7 +9,6 @@
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MeshAnalysis.h"
 
-#include "EvolverUtilsCommon.h"
 //#include "ConversionUtils.h"
 #include <fstream>
 
@@ -484,18 +483,4 @@ void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os)
 	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
 	os << "Do Feature Detection: " << (evolSettings.DoFeatureDetection ? "true" : "false") << ",\n";
 	os << "----------------------------------------------------------------------\n";
-}
-
-/// \brief a unit speed of a shrink-wrapping sphere sufficiently far away from target.
-constexpr double BASE_DISTANCE_MULTIPLIER = 1.0;
-
-/// \brief a factor by which distance field variance is multiplied.
-constexpr double BASE_DISTANCE_VARIANCE = 1.0;
-
-AdvectionDiffusionParameters PreComputeAdvectionDiffusionParams(const double& distanceMax, const double& targetMinDimension)
-{
-	// the radius within which target object starts slowing down shrink wrapping.
-	const double distanceVariance = BASE_DISTANCE_VARIANCE; //* 0.125 * targetMinDimension * targetMinDimension;
-	const double distanceMultiplier = BASE_DISTANCE_MULTIPLIER / (1.0 - exp(-distanceMax * distanceMax / distanceVariance));
-	return { distanceMultiplier, distanceVariance, distanceMultiplier, 1.0 };
 }

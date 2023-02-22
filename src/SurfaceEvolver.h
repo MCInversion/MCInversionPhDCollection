@@ -5,71 +5,7 @@
 
 #include "geometry/Grid.h"
 
-/**
- * \brief A wrapper for surface evolution advection-diffusion parameters.
- * \struct AdvectionDiffusionParameters
- */
-struct AdvectionDiffusionParameters
-{
-	// constants for weight function:
-	// C1 * (1 - exp(d^2 / C2)), where d is distance
-	double MCFMultiplier{ 1.0 }; // C1
-	double MCFVariance{ 1.0 }; // C2
-
-	// constants for weight function:
-	// D1 * d * ((-grad(d) . N) - D2 * sqrt(1 - (grad(d) . N)^2)), where d is distance, and N unit normal.
-	double AdvectionMultiplier{ 1.0 }; // D1
-	double AdvectionSineMultiplier{ 1.0 }; // D2
-
-	bool MCFSupportPositive{ true }; //>! if true, the diffusion weight function has non-zero support for positive values only.
-	bool AdvectionSupportPositive{ true }; //>! if true, the advection weight function has non-zero support for positive values only.
-};
-
-/**
- * \brief An enumerator for the type of feature detection function used during evolution.
- * \enum FeatureDetectionType
- */
-enum class [[nodiscard]] FeatureDetectionType
-{
-	Angle = 0, //>! edges with dihedral angle larger than a given threshold value are marked as features.
-	AngleWithinBounds = 1, //>! edges with dihedral angle within a given range are marked as features.
-	PrincipalCurvatures = 2, //>! vertices with too much imbalance in principal curvatures are marked as features.
-	MeanCurvature = 3 //>! features are preferred for vertices with high positive mean curvature.
-};
-
-/**
- * \brief A wrapper for parameters related to mesh topology adjustments (remeshing etc.).
- * \struct MeshTopologySettings
- */
-struct MeshTopologySettings
-{
-	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
-	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
-	float EdgeLengthDecayFactor{ 0.98f }; //>! decay factor for minimum (and consequently maximum) edge length.
-	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
-	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
-	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
-	unsigned int NRemeshingIters{ 3 }; //>! the number of iterations for pmp::Remeshing.
-	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
-	bool UseBackProjection{ true }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
-
-	FeatureDetectionType FeatureType{ FeatureDetectionType::MeanCurvature }; //>! type of feature detection function.
-	double MinDihedralAngle{ 1.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	double MaxDihedralAngle{ 2.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
-	float CriticalMeanCurvatureAngle{ 1.0f * static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
-	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
-};
-
-/// \brief An enumerator for the choice of mesh Laplacian scheme [Meyer, Desbrun, Schroder, Barr, 2003].
-enum class [[nodiscard]] MeshLaplacian
-{
-	Voronoi = 0, //>! the finite volume for mesh Laplacian is generated from a true Voronoi neighborhood of each vertex.
-	Barycentric = 1 //>! the finite volume for mesh Laplacian is generated from face barycenters.
-};
-
-/// \brief a list of triangle metrics to be computed.
-using TriangleMetrics = std::vector<std::string>;
+#include "EvolverUtilsCommon.h"
 
 /**
  * \brief A wrapper for surface evolution settings.
@@ -201,11 +137,3 @@ private:
  * \param os              output stream.
  */
 void ReportInput(const SurfaceEvolutionSettings& evolSettings, std::ostream& os);
-
-/**
- * \brief Precomputes parameters for advection-diffusion model within SurfaceEvolver.
- * \param distanceMax             maximum effective distance from target (affects diffusion term weight).
- * \param targetMinDimension      minimum target size (affects diffusion term variance).
- * \return desired advection-diffusion parameters.
- */
-[[nodiscard]] AdvectionDiffusionParameters PreComputeAdvectionDiffusionParams(const double& distanceMax, const double& targetMinDimension);

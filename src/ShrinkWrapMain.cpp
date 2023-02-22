@@ -12,6 +12,7 @@
 #include <map>
 
 #include "BrainSurfaceEvolver.h"
+#include "IsosurfaceEvolver.h"
 #include "SphereTest.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MarchingCubes.h"
@@ -30,9 +31,10 @@ const auto fsDataOutPath = fsRootPath / "output\\";
 const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
-constexpr bool performSDFTests = true;
+constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
+constexpr bool performIsosurfaceEvolverTests = true;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
@@ -42,7 +44,6 @@ constexpr bool performSubdivisionTest4 = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
-constexpr bool performMarchingCubesTests = false;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -61,10 +62,10 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
+        "armadillo",
         //"BentChair",
     	//"blub",
-    	"bunny",
+    	//"bunny",
         //"maxPlanck",
         //"nefertiti",
         //"ogre",
@@ -281,12 +282,92 @@ int main()
 				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
 		}
-	} // endif performSDFTests
+	} // endif performEvolverTests
 
-	if (performMarchingCubesTests)
+	if (performIsosurfaceEvolverTests)
 	{
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		const std::map<std::string, double> timeStepSizesForMeshes{
+			{"armadillo", 0.05 },
+			{"BentChair", 0.05 },
+			{"blub", 0.05 },
+			{"bunny", 0.0025 },
+			{"maxPlanck", 0.05 },
+			{"nefertiti", 0.05 },
+			{"ogre", 0.05 },
+			{"spot", 0.05 }
+		};
 
-	} // endif performMarchingCubesTests
+		for (const auto& name : meshNames)
+		{
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + name + ".obj");
+			const auto meshBBox = mesh.bounds();
+			const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+			constexpr float volExpansionFactor = 1.0f;
+			const SDF::DistanceFieldSettings sdfSettings{
+				cellSize,
+				volExpansionFactor,
+				//0.2, // TODO: will this truncation be OK?
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation::VoxelFloodFill,
+				SDF::BlurPostprocessingType::None,
+				SDF::PreprocessingType::Octree
+			};
+			SDF::ReportInput(mesh, sdfSettings, std::cout);
+
+			const auto startSDF = std::chrono::high_resolution_clock::now();
+			const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+			const auto endSDF = std::chrono::high_resolution_clock::now();
+
+			SDF::ReportOutput(sdf, std::cout);
+			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			ExportToVTI(dataOutPath + name + "SDF", sdf);
+
+			const auto& sdfBox = sdf.Box();
+			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+			constexpr double fieldIsoLevel = 0.0;
+
+			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
+			IsoSurfaceEvolutionSettings seSettings{
+				name,
+				80,
+				tau,
+				fieldIsoLevel,
+				10.0,
+				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
+				{},
+				minSize, maxSize,
+				meshBBox.center(),
+				true, false,
+				dataOutPath,
+				MeshLaplacian::Voronoi,
+				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+				0.05f,
+				true
+			};
+			ReportInput(seSettings, std::cout);
+			IsoSurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+	} // endif performIsosurfaceEvolverTests
 
 	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.vti)
 	const std::vector<std::string> brainNames{
