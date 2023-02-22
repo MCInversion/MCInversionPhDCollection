@@ -985,10 +985,11 @@ namespace Geometry
 					n += (v2Normal * b[2]);
 					n.normalize();
 					assert(!std::isnan(n[0]));
-					const auto dotProd = static_cast<double>(dot(n, gridPt - nearestPt));
+					const auto vecToMesh = gridPt - nearestPt;
+					const auto dotProd = static_cast<double>(dot(n, vecToMesh));
 
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
-					values[gridPos] = sgn(dotProd) * sqrt(std::abs(dotProd));
+					values[gridPos] = sgn(dotProd) * norm(vecToMesh);
 				}
 			}
 		}

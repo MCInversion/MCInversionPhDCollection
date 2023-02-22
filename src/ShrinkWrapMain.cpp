@@ -61,19 +61,19 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        "armadillo",
-        "BentChair",
-    	"blub",
+        //"armadillo",
+        //"BentChair",
+    	//"blub",
     	"bunny",
-        "maxPlanck",
-        "nefertiti",
-        "ogre",
-        "spot"
+        //"maxPlanck",
+        //"nefertiti",
+        //"ogre",
+        //"spot"
     };
 
 	if (performSDFTests)
 	{
-	    constexpr unsigned int nVoxelsPerMinDimension = 40;
+	    constexpr unsigned int nVoxelsPerMinDimension = 10;
 		constexpr bool computeGradients = false;
 
 	    for (const auto& name : meshNames)
@@ -87,7 +87,7 @@ int main()
 		    const SDF::DistanceFieldSettings sdfSettings{
 		        cellSize,
 		        1.0f,
-		        0.2,
+				DBL_MAX,
 		        SDF::KDTreeSplitType::Center,
 		        SDF::SignComputation::VoxelFloodFill,
 		        SDF::BlurPostprocessingType::None,
@@ -120,7 +120,7 @@ int main()
 				std::cout << "... done\n";			
 			}
 
-			/*std::cout << "---------------------------------------------------\n";
+			/**/std::cout << "---------------------------------------------------\n";
 			std::cout << "SDF - Angle Weighted Pseudonormal Approach:\n";
 			std::cout << "---------------------------------------------------\n";
 
@@ -137,7 +137,7 @@ int main()
 			const std::chrono::duration<double> timeDiff2 = endSDF2 - startSDF2;
 			std::cout << "SDF (Pseudonormal) Time: " << timeDiff2.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			ExportToVTI(dataOutPath + name + "SDF2", sdf2);*/
+			ExportToVTI(dataOutPath + name + "SDF2", sdf2);
 	    }
 	} // endif performSDFTests
 
