@@ -18,6 +18,7 @@
 #include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
 #include "pmp/algorithms/Decimation.h"
+#include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Subdivision.h"
 //#include "geometry/MeshAnalysis.h"
@@ -29,19 +30,19 @@ const auto fsDataOutPath = fsRootPath / "output\\";
 const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
-constexpr bool performSDFTests = false;
+constexpr bool performSDFTests = true;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
-constexpr bool performMarchingCubesTests = true;
 constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
 constexpr bool performSubdivisionTest4 = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
-constexpr bool performMetaballTest = true;
+constexpr bool performMetaballTest = false;
+constexpr bool performMarchingCubesTests = false;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -60,14 +61,14 @@ int main()
 {
     // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
     const std::vector<std::string> meshNames{
-        //"armadillo",
-        //"BentChair",
-    	//"blub",
+        "armadillo",
+        "BentChair",
+    	"blub",
     	"bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        //"ogre",
-        //"spot"
+        "maxPlanck",
+        "nefertiti",
+        "ogre",
+        "spot"
     };
 
 	if (performSDFTests)
@@ -118,6 +119,25 @@ int main()
 				ExportToVTK(dataOutPath + name + "negNormGradSDF", negNormGradSdf);
 				std::cout << "... done\n";			
 			}
+
+			/*std::cout << "---------------------------------------------------\n";
+			std::cout << "SDF - Angle Weighted Pseudonormal Approach:\n";
+			std::cout << "---------------------------------------------------\n";
+
+			pmp::BoundingBox sdfBox(meshBBox);
+			const float expansion = 1.0f * minSize;
+			sdfBox.expand(expansion, expansion, expansion);
+			Geometry::ScalarGrid sdf2(cellSize, sdfBox);
+
+			const auto startSDF2 = std::chrono::high_resolution_clock::now();
+			pmp::Normals::compute_vertex_normals(mesh);
+			ComputeMeshSignedDistanceFromNormals(sdf2, mesh);
+			const auto endSDF2 = std::chrono::high_resolution_clock::now();
+			SDF::ReportOutput(sdf2, std::cout);
+			const std::chrono::duration<double> timeDiff2 = endSDF2 - startSDF2;
+			std::cout << "SDF (Pseudonormal) Time: " << timeDiff2.count() << " s\n";
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			ExportToVTI(dataOutPath + name + "SDF2", sdf2);*/
 	    }
 	} // endif performSDFTests
 

@@ -111,6 +111,14 @@ namespace Geometry
 	 */
 	void ComputeInteriorExteriorSignFromMeshNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh);
 
+	/**
+	 * \brief Computes distance for each grid point using mesh normals [Baerentzen et al. 2005].
+	 * \param grid       ScalarGrid where values are stored.
+	 * \param mesh       input mesh (needs to have normals).
+	 * NOTE: Not using DistanceFieldGenerator because its pipeline is unnecessary for this approach.
+	 */
+	void ComputeMeshSignedDistanceFromNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh);
+
 	/// \brief a functor for evaluating a new grid value according to a boolean operation.
 	using ScalarGridBoolOpFunction = std::function<double(const double&, const double&)>;
 

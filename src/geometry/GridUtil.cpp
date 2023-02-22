@@ -901,6 +901,99 @@ namespace Geometry
 		}
 	}
 
+	/// \brief sign func.
+	template <typename T> int sgn(T val) {
+		return (T(0) < val) - (val < T(0));
+	}
+
+	void ComputeMeshSignedDistanceFromNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh)
+	{
+		if (!mesh.has_vertex_property("v:normal"))
+		{
+			std::cerr << "Geometry::ComputeMeshSignedDistanceFromNormals: Input mesh has no normals!\n";
+			return; // nothing to compute from
+		}
+
+		if (!mesh.is_triangle_mesh())
+		{
+			std::cerr << "Geometry::ComputeMeshSignedDistanceFromNormals: Must be a triangle mesh! Triangulate before processing!\n";
+			return; // must be a triangle mesh
+		}
+
+		const auto vNormalProp = mesh.get_vertex_property<pmp::Normal>("v:normal");
+		const auto ptrMeshKDTree = std::make_unique<pmp::TriangleKdTree>(mesh, 0);
+
+		auto& values = grid.Values();
+
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		pmp::Point gridPt{};		
+		pmp::Point n; // interpolated normal
+		pmp::Point b; // closest pt on triangle
+
+		const unsigned int progressStep = Nz / 10;
+
+		for (unsigned int iz = 0; iz < Nz; iz++)
+		{
+			// ----------------------------------
+			if (iz % progressStep == 0)
+			{
+				const float progress = static_cast<float>(iz) / static_cast<float>(Nz);
+				std::cout << "Geometry::ComputeMeshSignedDistanceFromNormals: " << progress << " %\n";
+			}
+			// ----------------------------------
+
+			for (unsigned int iy = 0; iy < Ny; iy++)
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++)
+				{
+					gridPt[0] = orig[0] + static_cast<float>(ix) * cellSize;
+					gridPt[1] = orig[1] + static_cast<float>(iy) * cellSize;
+					gridPt[2] = orig[2] + static_cast<float>(iz) * cellSize;
+
+					const auto nearestNeighbor = ptrMeshKDTree->nearest(gridPt);
+
+					const auto& nearestPt = nearestNeighbor.nearest;
+					const auto& nearestFace = nearestNeighbor.face;
+
+					std::vector<pmp::Vertex> vertices{};
+					vertices.reserve(3);
+					for (const auto& v : mesh.vertices(nearestFace))
+					{
+						vertices.push_back(v);
+					}
+					assert(vertices.size() == 3);
+
+					const auto& v0 = mesh.position(vertices[0]);
+					const auto& v1 = mesh.position(vertices[1]);
+					const auto& v2 = mesh.position(vertices[2]);
+
+					const auto& v0Normal = vNormalProp[vertices[0]];
+					const auto& v1Normal = vNormalProp[vertices[1]];
+					const auto& v2Normal = vNormalProp[vertices[2]];
+
+					b = barycentric_coordinates(nearestPt, v0, v1, v2);
+
+					n = (v0Normal * b[0]);
+					n += (v1Normal * b[1]);
+					n += (v2Normal * b[2]);
+					n.normalize();
+					assert(!std::isnan(n[0]));
+					const auto dotProd = static_cast<double>(dot(n, gridPt - nearestPt));
+
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					values[gridPos] = sgn(dotProd) * sqrt(std::abs(dotProd));
+				}
+			}
+		}
+	}
+
 	double SimpleUnion(const double& f1Val, const double& f2Val)
 	{
 		return std::max(f1Val, f2Val);
