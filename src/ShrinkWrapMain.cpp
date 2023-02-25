@@ -81,6 +81,9 @@ int main()
 	    {
 		    pmp::SurfaceMesh mesh;
 		    mesh.read(dataDirPath + name + ".obj");
+
+			std::cout << "I break here!\n";
+
 	        const auto meshBBox = mesh.bounds();
 	        const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
 	        const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
@@ -121,7 +124,7 @@ int main()
 				std::cout << "... done\n";			
 			}
 
-			/**/std::cout << "---------------------------------------------------\n";
+			/*std::cout << "---------------------------------------------------\n";
 			std::cout << "SDF - Angle Weighted Pseudonormal Approach:\n";
 			std::cout << "---------------------------------------------------\n";
 
@@ -138,7 +141,7 @@ int main()
 			const std::chrono::duration<double> timeDiff2 = endSDF2 - startSDF2;
 			std::cout << "SDF (Pseudonormal) Time: " << timeDiff2.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			ExportToVTI(dataOutPath + name + "SDF2", sdf2);
+			ExportToVTI(dataOutPath + name + "SDF2", sdf2);*/
 	    }
 	} // endif performSDFTests
 
@@ -335,7 +338,24 @@ int main()
 			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
 			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
-			constexpr double fieldIsoLevel = 0.0;
+			constexpr double fieldIsoLevel = 1.0;
+
+			const MeshTopologySettings topoParams{
+				0.4f,
+				0.0,
+				0.98f,
+				0.0,
+				2,
+				0.0,
+				3,
+				5,
+				true,
+				FeatureDetectionType::MeanCurvature,
+				1.0 * M_PI_2 * 180.0, 2.0 * M_PI_2 * 180.0,
+				2.0f,
+				0.8f * static_cast<float>(M_PI_2),
+				true
+			};
 
 			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
 			IsoSurfaceEvolutionSettings seSettings{
@@ -343,9 +363,9 @@ int main()
 				80,
 				tau,
 				fieldIsoLevel,
-				10.0,
-				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
-				{},
+				5.0,
+				PreComputeAdvectionDiffusionParams(2.0, minSize),
+				topoParams,
 				minSize, maxSize,
 				meshBBox.center(),
 				true, false,

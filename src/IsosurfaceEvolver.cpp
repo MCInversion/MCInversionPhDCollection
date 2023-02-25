@@ -11,6 +11,7 @@
 
 #include <fstream>
 
+#include "ConversionUtils.h"
 #include "geometry/GeometryConversionUtils.h"
 
 // ================================================================================================
@@ -79,14 +80,35 @@ void IsoSurfaceEvolver::Preprocess()
 
 	// build isosurface
 	const double isoLevel = m_EvolSettings.FieldIsoLevelOffset;
-	const auto mcMesh = GetMarchingCubesMesh<double>(
-		field.Values().data(),
-		field.Dimensions().Nx, field.Dimensions().Ny, field.Dimensions().Nz,
-		isoLevel);
+
+	const auto& dim = field.Dimensions();
+	const auto Nx = static_cast<unsigned int>(dim.Nx);
+	const auto Ny = static_cast<unsigned int>(dim.Ny);
+	const auto Nz = static_cast<unsigned int>(dim.Nz);
+	const auto mcMesh = GetMarchingCubesMesh<double>(field.Values().data(), Nx, Ny, Nz, isoLevel);
 	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(Geometry::ConvertMCMeshToPMPSurfaceMesh(mcMesh));
-	// TODO: Ilatsik's Marching cubes implementation shifts the mesh by 1/2 of the voxel size. Fix that.
-	const auto voxelShiftMat = translation_matrix(pmp::vec3{1, 1, 1} * field.CellSize() * 0.5f);
-	(*m_EvolvingSurface) *= voxelShiftMat;
+
+	// Ilatsik's Marching cubes implementation outputs a mesh from a grid with unit cell size, and zero origin (0,0,0)
+	const auto cellSize = field.CellSize();
+	const auto& orig = field.Box().min();
+	const pmp::mat4 voxelTransformMat{
+		cellSize, 0.0f, 0.0f, orig[0],
+		0.0f, cellSize, 0.0f, orig[1],
+		0.0f, 0.0f, cellSize, orig[2],
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	(*m_EvolvingSurface) *= voxelTransformMat;
+
+	// remesh bad quality mesh from marching cubes
+	const float minEdgeLength = M_SQRT2 * field.CellSize() * 0.3f;
+	const float maxEdgeLength = 4.0f * minEdgeLength;
+	const float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
+	pmp::Remeshing remeshing(*m_EvolvingSurface);
+	remeshing.adaptive_remeshing({
+		minEdgeLength, maxEdgeLength, approxError,
+		m_EvolSettings.TopoParams.NRemeshingIters,
+		m_EvolSettings.TopoParams.NTanSmoothingIters,
+		m_EvolSettings.TopoParams.UseBackProjection });
 
 	// transform mesh and grid
 	// >>> uniform scale to ensure numerical method's stability.
@@ -121,7 +143,7 @@ void IsoSurfaceEvolver::Preprocess()
 
 	// >>>>> Scaled geometry & field (use when debugging) <<<<<<
 	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_scaledField", *m_Field);
-	//pmp::SurfaceMesh scaledTargetMesh = *m_EvolSettings.DO_NOT_KEEP_ptrTargetSurface;
+	//pmp::SurfaceMesh scaledTargetMesh = *m_EvolvingSurface;
 	//scaledTargetMesh *= transfMatrixFull;
 	//scaledTargetMesh.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_stableScale.obj");
 }
@@ -202,7 +224,7 @@ void IsoSurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	float minEdgeLength = M_SQRT2 * field.CellSize();
+	float minEdgeLength = M_SQRT2 * field.CellSize() * m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	float maxEdgeLength = 4.0f * minEdgeLength;
 	float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 	//auto approxError = 2.0f * minEdgeLength;
@@ -357,7 +379,7 @@ void IsoSurfaceEvolver::Evolve()
 		std::cout << "done\n";
 #endif
 
-		if (m_EvolSettings.DoRemeshing && ti > NSteps * m_EvolSettings.TopoParams.RemeshingStartTimeFactor)
+		if (m_EvolSettings.DoRemeshing /* && ti > NSteps * m_EvolSettings.TopoParams.RemeshingStartTimeFactor*/)
 		{
 			// remeshing
 #if REPORT_EVOL_STEPS
@@ -468,10 +490,12 @@ void ReportInput(const IsoSurfaceEvolutionSettings& evolSettings, std::ostream& 
 
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+/// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
+constexpr float INV_SHRINK_FACTOR = 5.0f;
 
 float GetStabilizationScalingFactor(const double& timeStep, const float& cellSize, const float& stabilizationFactor)
 {
 	const float expectedMeanCoVolArea = stabilizationFactor * 2.0f * sqrt(3.0f) * cellSize / 3.0f;
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea, SCALE_FACTOR_POWER);
+	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }
 
