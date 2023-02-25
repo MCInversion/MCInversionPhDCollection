@@ -80,17 +80,18 @@ void IsoSurfaceEvolver::Preprocess()
 
 	// build isosurface
 	const double isoLevel = m_EvolSettings.FieldIsoLevelOffset;
+	const auto cellSize = m_EvolSettings.ReSampledGridCellSize;
+	const auto reSampledField = ExtractReSampledGrid(cellSize, field);
 
-	const auto& dim = field.Dimensions();
+	const auto& dim = reSampledField.Dimensions();
 	const auto Nx = static_cast<unsigned int>(dim.Nx);
 	const auto Ny = static_cast<unsigned int>(dim.Ny);
 	const auto Nz = static_cast<unsigned int>(dim.Nz);
-	const auto mcMesh = GetMarchingCubesMesh<double>(field.Values().data(), Nx, Ny, Nz, isoLevel);
+	const auto mcMesh = GetMarchingCubesMesh<double>(reSampledField.Values().data(), Nx, Ny, Nz, isoLevel);
 	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(Geometry::ConvertMCMeshToPMPSurfaceMesh(mcMesh));
 
 	// Ilatsik's Marching cubes implementation outputs a mesh from a grid with unit cell size, and zero origin (0,0,0)
-	const auto cellSize = field.CellSize();
-	const auto& orig = field.Box().min();
+	const auto& orig = reSampledField.Box().min();
 	const pmp::mat4 voxelTransformMat{
 		cellSize, 0.0f, 0.0f, orig[0],
 		0.0f, cellSize, 0.0f, orig[1],
@@ -114,7 +115,7 @@ void IsoSurfaceEvolver::Preprocess()
 	// >>> uniform scale to ensure numerical method's stability.
 	// >>> translation to origin for fields not centered at (0,0,0).
 	// >>> scaling factor value is intended for stabilization of the numerical method.
-	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, field.CellSize());
+	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, cellSize);
 	m_ScalingFactor = scalingFactor;
 	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
 #if REPORT_EVOL_STEPS
@@ -133,10 +134,11 @@ void IsoSurfaceEvolver::Preprocess()
 	field *= static_cast<double>(scalingFactor); // scale also distance values.
 
 	// >>>>> Scaled geometry & field (use when debugging) <<<<<<
-	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_scaledField", *m_Field);
+	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_resampledField", reSampledField);
 	//pmp::SurfaceMesh scaledTargetMesh = *m_EvolvingSurface;
 	//scaledTargetMesh *= transfMatrixFull;
 	//scaledTargetMesh.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_stableScale.obj");
+
 }
 
 // ================================================================================================
@@ -215,7 +217,8 @@ void IsoSurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	float minEdgeLength = static_cast<float>(M_SQRT2) * field.CellSize() * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	const float cellSize = m_EvolSettings.ReSampledGridCellSize * m_ScalingFactor;
+	float minEdgeLength = static_cast<float>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	float maxEdgeLength = 4.0f * minEdgeLength;
 	float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 	//auto approxError = 2.0f * minEdgeLength;
@@ -462,6 +465,7 @@ void ReportInput(const IsoSurfaceEvolutionSettings& evolSettings, std::ostream& 
 	os << "NSteps: " << evolSettings.NSteps << ",\n";
 	os << "TimeStep: " << evolSettings.TimeStep << ",\n";
 	os << "FieldIsoLevel: " << evolSettings.FieldIsoLevel << ",\n";
+	os << "ReSampledGridCellSize: " << evolSettings.ReSampledGridCellSize << ",\n";
 	os << "......................................................................\n";
 	const auto& c1 = evolSettings.ADParams.MCFMultiplier;
 	const auto& c2 = evolSettings.ADParams.MCFVariance;

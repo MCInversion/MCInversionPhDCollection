@@ -20,6 +20,8 @@ struct IsoSurfaceEvolutionSettings
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
 	double FieldIsoLevelOffset{ 1.0 }; //! value by which the shrink-wrapped surface is offset from the target surface.
 
+	float ReSampledGridCellSize{ 1.0f }; //! cell size of the grid from which an isosurface will be generated.
+
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 

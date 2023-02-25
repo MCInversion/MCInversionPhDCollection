@@ -289,7 +289,7 @@ int main()
 
 	if (performIsosurfaceEvolverTests)
 	{
-		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr unsigned int nVoxelsPerMinDimension = 60;
 		constexpr double defaultTimeStep = 0.05;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
@@ -332,20 +332,21 @@ int main()
 			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
 			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			ExportToVTI(dataOutPath + name + "SDF", sdf);
+			//ExportToVTI(dataOutPath + name + "SDF", sdf);
 
-			constexpr double fieldIsoLevel = 0.0;
+			//constexpr double fieldIsoLevel = 0.0;
+			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 
 			const MeshTopologySettings topoParams{
 				0.4f,
 				0.0,
-				0.98f,
+				1.0f,
 				0.0,
 				2,
 				0.0,
 				3,
 				5,
-				true,
+				false,
 				FeatureDetectionType::MeanCurvature,
 				1.0 * M_PI_2 * 180.0, 2.0 * M_PI_2 * 180.0,
 				2.0f,
@@ -360,6 +361,7 @@ int main()
 				tau,
 				fieldIsoLevel,
 				5.0,
+				4.32857f,
 				PreComputeAdvectionDiffusionParams(2.0, minSize),
 				topoParams,
 				true, false,
