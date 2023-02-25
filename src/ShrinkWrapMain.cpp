@@ -289,20 +289,35 @@ int main()
 
 	if (performIsosurfaceEvolverTests)
 	{
-		constexpr unsigned int nVoxelsPerMinDimension = 60;
-		constexpr double defaultTimeStep = 0.05;
-		const std::map<std::string, double> timeStepSizesForMeshes{
-			{"armadillo", 0.05 },
-			{"BentChair", 0.05 },
-			{"blub", 0.05 },
-			{"bunny", 0.0025 },
-			{"maxPlanck", 0.05 },
-			{"nefertiti", 0.05 },
-			{"ogre", 0.05 },
-			{"spot", 0.05 }
+		const std::vector<std::string> higherGenusMeshNames{
+			"3holes",
+			"fertility",
+			"happyBuddha",
+			"rockerArm"
 		};
 
-		for (const auto& name : meshNames)
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		const std::map<std::string, double> timeStepSizesForMeshes{
+			{"3holes", defaultTimeStep },
+			{"fertility", defaultTimeStep },
+			{"happyBuddha", defaultTimeStep },
+			{"rockerArm", defaultTimeStep }
+		};
+		const std::map<std::string, double> effectiveIsolevelsForMeshes{
+			{"3holes", 0.02 },
+			{"fertility", 4.0 },
+			{"happyBuddha", 1.5e-3 },
+			{"rockerArm", 0.06 }
+		};
+		const std::map<std::string, float> resamplingFactors{
+			{"3holes", 3.0f },
+			{"fertility", 2.0f },
+			{"happyBuddha", 1.0f },
+			{"rockerArm", 2.0f }
+		};
+
+		for (const auto& name : higherGenusMeshNames)
 		{
 			pmp::SurfaceMesh mesh;
 			mesh.read(dataDirPath + name + ".obj");
@@ -315,8 +330,8 @@ int main()
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
 				volExpansionFactor,
-				0.2, // TODO: will this truncation be OK?
-				//Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				//0.2, // TODO: will this truncation be OK?
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 				SDF::KDTreeSplitType::Center,
 				SDF::SignComputation::VoxelFloodFill,
 				SDF::BlurPostprocessingType::None,
@@ -332,10 +347,12 @@ int main()
 			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
 			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			//ExportToVTI(dataOutPath + name + "SDF", sdf);
+			ExportToVTI(dataOutPath + name + "SDF", sdf);
 
 			//constexpr double fieldIsoLevel = 0.0;
 			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+			const double isoLevel = (effectiveIsolevelsForMeshes.contains(name) ? 
+				(fieldIsoLevel < effectiveIsolevelsForMeshes.at(name) ? effectiveIsolevelsForMeshes.at(name) : 1.1 * fieldIsoLevel) : 5.0);
 
 			const MeshTopologySettings topoParams{
 				0.4f,
@@ -355,13 +372,14 @@ int main()
 			};
 
 			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
+			const float resamplingFactor = (resamplingFactors.contains(name) ? resamplingFactors.at(name) : 1.5f);
 			IsoSurfaceEvolutionSettings seSettings{
 				name,
 				20,
 				tau,
 				fieldIsoLevel,
-				5.0,
-				4.32857f,
+				isoLevel,
+				cellSize * resamplingFactor,
 				PreComputeAdvectionDiffusionParams(2.0, minSize),
 				topoParams,
 				true, false,
