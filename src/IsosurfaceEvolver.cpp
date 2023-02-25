@@ -80,17 +80,18 @@ void IsoSurfaceEvolver::Preprocess()
 
 	// build isosurface
 	const double isoLevel = m_EvolSettings.FieldIsoLevelOffset;
+	const auto cellSize = m_EvolSettings.ReSampledGridCellSize;
+	const auto reSampledField = field; // ExtractReSampledGrid(cellSize, field);
 
-	const auto& dim = field.Dimensions();
+	const auto& dim = reSampledField.Dimensions();
 	const auto Nx = static_cast<unsigned int>(dim.Nx);
 	const auto Ny = static_cast<unsigned int>(dim.Ny);
 	const auto Nz = static_cast<unsigned int>(dim.Nz);
-	const auto mcMesh = GetMarchingCubesMesh<double>(field.Values().data(), Nx, Ny, Nz, isoLevel);
+	const auto mcMesh = GetMarchingCubesMesh<double>(reSampledField.Values().data(), Nx, Ny, Nz, isoLevel);
 	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(Geometry::ConvertMCMeshToPMPSurfaceMesh(mcMesh));
 
 	// Ilatsik's Marching cubes implementation outputs a mesh from a grid with unit cell size, and zero origin (0,0,0)
-	const auto cellSize = field.CellSize();
-	const auto& orig = field.Box().min();
+	const auto& orig = reSampledField.Box().min();
 	const pmp::mat4 voxelTransformMat{
 		cellSize, 0.0f, 0.0f, orig[0],
 		0.0f, cellSize, 0.0f, orig[1],
@@ -99,28 +100,26 @@ void IsoSurfaceEvolver::Preprocess()
 	};
 	(*m_EvolvingSurface) *= voxelTransformMat;
 
-	// remesh bad quality mesh from marching cubes
-	const float minEdgeLength = M_SQRT2 * field.CellSize() * 0.3f;
+	// basic 1-iter remesh for bad quality mesh from marching cubes
+	const float minEdgeLength = static_cast<float>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	const float maxEdgeLength = 4.0f * minEdgeLength;
 	const float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 	pmp::Remeshing remeshing(*m_EvolvingSurface);
 	remeshing.adaptive_remeshing({
 		minEdgeLength, maxEdgeLength, approxError,
-		m_EvolSettings.TopoParams.NRemeshingIters,
+		1,
 		m_EvolSettings.TopoParams.NTanSmoothingIters,
-		m_EvolSettings.TopoParams.UseBackProjection });
+		false });
 
 	// transform mesh and grid
 	// >>> uniform scale to ensure numerical method's stability.
 	// >>> translation to origin for fields not centered at (0,0,0).
 	// >>> scaling factor value is intended for stabilization of the numerical method.
-	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, field.CellSize());
+	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, cellSize);
 	m_ScalingFactor = scalingFactor;
 	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
-	const auto origin = m_EvolSettings.TargetOrigin;
 #if REPORT_EVOL_STEPS
 	std::cout << "Stabilization Scaling Factor: " << scalingFactor << ",\n";
-	std::cout << "Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
 #endif
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,
@@ -128,21 +127,14 @@ void IsoSurfaceEvolver::Preprocess()
 		0.0f, 0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
-	};
-	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
-	m_TransformToOriginal = inverse(transfMatrixFull);
+	m_TransformToOriginal = inverse(transfMatrixGeomScale);
 
 	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
-	field *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
+	field *= transfMatrixGeomScale; // field needs to be moved to (0,0,0) and also scaled.
 	field *= static_cast<double>(scalingFactor); // scale also distance values.
 
 	// >>>>> Scaled geometry & field (use when debugging) <<<<<<
-	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_scaledField", *m_Field);
+	//ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_resampledField", reSampledField);
 	//pmp::SurfaceMesh scaledTargetMesh = *m_EvolvingSurface;
 	//scaledTargetMesh *= transfMatrixFull;
 	//scaledTargetMesh.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_stableScale.obj");
@@ -224,7 +216,7 @@ void IsoSurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	float minEdgeLength = M_SQRT2 * field.CellSize() * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	float minEdgeLength = static_cast<float>(M_SQRT2) * m_EvolSettings.ReSampledGridCellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	float maxEdgeLength = 4.0f * minEdgeLength;
 	float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 	//auto approxError = 2.0f * minEdgeLength;
@@ -479,8 +471,6 @@ void ReportInput(const IsoSurfaceEvolutionSettings& evolSettings, std::ostream& 
 	const auto& d2 = evolSettings.ADParams.AdvectionSineMultiplier;
 	os << "Advection weight: " << d1 << " * d * ((-grad(d) . N) - " << d2 << " * sqrt(1 - (grad(d) . N)^2)),\n";
 	os << "......................................................................\n";
-	os << "Min. Target Size: " << evolSettings.MinTargetSize << ",\n";
-	os << "Max. Target Size: " << evolSettings.MaxTargetSize << ",\n";
 	os << "Export Surface per Time Step: " << (evolSettings.ExportSurfacePerTimeStep ? "true" : "false") << ",\n";
 	os << "Output Path: " << evolSettings.OutputPath << ",\n";
 	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
