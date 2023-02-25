@@ -23,10 +23,6 @@ struct IsoSurfaceEvolutionSettings
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
-	float MinTargetSize{ 1.0f }; //>! minimum size of the target mesh bounding box.
-	float MaxTargetSize{ 1.0f }; //>! maximum size of the target mesh bounding box.
-	pmp::vec3 TargetOrigin{}; //>! origin of the evolution's target.
-
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.
 	std::string OutputPath{}; //>! path where output surfaces are to be exported.

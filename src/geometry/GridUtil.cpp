@@ -1093,4 +1093,37 @@ namespace Geometry
 		}
 	}
 
+	ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid)
+	{
+		ScalarGrid result(newCellSize, origGrid.Box());
+		auto& values = result.Values();
+
+		const auto& dim = result.Dimensions();
+		const auto& newOrigin = result.Box().min();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		for (unsigned int iz = 0; iz < Nz; iz++)
+		{
+			for (unsigned int iy = 0; iy < Ny; iy++)
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++)
+				{
+					const auto newGridPt = pmp::Point{
+						newOrigin[0] + static_cast<float>(ix) * newCellSize,
+						newOrigin[1] + static_cast<float>(iy) * newCellSize,
+						newOrigin[2] + static_cast<float>(iz) * newCellSize
+					};
+
+					const unsigned int newGridPos = Nx * Ny * iz + Nx * iy + ix;
+					values[newGridPos] = TrilinearInterpolateScalarValue(newGridPt, origGrid);
+				}
+			}
+		}
+
+		return result;
+	}
+
 } // namespace Geometry
