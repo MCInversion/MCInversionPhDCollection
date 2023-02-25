@@ -20,10 +20,12 @@ struct IsoSurfaceEvolutionSettings
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
 	double FieldIsoLevelOffset{ 1.0 }; //! value by which the shrink-wrapped surface is offset from the target surface.
 
-	float ReSampledGridCellSize{ 1.0f }; //! cell size of the grid from which an isosurface will be generated.
-
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
+
+	float MinTargetSize{ 1.0f }; //>! minimum size of the target mesh bounding box.
+	float MaxTargetSize{ 1.0f }; //>! maximum size of the target mesh bounding box.
+	pmp::vec3 TargetOrigin{}; //>! origin of the evolution's target.
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.

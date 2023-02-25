@@ -315,8 +315,8 @@ int main()
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
 				volExpansionFactor,
-				0.2, // TODO: will this truncation be OK?
-				//Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				//0.2, // TODO: will this truncation be OK?
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 				SDF::KDTreeSplitType::Center,
 				SDF::SignComputation::VoxelFloodFill,
 				SDF::BlurPostprocessingType::None,
@@ -332,9 +332,13 @@ int main()
 			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
 			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			//ExportToVTI(dataOutPath + name + "SDF", sdf);
-			
-			constexpr double fieldIsoLevel = 0.0;
+			ExportToVTI(dataOutPath + name + "SDF", sdf);
+
+			const auto& sdfBox = sdf.Box();
+			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+			constexpr double fieldIsoLevel = 1.0;
 
 			const MeshTopologySettings topoParams{
 				0.4f,
@@ -356,13 +360,14 @@ int main()
 			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
 			IsoSurfaceEvolutionSettings seSettings{
 				name,
-				20,
+				80,
 				tau,
 				fieldIsoLevel,
 				5.0,
-				cellSize * 1.0f,
 				PreComputeAdvectionDiffusionParams(2.0, minSize),
 				topoParams,
+				minSize, maxSize,
+				meshBBox.center(),
 				true, false,
 				dataOutPath,
 				MeshLaplacian::Voronoi,

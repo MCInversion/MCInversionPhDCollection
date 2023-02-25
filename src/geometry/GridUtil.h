@@ -193,15 +193,4 @@ namespace Geometry
 	 */
 	void ApplyMetaBallToGrid(ScalarGrid& grid, const MetaBallParams& params);
 
-	// ==================================================================================================================
-
-	/**
-	 * \brief Re-samples grid data to a new grid with the same bounds and different cell size.
-	 * \param newCellSize     cell size of the re-sampled grid.
-	 * \param origGrid            original grid
-	 * \return re-sampled grid.
-	 * NOTE: Using trilinear interpolation because the new cells don't need to align with the original grid's cells.
-	 */
-	[[nodiscard]] ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid);
-
 } // namespace Geometry
