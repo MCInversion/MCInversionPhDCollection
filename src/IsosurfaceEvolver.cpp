@@ -488,7 +488,8 @@ constexpr float INV_SHRINK_FACTOR = 5.0f;
 
 float GetStabilizationScalingFactor(const double& timeStep, const float& cellSize, const float& stabilizationFactor)
 {
-	const float expectedMeanCoVolArea = stabilizationFactor * 2.0f * sqrt(3.0f) * cellSize / 3.0f;
+	// const float expectedMeanCoVolArea = stabilizationFactor * 2.0f * sqrt(3.0f) * (cellSize * cellSize) / 3.0f;
+	const float expectedMeanCoVolArea = stabilizationFactor * 4.0f * sqrt(2.0f) * (cellSize * cellSize) / 3.0f;
 	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }
 
