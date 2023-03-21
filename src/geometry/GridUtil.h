@@ -193,6 +193,25 @@ namespace Geometry
 	 */
 	void ApplyMetaBallToGrid(ScalarGrid& grid, const MetaBallParams& params);
 
+	/**
+	 * \brief A parameter container for the capsule generator for ScalarGrid.
+	 * \struct CapsuleParams
+	 */
+	struct CapsuleParams
+	{
+		pmp::vec3 Position{}; //! base position of the capsule object
+		float Height{ 2.0f }; //! height of the capsule object
+		float Radius{ 1.0f }; //! radius of the capsule object
+		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a capsule object.
+	};
+
+	/**
+	 * \brief Applies a capsule object with given CapsuleParams to a ScalarGrid.
+	 * \param grid      grid, where capsule values are to be applied.
+	 * \param params    parameters of the applied capsule object.
+	 */
+	void ApplyCapsuleDistanceFieldToGrid(ScalarGrid& grid, const CapsuleParams& params);
+
 	// ==================================================================================================================
 
 	/**

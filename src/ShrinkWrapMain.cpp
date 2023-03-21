@@ -722,12 +722,16 @@ int main()
 
 	if (performSheetEvolverTest)
 	{
+		/**/
+		constexpr float roiHalfDim = 5.0f;
+		constexpr float roiDim = 2.0f * roiHalfDim;
+
 		constexpr Geometry::PlaneSettings mSettings{
-			1.0f,
-			1.0f,
-			16,
-			25,
-			false,
+			roiDim,
+			roiDim,
+			10,
+			10,
+			true,
 			true
 		};
 		Geometry::PlaneBuilder pb(mSettings);
@@ -737,5 +741,18 @@ int main()
 
 		pMesh.write(dataOutPath + "plane.vtk");
 		//pMesh.write(dataOutPath + "plane.obj");
+
+		constexpr double initVal = -Geometry::DEFAULT_SCALAR_GRID_INIT_VAL;
+		Geometry::ScalarGrid grid(0.1f, pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} }, initVal);
+		const Geometry::ScalarGridBoolOpFunction opFnc = Geometry::SimpleUnion;
+		const Geometry::CapsuleParams cp{
+			pmp::vec3{roiHalfDim, roiHalfDim, -0.5f * roiHalfDim},
+			4.0f,
+			0.2f,
+			opFnc
+		};
+		ApplyCapsuleDistanceFieldToGrid(grid, cp);
+
+		ExportToVTI(dataOutPath + "CapsuleVals", grid);
 	}
 }

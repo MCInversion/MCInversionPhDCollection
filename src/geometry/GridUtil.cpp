@@ -1093,6 +1093,69 @@ namespace Geometry
 		}
 	}
 
+	void ApplyCapsuleDistanceFieldToGrid(ScalarGrid& grid, const CapsuleParams& params)
+	{
+		// parameter check
+		if (params.Height < FLT_EPSILON)
+		{
+			std::cerr << "ApplyCapsuleDistanceFieldToGrid: Invalid parameter. params.Height <= 0.0f!\n";
+			return;
+		}
+		if (params.Radius < FLT_EPSILON)
+		{
+			std::cerr << "ApplyCapsuleDistanceFieldToGrid: Invalid parameter. params.Radius <= 0.0f!\n";
+			return;
+		}
+
+		// grid
+		auto& values = grid.Values();
+
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		// capsule ROI (region of influence (box))
+		const float radius = params.Radius;
+		const float height = params.Height;
+		const auto& position = params.Position;
+		const auto radiusVec = pmp::vec3(radius, radius, radius);
+		const auto heightVec = pmp::vec3(0.0f, 0.0f, height);
+		const auto roi = pmp::BoundingBox(position - radiusVec, position + heightVec + radiusVec);
+
+		if (!grid.Box().Intersects(roi))
+		{
+			return; // nothing happens
+		}
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		for (unsigned int iz = 0; iz < Nz; iz++)
+		{
+			for (unsigned int iy = 0; iy < Ny; iy++)
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++)
+				{
+					const auto gridPt = pmp::Point{
+						orig[0] + static_cast<float>(ix) * cellSize,
+						orig[1] + static_cast<float>(iy) * cellSize,
+						orig[2] + static_cast<float>(iz) * cellSize
+					};
+					const auto posVect = gridPt - position;
+					const auto posVectClamped = pmp::vec3{ posVect[0], posVect[1], posVect[2] - std::clamp<float>(posVect[2], 0.0f, height + radius) };
+					const auto dist = static_cast<double>(norm(posVectClamped)) - static_cast<double>(radius);
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
+				}
+			}
+		}
+	}
+
+	//
+	// ========================================================================================
+	//
+
 	ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid)
 	{
 		ScalarGrid result(newCellSize, origGrid.Box());
