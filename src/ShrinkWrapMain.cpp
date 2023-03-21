@@ -18,6 +18,7 @@
 #include "geometry/MarchingCubes.h"
 #include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
+#include "geometry/PlaneBuilder.h"
 #include "pmp/algorithms/Decimation.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Remeshing.h"
@@ -34,7 +35,8 @@ const std::string dataOutPath = fsDataOutPath.string();
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
-constexpr bool performIsosurfaceEvolverTests = true;
+constexpr bool performIsosurfaceEvolverTests = false;
+constexpr bool performSheetEvolverTest = true;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
@@ -60,54 +62,54 @@ constexpr bool performMetaballTest = false;
 
 int main()
 {
-    // DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
-    const std::vector<std::string> meshNames{
-        "armadillo",
-        //"BentChair",
-    	//"blub",
-    	//"bunny",
-        //"maxPlanck",
-        //"nefertiti",
-        //"ogre",
-        //"spot"
-    };
+	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
+	const std::vector<std::string> meshNames{
+		"armadillo",
+		//"BentChair",
+		//"blub",
+		//"bunny",
+		//"maxPlanck",
+		//"nefertiti",
+		//"ogre",
+		//"spot"
+	};
 
 	if (performSDFTests)
 	{
-	    constexpr unsigned int nVoxelsPerMinDimension = 10;
+		constexpr unsigned int nVoxelsPerMinDimension = 10;
 		constexpr bool computeGradients = false;
 
-	    for (const auto& name : meshNames)
-	    {
-		    pmp::SurfaceMesh mesh;
-		    mesh.read(dataDirPath + name + ".obj");
+		for (const auto& name : meshNames)
+		{
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + name + ".obj");
 
 			std::cout << "I break here!\n";
 
-	        const auto meshBBox = mesh.bounds();
-	        const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-	        const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			const auto meshBBox = mesh.bounds();
+			const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
 			const float cellSize = minSize / nVoxelsPerMinDimension;
-		    const SDF::DistanceFieldSettings sdfSettings{
-		        cellSize,
-		        1.0f,
+			const SDF::DistanceFieldSettings sdfSettings{
+				cellSize,
+				1.0f,
 				DBL_MAX,
-		        SDF::KDTreeSplitType::Center,
-		        SDF::SignComputation::VoxelFloodFill,
-		        SDF::BlurPostprocessingType::None,
-		        SDF::PreprocessingType::Octree
-		    };
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation::VoxelFloodFill,
+				SDF::BlurPostprocessingType::None,
+				SDF::PreprocessingType::Octree
+			};
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
-		    const auto startSDF = std::chrono::high_resolution_clock::now();
-		    const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
-		    const auto endSDF = std::chrono::high_resolution_clock::now();
+			const auto startSDF = std::chrono::high_resolution_clock::now();
+			const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+			const auto endSDF = std::chrono::high_resolution_clock::now();
 
 			SDF::ReportOutput(sdf, std::cout);
-		    const std::chrono::duration<double> timeDiff = endSDF - startSDF;
-		    std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-		    ExportToVTI(dataOutPath + name + "SDF", sdf);
+			ExportToVTI(dataOutPath + name + "SDF", sdf);
 			if (computeGradients)
 			{
 				std::cout << "Geometry::ComputeGradient(sdf) ...";
@@ -121,7 +123,7 @@ int main()
 				std::cout << "Geometry::ComputeNormalizedNegativeGradient(sdf) ...";
 				const auto negNormGradSdf = Geometry::ComputeNormalizedNegativeGradient(sdf);
 				ExportToVTK(dataOutPath + name + "negNormGradSDF", negNormGradSdf);
-				std::cout << "... done\n";			
+				std::cout << "... done\n";
 			}
 
 			/*std::cout << "---------------------------------------------------\n";
@@ -142,7 +144,7 @@ int main()
 			std::cout << "SDF (Pseudonormal) Time: " << timeDiff2.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 			ExportToVTI(dataOutPath + name + "SDF2", sdf2);*/
-	    }
+		}
 	} // endif performSDFTests
 
 	if (performSphereTest)
@@ -156,7 +158,7 @@ int main()
 				ST_MeshLaplacian::Barycentric, 0.0f, false};
 
 			SphereTest st(stSettings);
-			st.PerformTest(4);			
+			st.PerformTest(4);
 		}
 
 		std::cout << "=====================================================\n";
@@ -200,13 +202,13 @@ int main()
 			SphereTest st(stSettings);
 			st.PerformTest(4);
 		}
-		
+
 	} // endif performSphereTest
 
 	if (performEvolverTests)
 	{
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
-        constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultTimeStep = 0.05;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
 			{"BentChair", 0.05 },
@@ -254,7 +256,7 @@ int main()
 			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
 			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
-                        
+
 			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
 			SurfaceEvolutionSettings seSettings{
 				name,
@@ -280,7 +282,7 @@ int main()
 			{
 				evolver.Evolve();
 			}
-			catch(...)
+			catch (...)
 			{
 				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
@@ -351,7 +353,7 @@ int main()
 
 			//constexpr double fieldIsoLevel = 0.0;
 			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
-			const double isoLevel = (effectiveIsolevelsForMeshes.contains(name) ? 
+			const double isoLevel = (effectiveIsolevelsForMeshes.contains(name) ?
 				(fieldIsoLevel < effectiveIsolevelsForMeshes.at(name) ? effectiveIsolevelsForMeshes.at(name) : 1.1 * fieldIsoLevel) : 5.0);
 
 			const MeshTopologySettings topoParams{
@@ -501,12 +503,12 @@ int main()
 		}
 
 
-		
+
 	} // endif performBrainEvolverTests
 
 	if (performSubdivisionTests1)
 	{
-		Geometry::IcoSphereBuilder ico({0});
+		Geometry::IcoSphereBuilder ico({ 0 });
 		ico.BuildBaseData();
 		ico.BuildPMPSurfaceMesh();
 		auto icoMesh = ico.GetPMPSurfaceMeshResult();
@@ -563,7 +565,7 @@ int main()
 		icoMesh *= matrixGeomScale;
 
 		pmp::Decimation decim(icoMesh);
-		decim.initialize(aspectRatio, 0, 0, normalDeviation,0.0f);
+		decim.initialize(aspectRatio, 0, 0, normalDeviation, 0.0f);
 		decim.decimate(icoMesh.n_vertices() * 0.01 * targetDecimPercentage);
 
 		pmp::Remeshing remeshing(icoMesh);
@@ -716,5 +718,24 @@ int main()
 		remeshing.uniform_remeshing(1.5, 10, false);
 
 		mcPMPMesh.write(dataOutPath + "MetaBallMC.vtk");*/
+	}
+
+	if (performSheetEvolverTest)
+	{
+		constexpr Geometry::PlaneSettings mSettings{
+			1.0f,
+			1.0f,
+			16,
+			25,
+			false,
+			true
+		};
+		Geometry::PlaneBuilder pb(mSettings);
+		pb.BuildBaseData();
+		pb.BuildPMPSurfaceMesh();
+		auto pMesh = pb.GetPMPSurfaceMeshResult();
+
+		pMesh.write(dataOutPath + "plane.vtk");
+		//pMesh.write(dataOutPath + "plane.obj");
 	}
 }
