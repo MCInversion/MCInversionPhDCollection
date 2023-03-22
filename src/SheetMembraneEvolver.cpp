@@ -85,7 +85,7 @@ void SheetMembraneEvolver::Preprocess()
 
 	// build plane surface
 	const pmp::vec3 fieldOrig = fieldBox.min();
-	const pmp::vec3 planeOrig = fieldOrig + pmp::vec3{ 0.0f, 0.0f, startZHeight };
+	const pmp::vec3 planeOrig = pmp::vec3{ fieldOrig[0], fieldOrig[1], startZHeight };
 	const pmp::vec3 fieldSize = fieldBox.max() - fieldBox.min();
 	const Geometry::PlaneSettings mSettings{
 		planeOrig,
@@ -99,7 +99,7 @@ void SheetMembraneEvolver::Preprocess()
 	Geometry::PlaneBuilder pb(mSettings);
 	pb.BuildBaseData();
 	pb.BuildPMPSurfaceMesh();
-	auto pMesh = pb.GetPMPSurfaceMeshResult();
+	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(pb.GetPMPSurfaceMeshResult());
 
 	// transform mesh and grid
 	// >>> uniform scale to ensure numerical method's stability.
@@ -126,10 +126,18 @@ void SheetMembraneEvolver::Preprocess()
 		0.0f, 0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	m_TransformToOriginal = inverse(transfMatrixGeomScale);
+	const auto planeCenter = pmp::vec3{ fieldOrig[0] + 0.5f * fieldSize[0], fieldOrig[1] + 0.5f * fieldSize[1], planeOrig[2] };
+	const pmp::mat4 transfMatrixGeomMove{
+		1.0f, 0.0f, 0.0f, -planeCenter[0],
+		0.0f, 1.0f, 0.0f, -planeCenter[1],
+		0.0f, 0.0f, 1.0f, -planeCenter[2],
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	m_TransformToOriginal = inverse(transfMatrixFull);
 
-	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
-	field *= transfMatrixGeomScale; // field needs to be moved to (0,0,0) and also scaled.
+	(*m_EvolvingSurface) *= transfMatrixFull; // ico sphere is already centered at (0,0,0).
+	field *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
 	field *= static_cast<double>(scalingFactor); // scale also distance values.
 
 	// >>>>> Scaled geometry & field (use when debugging) <<<<<<
@@ -491,4 +499,80 @@ float GetStabilizationScalingFactor(const double& timeStep, const float& cellSiz
 {
 	const float expectedMeanCoVolArea = stabilizationFactor * cellSizeX * cellSizeY;
 	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
+}
+
+//
+// ============================================================================================================
+//
+
+/**
+ * \brief A verification function for the column 2D position within field box.
+ * \param fieldBox      bounding box of the scalar field
+ * \param pos           2D position in the x,y-plane
+ * \return true if pos is within box's x,y-range
+ */
+static [[nodiscard]] bool IsColumnInField(const pmp::BoundingBox& fieldBox, const pmp::vec2& pos)
+{
+	if (pos[0] < fieldBox.min()[0])
+		return false;
+
+	if (pos[0] > fieldBox.max()[0])
+		return false;
+
+	if (pos[1] < fieldBox.min()[1])
+		return false;
+
+	return pos[1] <= fieldBox.max()[1];
+}
+
+Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
+	const float& cellSize, const pmp::BoundingBox& box, 
+	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const float& supportZLevel)
+{
+	const auto boxSize = box.max() - box.min();
+
+	// input verification
+	if (cellSize >= boxSize[0] || cellSize >= boxSize[1] || cellSize >= boxSize[2])
+	{
+		std::cerr << "GetDistanceFieldWithSupportColumns: cellSize too large!\n";
+		throw std::logic_error("GetDistanceFieldWithSupportColumns: cellSize too large!\n");
+	}
+	if (supportZLevel < 0.0f || supportZLevel > 1.0f)
+	{
+		std::cerr << "GetDistanceFieldWithSupportColumns: supportZLevel must be a value between 0 and 1!\n";
+		throw std::logic_error("GetDistanceFieldWithSupportColumns: supportZLevel must be a value between 0 and 1!\n");
+	}
+
+	const float maxColumnRadius = 0.5f * std::fmaxf(boxSize[0], boxSize[1]);
+	const float preferredColumnRadius = 0.05f * maxColumnRadius;
+	const float columnZPosition = box.min()[2] + (supportZLevel - 0.1f) * boxSize[2];
+	const float maxColumnHeight = box.max()[2] - columnZPosition;
+
+	constexpr double initVal = Geometry::DEFAULT_SCALAR_GRID_INIT_VAL;
+	Geometry::ScalarGrid result(cellSize, box, initVal);
+	Geometry::CapsuleParams cp{};
+	cp.Radius = preferredColumnRadius;
+	cp.BoolOpFunction = Geometry::DistanceUnion;
+
+	for (const auto& wPos : weightedColumnPositions)
+	{
+		const auto& pos = wPos.Position;
+		if (!IsColumnInField(box, pos))
+			continue;
+
+		const auto& weight = wPos.Weight;
+		if (weight < 0.0f || weight > 1.0f)
+		{
+			std::cerr << "GetDistanceFieldWithSupportColums: Weight must be a value between 0 and 1!\n";
+			continue;
+		}
+
+		cp.Position = pmp::vec3{ pos[0], pos[1], columnZPosition };
+		const auto capsuleHeight = maxColumnHeight * weight;
+		cp.Height = capsuleHeight;
+
+		ApplyCapsuleDistanceFieldToGrid(result, cp);
+	}
+
+	return result;
 }

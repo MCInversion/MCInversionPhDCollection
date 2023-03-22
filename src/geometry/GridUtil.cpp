@@ -1025,6 +1025,11 @@ namespace Geometry
 		return f1Val - f2Val - sqrt(f1Val * f1Val + f2Val * f2Val);
 	}
 
+	double DistanceUnion(const double& f1Val, const double& f2Val)
+	{
+		return std::min(f1Val, f2Val);
+	}
+
 	// Zero of function g(r) = r^4 - r^2 + 0.25 in interval [0, 1], [Section III. from Ryan Geiss http://www.geisswerks.com/ryan/BLOBS/blobs.html]
 	constexpr double DECAY_POLYNOMIAL_ZERO_LVL_SQUARED = 0.49;
 

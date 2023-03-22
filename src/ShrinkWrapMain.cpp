@@ -727,12 +727,15 @@ int main()
 		constexpr float roiHalfDim = 5.0f;
 		constexpr float roiDim = 2.0f * roiHalfDim;
 
+		constexpr unsigned int nXSegments = 40;
+		constexpr unsigned int nYSegments = 40;
+
 		constexpr Geometry::PlaneSettings mSettings{
 			pmp::vec3{},
 			roiDim,
 			roiDim,
-			10,
-			10,
+			nXSegments,
+			nYSegments,
 			true,
 			true
 		};
@@ -744,17 +747,16 @@ int main()
 		pMesh.write(dataOutPath + "plane.vtk");
 		//pMesh.write(dataOutPath + "plane.obj");
 
-		constexpr double initVal = -Geometry::DEFAULT_SCALAR_GRID_INIT_VAL;
 		constexpr float cellSize = 0.1f;
-		Geometry::ScalarGrid grid(cellSize, pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} }, initVal);
-		const Geometry::ScalarGridBoolOpFunction opFnc = Geometry::SimpleUnion;
-		const Geometry::CapsuleParams cp{
-			pmp::vec3{roiHalfDim, roiHalfDim, -0.5f * roiHalfDim},
-			4.0f,
-			0.2f,
-			opFnc
-		};
-		ApplyCapsuleDistanceFieldToGrid(grid, cp);
+		const auto gridBox = pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} };
+		constexpr float columnWeight = 0.5f;
+		const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
+			{pmp::vec2{2.5f, 2.5f}, columnWeight},
+			{pmp::vec2{7.5f, 2.5f}, columnWeight},
+			{pmp::vec2{7.5f, 7.5f}, columnWeight},
+			{pmp::vec2{5.0f, 8.0f}, columnWeight},
+			{pmp::vec2{2.5f, 7.5f}, columnWeight}
+			});
 
 		ExportToVTI(dataOutPath + "CapsuleVals", grid);
 
@@ -766,27 +768,29 @@ int main()
 		const float startZHeight = sdfBox.min()[2] + 0.8f * sdfBoxSize[2];
 		const float endZHeight = sdfBox.min()[2] + 0.5f * sdfBoxSize[2];
 
-		constexpr unsigned int nXSegments = 10;
-		constexpr unsigned int nYSegments = 10;
-
-		constexpr double tau = 0.05;
+		constexpr double tau = 0.02;
 
 		const MeshTopologySettings topoSettings{
-			0.5f,
+			0.14f,
 			0.0,
 			1.0
 		};
 
+		const AdvectionDiffusionParameters adParams{
+			1.0, 1.0,
+			1.0, 1.0
+		};
+
 		SheetMembraneEvolutionSettings seSettings{
 			"SheetMembrane",
-			20,
+			80,
 			tau,
 			fieldIsoLevel,
 			startZHeight,
 			endZHeight,
 			nXSegments,
 			nYSegments,
-			{},
+			adParams,
 			topoSettings,
 			true, false,
 			dataOutPath,

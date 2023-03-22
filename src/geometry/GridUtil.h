@@ -176,6 +176,14 @@ namespace Geometry
 	[[nodiscard]] double BlendedDifference(const double& f1Val, const double& f2Val);
 
 	/**
+	 * \brief A union operator between distance functional representations: f1 v f2 = min(f1, f2).
+	 * \param f1Val     value of function 1 to be used for evaluation.
+	 * \param f2Val     value of function 2 to be used for evaluation.
+	 * \return new value.
+	 */
+	[[nodiscard]] double DistanceUnion(const double& f1Val, const double& f2Val);
+
+	/**
 	 * \brief A parameter container for the metaball generator for ScalarGrid.
 	 * \struct MetaBallParams
 	 */

@@ -148,3 +148,25 @@ void ReportInput(const SheetMembraneEvolutionSettings& evolSettings, std::ostrea
  * \return scaling factor for mesh and scalar grid.
  */
 [[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& cellSizeX, const float& cellSizeY, const float& stabilizationFactor = 1.0f);
+
+/**
+ * \brief A wrapper for the 2D position and weight of a support column
+ * \struct WeightedColumnPosition
+ */
+struct WeightedColumnPosition
+{
+	pmp::vec2 Position{}; //>! 2D position of this column
+	float Weight{ 1.0f }; //>! weight of this column
+};
+
+/**
+ * \brief Computes a scalar field representing volumetric columns placed within the bounding box.
+ * \param cellSize                      cell size of the produced field.
+ * \param box                           bounds of the produced field.
+ * \param weightedColumnPositions       weighted 2D positions of columns in the x,y-plane.
+ * \param supportZLevel                 Z-level height factor for the column positions. The produced columns will be slightly lower than this within the grid box.
+ * \return the produced scalar signed distance field.
+ */
+[[nodiscard]] Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
+	const float& cellSize, const pmp::BoundingBox& box,
+	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const float& supportZLevel = 0.5f);
