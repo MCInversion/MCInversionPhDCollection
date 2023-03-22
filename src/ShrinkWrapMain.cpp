@@ -14,6 +14,7 @@
 #include "BrainSurfaceEvolver.h"
 #include "IsosurfaceEvolver.h"
 #include "SphereTest.h"
+#include "SheetMembraneEvolver.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MarchingCubes.h"
 #include "geometry/TorusBuilder.h"
@@ -727,6 +728,7 @@ int main()
 		constexpr float roiDim = 2.0f * roiHalfDim;
 
 		constexpr Geometry::PlaneSettings mSettings{
+			pmp::vec3{},
 			roiDim,
 			roiDim,
 			10,
@@ -743,7 +745,8 @@ int main()
 		//pMesh.write(dataOutPath + "plane.obj");
 
 		constexpr double initVal = -Geometry::DEFAULT_SCALAR_GRID_INIT_VAL;
-		Geometry::ScalarGrid grid(0.1f, pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} }, initVal);
+		constexpr float cellSize = 0.1f;
+		Geometry::ScalarGrid grid(cellSize, pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} }, initVal);
 		const Geometry::ScalarGridBoolOpFunction opFnc = Geometry::SimpleUnion;
 		const Geometry::CapsuleParams cp{
 			pmp::vec3{roiHalfDim, roiHalfDim, -0.5f * roiHalfDim},
@@ -754,5 +757,54 @@ int main()
 		ApplyCapsuleDistanceFieldToGrid(grid, cp);
 
 		ExportToVTI(dataOutPath + "CapsuleVals", grid);
+
+		const auto& sdfBox = grid.Box();
+		const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+
+		const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+		const float startZHeight = sdfBox.min()[2] + 0.8f * sdfBoxSize[2];
+		const float endZHeight = sdfBox.min()[2] + 0.5f * sdfBoxSize[2];
+
+		constexpr unsigned int nXSegments = 10;
+		constexpr unsigned int nYSegments = 10;
+
+		constexpr double tau = 0.05;
+
+		const MeshTopologySettings topoSettings{
+			0.5f,
+			0.0,
+			1.0
+		};
+
+		SheetMembraneEvolutionSettings seSettings{
+			"SheetMembrane",
+			20,
+			tau,
+			fieldIsoLevel,
+			startZHeight,
+			endZHeight,
+			nXSegments,
+			nYSegments,
+			{},
+			topoSettings,
+			true, false,
+			dataOutPath,
+			MeshLaplacian::Voronoi,
+			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+			0.05f,
+			true
+		};
+		ReportInput(seSettings, std::cout);
+		SheetMembraneEvolver evolver(grid, seSettings);
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
 	}
 }

@@ -8,19 +8,22 @@
 #include "EvolverUtilsCommon.h"
 
 /**
- * \brief A wrapper for iso-surface evolution settings.
- * \struct IsoSurfaceEvolutionSettings
+ * \brief A wrapper for sheet membrane surface evolution settings.
+ * \struct SheetMembraneEvolutionSettings
  */
-struct IsoSurfaceEvolutionSettings
+struct SheetMembraneEvolutionSettings
 {
 	std::string ProcedureName{}; //>! name for the evolution procedure.
 
 	unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
 	double TimeStep{ 0.01 };     //>! time step size.
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
-	double FieldIsoLevelOffset{ 1.0 }; //! value by which the shrink-wrapped surface is offset from the target surface.
 
-	float ReSampledGridCellSize{ 1.0f }; //! cell size of the grid from which an isosurface will be generated.
+	float StartZHeight{ 0.9f }; //>! the evolving sheet plane surface will start at this z-height
+	float EndZHeight{ 0.0f }; //>! the evolving sheet plane surface will end at this z-height
+
+	unsigned int nXSegments{ 10 }; //>! the number of plane surface segments in x-direction
+	unsigned int nYSegments{ 10 }; //>! the number of plane surface segments in y-direction
 
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
@@ -42,19 +45,18 @@ struct IsoSurfaceEvolutionSettings
 };
 
 /**
- * \brief A utility for evolving iso-surfaces within a scalar field.
- * \class IsoSurfaceEvolver
+ * \brief A utility for evolving sheet membrane surfaces within a scalar field.
+ * \class SheetMembraneEvolver
  */
-class IsoSurfaceEvolver
+class SheetMembraneEvolver
 {
 public:
 	/**
 	 * \brief Constructor. Initialize with a given scalar field environment.
 	 * \param field                    pre-computed or loaded scalar field environment.
-	 * \param fieldExpansionFactor     the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	 * \param settings                 surface evolution settings.
 	 */
-	IsoSurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const IsoSurfaceEvolutionSettings& settings);
+	SheetMembraneEvolver(const Geometry::ScalarGrid& field, const SheetMembraneEvolutionSettings& settings);
 
 	/**
 	 * \brief Main functionality.
@@ -110,12 +112,14 @@ private:
 
 	// ----------------------------------------------------------------
 
-	IsoSurfaceEvolutionSettings m_EvolSettings{}; //>! settings.
+	SheetMembraneEvolutionSettings m_EvolSettings{}; //>! settings.
+
+	double m_SheetSurfaceVelocity{ 1.0 }; //>! the downward velocity (in -z direction) of the evolving sheet surface
+	float m_MeanEdgeLength{ 0.3f }; //>! mean edge length for adaptive remeshing
 
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
-	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
@@ -129,17 +133,18 @@ private:
 };
 
 /**
- * \brief Reports IsoSurfaceEvolver's input to a given stream.
- * \param evolSettings    settings for IsoSurfaceEvolver.
+ * \brief Reports SheetMembraneEvolver's input to a given stream.
+ * \param evolSettings    settings for SheetMembraneEvolver.
  * \param os              output stream.
  */
-void ReportInput(const IsoSurfaceEvolutionSettings& evolSettings, std::ostream& os);
+void ReportInput(const SheetMembraneEvolutionSettings& evolSettings, std::ostream& os);
 
 /**
- * \brief Computes scaling factor for stabilizing the finite volume method on assumed isosurface meshes with face size close to voxel size.
+ * \brief Computes scaling factor for stabilizing the finite volume method on assumed membrane surface meshes with face size close to plane cell size.
  * \param timeStep               time step size.
- * \param cellSize               size of the voxel.
+ * \param cellSizeX              size of the plane cell in x-direction
+ * \param cellSizeY              size of the plane cell in y-direction
  * \param stabilizationFactor    a multiplier for stabilizing mean co-volume area.
  * \return scaling factor for mesh and scalar grid.
  */
-[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& cellSize, const float& stabilizationFactor = 1.0f);
+[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& cellSizeX, const float& cellSizeY, const float& stabilizationFactor = 1.0f);

@@ -8,6 +8,7 @@ namespace Geometry
 
 		const float width = m_Settings.Width;
 		const float depth = m_Settings.Depth;
+		const auto orig = m_Settings.Origin;
 
 		const size_t nXSegments = m_Settings.nWidthSegments;
 		const size_t nYSegments = m_Settings.nDepthSegments;
@@ -26,11 +27,11 @@ namespace Geometry
 
 		for (unsigned int i = 0; i < nYVerts; i++)
 		{
-			const float yParam = static_cast<float>(i) / static_cast<float>(nYSegments) * depth;
+			const float yParam = orig[1] + static_cast<float>(i) / static_cast<float>(nYSegments) * depth;
 			for (unsigned int j = 0; j < nXVerts; j++)
 			{
-				const float xParam = static_cast<float>(j) / static_cast<float>(nXSegments) * width;
-				m_BaseResult->Vertices.emplace_back(pmp::vec3{ xParam, yParam, 0.0f	});
+				const float xParam = orig[0] + static_cast<float>(j) / static_cast<float>(nXSegments) * width;
+				m_BaseResult->Vertices.emplace_back(pmp::vec3{ xParam, yParam, orig[2] });
 
 				if (i > 0 && j > 0)
 				{

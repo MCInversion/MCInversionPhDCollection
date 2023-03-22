@@ -10,6 +10,7 @@ namespace Geometry
 	*/
 	struct PlaneSettings
 	{
+		pmp::vec3 Origin{}; //! reference point of this plane
 		float Width{ 1.0f }; //! dimension in the x-direction
 		float Depth{ 1.0f }; //! dimension in the y-direction
 		unsigned int nWidthSegments{ 5 }; //! number of segments in the x-direction
