@@ -765,13 +765,13 @@ int main()
 
 		const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 
-		const float startZHeight = sdfBox.min()[2] + 0.8f * sdfBoxSize[2];
+		const float startZHeight = sdfBox.min()[2] + 0.9f * sdfBoxSize[2];
 		const float endZHeight = sdfBox.min()[2] + 0.5f * sdfBoxSize[2];
 
 		constexpr double tau = 0.02;
 
 		const MeshTopologySettings topoSettings{
-			0.14f,
+			0.4f,
 			0.0,
 			1.0
 		};

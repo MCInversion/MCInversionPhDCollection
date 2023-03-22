@@ -224,7 +224,7 @@ void SheetMembraneEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	float minEdgeLength = static_cast<float>(M_SQRT2) * m_MeanEdgeLength * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	float minEdgeLength = m_MeanEdgeLength * m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	float maxEdgeLength = 4.0f * minEdgeLength;
 	float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 	//auto approxError = 2.0f * minEdgeLength;
@@ -493,7 +493,7 @@ void ReportInput(const SheetMembraneEvolutionSettings& evolSettings, std::ostrea
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 1.0f;
+constexpr float INV_SHRINK_FACTOR = 2.0f;
 
 float GetStabilizationScalingFactor(const double& timeStep, const float& cellSizeX, const float& cellSizeY, const float& stabilizationFactor)
 {
