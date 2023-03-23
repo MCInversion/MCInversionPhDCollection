@@ -768,7 +768,7 @@ int main()
 		const float startZHeight = sdfBox.min()[2] + 0.9f * sdfBoxSize[2];
 		const float endZHeight = sdfBox.min()[2] + 0.5f * sdfBoxSize[2];
 
-		constexpr double tau = 0.02;
+		constexpr double tau = 0.04;
 
 		const MeshTopologySettings topoSettings{
 			0.4f,
@@ -778,12 +778,12 @@ int main()
 
 		const AdvectionDiffusionParameters adParams{
 			1.0, 1.0,
-			1.0, 1.0
+			1.0, 0.0
 		};
 
 		SheetMembraneEvolutionSettings seSettings{
 			"SheetMembrane",
-			80,
+			50,
 			tau,
 			fieldIsoLevel,
 			startZHeight,
@@ -797,7 +797,8 @@ int main()
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
 			0.05f,
-			true
+			true,
+			false
 		};
 		ReportInput(seSettings, std::cout);
 		SheetMembraneEvolver evolver(grid, seSettings);
