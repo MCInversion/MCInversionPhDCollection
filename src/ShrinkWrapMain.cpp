@@ -789,7 +789,7 @@ int main()
 
 		const AdvectionDiffusionParameters adParams{
 			1.0, 1.0,
-			1.0, 1.0
+			1.0, 0.0
 		};
 
 		SheetMembraneEvolutionSettings seSettings{
