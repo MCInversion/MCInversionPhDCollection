@@ -529,6 +529,12 @@ Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
 	const float& cellSize, const pmp::BoundingBox& box, 
 	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const float& supportZLevel)
 {
+	if (box.is_empty())
+	{
+		std::cerr << "GetDistanceFieldWithSupportColumns: box.is_empty()!\n";
+		throw std::logic_error("GetDistanceFieldWithSupportColumns: box.is_empty()!\n");
+	}
+
 	const auto boxSize = box.max() - box.min();
 
 	// input verification

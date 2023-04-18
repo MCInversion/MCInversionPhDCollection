@@ -751,12 +751,23 @@ int main()
 		const auto gridBox = pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} };
 		constexpr float columnWeight = 0.5f;
 		const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
-			{pmp::vec2{2.5f, 2.5f}, columnWeight},
-			{pmp::vec2{7.5f, 2.5f}, columnWeight},
-			{pmp::vec2{7.5f, 7.5f}, columnWeight},
-			{pmp::vec2{5.0f, 8.0f}, columnWeight},
-			{pmp::vec2{2.5f, 7.5f}, columnWeight}
+			{pmp::vec2{2.5f, 2.5f}, 0.5f * columnWeight},
+			{pmp::vec2{7.5f, 2.5f}, 0.5f * columnWeight},
+			{pmp::vec2{7.5f, 7.5f}, 0.5f * columnWeight},
+			{pmp::vec2{5.0f, 8.0f}, 0.5f * columnWeight},
+			{pmp::vec2{2.5f, 7.5f}, 0.5f * columnWeight}
 			});
+		//const auto gridBox = pmp::BoundingBox{ pmp::vec3{-5.0f, -5.0f, -roiHalfDim}, pmp::vec3{16.1f, 15.0f, roiHalfDim} };
+		//constexpr float columnWeight = 0.5f;
+		//const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
+		//	{pmp::vec2{4.0f, 6.0f}, 0.5f * columnWeight},
+		//	{pmp::vec2{0.0f, 0.0f}, 0.5f * columnWeight},
+		//	{pmp::vec2{5.0f, 0.0f}, 0.5f * columnWeight},
+		//	{pmp::vec2{11.1f, 0.1f}, 0.5f * columnWeight},
+		//	{pmp::vec2{9.0f, 2.0f}, 0.5f * columnWeight},
+		//	{pmp::vec2{7.0f, 2.0f}, 0.5f * columnWeight},
+		//	{pmp::vec2{6.0f, 10.0f}, 0.5f * columnWeight}
+		//	});
 
 		ExportToVTI(dataOutPath + "CapsuleVals", grid);
 
@@ -771,7 +782,7 @@ int main()
 		constexpr double tau = 0.02;
 
 		const MeshTopologySettings topoSettings{
-			0.4f,
+			0.45f,
 			0.0,
 			1.0
 		};
@@ -783,7 +794,7 @@ int main()
 
 		SheetMembraneEvolutionSettings seSettings{
 			"SheetMembrane",
-			80,
+			50,
 			tau,
 			fieldIsoLevel,
 			startZHeight,
@@ -797,6 +808,7 @@ int main()
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
 			0.05f,
+			true,
 			true
 		};
 		ReportInput(seSettings, std::cout);
