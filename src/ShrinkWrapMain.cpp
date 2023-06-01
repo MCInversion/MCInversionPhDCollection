@@ -17,6 +17,7 @@
 #include "SheetMembraneEvolver.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MarchingCubes.h"
+#include "geometry/MeshAnalysis.h"
 #include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
 #include "geometry/PlaneBuilder.h"
@@ -37,7 +38,7 @@ constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
 constexpr bool performIsosurfaceEvolverTests = false;
-constexpr bool performSheetEvolverTest = true;
+constexpr bool performSheetEvolverTest = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
@@ -47,6 +48,7 @@ constexpr bool performSubdivisionTest4 = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
+constexpr bool performImportedObjMetricsEval = true;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -84,8 +86,6 @@ int main()
 		{
 			pmp::SurfaceMesh mesh;
 			mesh.read(dataDirPath + name + ".obj");
-
-			std::cout << "I break here!\n";
 
 			const auto meshBBox = mesh.bounds();
 			const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
@@ -821,6 +821,37 @@ int main()
 		catch (...)
 		{
 			std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+	}
+
+	if (performImportedObjMetricsEval)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"ArmadilloSWBlender_NearestSurfPt",
+			"ArmadilloSWBlender_ProjectNeg"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			//try
+			//{
+				std::cout << "MetricsEval: " << meshName << "...\n";
+				pmp::SurfaceMesh mesh;
+				mesh.read(dataDirPath + meshName + ".obj");
+
+				if (!Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(mesh))
+				{
+					std::cout << "Error!\n";
+					continue;
+				}
+				
+				mesh.write(dataOutPath + meshName + ".vtk");
+			//}
+			//catch(...)
+			//{
+			//	std::cerr << "> > > > > > MetricsEval subroutine has thrown an exception! Continue... < < < < < \n";
+			//}
+
 		}
 	}
 }

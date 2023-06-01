@@ -97,7 +97,8 @@ namespace Geometry
 		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
 		const float l0 = pmp::norm(e0);
 		const float l1 = pmp::norm(e1);
-		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
+		const float lNorm = pmp::norm(e2);
+		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON || lNorm < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const auto xVector = pmp::normalize(e0);
@@ -169,7 +170,8 @@ namespace Geometry
 		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
 		const float l0 = pmp::norm(e0);
 		const float l1 = pmp::norm(e1);
-		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
+		const float lNorm = pmp::norm(e2);
+		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON || lNorm < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const auto xVector = pmp::normalize(e0);
@@ -255,6 +257,8 @@ namespace Geometry
 
 	using FaceMetricFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
 
+	constexpr float METRIC_MAX_VAL = 1e+12;
+
 	/**
 	 * \brief Computes interpolated triangle metric for each mesh vertex & stores it as vertex property.
 	 * \param mesh         input mesh to be analyzed.
@@ -277,6 +281,9 @@ namespace Geometry
 				const auto val = metricFunc(mesh, f);
 				if (val < 0.0f)
 					return false; // Error, invalid triangle
+
+				if (std::fabsf(val) > METRIC_MAX_VAL)
+					continue; // skipping triangle
 				mean += val;
 			}
 			const auto nAdjacentFaces = std::distance(mesh.faces(v).begin(), mesh.faces(v).end());

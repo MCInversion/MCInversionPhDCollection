@@ -957,6 +957,10 @@ Mat4<Scalar> inverse(const Mat4<Scalar>& m)
     Vector<Scalar, 4> Col0(m(0, 0), m(0, 1), m(0, 2), m(0, 3));
 
     Scalar Determinant = dot(Col0, Row0);
+    //if (std::fabsf(Determinant) < 1e-10f)
+    //{
+    //    throw SolverException("4x4 matrix not invertible");
+    //}
 
     Inverse /= Determinant;
 
@@ -977,7 +981,7 @@ template <typename Scalar>
 Mat3<Scalar> inverse(const Mat3<Scalar>& m)
 {
     const Scalar det = determinant(m);
-    if (det < 1.0e-10 || std::isnan(det))
+    if (std::fabsf(det) < 1.0e-10 || std::isnan(det))
     {
         throw SolverException("3x3 matrix not invertible");
     }
