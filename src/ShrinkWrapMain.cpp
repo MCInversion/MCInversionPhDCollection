@@ -37,13 +37,14 @@ constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
 constexpr bool performIsosurfaceEvolverTests = false;
-constexpr bool performSheetEvolverTest = true;
+constexpr bool performSheetEvolverTest = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
 constexpr bool performSubdivisionTest4 = false;
+constexpr bool performSubdivTestsBoundary = true;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
@@ -59,6 +60,63 @@ constexpr bool performMetaballTest = false;
 		result++;
 	}
 	return result;
+}
+
+[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel)
+{
+	const auto nBdEdges0 = CountBoundaryEdges(mesh);
+	const size_t sMax = maxSubdivLevel;
+
+	if (nBdEdges0 == 0)
+	{
+		// mesh is watertight
+		const auto nEdges0 = mesh.n_edges();
+		const auto nVerts0 = mesh.n_vertices();
+
+		const auto edgeCountEstimate = [&nEdges0](const size_t& s) { return (static_cast<size_t>(pow(4, s)) * nEdges0); };
+		const auto vertCountEstimate = [&nEdges0, &nVerts0](const size_t& s) { return ((nEdges0 * static_cast<size_t>(pow(4, s) - 1) + 3 * nVerts0) / 3); };
+
+		std::vector<size_t> edgeCounts(sMax);
+		std::vector<size_t> vertCounts(sMax);
+
+		for (size_t s = 0; s < sMax; s++)
+		{
+			edgeCounts[s] = edgeCountEstimate(s);
+			vertCounts[s] = vertCountEstimate(s);
+		}
+
+		return { edgeCounts, vertCounts };
+	}
+
+	// mesh is not watertight
+	const auto nEdges0 = mesh.n_edges();
+	const auto nVerts0 = mesh.n_vertices();
+
+	const auto nIntEdges0 = nEdges0 - nBdEdges0;
+
+	const auto intEdgeCountEstimate = [&nIntEdges0, &nBdEdges0](const size_t& s) -> size_t
+	{
+		return (pow(2, s - 1)) * ((pow(2, s) - 1) * nBdEdges0 + nIntEdges0 * pow(2, s + 1));
+	};
+	const auto bdEdgeCountEstimate = [&nBdEdges0](const size_t& s) -> size_t
+	{
+		return (pow(2, s)) * nBdEdges0;
+	};
+	const auto vertCountEstimate = [&nIntEdges0, &nBdEdges0, &nVerts0](const size_t& s) -> size_t
+	{
+		return nBdEdges0 * (pow(4, s) - 4 + 3 * pow(2, s)) / 6 + nIntEdges0 * (pow(4, s) - 1) / 3 + nVerts0;
+	};
+
+	std::vector<size_t> edgeCounts(sMax);
+	std::vector<size_t> vertCounts(sMax);
+
+	for (size_t s = 0; s < sMax; s++)
+	{
+		edgeCounts[s] = intEdgeCountEstimate(s) + bdEdgeCountEstimate(s);
+		vertCounts[s] = vertCountEstimate(s);
+	}
+
+	return { edgeCounts, vertCounts };
 }
 
 int main()
@@ -631,6 +689,48 @@ int main()
 		subdiv.loop();
 
 		mesh.write(dataOutPath + "bunnySubdiv.vtk");
+	}
+
+	if (performSubdivTestsBoundary)
+	{
+		std::cout << "performSubdivTestsBoundary...\n";
+		Geometry::IcoSphereBuilder ico({ 1 });
+		ico.BuildBaseData();
+		ico.BuildPMPSurfaceMesh();
+		auto icoMesh = ico.GetPMPSurfaceMeshResult();
+
+		constexpr bool deleteSomeFaces = true;
+
+		if (deleteSomeFaces)
+		{
+			std::vector<unsigned int> facesToDeleteIds{
+				0, 1, 3, 10, 11
+			};
+			for (const auto i : facesToDeleteIds)
+				icoMesh.delete_face(pmp::Face(i));
+			icoMesh.garbage_collection();
+		}
+
+		icoMesh.write(dataOutPath + "icoMeshDeleteFaces.obj");
+
+		constexpr size_t maxSubdivLevel = 6;
+
+		// estimate edge & vertex counts
+		const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(icoMesh, maxSubdivLevel);
+
+		pmp::Subdivision subdiv(icoMesh);
+
+		for (size_t s = 1; s < maxSubdivLevel; s++)
+		{
+			subdiv.loop();
+			const auto nEdges = icoMesh.n_edges();
+			const auto nVerts = icoMesh.n_vertices();
+			std::cout << "========= Edge Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nEdges << ", Theoretical: " << edgeCounts[s] << ".\n";
+			std::cout << "========= Vertex Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nVerts << ", Theoretical: " << vertCounts[s] << ".\n";
+			std::cout << "------------------------------------------------\n";
+		}		
 	}
 
 	if (performRemeshingTests)
