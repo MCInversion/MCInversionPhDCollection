@@ -29,5 +29,13 @@ namespace Geometry
 	 * \return pmp::SurfaceMesh result.
 	 */
 	[[nodiscard]] pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MC_Mesh& mcMesh);
+
+	/**
+	 * \brief For testing out the BaseMeshGeometryData by exporting it to a Wavefront OBJ file.
+	 * \param geomData       input geom data.
+	 * \param absFileName    absolute file path for the created file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportBaseMeshGeometryDataToOBJ(const BaseMeshGeometryData& geomData, const std::string& absFileName);
 	
 } // namespace Geometry

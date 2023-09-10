@@ -20,6 +20,7 @@
 #include "geometry/MeshAnalysis.h"
 #include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
+#include "geometry/MultiTorusMeshBuilder.h"
 #include "geometry/PlaneBuilder.h"
 #include "pmp/algorithms/Decimation.h"
 #include "pmp/algorithms/Normals.h"
@@ -45,7 +46,10 @@ constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
 constexpr bool performSubdivisionTest4 = false;
-constexpr bool performSubdivTestsBoundary = true;
+constexpr bool performSubdivTestsBoundary = false;
+constexpr bool performSubdivTestsMultiTorus = false;
+constexpr bool performSubdivPreallocationTests = false;
+constexpr bool performNewIcosphereTests = true;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
@@ -64,7 +68,7 @@ constexpr bool performImportedObjMetricsEval = true;
 	return result;
 }
 
-[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel)
+[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel, const bool& evalOutput = false)
 {
 	const auto nBdEdges0 = CountBoundaryEdges(mesh);
 	const size_t sMax = maxSubdivLevel;
@@ -74,6 +78,15 @@ constexpr bool performImportedObjMetricsEval = true;
 		// mesh is watertight
 		const auto nEdges0 = mesh.n_edges();
 		const auto nVerts0 = mesh.n_vertices();
+
+		if (evalOutput)
+		{
+			std::cout << "............................................................\n";
+			std::cout << "GetEdgeVertCountsTheoreticalEstimate:\n";
+			std::cout << "nEdges0 = " << nEdges0 << "\n";
+			std::cout << "nVerts0 = " << nVerts0 << "\n";
+			std::cout << "............................................................\n";
+		}
 
 		const auto edgeCountEstimate = [&nEdges0](const size_t& s) { return (static_cast<size_t>(pow(4, s)) * nEdges0); };
 		const auto vertCountEstimate = [&nEdges0, &nVerts0](const size_t& s) { return ((nEdges0 * static_cast<size_t>(pow(4, s) - 1) + 3 * nVerts0) / 3); };
@@ -95,6 +108,15 @@ constexpr bool performImportedObjMetricsEval = true;
 	const auto nVerts0 = mesh.n_vertices();
 
 	const auto nIntEdges0 = nEdges0 - nBdEdges0;
+
+	if (evalOutput)
+	{
+		std::cout << "............................................................\n";
+		std::cout << "GetEdgeVertCountsTheoreticalEstimate:\n";
+		std::cout << "nIntEdges0 = " << nIntEdges0 << ", nBdEdges = " << nBdEdges0 << "\n";
+		std::cout << "nVerts0 = " << nVerts0 << "\n";
+		std::cout << "............................................................\n";
+	}
 
 	const auto intEdgeCountEstimate = [&nIntEdges0, &nBdEdges0](const size_t& s) -> size_t
 	{
@@ -711,12 +733,12 @@ int main()
 			icoMesh.garbage_collection();
 		}
 
-		icoMesh.write(dataOutPath + "icoMeshDeleteFaces.obj");
+		icoMesh.write(dataOutPath + "icoMeshDeleteFaces0.obj");
 
 		constexpr size_t maxSubdivLevel = 6;
 
 		// estimate edge & vertex counts
-		const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(icoMesh, maxSubdivLevel);
+		const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(icoMesh, maxSubdivLevel, true);
 
 		pmp::Subdivision subdiv(icoMesh);
 
@@ -730,7 +752,134 @@ int main()
 			std::cout << "========= Vertex Count (" << s << "): ==========\n";
 			std::cout << "Actual: " << nVerts << ", Theoretical: " << vertCounts[s] << ".\n";
 			std::cout << "------------------------------------------------\n";
+
+			icoMesh.write(dataOutPath + "icoMeshDeleteFaces" + std::to_string(s) + ".obj");
 		}		
+	}
+
+	if (performSubdivTestsMultiTorus)
+	{
+		std::cout << "performSubdivTestsTorus...\n";
+
+		for (size_t g = 1; g < 6; g++)
+		{
+			std::cout << "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n";
+			std::cout << "Genus : " << g << "\n";
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + std::to_string(g) + "Torus_Simple.obj");
+			mesh.write(dataOutPath + std::to_string(g) + "Torus_Subdiv0.vtk");
+
+			constexpr size_t maxSubdivLevel = 6;
+
+			// estimate edge & vertex counts
+			const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(mesh, maxSubdivLevel, true);
+
+			pmp::Subdivision subdiv(mesh);
+
+			for (size_t s = 1; s < maxSubdivLevel; s++)
+			{
+				subdiv.loop();
+				const auto nEdges = mesh.n_edges();
+				const auto nVerts = mesh.n_vertices();
+				std::cout << "========= Edge Count (" << s << "): ==========\n";
+				std::cout << "Actual: " << nEdges << ", Theoretical: " << edgeCounts[s] << ".\n";
+				std::cout << "========= Vertex Count (" << s << "): ==========\n";
+				std::cout << "Actual: " << nVerts << ", Theoretical: " << vertCounts[s] << ".\n";
+				std::cout << "------------------------------------------------\n";
+
+				mesh.write(dataOutPath + std::to_string(g) + "Torus_Subdiv" + std::to_string(s) + ".vtk");
+			}
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+		}
+
+	}
+
+	if (performSubdivPreallocationTests)
+	{
+		std::cout << " ... Preallocation Loop Subdivision Tests ..... \n";
+
+		const std::vector<std::string> subdivMeshNames{
+			/* 1 */ "armadillo_Simple",
+			/* 2 */ "blub_Simple",
+			/* 3 */ "bunny_Simple",
+			/* 4 */ "maxPlanck_Simple",
+			/* 5 */ "3holes",
+			/* 6 */ "rockerArm_Simple"
+		};
+
+		constexpr size_t maxSubdivLevel = 6;
+
+		for (const auto& meshName : subdivMeshNames)
+		{
+			std::cout << "meshName: " << meshName << "\n";
+			// Load mesh
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + meshName + ".obj");
+
+			double simpleTiming = 0.0;
+			double preallocTiming = 0.0;
+			constexpr size_t nTimings = 10;
+
+			for (size_t i = 0; i < nTimings; i++)
+			{
+				std::cout << "timing " << i << "\n";
+				// =================================================
+				// ......... Plain Subdivision .....................
+
+				auto meshForSubdiv0 = mesh;
+
+				const auto startSimpleSubdiv = std::chrono::high_resolution_clock::now();
+				pmp::Subdivision subdivSimple(meshForSubdiv0);
+
+				for (size_t s = 1; s < maxSubdivLevel; s++)
+				{
+					subdivSimple.loop();
+				}
+				const auto endSimpleSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffSimpleSubdiv = endSimpleSubdiv - startSimpleSubdiv;
+				simpleTiming += timeDiffSimpleSubdiv.count();
+
+				// export result for verification
+				//meshForSubdiv0.write(dataOutPath + meshName + "_simpleSubdiv" + std::to_string(maxSubdivLevel - 1) + "timesResult.vtk");
+
+				// =================================================
+				// ......... Preallocated Subdivision .....................
+
+				auto meshForSubdiv1 = mesh;
+
+				const auto startPreallocSubdiv = std::chrono::high_resolution_clock::now();
+				pmp::Subdivision subdivPrealloc(meshForSubdiv1);
+				subdivPrealloc.loop_prealloc(maxSubdivLevel - 1);
+				const auto endPreallocSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffPreallocSubdiv = endPreallocSubdiv - startPreallocSubdiv;
+				preallocTiming += timeDiffPreallocSubdiv.count();
+
+				// export result for verification
+				//meshForSubdiv1.write(dataOutPath + meshName + "_preallocSubdiv" + std::to_string(maxSubdivLevel - 1) + "timesResult.vtk");
+			}
+
+			simpleTiming /= nTimings;
+			preallocTiming /= nTimings;
+
+			// Report
+			std::cout << "Simple Subdiv: " << simpleTiming << " s, Prealloc Subdiv: " << preallocTiming << " s\n";
+		}
+	}
+
+	if (performNewIcosphereTests)
+	{
+		std::cout << "performNewIcosphereTests...\n";
+		Geometry::IcoSphereBuilder ico({ 2, 1.0f, true, false });
+		ico.BuildBaseData();
+
+		// test out BaseMeshGeometryData.
+		const auto bSuccess = ExportBaseMeshGeometryDataToOBJ(ico.GetBaseResult(), dataOutPath + "icoPreallocatedBase.obj");
+		assert(bSuccess);
+
+		ico.BuildPMPSurfaceMesh();
+		auto icoMesh = ico.GetPMPSurfaceMeshResult();
+
+		icoMesh.write(dataOutPath + "icoPreallocated.obj");
 	}
 
 	if (performRemeshingTests)

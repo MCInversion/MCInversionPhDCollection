@@ -1,6 +1,7 @@
 #include "GeometryConversionUtils.h"
 
 #include <set>
+#include <fstream>
 
 namespace Geometry
 {
@@ -98,6 +99,46 @@ namespace Geometry
 		}
 
 		return result;
+	}
+
+	bool ExportBaseMeshGeometryDataToOBJ(const BaseMeshGeometryData& geomData, const std::string& absFileName)
+	{
+		std::ofstream file(absFileName);
+		if (!file.is_open())
+		{
+			std::cerr << "Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Write vertices
+		for (const auto& vertex : geomData.Vertices)
+		{
+			file << "v " << vertex[0] << ' ' << vertex[1] << ' ' << vertex[2] << '\n';
+		}
+
+		// Optionally, write vertex normals
+		if (!geomData.VertexNormals.empty())
+		{
+			for (const auto& normal : geomData.VertexNormals)
+			{
+				file << "vn " << normal[0] << ' ' << normal[1] << ' ' << normal[2] << '\n';
+			}
+		}
+
+		// Write faces
+		for (const auto& indices : geomData.PolyIndices)
+		{
+			file << "f";
+			for (unsigned int index : indices)
+			{
+				// OBJ indices start from 1, not 0
+				file << ' ' << (index + 1);
+			}
+			file << '\n';
+		}
+
+		file.close();
+		return true;
 	}
 
 } // namespace Geometry

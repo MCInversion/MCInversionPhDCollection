@@ -2,10 +2,11 @@
 
 #include <map>
 
-namespace
+namespace IcoSphere
 {
 	using VertexList = std::vector<pmp::vec3>;
-	using TriangleList = std::vector<std::vector<unsigned int>>;
+	using Triangle = std::vector<unsigned int>;
+	using TriangleList = std::vector<Triangle>;
 
 	/// \brief golden ratio.
 	const float phi = (1.0f + sqrt(5.0f)) / 2.0f;
@@ -31,11 +32,12 @@ namespace
 		{4, 9, 5},     {2, 4, 11},   {6, 2, 10},   {8, 6, 7},     {9, 8, 1}
 	};
 	
-} // namespace
+} // namespace IcoSphere
 
 namespace Geometry
 {
 	using Lookup = std::map<std::pair<unsigned int, unsigned int>, unsigned int>;
+	using LookupMulti = std::map<std::pair<unsigned int, unsigned int>, std::vector<unsigned int>>;
 
 	/**
 	 * \brief Inserts a midpoint back-projected onto unit sphere and logs it into the lookup table.
@@ -45,7 +47,7 @@ namespace Geometry
 	 * \param endPtId       index of edge end point.
 	 * \return index of newly inserted back-projected midpoint.
 	 */
-	[[nodiscard]] unsigned int InsertMidpoint(Lookup& lookup, VertexList& vertices, 
+	[[nodiscard]] unsigned int InsertMidpoint(Lookup& lookup, IcoSphere::VertexList& vertices,
 		const unsigned int& startPtId, const unsigned int& endPtId)
 	{
 		Lookup::key_type key(startPtId, endPtId);
@@ -73,10 +75,10 @@ namespace Geometry
 	 * \param triangles     triangle vertex indices before subdivision.
 	 * \return triangle vertex indices after subdivision.
 	 */
-	[[nodiscard]] TriangleList Subdivide(VertexList& vertices, const TriangleList& triangles)
+	[[nodiscard]] IcoSphere::TriangleList Subdivide(IcoSphere::VertexList& vertices, const IcoSphere::TriangleList& triangles)
 	{
 		Lookup lookup;
-		TriangleList result;
+		IcoSphere::TriangleList result;
 		result.reserve(4 * triangles.size());
 
 		for (const auto& triVertId : triangles)
@@ -96,14 +98,239 @@ namespace Geometry
 		return result;
 	}
 
+	//
+	// ===============================================================================
+	//
+
+	std::vector<unsigned int> CalculateEdgePoints(
+		LookupMulti& lookup,
+		IcoSphere::VertexList& vertices,
+		unsigned int startPtId,
+		unsigned int endPtId,
+		const size_t& nInteriorEdgePts)
+	{
+		std::vector<unsigned int> ids;
+		LookupMulti::key_type key(startPtId, endPtId);
+
+		if (key.first > key.second)
+		{
+			std::swap(key.first, key.second);
+		}
+
+		const auto it = lookup.find(key);
+		if (it != lookup.end())
+		{
+			// Already calculated for this edge, just return the precomputed IDs
+			// but reverse the order, because of opposite half-edge orientation
+			ids = it->second;
+			std::reverse(ids.begin(), ids.end());
+			return ids;
+		}
+
+		ids.push_back(startPtId);
+		const pmp::vec3 start = vertices[startPtId];
+		const pmp::vec3 end = vertices[endPtId];
+
+		const auto nTotalEdgeSegments = nInteriorEdgePts + 1;
+		for (size_t i = 1; i <= nInteriorEdgePts; ++i)
+		{
+			const auto t = static_cast<float>(i) / static_cast<float>(nTotalEdgeSegments);
+			pmp::vec3 newPoint = normalize(start + t * (end - start));
+
+			ids.push_back(static_cast<unsigned int>(vertices.size()));
+			vertices.push_back(newPoint);
+		}
+		ids.push_back(endPtId);
+
+		// Save the calculated ids in the lookup map
+		lookup[key] = ids;
+
+		return ids;
+	}
+
+	std::vector<std::vector<unsigned int>> CalculateInteriorPoints(
+		IcoSphere::VertexList& vertices,
+		const std::vector<std::vector<unsigned int>>& edgePoints,
+		const size_t& nInteriorPts)
+	{
+		if (nInteriorPts == 0)
+		{
+			return {};
+		}
+		const auto nMaxPtsInRow = static_cast<size_t>(sqrt(1 + 8 * nInteriorPts) - 1) / 2;
+		std::vector<std::vector<unsigned int>> interiorPoints;
+		interiorPoints.resize(nMaxPtsInRow); // Initialize each row
+
+		size_t pointCount = 0;
+
+		for (size_t i = 0; i < nMaxPtsInRow; ++i)
+		{
+			interiorPoints[i].resize(nMaxPtsInRow - i); // Initialize each column for each row
+			for (size_t j = 0; j < nMaxPtsInRow - i; ++j)
+			{
+				const pmp::vec3 p1 = vertices[edgePoints[0][i]];
+				const pmp::vec3 p2 = vertices[edgePoints[1][j]];
+				const pmp::vec3 p3 = vertices[edgePoints[2][nMaxPtsInRow - i - j]];
+
+				const pmp::vec3 newPoint = normalize((p1 + p2 + p3) / 3.0f);
+
+				interiorPoints[i][j] = static_cast<unsigned int>(vertices.size());
+				vertices.push_back(newPoint);
+
+				++pointCount;
+
+				if (pointCount >= nInteriorPts)
+					return interiorPoints;
+			}
+		}
+
+		return interiorPoints;
+	}
+
+	IcoSphere::TriangleList GenerateTriangles(
+		const std::vector<std::vector<unsigned int>>& edgePoints,
+		const std::vector<std::vector<unsigned int>>& interiorPoints,
+		const size_t& nTrisPerEdge)
+	{
+		if (edgePoints.size() < 3)
+		{
+			throw std::logic_error("GenerateTriangles: No points to generate triangles from!\n");
+		}
+
+		if (edgePoints[0].size() < 3 || edgePoints[1].size() < 3 || edgePoints[2].size() < 3)
+		{
+			throw std::logic_error("GenerateTriangles: Incorrect number of points to generate triangles from!\n");
+		}
+
+		IcoSphere::TriangleList newTriangles;
+
+		// Special case: if there are no interior points (s = 1), generate four triangles
+		if (interiorPoints.empty())
+		{
+			const IcoSphere::Triangle tri1 = { edgePoints[0][0], edgePoints[0][1], edgePoints[2][1] };
+			const IcoSphere::Triangle tri2 = { edgePoints[0][1], edgePoints[0][2], edgePoints[1][1] };
+			const IcoSphere::Triangle tri3 = { edgePoints[2][1], edgePoints[1][1], edgePoints[1][2] };
+			const IcoSphere::Triangle tri4 = { edgePoints[0][1], edgePoints[1][1], edgePoints[2][1] };
+
+			newTriangles.push_back(tri1);
+			newTriangles.push_back(tri2);
+			newTriangles.push_back(tri3);
+			newTriangles.push_back(tri4);
+
+			return newTriangles;
+		}
+
+		// First row of triangles attached to the first edge
+		for (size_t i = 0; i < nTrisPerEdge; ++i)
+		{
+			IcoSphere::Triangle tri = { edgePoints[0][i], edgePoints[0][i + 1], edgePoints[1][nTrisPerEdge - 1 - i] };
+			newTriangles.push_back(tri);
+		}
+
+		// Generate triangles for the interior rows
+		size_t rowStartIdx = 0; // Keeps track of where each row starts in the edgePoints
+		for (size_t i = 1; i <= nTrisPerEdge; ++i)
+		{
+			for (size_t j = 0; j < nTrisPerEdge - i; ++j)
+			{
+				// Determine the vertices for this set of triangles
+				const unsigned int v1 = edgePoints[0][rowStartIdx + j];
+				const unsigned int v2 = edgePoints[0][rowStartIdx + j + 1];
+				const unsigned int v3 = edgePoints[1][rowStartIdx + j + 1];
+				const unsigned int v4 = edgePoints[1][rowStartIdx + j];
+				const unsigned int v5 = interiorPoints[i - 1][j];
+
+				// Generate the four triangles using these vertices
+				IcoSphere::Triangle tri1 = { v1, v2, v5 };
+				IcoSphere::Triangle tri2 = { v2, v3, v5 };
+				IcoSphere::Triangle tri3 = { v3, v4, v5 };
+				IcoSphere::Triangle tri4 = { v4, v1, v5 };
+
+				// Add the new triangles to the list
+				newTriangles.push_back(tri1);
+				newTriangles.push_back(tri2);
+				newTriangles.push_back(tri3);
+				newTriangles.push_back(tri4);
+			}
+			// Update the row start index for edgePoints
+			rowStartIdx += nTrisPerEdge - i + 1;
+		}
+
+		return newTriangles;
+	}
+
+	IcoSphere::TriangleList SubdivideSingleTriangle(LookupMulti& lookup, IcoSphere::VertexList& vertices, const IcoSphere::Triangle& triangle, const unsigned int& subdivLevel)
+	{
+		const auto nInteriorEdgePts = (static_cast<size_t>(pow(2, subdivLevel)) - 1);
+		std::vector<std::vector<unsigned int>> edgePoints(3);
+		for (size_t e = 0; e < 3; ++e)
+		{
+			edgePoints[e] = CalculateEdgePoints(lookup, vertices, triangle[e], triangle[(e + 1) % 3], nInteriorEdgePts);
+		}
+
+		const auto nInteriorTrianglePts = static_cast<size_t>(pow(4, subdivLevel) - 3 * pow(2, subdivLevel) + 2) / 2;
+		const auto interiorPoints = CalculateInteriorPoints(vertices, edgePoints, nInteriorTrianglePts);
+
+		IcoSphere::TriangleList newTriangles = GenerateTriangles(edgePoints, interiorPoints, nInteriorEdgePts + 1);
+
+		return newTriangles;
+	}
+
+	[[nodiscard]] std::pair<size_t, size_t> IcoSpherePreallocationCapacities(const size_t& subdivLvl, const size_t& nFaces0, const size_t& nVerts0)
+	{
+		const size_t nEdges0 = nVerts0 + nFaces0 - 2; // from Euler characteristic
+		const size_t nVerts = ((nEdges0 * static_cast<size_t>(pow(4, subdivLvl) - 1) + 3 * nVerts0) / 3);
+		const size_t nFaces = (static_cast<size_t>(pow(4, subdivLvl)) * nFaces0);
+
+		return { nVerts, nFaces };
+	}
+
+	//
+	// ===========================================================
+	//
+
 	void IcoSphereBuilder::BuildBaseData()
 	{
-		VertexList vertices = ICOSAHEDRON_BASE_VERTICES;
-		TriangleList triangles = ICOSAHEDRON_BASE_VERTEX_INDICES;
+		IcoSphere::VertexList vertices = IcoSphere::ICOSAHEDRON_BASE_VERTICES;
+		IcoSphere::TriangleList triangles = IcoSphere::ICOSAHEDRON_BASE_VERTEX_INDICES;
 
-		for (unsigned int i = 0; i < m_SubdivisionLevel; i++) 
+		if (m_SubdivisionLevel > 0)
 		{
-			triangles = Subdivide(vertices, triangles);
+			// base icosahedron triangles need to be subdivided.
+			if (m_UseRecursiveStrategy)
+			{
+				// old "recursive" strategy
+				for (unsigned int i = 0; i < m_SubdivisionLevel; i++) 
+				{
+					triangles = Subdivide(vertices, triangles);
+				}			
+			}
+			else
+			{
+				// new "predictive" strategy:
+				// generates new points uniformly across each triangle's spherical projection
+				IcoSphere::TriangleList newTriangles{};
+				IcoSphere::VertexList newVertices{};
+				// reserve memory
+				const auto [vertexCapacity, faceCapacity] = IcoSpherePreallocationCapacities(m_SubdivisionLevel, triangles.size(), vertices.size());
+				newVertices.reserve(vertexCapacity);
+				newTriangles.reserve(faceCapacity);
+
+				LookupMulti lookup;
+				newVertices = vertices;
+
+				for (const auto& triangle : triangles)
+				{
+					// Subdivide this triangle
+					IcoSphere::TriangleList subdividedTriangles = SubdivideSingleTriangle(lookup, newVertices, triangle, m_SubdivisionLevel);
+
+					// Append these to the list of newTriangles
+					newTriangles.insert(newTriangles.end(), subdividedTriangles.begin(), subdividedTriangles.end());
+				}
+
+				vertices = newVertices;
+				triangles = newTriangles;
+			}			
 		}
 
 		m_BaseResult = std::make_unique<BaseMeshGeometryData>();

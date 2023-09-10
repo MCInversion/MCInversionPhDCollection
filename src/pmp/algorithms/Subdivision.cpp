@@ -4,6 +4,57 @@
 #include "pmp/algorithms/Subdivision.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 
+namespace
+{
+    [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
+    {
+        size_t result = 0;
+        for (const auto e : mesh.edges())
+        {
+            if (!mesh.is_boundary(e))
+                continue;
+
+            result++;
+        }
+        return result;
+    }
+
+    [[nodiscard]] std::tuple<size_t, size_t, size_t> EstimateMeshCountsForLoopSubdivision(const pmp::SurfaceMesh& mesh, const size_t& subdivLevel)
+    {
+        const auto& s = subdivLevel;
+
+        const auto nBdEdges0 = CountBoundaryEdges(mesh);
+
+        if (nBdEdges0 == 0)
+        {
+            // mesh is watertight
+            const auto nEdges0 = mesh.n_edges();
+            const auto nVerts0 = mesh.n_vertices();
+            const auto nFaces0 = mesh.n_faces();
+
+            const size_t nEdges = (static_cast<size_t>(pow(4, s)) * nEdges0);
+            const size_t nVerts = ((nEdges0 * static_cast<size_t>(pow(4, s) - 1) + 3 * nVerts0) / 3);
+            const size_t nFaces = (static_cast<size_t>(pow(4, s)) * nFaces0);
+
+            return { nEdges, nVerts, nFaces };
+        }
+
+        const auto nEdges0 = mesh.n_edges();
+        const auto nVerts0 = mesh.n_vertices();
+        const auto nFaces0 = mesh.n_faces();
+
+        const auto nIntEdges0 = nEdges0 - nBdEdges0;
+
+        const size_t nIntEdges = (pow(2, s - 1)) * ((pow(2, s) - 1) * nBdEdges0 + nIntEdges0 * pow(2, s + 1));
+        const size_t nBdEdges = (pow(2, s)) * nBdEdges0;
+        const size_t nVerts = nBdEdges0 * (pow(4, s) - 4 + 3 * pow(2, s)) / 6 + nIntEdges0 * (pow(4, s) - 1) / 3 + nVerts0;
+        const size_t nFaces = (static_cast<size_t>(pow(4, s)) * nFaces0);
+
+        return { nIntEdges + nBdEdges, nVerts, nFaces };
+    }
+	
+} // anonymous namespace
+
 namespace pmp {
 
 Subdivision::Subdivision(SurfaceMesh& mesh) : mesh_(mesh)
@@ -340,6 +391,167 @@ void Subdivision::loop()
     // clean-up properties
     mesh_.remove_vertex_property(vpoint);
     mesh_.remove_edge_property(epoint);
+}
+
+void Subdivision::loop_prealloc(const size_t& steps)
+{
+    if (!mesh_.is_triangle_mesh())
+    {
+        auto what = "Subdivision: Not a triangle mesh.";
+        throw InvalidInputException(what);
+    }
+
+    // return { nEdges, nVerts, nFaces };
+    const auto [ne_final, nv_final, nf_final] = EstimateMeshCountsForLoopSubdivision(mesh_, steps);
+    mesh_.reserve(nv_final, ne_final, nf_final);
+
+    for (size_t s = 0; s < steps; s++)
+    {
+        // add properties
+        auto vpoint = mesh_.add_vertex_property<Point>("loop:vpoint");
+        auto epoint = mesh_.add_edge_property<Point>("loop:epoint");
+
+        // compute vertex positions
+        for (auto v : mesh_.vertices())
+        {
+            // isolated vertex?
+            if (mesh_.is_isolated(v))
+            {
+                vpoint[v] = points_[v];
+            }
+
+            // boundary vertex?
+            else if (mesh_.is_boundary(v))
+            {
+                auto h1 = mesh_.halfedge(v);
+                auto h0 = mesh_.prev_halfedge(h1);
+
+                Point p = points_[v];
+                p *= 6.0;
+                p += points_[mesh_.to_vertex(h1)];
+                p += points_[mesh_.from_vertex(h0)];
+                p *= 0.125;
+                vpoint[v] = p;
+            }
+
+            // interior feature vertex?
+            else if (vfeature_ && vfeature_[v])
+            {
+                Point p = points_[v];
+                p *= 6.0;
+                int count(0);
+
+                for (auto h : mesh_.halfedges(v))
+                {
+                    if (efeature_[mesh_.edge(h)])
+                    {
+                        p += points_[mesh_.to_vertex(h)];
+                        ++count;
+                    }
+                }
+
+                if (count == 2) // vertex is on feature edge
+                {
+                    p *= 0.125;
+                    vpoint[v] = p;
+                }
+                else // keep fixed
+                {
+                    vpoint[v] = points_[v];
+                }
+            }
+
+            // interior vertex
+            else
+            {
+                Point p(0, 0, 0);
+                Scalar k(0);
+
+                for (auto vv : mesh_.vertices(v))
+                {
+                    p += points_[vv];
+                    ++k;
+                }
+                p /= k;
+
+                Scalar beta =
+                    (0.625 - pow(0.375 + 0.25 * std::cos(2.0 * M_PI / k), 2.0));
+
+                vpoint[v] = points_[v] * (Scalar)(1.0 - beta) + beta * p;
+            }
+        }
+
+        // compute edge positions
+        for (auto e : mesh_.edges())
+        {
+            // boundary or feature edge?
+            if (mesh_.is_boundary(e) || (efeature_ && efeature_[e]))
+            {
+                epoint[e] =
+                    (points_[mesh_.vertex(e, 0)] + points_[mesh_.vertex(e, 1)]) *
+                    Scalar(0.5);
+            }
+
+            // interior edge
+            else
+            {
+                auto h0 = mesh_.halfedge(e, 0);
+                auto h1 = mesh_.halfedge(e, 1);
+                Point p = points_[mesh_.to_vertex(h0)];
+                p += points_[mesh_.to_vertex(h1)];
+                p *= 3.0;
+                p += points_[mesh_.to_vertex(mesh_.next_halfedge(h0))];
+                p += points_[mesh_.to_vertex(mesh_.next_halfedge(h1))];
+                p *= 0.125;
+                epoint[e] = p;
+            }
+        }
+
+        // set new vertex positions
+        for (auto v : mesh_.vertices())
+        {
+            points_[v] = vpoint[v];
+        }
+
+        // insert new vertices on edges
+        for (auto e : mesh_.edges())
+        {
+            // feature edge?
+            if (efeature_ && efeature_[e])
+            {
+                auto h = mesh_.insert_vertex(e, epoint[e]);
+                auto v = mesh_.to_vertex(h);
+                auto e0 = mesh_.edge(h);
+                auto e1 = mesh_.edge(mesh_.next_halfedge(h));
+
+                vfeature_[v] = true;
+                efeature_[e0] = true;
+                efeature_[e1] = true;
+            }
+
+            // normal edge
+            else
+            {
+                mesh_.insert_vertex(e, epoint[e]);
+            }
+        }
+
+        // split faces
+        Halfedge h;
+        for (auto f : mesh_.faces())
+        {
+            h = mesh_.halfedge(f);
+            mesh_.insert_edge(h, mesh_.next_halfedge(mesh_.next_halfedge(h)));
+            h = mesh_.next_halfedge(h);
+            mesh_.insert_edge(h, mesh_.next_halfedge(mesh_.next_halfedge(h)));
+            h = mesh_.next_halfedge(h);
+            mesh_.insert_edge(h, mesh_.next_halfedge(mesh_.next_halfedge(h)));
+        }
+
+        // clean-up properties
+        mesh_.remove_vertex_property(vpoint);
+        mesh_.remove_edge_property(epoint);
+    }
 }
 
 void Subdivision::quad_tri()

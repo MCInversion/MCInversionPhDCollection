@@ -220,6 +220,25 @@ namespace Geometry
 	 */
 	void ApplyCapsuleDistanceFieldToGrid(ScalarGrid& grid, const CapsuleParams& params);
 
+	/**
+	 * \brief A parameter container for the torus generator for ScalarGrid.
+	 * \struct TorusParams
+	 */
+	struct TorusParams
+	{
+		pmp::vec3 Center{}; //! base position of the torus object
+		float RingRadius{ 1.0f }; //! radius of the torus loop
+		float TubeRadius{ 0.3f }; //! radius of the torus tube
+		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a torus object.
+	};
+
+	/**
+	 * \brief Applies a torus object with given TorusParams to a ScalarGrid.
+	 * \param grid      grid, where torus values are to be applied.
+	 * \param params    parameters of the applied torus object.
+	 */
+	void ApplyTorusDistanceFieldToGrid(ScalarGrid& grid, const TorusParams& params);
+
 	// ==================================================================================================================
 
 	/**
