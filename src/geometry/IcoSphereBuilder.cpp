@@ -157,30 +157,34 @@ namespace Geometry
 		{
 			return {};
 		}
+
+		if (edgePoints.size() < 3)
+		{
+			throw std::logic_error("CalculateInteriorPoints: edgePoints.size() < 3!\n");
+		}
+
 		const auto nMaxPtsInRow = static_cast<size_t>(sqrt(1 + 8 * nInteriorPts) - 1) / 2;
 		std::vector<std::vector<unsigned int>> interiorPoints;
 		interiorPoints.resize(nMaxPtsInRow); // Initialize each row
 
-		size_t pointCount = 0;
+		// interpolate between the triangle pts with parameter values starting at p3
+		const pmp::vec3& p1 = vertices[edgePoints[0][0]];
+		const pmp::vec3& p2 = vertices[edgePoints[1][0]];
+		const pmp::vec3& p3 = vertices[edgePoints[2][0]];
 
-		for (size_t i = 0; i < nMaxPtsInRow; ++i)
+		const auto nEdgePts = edgePoints[0].size();
+
+		for (size_t i = 1; i < nEdgePts - 1; i++)
 		{
-			interiorPoints[i].resize(nMaxPtsInRow - i); // Initialize each column for each row
-			for (size_t j = 0; j < nMaxPtsInRow - i; ++j)
+			const float iParam = static_cast<float>(i) / static_cast<float>(nEdgePts - 1);
+			interiorPoints.reserve(nMaxPtsInRow - i + 1);
+			for (size_t j = 1; j < nEdgePts - i - 1; j++)
 			{
-				const pmp::vec3 p1 = vertices[edgePoints[0][i]];
-				const pmp::vec3 p2 = vertices[edgePoints[1][j]];
-				const pmp::vec3 p3 = vertices[edgePoints[2][nMaxPtsInRow - i - j]];
+				const float jParam = static_cast<float>(j) / static_cast<float>(nEdgePts - 1);
+				const pmp::vec3 newPoint = normalize(p2 * iParam + p3 * jParam + (1.0f - iParam - jParam) * p1);
 
-				const pmp::vec3 newPoint = normalize((p1 + p2 + p3) / 3.0f);
-
-				interiorPoints[i][j] = static_cast<unsigned int>(vertices.size());
+				interiorPoints[i - 1].push_back(static_cast<unsigned int>(vertices.size()));
 				vertices.push_back(newPoint);
-
-				++pointCount;
-
-				if (pointCount >= nInteriorPts)
-					return interiorPoints;
 			}
 		}
 
@@ -207,53 +211,96 @@ namespace Geometry
 		// Special case: if there are no interior points (s = 1), generate four triangles
 		if (interiorPoints.empty())
 		{
-			const IcoSphere::Triangle tri1 = { edgePoints[0][0], edgePoints[0][1], edgePoints[2][1] };
-			const IcoSphere::Triangle tri2 = { edgePoints[0][1], edgePoints[0][2], edgePoints[1][1] };
-			const IcoSphere::Triangle tri3 = { edgePoints[2][1], edgePoints[1][1], edgePoints[1][2] };
-			const IcoSphere::Triangle tri4 = { edgePoints[0][1], edgePoints[1][1], edgePoints[2][1] };
-
-			newTriangles.push_back(tri1);
-			newTriangles.push_back(tri2);
-			newTriangles.push_back(tri3);
-			newTriangles.push_back(tri4);
+			newTriangles.push_back({ edgePoints[0][0], edgePoints[0][1], edgePoints[2][1] });
+			newTriangles.push_back({ edgePoints[0][1], edgePoints[0][2], edgePoints[1][1] });
+			newTriangles.push_back({ edgePoints[2][1], edgePoints[1][1], edgePoints[1][2] });
+			newTriangles.push_back({ edgePoints[0][1], edgePoints[1][1], edgePoints[2][1] });
 
 			return newTriangles;
 		}
 
-		// First row of triangles attached to the first edge
-		for (size_t i = 0; i < nTrisPerEdge; ++i)
+		const size_t nIntPtsRowSize = interiorPoints.size(); // should be the same as interiorPoints[0].size()
+
+		// triangulate along edge 0
+		for (size_t i = 0; i < nTrisPerEdge; i++)
 		{
-			IcoSphere::Triangle tri = { edgePoints[0][i], edgePoints[0][i + 1], edgePoints[1][nTrisPerEdge - 1 - i] };
-			newTriangles.push_back(tri);
+			// triangle pointing from edge 0
+			{
+				const auto v0Id = edgePoints[0][i];
+				const auto v1Id = edgePoints[0][i + 1];
+				const auto v2Id = (i < nIntPtsRowSize ? interiorPoints[0][i] : (i == 0 ? edgePoints[2][nTrisPerEdge - 1] : edgePoints[1][1]));
+
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
+			}
+
+			// triangle pointing towards edge 0
+			if (i < nTrisPerEdge - 1)
+			{
+				const auto v0Id = edgePoints[0][i + 1];
+				const auto v1Id = (i < nIntPtsRowSize ? interiorPoints[0][i + 1] : edgePoints[1][1]);
+				const auto v2Id = (i == 0 ? edgePoints[2][nTrisPerEdge - 1] : interiorPoints[0][i]);
+
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
+			}
 		}
 
-		// Generate triangles for the interior rows
-		size_t rowStartIdx = 0; // Keeps track of where each row starts in the edgePoints
-		for (size_t i = 1; i <= nTrisPerEdge; ++i)
+		// triangulate along edge 1
+		for (size_t i = 0; i < nTrisPerEdge; i++)
 		{
-			for (size_t j = 0; j < nTrisPerEdge - i; ++j)
+			// triangle pointing from edge 1
 			{
-				// Determine the vertices for this set of triangles
-				const unsigned int v1 = edgePoints[0][rowStartIdx + j];
-				const unsigned int v2 = edgePoints[0][rowStartIdx + j + 1];
-				const unsigned int v3 = edgePoints[1][rowStartIdx + j + 1];
-				const unsigned int v4 = edgePoints[1][rowStartIdx + j];
-				const unsigned int v5 = interiorPoints[i - 1][j];
+				const auto v0Id = edgePoints[2][i];
+				const auto v1Id = edgePoints[2][i + 1];
+				const auto v2Id = (i < nIntPtsRowSize ? interiorPoints[i][nIntPtsRowSize - i] : (i == 0 ? edgePoints[1][nTrisPerEdge - 1] : edgePoints[0][1]));
 
-				// Generate the four triangles using these vertices
-				IcoSphere::Triangle tri1 = { v1, v2, v5 };
-				IcoSphere::Triangle tri2 = { v2, v3, v5 };
-				IcoSphere::Triangle tri3 = { v3, v4, v5 };
-				IcoSphere::Triangle tri4 = { v4, v1, v5 };
-
-				// Add the new triangles to the list
-				newTriangles.push_back(tri1);
-				newTriangles.push_back(tri2);
-				newTriangles.push_back(tri3);
-				newTriangles.push_back(tri4);
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
-			// Update the row start index for edgePoints
-			rowStartIdx += nTrisPerEdge - i + 1;
+
+			// triangle pointing towards edge 1
+			if (i < nTrisPerEdge - 1)
+			{
+				const auto v0Id = edgePoints[1][i + 1];
+				const auto v1Id = (i < nIntPtsRowSize ? interiorPoints[i + 1][nIntPtsRowSize - i - 1] : edgePoints[0][1]);
+				const auto v2Id = (i == 0 ? edgePoints[2][nTrisPerEdge - 1] : interiorPoints[0][i]);
+
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
+			}
+		}
+
+		// triangulate along edge 2
+		for (size_t i = 0; i < nTrisPerEdge; i++)
+		{
+			// triangle pointing from edge 2
+			{
+				const auto v0Id = edgePoints[1][i];
+				const auto v1Id = edgePoints[1][i + 1];
+				const auto v2Id = (i < nIntPtsRowSize ? interiorPoints[nIntPtsRowSize - i][0] : (i == 0 ? edgePoints[2][nTrisPerEdge - 1] : edgePoints[2][1]));
+
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
+			}
+
+			// triangle pointing towards edge 2
+			if (i < nTrisPerEdge - 1)
+			{
+				const auto v0Id = edgePoints[1][i + 1];
+				const auto v1Id = (i < nIntPtsRowSize ? interiorPoints[nIntPtsRowSize - i - 1][0] : edgePoints[2][1]);
+				const auto v2Id = (i == 0 ? edgePoints[0][nTrisPerEdge - 1] : interiorPoints[0][i]);
+
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
+			}
+		}
+
+		// triangulate interior points
+		for (size_t i = 0; i < nIntPtsRowSize - 1; i++)
+		{
+			for (size_t j = 0; j < nIntPtsRowSize - i - 1; j++)
+			{
+				const auto v0Id = interiorPoints[i][j];
+				const auto v1Id = interiorPoints[i][j + 1];
+				const auto v2Id = interiorPoints[i + 1][j];
+
+				newTriangles.push_back({ v0Id, v1Id, v2Id });
+			}
 		}
 
 		return newTriangles;
