@@ -228,12 +228,11 @@ namespace Geometry
 		// triangulate along edge 0
 		for (size_t i = 0; i < nCutOffTrisPerEdge; i++)
 		{
-			const size_t closestInteriorPtId = (i == 0 ? i : i - 1);
 			// triangle pointing from edge 0
 			{
 				const auto v0Id = edgePoints[0][i];
 				const auto v1Id = edgePoints[0][i + 1];
-				const auto v2Id = (i > 0 ? interiorPoints[0][closestInteriorPtId] : edgePoints[2][nTrisPerEdge - 1]);
+				const auto v2Id = (i > 0 ? interiorPoints[0][i - 1] : edgePoints[2][nTrisPerEdge - 1]);
 
 				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
@@ -241,10 +240,9 @@ namespace Geometry
 			// triangle pointing towards edge 0
 			if (i < nCutOffTrisPerEdge - 1)
 			{
-				const size_t closestNextInteriorPtId = closestInteriorPtId + (i == 0 ? 0 : 1);
 				const auto v0Id = edgePoints[0][i + 1];
-				const auto v1Id = interiorPoints[0][closestNextInteriorPtId];
-				const auto v2Id = (i > 0 ? interiorPoints[0][closestInteriorPtId] : edgePoints[2][nTrisPerEdge - 1]);
+				const auto v1Id = interiorPoints[0][i];
+				const auto v2Id = (i > 0 ? interiorPoints[0][i - 1] : edgePoints[2][nTrisPerEdge - 1]);
 
 				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
@@ -254,13 +252,12 @@ namespace Geometry
 		for (size_t i = 0; i < nCutOffTrisPerEdge; i++)
 		{
 			// iterating diagonally across interiorPoints
-			const size_t closestInteriorPtRowId = (i == 0 ? i : i - 1); // incremented
-			const size_t closestInteriorPtId = (i == 0 ? nIntPtsRowSize - i - 1 : nIntPtsRowSize - i); // decremented
+
 			// triangle pointing from edge 1
 			{
 				const auto v0Id = edgePoints[1][i];
 				const auto v1Id = edgePoints[1][i + 1];
-				const auto v2Id = (i > 0 ? interiorPoints[closestInteriorPtRowId][closestInteriorPtId] : edgePoints[0][nTrisPerEdge - 1]);
+				const auto v2Id = (i > 0 ? interiorPoints[i - 1][nIntPtsRowSize - i] : edgePoints[0][nTrisPerEdge - 1]);
 
 				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
@@ -268,11 +265,9 @@ namespace Geometry
 			// triangle pointing towards edge 1
 			if (i < nCutOffTrisPerEdge - 1)
 			{
-				const size_t closestNextInteriorPtRowId = closestInteriorPtRowId + (i == 0 ? 0 : 1);
-				const size_t closestNextInteriorPtId = closestInteriorPtId - (i == 0 ? 0 : 1);
 				const auto v0Id = edgePoints[1][i + 1];
-				const auto v1Id = interiorPoints[closestNextInteriorPtRowId][closestNextInteriorPtId];
-				const auto v2Id = (i > 0 ? interiorPoints[closestInteriorPtRowId][closestNextInteriorPtRowId] : edgePoints[0][nTrisPerEdge - 1]);
+				const auto v1Id = interiorPoints[i][nIntPtsRowSize - i - 1];
+				const auto v2Id = (i > 0 ? interiorPoints[i - 1][nIntPtsRowSize - i] : edgePoints[0][nTrisPerEdge - 1]);
 
 				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
@@ -281,12 +276,11 @@ namespace Geometry
 		// triangulate along edge 2
 		for (size_t i = 0; i < nCutOffTrisPerEdge; i++)
 		{
-			const size_t closestInteriorPtRowId = (i == 0 ? nIntPtsRowSize - i - 1 : nIntPtsRowSize - i);
 			// triangle pointing from edge 2
 			{
 				const auto v0Id = edgePoints[2][i];
 				const auto v1Id = edgePoints[2][i + 1];
-				const auto v2Id = (i > 0 ? interiorPoints[closestInteriorPtRowId][0] : edgePoints[1][nTrisPerEdge - 1]);
+				const auto v2Id = (i > 0 ? interiorPoints[nIntPtsRowSize - i][0] : edgePoints[1][nTrisPerEdge - 1]);
 
 				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
@@ -294,10 +288,9 @@ namespace Geometry
 			// triangle pointing towards edge 2
 			if (i < nCutOffTrisPerEdge - 1)
 			{
-				const size_t closestNextInteriorPtRowId = closestInteriorPtRowId - (i == 0 ? 0 : 1);
 				const auto v0Id = edgePoints[2][i + 1];
-				const auto v1Id = interiorPoints[closestNextInteriorPtRowId][0];
-				const auto v2Id = (i > 0 ? interiorPoints[closestInteriorPtRowId][0] : edgePoints[1][nTrisPerEdge - 1]);
+				const auto v1Id = interiorPoints[nIntPtsRowSize - i - 1][0];
+				const auto v2Id = (i > 0 ? interiorPoints[nIntPtsRowSize - i][0] : edgePoints[1][nTrisPerEdge - 1]);
 
 				newTriangles.push_back({ v0Id, v1Id, v2Id });
 			}
@@ -308,11 +301,24 @@ namespace Geometry
 		{
 			for (size_t j = 0; j < nIntPtsRowSize - i - 1; j++)
 			{
-				const auto v0Id = interiorPoints[i][j];
-				const auto v1Id = interiorPoints[i][j + 1];
-				const auto v2Id = interiorPoints[i + 1][j];
+				// upward pointing triangles
+				{
+					const auto v0Id = interiorPoints[i][j];
+					const auto v1Id = interiorPoints[i][j + 1];
+					const auto v2Id = interiorPoints[i + 1][j];
 
-				newTriangles.push_back({ v0Id, v1Id, v2Id });
+					newTriangles.push_back({ v0Id, v1Id, v2Id });
+				}
+
+				// downward pointing triangles
+				if (j < nIntPtsRowSize - i - 2)
+				{
+					const auto v0Id = interiorPoints[i][j + 1];
+					const auto v1Id = interiorPoints[i + 1][j + 1];
+					const auto v2Id = interiorPoints[i + 1][j];
+
+					newTriangles.push_back({ v0Id, v1Id, v2Id });
+				}
 			}
 		}
 

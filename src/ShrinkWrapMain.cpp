@@ -869,7 +869,7 @@ int main()
 	if (performNewIcosphereTests)
 	{
 		std::cout << "performNewIcosphereTests...\n";
-		Geometry::IcoSphereBuilder ico({ 3, 1.0f, true, false });
+		Geometry::IcoSphereBuilder ico({ 5, 1.0f, true, false });
 		ico.BuildBaseData();
 
 		// test out BaseMeshGeometryData.
