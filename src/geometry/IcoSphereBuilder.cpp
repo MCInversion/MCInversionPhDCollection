@@ -34,82 +34,24 @@ namespace IcoSphere
 	
 } // namespace IcoSphere
 
-namespace Geometry
+using Lookup = std::map<std::pair<unsigned int, unsigned int>, unsigned int>;
+using LookupMulti = std::map<std::pair<unsigned int, unsigned int>, std::vector<unsigned int>>;
+
+namespace 
 {
-	using Lookup = std::map<std::pair<unsigned int, unsigned int>, unsigned int>;
-	using LookupMulti = std::map<std::pair<unsigned int, unsigned int>, std::vector<unsigned int>>;
-
-	/**
-	 * \brief Inserts a midpoint back-projected onto unit sphere and logs it into the lookup table.
-	 * \param lookup        Lookup table for logging edge -> inserted vertex mapping.
-	 * \param vertices      mesh vertices buffer.
-	 * \param startPtId     index of edge start point.
-	 * \param endPtId       index of edge end point.
-	 * \return index of newly inserted back-projected midpoint.
-	 */
-	[[nodiscard]] unsigned int InsertMidpoint(Lookup& lookup, IcoSphere::VertexList& vertices,
-		const unsigned int& startPtId, const unsigned int& endPtId)
-	{
-		Lookup::key_type key(startPtId, endPtId);
-
-		if (key.first > key.second) 
-		{
-			std::swap(key.first, key.second);
-		}
-
-		const auto& [insertedIter, insertionSuccessful] = lookup.insert({ key, vertices.size() });
-		if (insertionSuccessful)
-		{
-			const auto& edge0 = vertices[startPtId];
-			const auto& edge1 = vertices[endPtId];
-			const auto midPt = normalize(edge0 + edge1);
-			vertices.push_back(midPt);
-		}
-
-		return insertedIter->second;
-	};
-
-	/**
-	 * \brief Subdivides a triangle mesh representation using 4:1 subdivision.
-	 * \param vertices      modifiable list of mesh vertices.
-	 * \param triangles     triangle vertex indices before subdivision.
-	 * \return triangle vertex indices after subdivision.
-	 */
-	[[nodiscard]] IcoSphere::TriangleList Subdivide(IcoSphere::VertexList& vertices, const IcoSphere::TriangleList& triangles)
-	{
-		Lookup lookup;
-		IcoSphere::TriangleList result;
-		result.reserve(4 * triangles.size());
-
-		for (const auto& triVertId : triangles)
-		{
-			std::array midPtIds{UINT_MAX, UINT_MAX, UINT_MAX};
-			for (unsigned int edgeId = 0; edgeId < 3; edgeId++)
-			{
-				midPtIds[edgeId] = InsertMidpoint(lookup, vertices, triVertId[edgeId], triVertId[(edgeId + 1) % 3]);
-			}
-
-			result.push_back({ triVertId[0], midPtIds[0], midPtIds[2] });
-			result.push_back({ triVertId[1], midPtIds[1], midPtIds[0] });
-			result.push_back({ triVertId[2], midPtIds[2], midPtIds[1] });
-			result.push_back({ midPtIds[0], midPtIds[1], midPtIds[2] });
-		}
-
-		return result;
-	}
 
 	//
 	// ===============================================================================
 	//
 
-	std::vector<unsigned int> CalculateEdgePoints(
+	void CalculateEdgePoints(
 		LookupMulti& lookup,
 		IcoSphere::VertexList& vertices,
 		unsigned int startPtId,
 		unsigned int endPtId,
-		const size_t& nInteriorEdgePts)
+		const size_t& nInteriorEdgePts,
+		std::vector<unsigned int>& ids)
 	{
-		std::vector<unsigned int> ids;
 		LookupMulti::key_type key(startPtId, endPtId);
 
 		if (key.first > key.second)
@@ -124,9 +66,10 @@ namespace Geometry
 			// but reverse the order, because of opposite half-edge orientation
 			ids = it->second;
 			std::reverse(ids.begin(), ids.end());
-			return ids;
+			return;
 		}
 
+		ids.reserve(nInteriorEdgePts + 2);
 		ids.push_back(startPtId);
 		const pmp::vec3 start = vertices[startPtId];
 		const pmp::vec3 end = vertices[endPtId];
@@ -144,18 +87,17 @@ namespace Geometry
 
 		// Save the calculated ids in the lookup map
 		lookup[key] = ids;
-
-		return ids;
 	}
 
-	std::vector<std::vector<unsigned int>> CalculateInteriorPoints(
+	void CalculateInteriorPoints(
 		IcoSphere::VertexList& vertices,
 		const std::vector<std::vector<unsigned int>>& edgePoints,
-		const size_t& nInteriorPts)
+		const size_t& nInteriorPts,
+		std::vector<std::vector<unsigned int>>& interiorPoints)
 	{
 		if (nInteriorPts == 0)
 		{
-			return {};
+			return;
 		}
 
 		if (edgePoints.size() < 3)
@@ -164,7 +106,6 @@ namespace Geometry
 		}
 
 		const auto nMaxPtsInRow = static_cast<size_t>(sqrt(1 + 8 * nInteriorPts) - 1) / 2;
-		std::vector<std::vector<unsigned int>> interiorPoints;
 		interiorPoints.resize(nMaxPtsInRow); // Initialize each row
 
 		// interpolate between the triangle pts with parameter values starting at p3
@@ -187,14 +128,13 @@ namespace Geometry
 				vertices.push_back(newPoint);
 			}
 		}
-
-		return interiorPoints;
 	}
 
-	IcoSphere::TriangleList GenerateTriangles(
+	void GenerateTriangles(
 		const std::vector<std::vector<unsigned int>>& edgePoints,
 		const std::vector<std::vector<unsigned int>>& interiorPoints,
-		const size_t& nTrisPerEdge)
+		const size_t& subdivLevel,
+		IcoSphere::TriangleList& newTriangles)
 	{
 		if (edgePoints.size() < 3)
 		{
@@ -206,7 +146,7 @@ namespace Geometry
 			throw std::logic_error("GenerateTriangles: Incorrect number of points to generate triangles from!\n");
 		}
 
-		IcoSphere::TriangleList newTriangles;
+		//newTriangles.reserve(static_cast<size_t>(pow(4, subdivLevel))); // already resesrved
 
 		// Special case: if there are no interior points (s = 1), generate four triangles
 		if (interiorPoints.empty())
@@ -216,13 +156,14 @@ namespace Geometry
 			newTriangles.push_back({ edgePoints[2][1], edgePoints[1][1], edgePoints[1][2] });
 			newTriangles.push_back({ edgePoints[0][1], edgePoints[1][1], edgePoints[2][1] });
 
-			return newTriangles;
+			return;
 		}
 
 		const size_t nIntPtsRowSize = interiorPoints.size(); // should be the same as interiorPoints[0].size()
 		// because the edge blocks of triangles need to complement each other to avoid overlap,
 		// we stop 2 triangles earlier than we normally would to make space for the first two triangles of the
 		// consecutive edge
+		const size_t nTrisPerEdge = static_cast<size_t>(pow(2, subdivLevel));
 		const size_t nCutOffTrisPerEdge = nTrisPerEdge - 1;
 
 		// triangulate along edge 0
@@ -321,25 +262,22 @@ namespace Geometry
 				}
 			}
 		}
-
-		return newTriangles;
 	}
 
-	IcoSphere::TriangleList SubdivideSingleTriangle(LookupMulti& lookup, IcoSphere::VertexList& vertices, const IcoSphere::Triangle& triangle, const unsigned int& subdivLevel)
+	void SubdivideSingleTriangle(LookupMulti& lookup, IcoSphere::VertexList& vertices, const IcoSphere::Triangle& triangle, const unsigned int& subdivLevel, IcoSphere::TriangleList& newTriangles)
 	{
 		const auto nInteriorEdgePts = (static_cast<size_t>(pow(2, subdivLevel)) - 1);
 		std::vector<std::vector<unsigned int>> edgePoints(3);
 		for (size_t e = 0; e < 3; ++e)
 		{
-			edgePoints[e] = CalculateEdgePoints(lookup, vertices, triangle[e], triangle[(e + 1) % 3], nInteriorEdgePts);
+			CalculateEdgePoints(lookup, vertices, triangle[e], triangle[(e + 1) % 3], nInteriorEdgePts, edgePoints[e]);
 		}
 
 		const auto nInteriorTrianglePts = static_cast<size_t>(pow(4, subdivLevel) - 3 * pow(2, subdivLevel) + 2) / 2;
-		const auto interiorPoints = CalculateInteriorPoints(vertices, edgePoints, nInteriorTrianglePts);
+		std::vector<std::vector<unsigned int>> interiorPoints;
+		CalculateInteriorPoints(vertices, edgePoints, nInteriorTrianglePts, interiorPoints);
 
-		IcoSphere::TriangleList newTriangles = GenerateTriangles(edgePoints, interiorPoints, nInteriorEdgePts + 1);
-
-		return newTriangles;
+		GenerateTriangles(edgePoints, interiorPoints, subdivLevel, newTriangles);
 	}
 
 	[[nodiscard]] std::pair<size_t, size_t> IcoSpherePreallocationCapacities(const size_t& subdivLvl, const size_t& nFaces0, const size_t& nVerts0)
@@ -349,6 +287,69 @@ namespace Geometry
 		const size_t nFaces = (static_cast<size_t>(pow(4, subdivLvl)) * nFaces0);
 
 		return { nVerts, nFaces };
+	}
+	
+} // anonymous namespace
+
+namespace Geometry
+{
+	/**
+	 * \brief Inserts a midpoint back-projected onto unit sphere and logs it into the lookup table.
+	 * \param lookup        Lookup table for logging edge -> inserted vertex mapping.
+	 * \param vertices      mesh vertices buffer.
+	 * \param startPtId     index of edge start point.
+	 * \param endPtId       index of edge end point.
+	 * \return index of newly inserted back-projected midpoint.
+	 */
+	[[nodiscard]] unsigned int InsertMidpoint(Lookup& lookup, IcoSphere::VertexList& vertices,
+		const unsigned int& startPtId, const unsigned int& endPtId)
+	{
+		Lookup::key_type key(startPtId, endPtId);
+
+		if (key.first > key.second) 
+		{
+			std::swap(key.first, key.second);
+		}
+
+		const auto& [insertedIter, insertionSuccessful] = lookup.insert({ key, vertices.size() });
+		if (insertionSuccessful)
+		{
+			const auto& edge0 = vertices[startPtId];
+			const auto& edge1 = vertices[endPtId];
+			const auto midPt = normalize(edge0 + edge1);
+			vertices.push_back(midPt);
+		}
+
+		return insertedIter->second;
+	};
+
+	/**
+	 * \brief Subdivides a triangle mesh representation using 4:1 subdivision.
+	 * \param vertices      modifiable list of mesh vertices.
+	 * \param triangles     triangle vertex indices before subdivision.
+	 * \return triangle vertex indices after subdivision.
+	 */
+	[[nodiscard]] IcoSphere::TriangleList Subdivide(IcoSphere::VertexList& vertices, const IcoSphere::TriangleList& triangles)
+	{
+		Lookup lookup;
+		IcoSphere::TriangleList result;
+		result.reserve(4 * triangles.size());
+
+		for (const auto& triVertId : triangles)
+		{
+			std::array midPtIds{UINT_MAX, UINT_MAX, UINT_MAX};
+			for (unsigned int edgeId = 0; edgeId < 3; edgeId++)
+			{
+				midPtIds[edgeId] = InsertMidpoint(lookup, vertices, triVertId[edgeId], triVertId[(edgeId + 1) % 3]);
+			}
+
+			result.push_back({ triVertId[0], midPtIds[0], midPtIds[2] });
+			result.push_back({ triVertId[1], midPtIds[1], midPtIds[0] });
+			result.push_back({ triVertId[2], midPtIds[2], midPtIds[1] });
+			result.push_back({ midPtIds[0], midPtIds[1], midPtIds[2] });
+		}
+
+		return result;
 	}
 
 	//
@@ -387,11 +388,7 @@ namespace Geometry
 
 				for (const auto& triangle : triangles)
 				{
-					// Subdivide this triangle
-					IcoSphere::TriangleList subdividedTriangles = SubdivideSingleTriangle(lookup, newVertices, triangle, m_SubdivisionLevel);
-
-					// Append these to the list of newTriangles
-					newTriangles.insert(newTriangles.end(), subdividedTriangles.begin(), subdividedTriangles.end());
+					SubdivideSingleTriangle(lookup, newVertices, triangle, m_SubdivisionLevel, newTriangles);
 				}
 
 				vertices = newVertices;

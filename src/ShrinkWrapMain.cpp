@@ -49,7 +49,9 @@ constexpr bool performSubdivisionTest4 = false;
 constexpr bool performSubdivTestsBoundary = false;
 constexpr bool performSubdivTestsMultiTorus = false;
 constexpr bool performSubdivPreallocationTests = false;
-constexpr bool performNewIcosphereTests = true;
+constexpr bool performNewIcosphereTests = false;
+constexpr bool performIcospherePerformanceTests = false;
+constexpr bool pefrormCatmullClarkCounting = true;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
@@ -880,6 +882,87 @@ int main()
 		auto icoMesh = ico.GetPMPSurfaceMeshResult();
 
 		icoMesh.write(dataOutPath + "icoPreallocated.obj");
+	}
+
+	if (performIcospherePerformanceTests)
+	{
+		std::cout << "performIcospherePerformanceTests...\n";
+		constexpr size_t maxSubdivLevel = 7;
+		constexpr size_t nSphereRuns = 10;
+
+		double simpleTiming = 0.0;
+		double preallocTiming = 0.0;
+		constexpr size_t nTimings = 10;
+
+		for (size_t s = 1; s < maxSubdivLevel; s++)
+		{
+			std::cout << "s = " << s << ":\n";
+			for (size_t j = 0; j < nTimings; j++)
+			{
+				//std::cout << "timing " << i << "\n";
+				// =================================================
+				// ......... Plain Subdivision .....................
+
+				const unsigned int subdiv = s;
+
+				const auto startSimpleSubdiv = std::chrono::high_resolution_clock::now();
+
+				for (size_t i = 0; i < nSphereRuns; i++)
+				{
+					Geometry::IcoSphereBuilder ico0({ subdiv, 1.0f, true, true });
+					ico0.BuildBaseData();
+				}
+
+				const auto endSimpleSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffSimpleSubdiv = endSimpleSubdiv - startSimpleSubdiv;
+				simpleTiming += timeDiffSimpleSubdiv.count();
+
+				// =================================================
+				// ......... Preallocated Subdivision .....................
+
+				const auto startPreallocSubdiv = std::chrono::high_resolution_clock::now();
+
+				for (size_t i = 0; i < nSphereRuns; i++)
+				{
+					Geometry::IcoSphereBuilder ico1({ subdiv, 1.0f, true, false });
+					ico1.BuildBaseData();					
+				}
+
+				const auto endPreallocSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffPreallocSubdiv = endPreallocSubdiv - startPreallocSubdiv;
+				preallocTiming += timeDiffPreallocSubdiv.count();
+			}
+
+			simpleTiming /= nTimings;
+			preallocTiming /= nTimings;
+
+			// Report
+			std::cout << "Simple Icosphere Subdiv: " << simpleTiming << " s, Preallocated Icosphere Subdiv: " << preallocTiming << " s\n";
+		}
+	}
+
+	if (pefrormCatmullClarkCounting)
+	{
+		// Load mesh
+		pmp::SurfaceMesh mesh;
+		mesh.read(dataDirPath + "CubeSphere.obj");
+
+		constexpr size_t maxSubdivLevel = 6;
+		pmp::Subdivision subdiv(mesh);
+
+		for (size_t s = 1; s < maxSubdivLevel; s++)
+		{
+			subdiv.catmull_clark();
+			const auto nEdges = mesh.n_edges();
+			const auto nVerts = mesh.n_vertices();
+			std::cout << "========= Edge Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nEdges << ".\n";
+			std::cout << "========= Vertex Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nVerts << ".\n";
+			std::cout << "------------------------------------------------\n";
+
+			mesh.write(dataOutPath + "CubeSphereCC" + std::to_string(s) + ".obj");
+		}
 	}
 
 	if (performRemeshingTests)
