@@ -1,6 +1,7 @@
 #include "IcoSphereBuilder.h"
 
 #include <map>
+#include <unordered_map>
 
 namespace IcoSphere
 {
@@ -35,7 +36,7 @@ namespace IcoSphere
 } // namespace IcoSphere
 
 using Lookup = std::map<std::pair<unsigned int, unsigned int>, unsigned int>;
-using LookupMulti = std::map<std::pair<unsigned int, unsigned int>, std::vector<unsigned int>>;
+using LookupMulti = std::unordered_map<size_t, std::vector<unsigned int>>;
 
 namespace 
 {
@@ -44,19 +45,36 @@ namespace
 	// ===============================================================================
 	//
 
+	size_t createKey(unsigned int a, unsigned int b)
+	{
+		static_assert(sizeof(size_t) >= 2 * sizeof(unsigned int),
+			"size_t must be at least twice the size of unsigned int to safely store two unsigned int values");
+		size_t key = static_cast<size_t>(a);
+		key <<= 32;
+		key |= b;
+		return key;
+	}
+
+	//std::pair<unsigned int, unsigned int> extractKey(size_t key)
+	//{
+	//	return { static_cast<unsigned int>(key >> 32), static_cast<unsigned int>(key) };
+	//}
+
 	void CalculateEdgePoints(
 		LookupMulti& lookup,
 		IcoSphere::VertexList& vertices,
-		unsigned int startPtId,
-		unsigned int endPtId,
+		const unsigned int& startPtId,
+		const unsigned int& endPtId,
 		const size_t& nInteriorEdgePts,
 		std::vector<unsigned int>& ids)
 	{
-		LookupMulti::key_type key(startPtId, endPtId);
+		unsigned int keyVal0 = startPtId;
+		unsigned int keyVal1 = endPtId;
+		const LookupMulti::key_type key = createKey(keyVal0, keyVal1);
 
-		if (key.first > key.second)
+		if (keyVal0 > keyVal1)
 		{
-			std::swap(key.first, key.second);
+			std::swap(keyVal0, keyVal1);
 		}
 
 		const auto it = lookup.find(key);
@@ -384,6 +402,7 @@ namespace Geometry
 				newTriangles.reserve(faceCapacity);
 
 				LookupMulti lookup;
+				lookup.reserve(vertexCapacity + faceCapacity - 2);
 				newVertices = vertices;
 
 				for (const auto& triangle : triangles)
