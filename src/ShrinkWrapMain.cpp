@@ -49,13 +49,14 @@ constexpr bool performSubdivisionTest4 = false;
 constexpr bool performSubdivTestsBoundary = false;
 constexpr bool performSubdivTestsMultiTorus = false;
 constexpr bool performSubdivPreallocationTests = false;
-constexpr bool performNewIcosphereTests = true;
+constexpr bool performNewIcosphereTests = false;
 constexpr bool performIcospherePerformanceTests = false;
 constexpr bool pefrormCatmullClarkCounting = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
-constexpr bool performImportedObjMetricsEval = true;
+constexpr bool performImportedObjMetricsEval = false;
+constexpr bool performMMapImportTest = true;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -1185,5 +1186,10 @@ int main()
 			//}
 
 		}
+	}
+
+	if (performMMapImportTest)
+	{
+		
 	}
 }

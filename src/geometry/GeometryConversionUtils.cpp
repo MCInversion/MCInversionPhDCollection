@@ -1,7 +1,19 @@
 #include "GeometryConversionUtils.h"
 
+#include "utils/StringUtils.h"
+
 #include <set>
 #include <fstream>
+#include <thread>
+
+#ifdef _WINDOWS
+// Windows-specific headers
+#include <windows.h>
+#include <fcntl.h>
+#else
+// Unsupported platform
+#error "Unsupported platform"
+#endif
 
 namespace Geometry
 {
@@ -139,6 +151,160 @@ namespace Geometry
 
 		file.close();
 		return true;
+	}
+
+	// TODO: different representations, e.g.: ProgressiveMeshData which would then be exported into a disk file
+
+	namespace
+	{
+		struct ChunkData
+		{
+			std::vector<pmp::vec3> Vertices;
+			std::vector<pmp::vec3> Normals;
+			std::vector<std::vector<unsigned int>> Faces;
+		};
+
+		ChunkData ParseChunk(const char* start, const char* end)
+		{
+			ChunkData data;
+			const char* cursor = start;
+
+			while (cursor < end)
+			{
+				// If the current line is incomplete, skip to the next line
+				if (*cursor == '\n')
+				{
+					cursor++;
+					continue;
+				}
+
+				// If it's a vertex or normal, parse the three floats
+				if (strncmp(cursor, "v ", 2) == 0 || strncmp(cursor, "vn ", 3) == 0)
+				{
+					pmp::vec3 vec;
+					cursor += (cursor[1] == ' ') ? 2 : 3; // skip "v " or "vn "
+
+					char* tempCursor;
+					vec[0] = std::strtof(cursor, &tempCursor);
+					cursor = tempCursor;
+
+					vec[1] = std::strtof(cursor, &tempCursor);
+					cursor = tempCursor;
+
+					vec[2] = std::strtof(cursor, &tempCursor);
+					cursor = tempCursor;
+
+					if (cursor[-1] == 'n') // distinguish between vertex and normal
+						data.Normals.push_back(vec);
+					else
+						data.Vertices.push_back(vec);
+				}
+				// If it's a face, parse the vertex indices
+				else if (strncmp(cursor, "f ", 2) == 0)
+				{
+					cursor += 2; // skip "f "
+					std::vector<unsigned int> faceIndices;
+
+					while (*cursor != '\n' && cursor < end)
+					{
+						char* tempCursor;
+						const unsigned int index = std::strtoul(cursor, &tempCursor, 10);
+						cursor = tempCursor;
+						faceIndices.push_back(index - 1);
+
+						while (*cursor == ' ' || *cursor == '/') // skip to next index or newline
+							cursor++;
+					}
+
+					data.Faces.push_back(faceIndices);
+				}
+				else
+				{
+					// Skip to the next line if the current line isn't recognized
+					while (*cursor != '\n' && cursor < end)
+						cursor++;
+				}
+			}
+
+			return data;
+		}
+	} // anonymous namespace
+
+
+	std::optional<BaseMeshGeometryData> ParallelImportSimplifiedOBJMeshGeometryData(const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "obj")
+			return {};
+
+		const char* file_path = absFileName.c_str();
+
+		const HANDLE file_handle = CreateFile(file_path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+		if (file_handle == INVALID_HANDLE_VALUE) 
+		{
+			std::cerr << "ParallelImportSimplifiedOBJMeshGeometryData [ERROR]: Failed to open the file.\n";
+			return {};
+		}
+
+		// Get the file size
+		DWORD file_size = GetFileSize(file_handle, nullptr);
+
+		// Create a file mapping object
+		const HANDLE file_mapping = CreateFileMapping(file_handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+		if (file_mapping == nullptr) 
+		{
+			std::cerr << "ParallelImportSimplifiedOBJMeshGeometryData [ERROR]: Failed to create file mapping.\n";
+			CloseHandle(file_handle);
+			return {};
+		}
+
+		// Map the file into memory
+		const LPVOID file_memory = MapViewOfFile(file_mapping, FILE_MAP_READ, 0, 0, 0);
+		if (file_memory == nullptr) 
+		{
+			std::cerr << "ParallelImportSimplifiedOBJMeshGeometryData [ERROR]: Failed to map the file.\n";
+			CloseHandle(file_mapping);
+			CloseHandle(file_handle);
+			return {};
+		}
+
+		BaseMeshGeometryData simplifiedResult;
+
+		// Determine the number of threads (e.g., hardware concurrency)
+		const size_t thread_count = std::thread::hardware_concurrency();
+		const size_t chunk_size = file_size / thread_count;
+		std::vector<std::thread> threads(thread_count);
+
+		char* file_start = static_cast<char*>(file_memory);
+		char* file_end = file_start + file_size;
+
+		for (size_t i = 0; i < thread_count; ++i) 
+		{
+			char* chunk_start = file_start + (i * chunk_size);
+			char* chunk_end = (i == thread_count - 1) ? file_end : chunk_start + chunk_size;
+
+			// Adjust chunk_end to point to the end of a line
+			while (*chunk_end != '\n' && chunk_end < file_end) {
+				chunk_end++;
+			}
+			chunk_end++;  // move past the newline character
+
+			// Start a thread to process this chunk
+			threads[i] = std::thread(ParseChunk, chunk_start, chunk_end, std::ref(simplifiedResult));
+		}
+
+		// Wait for all threads to finish
+		for (auto& t : threads) {
+			t.join();
+		}
+
+		// Clean up
+		UnmapViewOfFile(file_memory);
+		CloseHandle(file_mapping);
+		CloseHandle(file_handle);
+		
+		return simplifiedResult;
 	}
 
 } // namespace Geometry

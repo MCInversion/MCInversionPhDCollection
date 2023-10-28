@@ -392,6 +392,9 @@ namespace Geometry
 			}
 			else
 			{
+				std::cerr << "!!!--------------------------------------------------------------------------------------\n";
+				std::cerr << "IcoSphereBuilder::BuildBaseData [WARNING]: Using an experimental predictive construction with std::unordered_map lookup. Throws an exception for subdiv = 7 and higher.\n";
+				std::cerr << "!!!--------------------------------------------------------------------------------------\n";
 				// new "predictive" strategy:
 				// generates new points uniformly across each triangle's spherical projection
 				IcoSphere::TriangleList newTriangles{};

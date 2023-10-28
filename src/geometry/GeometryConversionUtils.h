@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "pmp/SurfaceMesh.h"
 #include "MarchingCubes.h"
 
@@ -37,5 +39,12 @@ namespace Geometry
 	 * \return if true, the export was successful.
 	 */
 	[[nodiscard]] bool ExportBaseMeshGeometryDataToOBJ(const BaseMeshGeometryData& geomData, const std::string& absFileName);
+
+	/**
+	 * \brief For importing very large OBJ mesh files.
+	 * \param absFileName    absolute file path for the opened file.
+	 * \return optional BaseMeshGeometryData
+	 */
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ParallelImportSimplifiedOBJMeshGeometryData(const std::string& absFileName);
 	
 } // namespace Geometry
