@@ -160,13 +160,12 @@ namespace Geometry
 		struct ChunkData
 		{
 			std::vector<pmp::vec3> Vertices;
-			std::vector<pmp::vec3> Normals;
-			std::vector<std::vector<unsigned int>> Faces;
+			std::vector<pmp::vec3> VertexNormals;
+			std::vector<std::vector<unsigned int>> PolyIndices;
 		};
 
-		ChunkData ParseChunk(const char* start, const char* end)
+		void ParseChunk(const char* start, const char* end, ChunkData& data)
 		{
-			ChunkData data;
 			const char* cursor = start;
 
 			while (cursor < end)
@@ -195,7 +194,7 @@ namespace Geometry
 					cursor = tempCursor;
 
 					if (cursor[-1] == 'n') // distinguish between vertex and normal
-						data.Normals.push_back(vec);
+						data.VertexNormals.push_back(vec);
 					else
 						data.Vertices.push_back(vec);
 				}
@@ -216,7 +215,7 @@ namespace Geometry
 							cursor++;
 					}
 
-					data.Faces.push_back(faceIndices);
+					data.PolyIndices.push_back(faceIndices);
 				}
 				else
 				{
@@ -225,8 +224,6 @@ namespace Geometry
 						cursor++;
 				}
 			}
-
-			return data;
 		}
 	} // anonymous namespace
 
@@ -248,7 +245,7 @@ namespace Geometry
 		}
 
 		// Get the file size
-		DWORD file_size = GetFileSize(file_handle, nullptr);
+		const DWORD file_size = GetFileSize(file_handle, nullptr);
 
 		// Create a file mapping object
 		const HANDLE file_mapping = CreateFileMapping(file_handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -269,12 +266,13 @@ namespace Geometry
 			return {};
 		}
 
-		BaseMeshGeometryData simplifiedResult;
+		BaseMeshGeometryData resultData;
 
-		// Determine the number of threads (e.g., hardware concurrency)
+		// Determine the number of threads
 		const size_t thread_count = std::thread::hardware_concurrency();
 		const size_t chunk_size = file_size / thread_count;
 		std::vector<std::thread> threads(thread_count);
+		std::vector<ChunkData> threadResults(thread_count);
 
 		char* file_start = static_cast<char*>(file_memory);
 		char* file_end = file_start + file_size;
@@ -291,7 +289,7 @@ namespace Geometry
 			chunk_end++;  // move past the newline character
 
 			// Start a thread to process this chunk
-			threads[i] = std::thread(ParseChunk, chunk_start, chunk_end, std::ref(simplifiedResult));
+			threads[i] = std::thread(ParseChunk, chunk_start, chunk_end, std::ref(threadResults[i]));
 		}
 
 		// Wait for all threads to finish
@@ -299,12 +297,19 @@ namespace Geometry
 			t.join();
 		}
 
+		for (const auto& result : threadResults)
+		{
+			resultData.Vertices.insert(resultData.Vertices.end(), result.Vertices.begin(), result.Vertices.end());
+			resultData.PolyIndices.insert(resultData.PolyIndices.end(), result.PolyIndices.begin(), result.PolyIndices.end());
+			resultData.VertexNormals.insert(resultData.VertexNormals.end(), result.VertexNormals.begin(), result.VertexNormals.end());
+		}
+
 		// Clean up
 		UnmapViewOfFile(file_memory);
 		CloseHandle(file_mapping);
 		CloseHandle(file_handle);
 		
-		return simplifiedResult;
+		return std::move(resultData);
 	}
 
 } // namespace Geometry
