@@ -26,6 +26,7 @@
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Subdivision.h"
+#include "utils/TimingUtils.h"
 //#include "geometry/MeshAnalysis.h"
 
 // set up root directory
@@ -1190,6 +1191,48 @@ int main()
 
 	if (performMMapImportTest)
 	{
-		
+		const std::vector<std::string> importedMeshNames{
+			"nefertiti"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			constexpr size_t nRuns = 10;
+
+			// load parallel
+			pmp::SurfaceMesh parImportedMesh;
+			std::optional<Geometry::BaseMeshGeometryData> baseDataOpt;
+
+			AVERAGE_TIMING(parImported, nRuns, {
+				baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", true);
+				if (!baseDataOpt.has_value())
+				{
+					std::cerr << "baseDataOpt == nullopt!\n";
+					break;
+				}
+			}, true);
+
+			// verify by export
+			parImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(baseDataOpt.value());
+			parImportedMesh.write(dataOutPath + meshName + "_parallelImp.obj");
+
+			// load single-threaded			
+			pmp::SurfaceMesh stImportedMesh;
+			std::optional<Geometry::BaseMeshGeometryData> stBaseDataOpt;
+
+			AVERAGE_TIMING(singleThreadImported, nRuns, {
+				stBaseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+				if (!stBaseDataOpt.has_value())
+				{
+					std::cerr << "stBaseDataOpt == nullopt!\n";
+					break;
+				}
+			}, true);
+
+			// verify by export
+			stImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(stBaseDataOpt.value());
+			stImportedMesh.write(dataOutPath + meshName + "_stImp.obj");
+			
+		}
 	}
 }

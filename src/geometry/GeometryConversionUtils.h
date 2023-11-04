@@ -41,10 +41,11 @@ namespace Geometry
 	[[nodiscard]] bool ExportBaseMeshGeometryDataToOBJ(const BaseMeshGeometryData& geomData, const std::string& absFileName);
 
 	/**
-	 * \brief For importing very large OBJ mesh files.
-	 * \param absFileName    absolute file path for the opened file.
+	 * \brief For importing very OBJ mesh files with option for parallel.
+	 * \param absFileName        absolute file path for the opened file.
+	 * \param importInParallel   if true, a parallel version of the importer will be used.
 	 * \return optional BaseMeshGeometryData
 	 */
-	[[nodiscard]] std::optional<BaseMeshGeometryData> ParallelImportSimplifiedOBJMeshGeometryData(const std::string& absFileName);
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel = false);
 	
 } // namespace Geometry
