@@ -38,7 +38,7 @@ constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
 constexpr bool performIsosurfaceEvolverTests = false;
-constexpr bool performSheetEvolverTest = false;
+constexpr bool performSheetEvolverTest = true;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
@@ -48,7 +48,7 @@ constexpr bool performSubdivisionTest4 = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
-constexpr bool performImportedObjMetricsEval = true;
+constexpr bool performImportedObjMetricsEval = false;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -264,7 +264,8 @@ int main()
 				80,
 				tau,
 				fieldIsoLevel,
-				3,
+				3, // IcoSphereSubdivisionLevel
+				true, // UseUVMaps
 				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
 				{},
 				minSize, maxSize,
@@ -806,7 +807,7 @@ int main()
 			true, false,
 			dataOutPath,
 			MeshLaplacian::Voronoi,
-			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+			{/*"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition", "stiffnessMatrixConditioning" */},
 			0.05f,
 			true,
 			true

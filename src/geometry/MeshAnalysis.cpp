@@ -256,6 +256,7 @@ namespace Geometry
 	}
 
 	using FaceMetricFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
+	//using VertexMetricFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Vertex&)>;
 
 	constexpr float METRIC_MAX_VAL = 1e+12;
 
@@ -404,6 +405,16 @@ namespace Geometry
 			vMinCurvature[v] = curvAlg.min_curvature(v);
 			vMaxCurvature[v] = curvAlg.max_curvature(v);
 			vMeanCurvature[v] = vMinCurvature[v] + vMaxCurvature[v];
+		}
+	}
+
+	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh)
+	{
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:zLevelElevation", 0.0f);
+		for (const auto v : mesh.vertices())
+		{
+			const auto& vPos = mesh.position(v);
+			vProp[v] = vPos[2];
 		}
 	}
 

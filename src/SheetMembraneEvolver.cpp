@@ -306,9 +306,10 @@ void SheetMembraneEvolver::Evolve()
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 	}
-	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
-	ComputeTriangleMetrics();
+	// Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
+	// Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
+	Geometry::ComputeZLevelElevations(*m_EvolvingSurface);
+	// ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
 
@@ -431,9 +432,10 @@ void SheetMembraneEvolver::Evolve()
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		}
-		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
-		ComputeTriangleMetrics();
+		// Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
+		// Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
+		Geometry::ComputeZLevelElevations(*m_EvolvingSurface);
+		// ComputeTriangleMetrics();
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
 			ExportSurface(ti);

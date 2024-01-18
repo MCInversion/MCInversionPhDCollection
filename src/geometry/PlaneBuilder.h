@@ -20,7 +20,7 @@ namespace Geometry
 	};
 
 	/**
-	 * \brief A builder object for generating parametric ico-sphere meshes (a 4:1-subdivided icosahedron).
+	 * \brief A builder object for generating parametric plane meshes (composed of (triangulated) quads).
 	 * \class PlaneBuilder
 	 */
 	class PlaneBuilder : public PrimitiveMeshBuilder

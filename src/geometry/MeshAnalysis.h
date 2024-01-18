@@ -44,4 +44,7 @@ namespace Geometry
 	/// \brief Computes vertex principal curvatures and mean curvature.
 	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh);
 
+	/// \brief Computes z-level elevation values for each vertex.
+	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);
+
 } // namespace Geometry
