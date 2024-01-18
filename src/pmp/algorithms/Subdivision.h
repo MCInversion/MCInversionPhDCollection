@@ -25,6 +25,8 @@ public:
     //! \throw InvalidInputException in case the input violates the precondition.
     void loop();
 
+    void loop_prealloc(const size_t& steps);
+
     //! \brief Perform one step of quad-tri subdivision.
     //! \details See \cite stam_2003_subdiv for details.
     void quad_tri();

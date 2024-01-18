@@ -19,6 +19,7 @@ namespace Geometry
 		unsigned int SubdivisionLevel{ 0 }; //! subdivision level. Zero corresponds to a basic icosahedron.
 		float Radius{ 1.0f }; //! ico-sphere radius
 		bool ComputeNormals{ false }; //! whether to compute vertex normals
+		bool UseRecursiveStrategy{ true }; //! if true the default recursive construction strategy will be used
 	};
 
 	/**
@@ -30,7 +31,9 @@ namespace Geometry
 	public:
 		/// \brief constructor
 		explicit IcoSphereBuilder(const IcoSphereSettings& settings)
-			: m_SubdivisionLevel(settings.SubdivisionLevel), m_Radius(settings.Radius), m_ComputeNormals(settings.ComputeNormals)
+			: m_SubdivisionLevel(settings.SubdivisionLevel),
+		m_Radius(settings.Radius), m_ComputeNormals(settings.ComputeNormals),
+		m_UseRecursiveStrategy(settings.UseRecursiveStrategy)
 		{ }
 
 		/// \brief builds BaseMeshGeometryData for an ico-sphere with given settings.
@@ -41,6 +44,7 @@ namespace Geometry
 		unsigned int m_SubdivisionLevel{ 0 }; //>! subdivision level. Zero corresponds to a basic icosahedron.
 		float m_Radius{ 1.0f }; //>! ico-sphere radius
 		bool m_ComputeNormals{ false };
+		bool m_UseRecursiveStrategy{ true };
 	};
 
 } // namespace Geometry

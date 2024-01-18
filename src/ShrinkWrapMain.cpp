@@ -20,11 +20,13 @@
 #include "geometry/MeshAnalysis.h"
 #include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
+#include "geometry/MultiTorusMeshBuilder.h"
 #include "geometry/PlaneBuilder.h"
 #include "pmp/algorithms/Decimation.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Subdivision.h"
+#include "utils/TimingUtils.h"
 //#include "geometry/MeshAnalysis.h"
 
 // set up root directory
@@ -45,10 +47,17 @@ constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
 constexpr bool performSubdivisionTest4 = false;
+constexpr bool performSubdivTestsBoundary = false;
+constexpr bool performSubdivTestsMultiTorus = false;
+constexpr bool performSubdivPreallocationTests = false;
+constexpr bool performNewIcosphereTests = false;
+constexpr bool performIcospherePerformanceTests = false;
+constexpr bool pefrormCatmullClarkCounting = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
 constexpr bool performImportedObjMetricsEval = false;
+constexpr bool performMMapImportTest = false;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -61,6 +70,81 @@ constexpr bool performImportedObjMetricsEval = false;
 		result++;
 	}
 	return result;
+}
+
+[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel, const bool& evalOutput = false)
+{
+	const auto nBdEdges0 = CountBoundaryEdges(mesh);
+	const size_t sMax = maxSubdivLevel;
+
+	if (nBdEdges0 == 0)
+	{
+		// mesh is watertight
+		const auto nEdges0 = mesh.n_edges();
+		const auto nVerts0 = mesh.n_vertices();
+
+		if (evalOutput)
+		{
+			std::cout << "............................................................\n";
+			std::cout << "GetEdgeVertCountsTheoreticalEstimate:\n";
+			std::cout << "nEdges0 = " << nEdges0 << "\n";
+			std::cout << "nVerts0 = " << nVerts0 << "\n";
+			std::cout << "............................................................\n";
+		}
+
+		const auto edgeCountEstimate = [&nEdges0](const size_t& s) { return (static_cast<size_t>(pow(4, s)) * nEdges0); };
+		const auto vertCountEstimate = [&nEdges0, &nVerts0](const size_t& s) { return ((nEdges0 * static_cast<size_t>(pow(4, s) - 1) + 3 * nVerts0) / 3); };
+
+		std::vector<size_t> edgeCounts(sMax);
+		std::vector<size_t> vertCounts(sMax);
+
+		for (size_t s = 0; s < sMax; s++)
+		{
+			edgeCounts[s] = edgeCountEstimate(s);
+			vertCounts[s] = vertCountEstimate(s);
+		}
+
+		return { edgeCounts, vertCounts };
+	}
+
+	// mesh is not watertight
+	const auto nEdges0 = mesh.n_edges();
+	const auto nVerts0 = mesh.n_vertices();
+
+	const auto nIntEdges0 = nEdges0 - nBdEdges0;
+
+	if (evalOutput)
+	{
+		std::cout << "............................................................\n";
+		std::cout << "GetEdgeVertCountsTheoreticalEstimate:\n";
+		std::cout << "nIntEdges0 = " << nIntEdges0 << ", nBdEdges = " << nBdEdges0 << "\n";
+		std::cout << "nVerts0 = " << nVerts0 << "\n";
+		std::cout << "............................................................\n";
+	}
+
+	const auto intEdgeCountEstimate = [&nIntEdges0, &nBdEdges0](const size_t& s) -> size_t
+	{
+		return (pow(2, s - 1)) * ((pow(2, s) - 1) * nBdEdges0 + nIntEdges0 * pow(2, s + 1));
+	};
+	const auto bdEdgeCountEstimate = [&nBdEdges0](const size_t& s) -> size_t
+	{
+		return (pow(2, s)) * nBdEdges0;
+	};
+	const auto vertCountEstimate = [&nIntEdges0, &nBdEdges0, &nVerts0](const size_t& s) -> size_t
+	{
+		return nBdEdges0 * (pow(4, s) - 4 + 3 * pow(2, s)) / 6 + nIntEdges0 * (pow(4, s) - 1) / 3 + nVerts0;
+	};
+
+	std::vector<size_t> edgeCounts(sMax);
+	std::vector<size_t> vertCounts(sMax);
+
+	for (size_t s = 0; s < sMax; s++)
+	{
+		edgeCounts[s] = intEdgeCountEstimate(s) + bdEdgeCountEstimate(s);
+		vertCounts[s] = vertCountEstimate(s);
+	}
+
+	return { edgeCounts, vertCounts };
 }
 
 int main()
@@ -265,7 +349,6 @@ int main()
 				tau,
 				fieldIsoLevel,
 				3, // IcoSphereSubdivisionLevel
-				true, // UseUVMaps
 				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
 				{},
 				minSize, maxSize,
@@ -634,6 +717,256 @@ int main()
 		mesh.write(dataOutPath + "bunnySubdiv.vtk");
 	}
 
+	if (performSubdivTestsBoundary)
+	{
+		std::cout << "performSubdivTestsBoundary...\n";
+		Geometry::IcoSphereBuilder ico({ 1 });
+		ico.BuildBaseData();
+		ico.BuildPMPSurfaceMesh();
+		auto icoMesh = ico.GetPMPSurfaceMeshResult();
+
+		constexpr bool deleteSomeFaces = true;
+
+		if (deleteSomeFaces)
+		{
+			std::vector<unsigned int> facesToDeleteIds{
+				0, 1, 3, 10, 11
+			};
+			for (const auto i : facesToDeleteIds)
+				icoMesh.delete_face(pmp::Face(i));
+			icoMesh.garbage_collection();
+		}
+
+		icoMesh.write(dataOutPath + "icoMeshDeleteFaces0.obj");
+
+		constexpr size_t maxSubdivLevel = 6;
+
+		// estimate edge & vertex counts
+		const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(icoMesh, maxSubdivLevel, true);
+
+		pmp::Subdivision subdiv(icoMesh);
+
+		for (size_t s = 1; s < maxSubdivLevel; s++)
+		{
+			subdiv.loop();
+			const auto nEdges = icoMesh.n_edges();
+			const auto nVerts = icoMesh.n_vertices();
+			std::cout << "========= Edge Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nEdges << ", Theoretical: " << edgeCounts[s] << ".\n";
+			std::cout << "========= Vertex Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nVerts << ", Theoretical: " << vertCounts[s] << ".\n";
+			std::cout << "------------------------------------------------\n";
+
+			icoMesh.write(dataOutPath + "icoMeshDeleteFaces" + std::to_string(s) + ".obj");
+		}		
+	}
+
+	if (performSubdivTestsMultiTorus)
+	{
+		std::cout << "performSubdivTestsTorus...\n";
+
+		for (size_t g = 1; g < 6; g++)
+		{
+			std::cout << "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n";
+			std::cout << "Genus : " << g << "\n";
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + std::to_string(g) + "Torus_Simple.obj");
+			mesh.write(dataOutPath + std::to_string(g) + "Torus_Subdiv0.vtk");
+
+			constexpr size_t maxSubdivLevel = 6;
+
+			// estimate edge & vertex counts
+			const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(mesh, maxSubdivLevel, true);
+
+			pmp::Subdivision subdiv(mesh);
+
+			for (size_t s = 1; s < maxSubdivLevel; s++)
+			{
+				subdiv.loop();
+				const auto nEdges = mesh.n_edges();
+				const auto nVerts = mesh.n_vertices();
+				std::cout << "========= Edge Count (" << s << "): ==========\n";
+				std::cout << "Actual: " << nEdges << ", Theoretical: " << edgeCounts[s] << ".\n";
+				std::cout << "========= Vertex Count (" << s << "): ==========\n";
+				std::cout << "Actual: " << nVerts << ", Theoretical: " << vertCounts[s] << ".\n";
+				std::cout << "------------------------------------------------\n";
+
+				mesh.write(dataOutPath + std::to_string(g) + "Torus_Subdiv" + std::to_string(s) + ".vtk");
+			}
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+		}
+
+	}
+
+	if (performSubdivPreallocationTests)
+	{
+		std::cout << " ... Preallocation Loop Subdivision Tests ..... \n";
+
+		const std::vector<std::string> subdivMeshNames{
+			/* 1 */ "armadillo_Simple",
+			/* 2 */ "blub_Simple",
+			/* 3 */ "bunny_Simple",
+			/* 4 */ "maxPlanck_Simple",
+			/* 5 */ "3holes",
+			/* 6 */ "rockerArm_Simple"
+		};
+
+		constexpr size_t maxSubdivLevel = 6;
+
+		for (const auto& meshName : subdivMeshNames)
+		{
+			std::cout << "meshName: " << meshName << "\n";
+			// Load mesh
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + meshName + ".obj");
+
+			double simpleTiming = 0.0;
+			double preallocTiming = 0.0;
+			constexpr size_t nTimings = 10;
+
+			for (size_t i = 0; i < nTimings; i++)
+			{
+				std::cout << "timing " << i << "\n";
+				// =================================================
+				// ......... Plain Subdivision .....................
+
+				auto meshForSubdiv0 = mesh;
+
+				const auto startSimpleSubdiv = std::chrono::high_resolution_clock::now();
+				pmp::Subdivision subdivSimple(meshForSubdiv0);
+
+				for (size_t s = 1; s < maxSubdivLevel; s++)
+				{
+					subdivSimple.loop();
+				}
+				const auto endSimpleSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffSimpleSubdiv = endSimpleSubdiv - startSimpleSubdiv;
+				simpleTiming += timeDiffSimpleSubdiv.count();
+
+				// export result for verification
+				//meshForSubdiv0.write(dataOutPath + meshName + "_simpleSubdiv" + std::to_string(maxSubdivLevel - 1) + "timesResult.vtk");
+
+				// =================================================
+				// ......... Preallocated Subdivision .....................
+
+				auto meshForSubdiv1 = mesh;
+
+				const auto startPreallocSubdiv = std::chrono::high_resolution_clock::now();
+				pmp::Subdivision subdivPrealloc(meshForSubdiv1);
+				subdivPrealloc.loop_prealloc(maxSubdivLevel - 1);
+				const auto endPreallocSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffPreallocSubdiv = endPreallocSubdiv - startPreallocSubdiv;
+				preallocTiming += timeDiffPreallocSubdiv.count();
+
+				// export result for verification
+				//meshForSubdiv1.write(dataOutPath + meshName + "_preallocSubdiv" + std::to_string(maxSubdivLevel - 1) + "timesResult.vtk");
+			}
+
+			simpleTiming /= nTimings;
+			preallocTiming /= nTimings;
+
+			// Report
+			std::cout << "Simple Subdiv: " << simpleTiming << " s, Prealloc Subdiv: " << preallocTiming << " s\n";
+		}
+	}
+
+	if (performNewIcosphereTests)
+	{
+		std::cout << "performNewIcosphereTests...\n";
+		Geometry::IcoSphereBuilder ico({ 5, 1.0f, true, false });
+		ico.BuildBaseData();
+
+		// test out BaseMeshGeometryData.
+		const auto bSuccess = ExportBaseMeshGeometryDataToOBJ(ico.GetBaseResult(), dataOutPath + "icoPreallocatedBase.obj");
+		assert(bSuccess);
+
+		ico.BuildPMPSurfaceMesh();
+		auto icoMesh = ico.GetPMPSurfaceMeshResult();
+
+		icoMesh.write(dataOutPath + "icoPreallocated.obj");
+	}
+
+	if (performIcospherePerformanceTests)
+	{
+		std::cout << "performIcospherePerformanceTests...\n";
+		constexpr size_t maxSubdivLevel = 7;
+		constexpr size_t nSphereRuns = 10;
+
+		double simpleTiming = 0.0;
+		double preallocTiming = 0.0;
+		constexpr size_t nTimings = 10;
+
+		for (size_t s = 1; s < maxSubdivLevel; s++)
+		{
+			std::cout << "s = " << s << ":\n";
+			for (size_t j = 0; j < nTimings; j++)
+			{
+				//std::cout << "timing " << i << "\n";
+				// =================================================
+				// ......... Plain Subdivision .....................
+
+				const unsigned int subdiv = s;
+
+				const auto startSimpleSubdiv = std::chrono::high_resolution_clock::now();
+
+				for (size_t i = 0; i < nSphereRuns; i++)
+				{
+					Geometry::IcoSphereBuilder ico0({ subdiv, 1.0f, true, true });
+					ico0.BuildBaseData();
+				}
+
+				const auto endSimpleSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffSimpleSubdiv = endSimpleSubdiv - startSimpleSubdiv;
+				simpleTiming += timeDiffSimpleSubdiv.count();
+
+				// =================================================
+				// ......... Preallocated Subdivision .....................
+
+				const auto startPreallocSubdiv = std::chrono::high_resolution_clock::now();
+
+				for (size_t i = 0; i < nSphereRuns; i++)
+				{
+					Geometry::IcoSphereBuilder ico1({ subdiv, 1.0f, true, false });
+					ico1.BuildBaseData();					
+				}
+
+				const auto endPreallocSubdiv = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double> timeDiffPreallocSubdiv = endPreallocSubdiv - startPreallocSubdiv;
+				preallocTiming += timeDiffPreallocSubdiv.count();
+			}
+
+			simpleTiming /= nTimings;
+			preallocTiming /= nTimings;
+
+			// Report
+			std::cout << "Simple Icosphere Subdiv: " << simpleTiming << " s, Preallocated Icosphere Subdiv: " << preallocTiming << " s\n";
+		}
+	}
+
+	if (pefrormCatmullClarkCounting)
+	{
+		// Load mesh
+		pmp::SurfaceMesh mesh;
+		mesh.read(dataDirPath + "CubeSphere.obj");
+
+		constexpr size_t maxSubdivLevel = 6;
+		pmp::Subdivision subdiv(mesh);
+
+		for (size_t s = 1; s < maxSubdivLevel; s++)
+		{
+			subdiv.catmull_clark();
+			const auto nEdges = mesh.n_edges();
+			const auto nVerts = mesh.n_vertices();
+			std::cout << "========= Edge Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nEdges << ".\n";
+			std::cout << "========= Vertex Count (" << s << "): ==========\n";
+			std::cout << "Actual: " << nVerts << ".\n";
+			std::cout << "------------------------------------------------\n";
+
+			mesh.write(dataOutPath + "CubeSphereCC" + std::to_string(s) + ".obj");
+		}
+	}
+
 	if (performRemeshingTests)
 	{
 		pmp::SurfaceMesh mesh;
@@ -853,6 +1186,53 @@ int main()
 			//	std::cerr << "> > > > > > MetricsEval subroutine has thrown an exception! Continue... < < < < < \n";
 			//}
 
+		}
+	}
+
+	if (performMMapImportTest)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"nefertiti"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			constexpr size_t nRuns = 10;
+
+			// load parallel
+			pmp::SurfaceMesh parImportedMesh;
+			std::optional<Geometry::BaseMeshGeometryData> baseDataOpt;
+
+			AVERAGE_TIMING(parImported, nRuns, {
+				baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", true);
+				if (!baseDataOpt.has_value())
+				{
+					std::cerr << "baseDataOpt == nullopt!\n";
+					break;
+				}
+			}, true);
+
+			// verify by export
+			parImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(baseDataOpt.value());
+			parImportedMesh.write(dataOutPath + meshName + "_parallelImp.obj");
+
+			// load single-threaded			
+			pmp::SurfaceMesh stImportedMesh;
+			std::optional<Geometry::BaseMeshGeometryData> stBaseDataOpt;
+
+			AVERAGE_TIMING(singleThreadImported, nRuns, {
+				stBaseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+				if (!stBaseDataOpt.has_value())
+				{
+					std::cerr << "stBaseDataOpt == nullopt!\n";
+					break;
+				}
+			}, true);
+
+			// verify by export
+			stImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(stBaseDataOpt.value());
+			stImportedMesh.write(dataOutPath + meshName + "_stImp.obj");
+			
 		}
 	}
 }

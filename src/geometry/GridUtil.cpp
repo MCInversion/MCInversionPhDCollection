@@ -1161,6 +1161,63 @@ namespace Geometry
 	// ========================================================================================
 	//
 
+	void ApplyTorusDistanceFieldToGrid(ScalarGrid& grid, const TorusParams& params)
+	{
+		// parameter check
+		if (params.RingRadius < FLT_EPSILON) {
+			std::cerr << "ApplyTorusDistanceFieldToGrid: Invalid parameter. params.RingRadius <= 0.0f!\n";
+			return;
+		}
+		if (params.TubeRadius < FLT_EPSILON) {
+			std::cerr << "ApplyTorusDistanceFieldToGrid: Invalid parameter. params.TubeRadius <= 0.0f!\n";
+			return;
+		}
+
+		// grid
+		auto& values = grid.Values();
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		// torus ROI (region of influence (box))
+		const float ringRadius = params.RingRadius;
+		const float tubeRadius = params.TubeRadius;
+		const auto& center = params.Center;
+
+		const auto roi = pmp::BoundingBox{
+			pmp::Point{center[0] - ringRadius - tubeRadius, center[1] - ringRadius - tubeRadius, center[2] - tubeRadius},
+			pmp::Point{center[0] + ringRadius + tubeRadius, center[1] + ringRadius + tubeRadius, center[2] + tubeRadius}
+		};
+
+		if (!grid.Box().Intersects(roi)) {
+			return; // nothing happens
+		}
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		for (unsigned int iz = 0; iz < Nz; iz++) {
+			for (unsigned int iy = 0; iy < Ny; iy++) {
+				for (unsigned int ix = 0; ix < Nx; ix++) {
+					const auto gridPt = pmp::Point{
+						orig[0] + static_cast<float>(ix) * cellSize,
+						orig[1] + static_cast<float>(iy) * cellSize,
+						orig[2] + static_cast<float>(iz) * cellSize
+					};
+					const auto posVect = gridPt - center;
+
+					// Calculate distance from grid point to the torus
+					const float len = sqrt(posVect[0] * posVect[0] + posVect[1] * posVect[1]) - ringRadius;
+					const auto dist = static_cast<double>(sqrt(len * len + posVect[2] * posVect[2]) - tubeRadius);
+
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
+				}
+			}
+		}
+	}
+
 	ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid)
 	{
 		ScalarGrid result(newCellSize, origGrid.Box());
