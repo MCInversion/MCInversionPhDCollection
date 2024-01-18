@@ -1057,12 +1057,18 @@ int main()
 
 	if (performSheetEvolverTest)
 	{
+#define PERFORM_7PT_EXAMPLE false
 		/**/
 		constexpr float roiHalfDim = 5.0f;
 		constexpr float roiDim = 2.0f * roiHalfDim;
 
+#if PERFORM_7PT_EXAMPLE
+		constexpr unsigned int nXSegments = 50;
+		constexpr unsigned int nYSegments = 50;
+#else
 		constexpr unsigned int nXSegments = 40;
 		constexpr unsigned int nYSegments = 40;
+#endif
 
 		constexpr Geometry::PlaneSettings mSettings{
 			pmp::vec3{},
@@ -1082,8 +1088,20 @@ int main()
 		//pMesh.write(dataOutPath + "plane.obj");
 
 		constexpr float cellSize = 0.1f;
-		const auto gridBox = pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} };
 		constexpr float columnWeight = 0.5f;
+#if PERFORM_7PT_EXAMPLE
+		const auto gridBox = pmp::BoundingBox{ pmp::vec3{-5.0f, -5.0f, -roiHalfDim}, pmp::vec3{16.1f, 15.0f, roiHalfDim} };
+		const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
+			{pmp::vec2{4.0f, 6.0f}, 0.5f * columnWeight},
+			{pmp::vec2{0.0f, 0.0f}, 0.5f * columnWeight},
+			{pmp::vec2{5.0f, 0.0f}, 0.5f * columnWeight},
+			{pmp::vec2{11.1f, 0.1f}, 0.5f * columnWeight},
+			{pmp::vec2{9.0f, 2.0f}, 0.5f * columnWeight},
+			{pmp::vec2{7.0f, 2.0f}, 0.5f * columnWeight},
+			{pmp::vec2{6.0f, 10.0f}, 0.5f * columnWeight}
+			});
+#else // 5-point example:
+		const auto gridBox = pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} };
 		const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
 			{pmp::vec2{2.5f, 2.5f}, 0.5f * columnWeight},
 			{pmp::vec2{7.5f, 2.5f}, 0.5f * columnWeight},
@@ -1091,18 +1109,7 @@ int main()
 			{pmp::vec2{5.0f, 8.0f}, 0.5f * columnWeight},
 			{pmp::vec2{2.5f, 7.5f}, 0.5f * columnWeight}
 			});
-		//const auto gridBox = pmp::BoundingBox{ pmp::vec3{-5.0f, -5.0f, -roiHalfDim}, pmp::vec3{16.1f, 15.0f, roiHalfDim} };
-		//constexpr float columnWeight = 0.5f;
-		//const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
-		//	{pmp::vec2{4.0f, 6.0f}, 0.5f * columnWeight},
-		//	{pmp::vec2{0.0f, 0.0f}, 0.5f * columnWeight},
-		//	{pmp::vec2{5.0f, 0.0f}, 0.5f * columnWeight},
-		//	{pmp::vec2{11.1f, 0.1f}, 0.5f * columnWeight},
-		//	{pmp::vec2{9.0f, 2.0f}, 0.5f * columnWeight},
-		//	{pmp::vec2{7.0f, 2.0f}, 0.5f * columnWeight},
-		//	{pmp::vec2{6.0f, 10.0f}, 0.5f * columnWeight}
-		//	});
-
+#endif
 		ExportToVTI(dataOutPath + "CapsuleVals", grid);
 
 		const auto& sdfBox = grid.Box();
@@ -1123,7 +1130,7 @@ int main()
 
 		const AdvectionDiffusionParameters adParams{
 			1.0, 1.0,
-			1.0, 0.0
+			1.0, 0.5
 		};
 
 		SheetMembraneEvolutionSettings seSettings{
