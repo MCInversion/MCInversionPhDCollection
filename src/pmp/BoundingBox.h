@@ -24,6 +24,13 @@ public:
     //! Construct from min and max points.
     BoundingBox(const Point& min, const Point& max) : min_(min), max_(max) {}
 
+    //! Construct from a vector of points.
+    BoundingBox(const std::vector<Point>& pts)
+    {
+        for (const auto& p : pts)
+            operator+=(p);
+    }
+
     //! Add point to the bounding box.
     BoundingBox& operator+=(const Point& p)
     {

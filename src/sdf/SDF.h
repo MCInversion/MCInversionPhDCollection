@@ -103,8 +103,48 @@ namespace SDF
 
 		/// \brief computes sign of the distance field by negating and applying a recursive flood-fill algorithm for non-frozen voxels.
 		static void ComputeSignUsingFloodFill(Geometry::ScalarGrid& grid);
+
 		/// \brief after applying a pmp::HoleFilling, then all voxels whose outgoing ray intersects the mesh are interior.
 		static void ComputeSignUsingRays(Geometry::ScalarGrid& grid);
+	};
+
+	/// \brief A wrapper for input settings for computing distance field.
+	struct PointCloudDistanceFieldSettings
+	{
+		float CellSize{ 1.0f }; //>! size of a single distance voxel.
+		float VolumeExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of the point cloud's bounding box) for the resulting scalar grid volume.
+		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of point cloud's bounding box gives rise to a truncation (cutoff) value for the distance field.
+		BlurPostprocessingType BlurType{ BlurPostprocessingType::None }; //>! type of blur filter to be used for post-processing.
+	};
+
+	/// \brief A singleton object for computing distance fields to point clouds.
+	class PointCloudDistanceFieldGenerator
+	{
+	public:
+		/// \brief a deleted default constructor because m_KdTree is not default-constructable.
+		PointCloudDistanceFieldGenerator() = delete;
+
+		/**
+		 * \brief Compute the signed distance field of given input point cloud.
+		 * \param inputPoints             evaluated point cloud.
+		 * \param settings                settings for the distance field.
+		 * \return the computed distance field's ScalarGrid.
+		 */
+		static [[nodiscard]] Geometry::ScalarGrid Generate(const std::vector<pmp::vec3>& inputPoints, const DistanceFieldSettings& settings);
+
+	private:
+
+		/**
+		 * \brief A preprocessing approach for distance grid using nearest neighbor approximation
+		 * \param grid         modifiable input grid.
+		 */
+		static void PreprocessGridFromPoints(Geometry::ScalarGrid& grid);
+
+		//
+		// ===================================================
+		//
+
+		inline static std::vector<pmp::vec3> m_Points{}; //>! the input point cloud
 	};
 
 	/**

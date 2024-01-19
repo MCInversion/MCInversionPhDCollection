@@ -40,7 +40,7 @@ constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
 constexpr bool performIsosurfaceEvolverTests = false;
-constexpr bool performSheetEvolverTest = true;
+constexpr bool performSheetEvolverTest = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
 constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
@@ -58,6 +58,10 @@ constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
 constexpr bool performImportedObjMetricsEval = false;
 constexpr bool performMMapImportTest = false;
+constexpr bool performSimpleBunnyOBJSamplingDemo = false;
+constexpr bool performPDanielPtCloudPLYExport = false;
+constexpr bool performPtCloudToDF = true;
+constexpr bool performPDanielPtCloudComparisonTest = true;
 
 [[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
 {
@@ -1241,5 +1245,134 @@ int main()
 			stImportedMesh.write(dataOutPath + meshName + "_stImp.obj");
 			
 		}
+	}
+
+	if (performSimpleBunnyOBJSamplingDemo)
+	{
+		const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + "bunny.obj", true);
+		assert(baseDataOpt.has_value());
+		const auto& baseData = baseDataOpt.value();
+
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+		const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+
+		for (size_t i = 0; i < nSamplings; ++i) {
+			// Determine the number of vertices to sample for this iteration
+			size_t nVerts = minVerts + (maxVerts - minVerts) * i / (nSamplings - 1);
+
+			// Ensure nVerts is within the valid range
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+			std::cout << "Sampling " << nVerts << " vertices in iteration " << i << "\n";
+
+			// Export sampled vertices to PLY
+			std::string filename = dataOutPath + "bunnyPts_" + std::to_string(i) + ".ply";
+			const auto bSuccess = ExportSampledVerticesToPLY(baseData, nVerts, filename);
+			assert(bSuccess);
+		}
+	}
+
+	if (performPDanielPtCloudPLYExport)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"bunny",
+			"CaesarBust"
+		};
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			// Export sampled vertices to PLY
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+		}
+	}
+
+	if (performPtCloudToDF)
+	{
+		const std::vector<std::string> importedPtCloudNames{
+			"bunnyPts_3",
+			"CaesarBustPts_3"
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 10;
+		for (const auto& ptCloudName : importedPtCloudNames)
+		{
+
+			// const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto ptCloud = ptCloudOpt.value();
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+
+
+			std::cout << "==================================================================\n";
+			std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << samplingLevel << ".vti\n";
+			std::cout << "------------------------------------------------------------------\n";
+
+		}
+
+		//constexpr bool computeGradients = false;
+
+		//for (const auto& name : meshNames)
+		//{
+		//	pmp::SurfaceMesh mesh;
+		//	mesh.read(dataDirPath + name + ".obj");
+
+		//	const auto meshBBox = mesh.bounds();
+		//	const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		//	const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		//	const float cellSize = minSize / nVoxelsPerMinDimension;
+		//	const SDF::DistanceFieldSettings sdfSettings{
+		//		cellSize,
+		//		1.0f,
+		//		DBL_MAX,
+		//		SDF::KDTreeSplitType::Center,
+		//		SDF::SignComputation::VoxelFloodFill,
+		//		SDF::BlurPostprocessingType::None,
+		//		SDF::PreprocessingType::Octree
+		//	};
+		//	SDF::ReportInput(mesh, sdfSettings, std::cout);
+
+		//	const auto startSDF = std::chrono::high_resolution_clock::now();
+		//	const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+		//	const auto endSDF = std::chrono::high_resolution_clock::now();
+
+		//	SDF::ReportOutput(sdf, std::cout);
+		//	const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+		//	std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+		//	std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+		//	ExportToVTI(dataOutPath + name + "SDF", sdf);
 	}
 }

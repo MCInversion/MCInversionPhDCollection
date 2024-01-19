@@ -73,6 +73,10 @@ set(RPLY_SOURCE_DIR "external/rply")
 include_directories(${RPLY_SOURCE_DIR})
 add_subdirectory(${RPLY_SOURCE_DIR})
 
+# setup Nanoflann
+set(NANOFLANN_SRC_DIR "external/nanoflann")
+include_directories(${NANOFLANN_SRC_DIR})
+
 include(AddFileDependencies)
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 

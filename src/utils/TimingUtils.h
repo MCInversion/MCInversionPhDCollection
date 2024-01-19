@@ -11,7 +11,7 @@
   do { \
     auto start_##SESSION_NAME = std::chrono::high_resolution_clock::now();
 
- /**
+/**
   * \brief A simple macro for the end of a timing session.
   * \param SESSION_NAME      chosen name (in camelCase) of the timed session.
   *	\param bCoutOutput       if true, the timing output will be streamed to std::cout.

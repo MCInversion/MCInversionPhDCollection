@@ -41,11 +41,29 @@ namespace Geometry
 	[[nodiscard]] bool ExportBaseMeshGeometryDataToOBJ(const BaseMeshGeometryData& geomData, const std::string& absFileName);
 
 	/**
-	 * \brief For importing very OBJ mesh files with option for parallel.
+	 * \brief For importing very large OBJ mesh files with option for parallel.
 	 * \param absFileName        absolute file path for the opened file.
 	 * \param importInParallel   if true, a parallel version of the importer will be used.
-	 * \return optional BaseMeshGeometryData
+	 * \return optional BaseMeshGeometryData.
 	 */
 	[[nodiscard]] std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel = false);
-	
+
+	/**
+	 * \brief For importing PLY point cloud files with option for parallel.
+	 * \param absFileName        absolute file path for the opened file.
+	 * \param importInParallel   if true, a parallel version of the importer will be used.
+	 * \return optional vector of points (pmp::vec3).
+	 */
+	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudData(const std::string& absFileName, const bool& importInParallel = false);
+
+	/**
+	 * \brief At this point this is a demo function for MeshLab's ball-pivoting.
+	 * \param meshData       input geom data.
+	 * \param nVerts         the number of vertices to be sampled from meshData.
+	 * \param absFileName    absolute file path for the opened file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName);
+
+
 } // namespace Geometry

@@ -563,4 +563,87 @@ namespace SDF
 		grid.FrozenValues() = origFrozenFlags;
 	}
 
+	Geometry::ScalarGrid PointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::vec3>& inputPoints, const DistanceFieldSettings& settings)
+	{
+		assert(settings.CellSize > 0.0f);
+		assert(settings.VolumeExpansionFactor >= 0.0f);
+		assert(settings.TruncationFactor <= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+
+		pmp::BoundingBox dfBBox(inputPoints);
+		const auto size = dfBBox.max() - dfBBox.min();
+		const float minSize = std::min({ size[0], size[1], size[2] });
+
+		if (settings.VolumeExpansionFactor > 0.0f)
+		{
+			const float expansion = settings.VolumeExpansionFactor * minSize;
+			dfBBox.expand(expansion, expansion, expansion);
+		}
+
+		// percentage of the minimum half-size of the mesh's bounding box.
+		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		Geometry::ScalarGrid resultGrid(settings.CellSize, dfBBox, truncationValue);
+
+		PreprocessGridFromPoints(resultGrid);
+
+		if (truncationValue > 0.0)
+		{
+#if REPORT_SDF_STEPS
+			std::cout << "FastSweep ... ";
+#endif
+			constexpr SweepSolverSettings fsSettings{};
+			FastSweep(resultGrid, fsSettings);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
+		}
+
+		// blur postprocessing
+		if (settings.BlurType != BlurPostprocessingType::None)
+		{
+#if REPORT_SDF_STEPS
+			std::cout << "blurFunction ... ";
+#endif
+			const auto blurFunction = GetBlurFunction(settings.BlurType);
+			blurFunction(resultGrid);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
+		}
+		return resultGrid;
+	}
+
+	void PointCloudDistanceFieldGenerator::PreprocessGridFromPoints(Geometry::ScalarGrid& grid)
+	{
+		auto& gridVals = grid.Values();
+		auto& gridFrozenVals = grid.FrozenValues();
+		const float cellSize = grid.CellSize();
+
+		const auto& gridBox = grid.Box();
+		const float gBoxMinX = gridBox.min()[0];
+		const float gBoxMinY = gridBox.min()[1];
+		const float gBoxMinZ = gridBox.min()[2];
+
+		const auto& dims = grid.Dimensions();
+		const auto Nx = static_cast<unsigned int>(dims.Nx);
+		const auto Ny = static_cast<unsigned int>(dims.Ny);
+		unsigned int ix, iy, iz, gridPos;
+		pmp::vec3 gridPt;
+
+		for (const auto& p : m_Points)
+		{
+			// transform from real space to grid index space
+			ix = static_cast<unsigned int>(std::floor((p[0] - gBoxMinX) / cellSize));
+			iy = static_cast<unsigned int>(std::floor((p[1] - gBoxMinY) / cellSize));
+			iz = static_cast<unsigned int>(std::floor((p[2] - gBoxMinZ) / cellSize));
+
+			gridPt[0] = gBoxMinX + ix * cellSize;
+			gridPt[1] = gBoxMinY + iy * cellSize;
+			gridPt[2] = gBoxMinZ + iz * cellSize;
+
+			gridPos = Nx * Ny * iz + Nx * iy + ix;
+			gridVals[gridPos] = norm(gridPt - p);
+			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
+		}
+	}
+
 } // namespace SDF
