@@ -1319,60 +1319,44 @@ int main()
 			"CaesarBustPts_3"
 		};
 
-		constexpr unsigned int nVoxelsPerMinDimension = 10;
+		constexpr unsigned int nVoxelsPerMinDimension = 20;
 		for (const auto& ptCloudName : importedPtCloudNames)
 		{
 
 			// const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			//const auto ptCloudOpt = Geometry::ImportPLYPointCloudDataMainThread(dataOutPath + ptCloudName + ".ply");
 			if (!ptCloudOpt.has_value())
 			{
 				std::cerr << "ptCloudOpt == nullopt!\n";
 				break;
 			}
 
-			const auto ptCloud = ptCloudOpt.value();
+			const auto& ptCloud = ptCloudOpt.value();
 			const pmp::BoundingBox ptCloudBBox(ptCloud);
 			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+			const SDF::PointCloudDistanceFieldSettings dfSettings{
+						cellSize,
+						1.0f,
+						DBL_MAX,
+						SDF::BlurPostprocessingType::None
+			};
 
 			std::cout << "==================================================================\n";
-			std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << samplingLevel << ".vti\n";
+			std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << nVoxelsPerMinDimension << "voxPerMinDim.vti\n";
 			std::cout << "------------------------------------------------------------------\n";
 
+			const auto startSDF = std::chrono::high_resolution_clock::now();
+			const auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
+			const auto endSDF = std::chrono::high_resolution_clock::now();
+
+			SDF::ReportOutput(sdf, std::cout);
+			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			std::cout << "DF Time: " << timeDiff.count() << " s\n";
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			ExportToVTI(dataOutPath + ptCloudName + "DF", sdf);
 		}
-
-		//constexpr bool computeGradients = false;
-
-		//for (const auto& name : meshNames)
-		//{
-		//	pmp::SurfaceMesh mesh;
-		//	mesh.read(dataDirPath + name + ".obj");
-
-		//	const auto meshBBox = mesh.bounds();
-		//	const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		//	const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		//	const float cellSize = minSize / nVoxelsPerMinDimension;
-		//	const SDF::DistanceFieldSettings sdfSettings{
-		//		cellSize,
-		//		1.0f,
-		//		DBL_MAX,
-		//		SDF::KDTreeSplitType::Center,
-		//		SDF::SignComputation::VoxelFloodFill,
-		//		SDF::BlurPostprocessingType::None,
-		//		SDF::PreprocessingType::Octree
-		//	};
-		//	SDF::ReportInput(mesh, sdfSettings, std::cout);
-
-		//	const auto startSDF = std::chrono::high_resolution_clock::now();
-		//	const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
-		//	const auto endSDF = std::chrono::high_resolution_clock::now();
-
-		//	SDF::ReportOutput(sdf, std::cout);
-		//	const std::chrono::duration<double> timeDiff = endSDF - startSDF;
-		//	std::cout << "SDF Time: " << timeDiff.count() << " s\n";
-		//	std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-		//	ExportToVTI(dataOutPath + name + "SDF", sdf);
 	}
 }

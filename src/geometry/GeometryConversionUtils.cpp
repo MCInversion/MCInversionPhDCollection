@@ -167,35 +167,121 @@ namespace
 	void ParsePointCloudChunk(const char* start, const char* end, std::vector<pmp::vec3>& data) {
 		const char* cursor = start;
 
-		while (cursor < end) {
+		while (cursor < end) 
+		{
 			// Skip any leading whitespace
-			while ((*cursor == ' ' || *cursor == '\n') && cursor < end) {
+			while ((*cursor == ' ' || *cursor == '\n') && cursor < end)
+			{
 				cursor++;
+			}
+
+			if (cursor >= end)
+			{
+				break; // Reached the end of the chunk
 			}
 
 			// Start of a new line
 			const char* lineStart = cursor;
 
 			// Find the end of the line
-			while (*cursor != '\n' && cursor < end) {
+			while (*cursor != '\n' && cursor < end) 
+			{
 				cursor++;
+			}
+
+			// Check if the end of the line is within the chunk
+			if (*cursor != '\n' && cursor == end) 
+			{
+				break; // The line is incomplete, so stop parsing
 			}
 
 			// Extract the line
 			std::string line(lineStart, cursor);
 
+			// Remove carriage return if present
+			if (!line.empty() && line.back() == '\r') 
+			{
+				line.pop_back();
+			}
+
 			// Increment cursor to start the next line in the next iteration
-			if (cursor < end) {
+			if (cursor < end) 
+			{
 				cursor++;
 			}
 
 			// Parse the line to extract vertex coordinates
 			std::istringstream iss(line);
 			pmp::vec3 vertex;
-			if (iss >> vertex[0] >> vertex[1] >> vertex[2]) {
-				data.push_back(vertex);
+			if (!(iss >> vertex[0] >> vertex[1] >> vertex[2])) 
+			{
+				std::cerr << "ParsePointCloudChunk: Error parsing line: " << line << std::endl;
+				continue;
+			}
+
+			data.push_back(vertex);
+		}
+	}
+
+	/**
+	 * \brief Reads the header of the PLY file for vertices.
+	 * \param start     header start position in memory.
+	 * \return pair { number of vertices read from the header, the memory position where the point data starts }
+	 */
+	[[nodiscard]] std::pair<size_t, char*> ReadPLYVertexHeader(const char* start)
+	{
+		const char* cursor = start;
+		std::string line;
+		size_t vertexCount = 0;
+
+		while (*cursor != '\0') 
+		{
+			// Extract the line
+			const char* lineStart = cursor;
+			while (*cursor != '\n' && *cursor != '\0') 
+			{
+				cursor++;
+			}
+			line.assign(lineStart, cursor);
+
+			// Trim trailing carriage return if present
+			if (!line.empty() && line.back() == '\r') 
+			{
+				line.pop_back();
+			}
+
+			// Move to the start of the next line
+			if (*cursor != '\0') 
+			{
+				cursor++;
+			}
+
+			// Check for the vertex count line
+			if (line.rfind("element vertex", 0) == 0) 
+			{
+				std::istringstream iss(line);
+				std::string element, vertex;
+				if (!(iss >> element >> vertex >> vertexCount))
+				{
+					std::cerr << "ReadPLYVertexHeader [WARNING]: Failed to parse vertex count line: " << line << "\n";
+					continue;
+				}
+				// Successfully parsed the vertex count line. Continue to look for the end of the header.
+			}
+
+			// Check for the end of the header
+			if (line == "end_header") 
+			{
+				break;
 			}
 		}
+
+		if (vertexCount == 0) 
+		{
+			std::cerr << "ReadPLYVertexHeader [ERROR]: Vertex count not found in the header.\n";
+		}
+
+		return { vertexCount, const_cast<char*>(cursor) }; // Return the vertex count and the cursor position
 	}
 
 
@@ -464,25 +550,68 @@ namespace Geometry
 
 		std::vector<pmp::vec3> resultData;
 
-		// Determine the number of threads
-		const size_t thread_count = importInParallel ? std::thread::hardware_concurrency() : 1;
-		const size_t chunk_size = file_size / thread_count;
-		std::vector<std::thread> threads(thread_count);
-		std::vector<std::vector<pmp::vec3>> threadResults(thread_count);
-
 		char* file_start = static_cast<char*>(file_memory);
 		char* file_end = file_start + file_size;
 
-		for (size_t i = 0; i < thread_count; ++i) {
+		// Read the PLY header to get the number of vertices and start position of vertex data
+		const auto [vertexCount, vertexDataStart] = ReadPLYVertexHeader(file_start);
+		if (vertexDataStart == 0)
+		{
+			std::cerr << "ImportPLYPointCloudData [ERROR]: Failed to read PLY header or no vertices found.\n";
+			UnmapViewOfFile(file_memory);
+			CloseHandle(file_mapping);
+			CloseHandle(file_handle);
+			return {};
+		}
+
+		// Adjust file_start to point to the beginning of vertex data
+		file_start = vertexDataStart;
+
+		// Ensure there is vertex data to process
+		if (file_start >= file_end) 
+		{
+			std::cerr << "ImportPLYPointCloudData [ERROR]: No vertex data to process.\n";
+			UnmapViewOfFile(file_memory);
+			CloseHandle(file_mapping);
+			CloseHandle(file_handle);
+			return {};
+		}
+
+		// Adjust the file size for chunk calculation
+		const size_t adjusted_file_size = file_end - file_start;
+
+		// Determine the number of threads and chunk size
+		const size_t thread_count = importInParallel ? std::thread::hardware_concurrency() : 1;
+		const size_t chunk_size = std::max<size_t>(adjusted_file_size / thread_count, 1ul); // Ensure chunk size is at least 1
+		std::vector<std::thread> threads(thread_count);
+		std::vector<std::vector<pmp::vec3>> threadResults(thread_count);
+
+		for (size_t i = 0; i < thread_count; ++i) 
+		{
 			char* chunk_start = file_start + (i * chunk_size);
 			char* chunk_end = (i == thread_count - 1) ? file_end : chunk_start + chunk_size;
 
-			// Adjust chunk_end to point to the end of a line
-			while (*chunk_end != '\n' && chunk_end < file_end) {
+			// Adjust chunk_start to the beginning of a line (for all chunks except the first)
+			if (i > 0) 
+			{
+				while (*chunk_start != '\n' && chunk_start < file_end) 
+				{
+					chunk_start++;
+				}
+				if (chunk_start < file_end)
+				{
+					chunk_start++;  // Move past the newline character
+				}
+			}
+
+			// Adjust chunk_end to the end of a line
+			while (*chunk_end != '\n' && chunk_end < file_end)
+			{
 				chunk_end++;
 			}
-			if (chunk_end != file_end) {
-				chunk_end++;  // move past the newline character
+			if (chunk_end < file_end)
+			{
+				chunk_end++;  // Move past the newline character
 			}
 
 			// Start a thread to process this chunk
@@ -490,7 +619,8 @@ namespace Geometry
 		}
 
 		// Wait for all threads to finish
-		for (auto& t : threads) {
+		for (auto& t : threads) 
+		{
 			t.join();
 		}
 
@@ -505,6 +635,67 @@ namespace Geometry
 		CloseHandle(file_handle);
 
 		return std::move(resultData);
+	}
+
+	std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudDataMainThread(const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "ply")
+		{
+			std::cerr << absFileName << " has invalid extension!" << std::endl;
+			return {};
+		}
+
+		std::ifstream file(absFileName);
+		if (!file.is_open()) 
+		{
+			std::cerr << "Failed to open the file." << std::endl;
+			return {};
+		}
+
+		std::string line;
+		size_t vertexCount = 0;
+		bool headerEnded = false;
+
+		// Read header to find the vertex count
+		while (std::getline(file, line) && !headerEnded) 
+		{
+			std::istringstream iss(line);
+			std::string token;
+			iss >> token;
+
+			if (token == "element") {
+				iss >> token;
+				if (token == "vertex") {
+					iss >> vertexCount;
+				}
+			}
+			else if (token == "end_header") {
+				headerEnded = true;
+			}
+		}
+
+		if (!headerEnded || vertexCount == 0) {
+			std::cerr << "Invalid PLY header or no vertices found." << std::endl;
+			return {};
+		}
+
+		std::vector<pmp::vec3> vertices;
+		vertices.reserve(vertexCount);
+
+		// Read vertex data
+		while (std::getline(file, line)) {
+			std::istringstream iss(line);
+			pmp::vec3 vertex;
+			if (!(iss >> vertex[0] >> vertex[1] >> vertex[2])) {
+				std::cerr << "Error parsing vertex data: " << line << std::endl;
+				continue;
+			}
+
+			vertices.push_back(vertex);
+		}
+
+		return vertices;
 	}
 
 	bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName)

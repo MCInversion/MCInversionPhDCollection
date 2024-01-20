@@ -130,7 +130,7 @@ namespace SDF
 		 * \param settings                settings for the distance field.
 		 * \return the computed distance field's ScalarGrid.
 		 */
-		static [[nodiscard]] Geometry::ScalarGrid Generate(const std::vector<pmp::vec3>& inputPoints, const DistanceFieldSettings& settings);
+		static [[nodiscard]] Geometry::ScalarGrid Generate(const std::vector<pmp::vec3>& inputPoints, const PointCloudDistanceFieldSettings& settings);
 
 	private:
 

@@ -56,6 +56,8 @@ namespace Geometry
 	 */
 	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudData(const std::string& absFileName, const bool& importInParallel = false);
 
+	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudDataMainThread(const std::string& absFileName);
+
 	/**
 	 * \brief At this point this is a demo function for MeshLab's ball-pivoting.
 	 * \param meshData       input geom data.

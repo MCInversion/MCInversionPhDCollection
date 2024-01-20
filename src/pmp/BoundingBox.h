@@ -25,10 +25,22 @@ public:
     BoundingBox(const Point& min, const Point& max) : min_(min), max_(max) {}
 
     //! Construct from a vector of points.
-    BoundingBox(const std::vector<Point>& pts)
+    explicit BoundingBox(const std::vector<Point>& pts)
+        : min_(std::numeric_limits<Scalar>::max()),
+	      max_(-std::numeric_limits<Scalar>::max())
     {
-        for (const auto& p : pts)
-            operator+=(p);
+        for (int pId = 0; const auto& p : pts)
+		{
+            for (int i = 0; i < 3; ++i)
+            {
+                if (p[i] < min_[i])
+                    min_[i] = p[i];
+                if (p[i] > max_[i])
+                    max_[i] = p[i];
+            }
+
+            ++pId;
+        }
     }
 
     //! Add point to the bounding box.

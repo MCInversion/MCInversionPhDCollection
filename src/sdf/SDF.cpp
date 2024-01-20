@@ -285,7 +285,7 @@ namespace SDF
 	{
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
-		assert(settings.TruncationFactor <= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		assert(settings.TruncationFactor > 0);
 
 		m_Mesh = inputMesh;
 		if (settings.SignMethod != SignComputation::None)
@@ -563,11 +563,11 @@ namespace SDF
 		grid.FrozenValues() = origFrozenFlags;
 	}
 
-	Geometry::ScalarGrid PointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::vec3>& inputPoints, const DistanceFieldSettings& settings)
+	Geometry::ScalarGrid PointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::vec3>& inputPoints, const PointCloudDistanceFieldSettings& settings)
 	{
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
-		assert(settings.TruncationFactor <= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		assert(settings.TruncationFactor > 0);
 
 		pmp::BoundingBox dfBBox(inputPoints);
 		const auto size = dfBBox.max() - dfBBox.min();
@@ -583,6 +583,7 @@ namespace SDF
 		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, dfBBox, truncationValue);
 
+		m_Points = inputPoints;
 		PreprocessGridFromPoints(resultGrid);
 
 		if (truncationValue > 0.0)
@@ -641,6 +642,7 @@ namespace SDF
 			gridPt[2] = gBoxMinZ + iz * cellSize;
 
 			gridPos = Nx * Ny * iz + Nx * iy + ix;
+			assert(gridPos < gridVals.size());
 			gridVals[gridPos] = norm(gridPt - p);
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
