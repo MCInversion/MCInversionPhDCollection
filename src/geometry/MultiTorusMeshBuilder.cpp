@@ -20,7 +20,7 @@ namespace Geometry
         const size_t nRSegments = m_Settings.RingSegments;
         const size_t nTSegments = m_Settings.TubeSegments;
 
-		
+		// TODO
     }
 
 } // namespace Geometry

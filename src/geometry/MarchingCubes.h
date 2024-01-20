@@ -53,6 +53,10 @@ struct IdPoint
 
 typedef std::map<size_t, IdPoint> PointIdMapping;
 
+///	==========================================================================
+/// \brief Triangle point indices.
+///	\struct Triangle
+///	==========================================================================
 struct Triangle
 {
 	size_t pointId[3];
@@ -75,11 +79,13 @@ struct MC_Mesh
 };
 
 /**
- * the marching cubes algorithm as described here: http://paulbourke.net/geometry/polygonise/
- * volume:   contains the data (size = xDim * yDim * zDim)
- * [xyz]Dim: the dimensions in each direction
- * isoLevel: the minimum isoLevel, all values >= isoLevel will contribute to the mesh
- * the mesh is returned, the caller takes ownership over the pointers
+ * \brief The marching cubes algorithm as described here: http://paulbourke.net/geometry/polygonise/
+ * \param volume      contains the data (size = xDim * yDim * zDim).
+ * \param xDim        the x dimension of the grid.
+ * \param yDim        the y dimension of the grid.
+ * \param zDim        the z dimension of the grid.
+ * \param isoLevel    the minimum isoLevel, all values >= isoLevel will contribute to the mesh.
+ * \return the mesh is returned, the caller takes ownership over the pointers.
  */
 template<typename T>
 MC_Mesh GetMarchingCubesMesh(const T* volume, size_t xDim, size_t yDim, size_t zDim, T isoLevel);

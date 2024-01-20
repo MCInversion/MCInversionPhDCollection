@@ -1212,6 +1212,20 @@ public:
     //! \return number of edges in the mesh
     size_t n_edges() const { return edges_size() - deleted_edges_; }
 
+    //! \return number of boundary edges in the mesh
+    size_t n_boundary_edges() const
+    {
+        size_t result = 0;
+        for (const auto e : edges())
+        {
+            if (!is_boundary(e))
+                continue;
+
+            result++;
+        }
+        return result;
+    }
+
     //! \return number of faces in the mesh
     size_t n_faces() const { return faces_size() - deleted_faces_; }
 

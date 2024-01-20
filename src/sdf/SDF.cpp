@@ -615,6 +615,11 @@ namespace SDF
 
 	void PointCloudDistanceFieldGenerator::PreprocessGridFromPoints(Geometry::ScalarGrid& grid)
 	{
+		if (m_Points.empty())
+		{
+			std::cerr << "PointCloudDistanceFieldGenerator::PreprocessGridFromPoints: m_Points.empty()!\n";
+			return;
+		}
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
 		const float cellSize = grid.CellSize();

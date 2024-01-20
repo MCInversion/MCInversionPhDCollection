@@ -58,6 +58,12 @@ namespace Geometry
 	void RepairScalarGrid(ScalarGrid& grid);
 
 	/**
+	 * \brief Normalizes the values of the scalar grid to interval [-1, 1]
+	 * \param grid    input grid.
+	 */
+	void NormalizeScalarGridValues(ScalarGrid& grid);
+
+	/**
 	 * \brief Computes a gradient from a given scalar grid.
 	 * \param scalarGrid     input grid.
 	 * \return gradient field.

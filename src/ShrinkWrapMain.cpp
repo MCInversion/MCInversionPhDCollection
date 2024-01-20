@@ -1,33 +1,29 @@
-
-#include "pmp/SurfaceMesh.h"
-
-#include "sdf/SDF.h"
-#include "geometry/GridUtil.h"
-
-#include "SurfaceEvolver.h"
-#include "ConversionUtils.h"
-
-#include <filesystem>
-#include <chrono>
-#include <map>
-
 #include "BrainSurfaceEvolver.h"
+#include "ConversionUtils.h"
 #include "IsosurfaceEvolver.h"
-#include "SphereTest.h"
+#include "SurfaceEvolver.h"
 #include "SheetMembraneEvolver.h"
+#include "SphereTest.h"
+
+#include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MarchingCubes.h"
 #include "geometry/MeshAnalysis.h"
-#include "geometry/TorusBuilder.h"
 #include "geometry/MobiusStripBuilder.h"
-#include "geometry/MultiTorusMeshBuilder.h"
 #include "geometry/PlaneBuilder.h"
+#include "geometry/TorusBuilder.h"
+#include "sdf/SDF.h"
+#include "utils/TimingUtils.h"
+
+#include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/Decimation.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/Subdivision.h"
-#include "utils/TimingUtils.h"
-//#include "geometry/MeshAnalysis.h"
+
+#include <filesystem>
+#include <chrono>
+#include <map>
 
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
@@ -36,6 +32,7 @@ const auto fsDataOutPath = fsRootPath / "output\\";
 const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
+// test flags. The actual execution is just wrapped inside an if-statement.
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
@@ -60,96 +57,8 @@ constexpr bool performImportedObjMetricsEval = false;
 constexpr bool performMMapImportTest = false;
 constexpr bool performSimpleBunnyOBJSamplingDemo = false;
 constexpr bool performPDanielPtCloudPLYExport = false;
-constexpr bool performPtCloudToDF = true;
+constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = true;
-
-[[nodiscard]] size_t CountBoundaryEdges(const pmp::SurfaceMesh& mesh)
-{
-	size_t result = 0;
-	for (const auto e : mesh.edges())
-	{
-		if (!mesh.is_boundary(e))
-			continue;
-
-		result++;
-	}
-	return result;
-}
-
-[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel, const bool& evalOutput = false)
-{
-	const auto nBdEdges0 = CountBoundaryEdges(mesh);
-	const size_t sMax = maxSubdivLevel;
-
-	if (nBdEdges0 == 0)
-	{
-		// mesh is watertight
-		const auto nEdges0 = mesh.n_edges();
-		const auto nVerts0 = mesh.n_vertices();
-
-		if (evalOutput)
-		{
-			std::cout << "............................................................\n";
-			std::cout << "GetEdgeVertCountsTheoreticalEstimate:\n";
-			std::cout << "nEdges0 = " << nEdges0 << "\n";
-			std::cout << "nVerts0 = " << nVerts0 << "\n";
-			std::cout << "............................................................\n";
-		}
-
-		const auto edgeCountEstimate = [&nEdges0](const size_t& s) { return (static_cast<size_t>(pow(4, s)) * nEdges0); };
-		const auto vertCountEstimate = [&nEdges0, &nVerts0](const size_t& s) { return ((nEdges0 * static_cast<size_t>(pow(4, s) - 1) + 3 * nVerts0) / 3); };
-
-		std::vector<size_t> edgeCounts(sMax);
-		std::vector<size_t> vertCounts(sMax);
-
-		for (size_t s = 0; s < sMax; s++)
-		{
-			edgeCounts[s] = edgeCountEstimate(s);
-			vertCounts[s] = vertCountEstimate(s);
-		}
-
-		return { edgeCounts, vertCounts };
-	}
-
-	// mesh is not watertight
-	const auto nEdges0 = mesh.n_edges();
-	const auto nVerts0 = mesh.n_vertices();
-
-	const auto nIntEdges0 = nEdges0 - nBdEdges0;
-
-	if (evalOutput)
-	{
-		std::cout << "............................................................\n";
-		std::cout << "GetEdgeVertCountsTheoreticalEstimate:\n";
-		std::cout << "nIntEdges0 = " << nIntEdges0 << ", nBdEdges = " << nBdEdges0 << "\n";
-		std::cout << "nVerts0 = " << nVerts0 << "\n";
-		std::cout << "............................................................\n";
-	}
-
-	const auto intEdgeCountEstimate = [&nIntEdges0, &nBdEdges0](const size_t& s) -> size_t
-	{
-		return (pow(2, s - 1)) * ((pow(2, s) - 1) * nBdEdges0 + nIntEdges0 * pow(2, s + 1));
-	};
-	const auto bdEdgeCountEstimate = [&nBdEdges0](const size_t& s) -> size_t
-	{
-		return (pow(2, s)) * nBdEdges0;
-	};
-	const auto vertCountEstimate = [&nIntEdges0, &nBdEdges0, &nVerts0](const size_t& s) -> size_t
-	{
-		return nBdEdges0 * (pow(4, s) - 4 + 3 * pow(2, s)) / 6 + nIntEdges0 * (pow(4, s) - 1) / 3 + nVerts0;
-	};
-
-	std::vector<size_t> edgeCounts(sMax);
-	std::vector<size_t> vertCounts(sMax);
-
-	for (size_t s = 0; s < sMax; s++)
-	{
-		edgeCounts[s] = intEdgeCountEstimate(s) + bdEdgeCountEstimate(s);
-		vertCounts[s] = vertCountEstimate(s);
-	}
-
-	return { edgeCounts, vertCounts };
-}
 
 int main()
 {
@@ -610,7 +519,7 @@ int main()
 		auto nFaces = icoMesh.n_faces();
 		int euler = nVerts - nEdges + nFaces;
 		size_t nBdEdgesTheoretical = std::max(0, 2 - euler);
-		auto nBdEdges0 = CountBoundaryEdges(icoMesh);
+		auto nBdEdges0 = icoMesh.n_boundary_edges();
 		std::cout << "s = 0, nBoundaryEdges = " << nBdEdges0 << ", nBdEdgesTheoretical = " << nBdEdgesTheoretical << "\n";
 
 		pmp::Subdivision subdiv(icoMesh);
@@ -627,7 +536,7 @@ int main()
 			nFaces = icoMesh.n_faces();
 			euler = nVerts - nEdges + nFaces;
 			nBdEdgesTheoretical = std::max(0, 2 - euler);
-			nBdEdges0 = CountBoundaryEdges(icoMesh);
+			nBdEdges0 = icoMesh.n_boundary_edges();
 			std::cout << "s = " << s << ", nBoundaryEdges = " << nBdEdges0 << ", nBdEdgesTheoretical = " << nBdEdgesTheoretical << "\n";
 
 			icoMesh.write(dataOutPath + "ico_Loop" + std::to_string(s) + ".vtk"); /**/
@@ -746,7 +655,7 @@ int main()
 		constexpr size_t maxSubdivLevel = 6;
 
 		// estimate edge & vertex counts
-		const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(icoMesh, maxSubdivLevel, true);
+		const auto [edgeCounts, vertCounts] = Geometry::GetEdgeVertCountsTheoreticalEstimate(icoMesh, maxSubdivLevel, true);
 
 		pmp::Subdivision subdiv(icoMesh);
 
@@ -780,7 +689,7 @@ int main()
 			constexpr size_t maxSubdivLevel = 6;
 
 			// estimate edge & vertex counts
-			const auto [edgeCounts, vertCounts] = GetEdgeVertCountsTheoreticalEstimate(mesh, maxSubdivLevel, true);
+			const auto [edgeCounts, vertCounts] = Geometry::GetEdgeVertCountsTheoreticalEstimate(mesh, maxSubdivLevel, true);
 
 			pmp::Subdivision subdiv(mesh);
 
@@ -1322,7 +1231,6 @@ int main()
 		constexpr unsigned int nVoxelsPerMinDimension = 20;
 		for (const auto& ptCloudName : importedPtCloudNames)
 		{
-
 			// const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
 			//const auto ptCloudOpt = Geometry::ImportPLYPointCloudDataMainThread(dataOutPath + ptCloudName + ".ply");
@@ -1357,6 +1265,103 @@ int main()
 			std::cout << "DF Time: " << timeDiff.count() << " s\n";
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 			ExportToVTI(dataOutPath + ptCloudName + "DF", sdf);
+		}
+	}
+
+	if (performPDanielPtCloudComparisonTest)
+	{
+		const std::vector<std::string> importedPtCloudNames{
+			"bunnyPts_3",
+			"CaesarBustPts_3"
+		};
+		const std::map<std::string, double> timeStepSizesForPtClouds{
+			{"bunnyPts_3", 0.05 },
+			{"CaesarBustPts_3", 0.05 }
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		for (const auto& ptCloudName : importedPtCloudNames)
+		{
+			// const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			//const auto ptCloudOpt = Geometry::ImportPLYPointCloudDataMainThread(dataOutPath + ptCloudName + ".ply");
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+			constexpr float volExpansionFactor = 1.0f;
+			const SDF::PointCloudDistanceFieldSettings dfSettings{
+						cellSize,
+						volExpansionFactor,
+						Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+						SDF::BlurPostprocessingType::None
+			};
+
+			std::cout << "==================================================================\n";
+			std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << nVoxelsPerMinDimension << "voxPerMinDim.vti\n";
+			std::cout << "------------------------------------------------------------------\n";
+
+			const auto startSDF = std::chrono::high_resolution_clock::now();
+			auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
+			const auto endSDF = std::chrono::high_resolution_clock::now();
+
+			//NormalizeScalarGridValues(sdf);
+
+			SDF::ReportOutput(sdf, std::cout);
+			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			std::cout << "DF Time: " << timeDiff.count() << " s\n";
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			//ExportToVTI(dataOutPath + ptCloudName + "DF", sdf);
+
+			const auto& sdfBox = sdf.Box();
+			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+			MeshTopologySettings topoParams;
+			topoParams.UseBackProjection = false;
+			topoParams.PrincipalCurvatureFactor = 3.0;
+
+			SurfaceEvolutionSettings seSettings{
+				ptCloudName,
+				80,
+				tau,
+				fieldIsoLevel,
+				3, // IcoSphereSubdivisionLevel
+				{},
+				topoParams,
+				minSize, maxSize,
+				ptCloudBBox.center(),
+				true, false,
+				dataOutPath,
+				MeshLaplacian::Voronoi,
+				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+				0.05f,
+				true
+			};
+			ReportInput(seSettings, std::cout);
+			SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
 		}
 	}
 }

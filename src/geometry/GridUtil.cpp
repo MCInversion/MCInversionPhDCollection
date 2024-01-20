@@ -361,6 +361,27 @@ namespace Geometry
 		std::cout << "----------------------------------------------------------\n";
 	}
 
+	void NormalizeScalarGridValues(ScalarGrid& grid)
+	{
+		// find max absolute value
+		double maxAbsVal = 0;
+		for (const auto& val : grid.Values())
+		{
+			if (std::abs(val) > maxAbsVal) maxAbsVal = std::abs(val);
+		}
+		if (maxAbsVal < DBL_EPSILON)
+		{
+			std::cerr << "NormalizeScalarGridValues: maxAbsVal < DBL_EPSILON!\n";
+			return;
+		}
+
+		// normalize
+		for (auto& val : grid.Values())
+		{
+			val = val / maxAbsVal; // Normalize to [-1, 1]
+		}
+	}
+
 	/// \brief if true, additional checks will be performed before writing gradient values.
 #define EXPECT_INVALID_VALUES false
 

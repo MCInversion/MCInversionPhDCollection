@@ -47,4 +47,8 @@ namespace Geometry
 	/// \brief Computes z-level elevation values for each vertex.
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);
 
+	/// \brief A test function for subdivision mesh counts estimation.
+	/// See: "Cavarga, Mesh Primitive Counting Formula for Subdivision Surfaces, SCG 2023".
+	[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel, const bool& evalOutput = false);
+
 } // namespace Geometry

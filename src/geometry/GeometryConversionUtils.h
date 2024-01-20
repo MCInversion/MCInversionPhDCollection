@@ -56,6 +56,11 @@ namespace Geometry
 	 */
 	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudData(const std::string& absFileName, const bool& importInParallel = false);
 
+	/**
+	 * \brief For importing PLY point cloud files.
+	 * \param absFileName        absolute file path for the opened file.
+	 * \return optional vector of points (pmp::vec3).
+	 */
 	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudDataMainThread(const std::string& absFileName);
 
 	/**
