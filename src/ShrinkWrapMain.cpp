@@ -53,12 +53,12 @@ constexpr bool pefrormCatmullClarkCounting = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
-constexpr bool performImportedObjMetricsEval = false;
+constexpr bool performImportedObjMetricsEval = true;
 constexpr bool performMMapImportTest = false;
 constexpr bool performSimpleBunnyOBJSamplingDemo = false;
 constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
-constexpr bool performPDanielPtCloudComparisonTest = true;
+constexpr bool performPDanielPtCloudComparisonTest = false;
 
 int main()
 {
@@ -1081,8 +1081,9 @@ int main()
 	if (performImportedObjMetricsEval)
 	{
 		const std::vector<std::string> importedMeshNames{
-			"ArmadilloSWBlender_NearestSurfPt",
-			"ArmadilloSWBlender_ProjectNeg"
+			//"ArmadilloSWBlender_NearestSurfPt",
+			//"ArmadilloSWBlender_ProjectNeg"
+			"bunnyDanielLSW150"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1099,7 +1100,7 @@ int main()
 					continue;
 				}
 				
-				mesh.write(dataOutPath + meshName + ".vtk");
+				mesh.write(dataOutPath + meshName + "_Metric.vtk");
 			//}
 			//catch(...)
 			//{
@@ -1271,21 +1272,26 @@ int main()
 	if (performPDanielPtCloudComparisonTest)
 	{
 		const std::vector<std::string> importedPtCloudNames{
-			"bunnyPts_3",
-			"CaesarBustPts_3"
+			"bunnyPts_3"//,
+			//"CaesarBustPts_3"
 		};
 		const std::map<std::string, double> timeStepSizesForPtClouds{
-			{"bunnyPts_3", 0.05 },
+			{"bunnyPts_3", 0.07 },
 			{"CaesarBustPts_3", 0.05 }
+		};
+		const std::map<std::string, double> isoLevelOffsetFactors{
+			{"bunnyPts_3", 2.0 },
+			{"CaesarBustPts_3", 0.5 }
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
 		for (const auto& ptCloudName : importedPtCloudNames)
 		{
 			// const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
-			//const auto ptCloudOpt = Geometry::ImportPLYPointCloudDataMainThread(dataOutPath + ptCloudName + ".ply");
+			// const auto ptCloudOpt = Geometry::ImportPLYPointCloudDataMainThread(dataOutPath + ptCloudName + ".ply");
 			if (!ptCloudOpt.has_value())
 			{
 				std::cerr << "ptCloudOpt == nullopt!\n";
@@ -1322,25 +1328,36 @@ int main()
 			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 			//ExportToVTI(dataOutPath + ptCloudName + "DF", sdf);
 
-			const auto& sdfBox = sdf.Box();
-			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
-			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+			//const auto& sdfBox = sdf.Box();
+			//const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+			//const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
 
-			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+			const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 
 			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
 			MeshTopologySettings topoParams;
+			topoParams.MinEdgeMultiplier = 0.14f;
 			topoParams.UseBackProjection = false;
-			topoParams.PrincipalCurvatureFactor = 3.0;
+			topoParams.PrincipalCurvatureFactor = 3.2f;
+			topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			topoParams.EdgeLengthDecayFactor = 0.7f;
+			topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+			topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+
+			AdvectionDiffusionParameters adParams{
+				1.0, 1.0,
+				2.0, 1.0
+			};
 
 			SurfaceEvolutionSettings seSettings{
 				ptCloudName,
-				80,
+				150,
 				tau,
 				fieldIsoLevel,
-				3, // IcoSphereSubdivisionLevel
-				{},
+				2, // IcoSphereSubdivisionLevel
+				adParams,
 				topoParams,
 				minSize, maxSize,
 				ptCloudBBox.center(),
@@ -1349,7 +1366,8 @@ int main()
 				MeshLaplacian::Voronoi,
 				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
 				0.05f,
-				true
+				true,
+				false
 			};
 			ReportInput(seSettings, std::cout);
 			SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);

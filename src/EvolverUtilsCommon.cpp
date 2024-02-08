@@ -3,6 +3,8 @@
 #include "pmp/SurfaceMesh.h"
 #include "geometry/IcoSphereBuilder.h"
 
+#include <unordered_set>
+
 CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
 {
 	// vertex property for co-volume measures.
@@ -85,4 +87,56 @@ AdvectionDiffusionParameters PreComputeAdvectionDiffusionParams(const double& di
 	const double distanceVariance = BASE_DISTANCE_VARIANCE; //* 0.125 * targetMinDimension * targetMinDimension;
 	const double distanceMultiplier = BASE_DISTANCE_MULTIPLIER / (1.0 - exp(-distanceMax * distanceMax / distanceVariance));
 	return { distanceMultiplier, distanceVariance, distanceMultiplier, 1.0 };
+}
+
+bool IsRemeshingNecessary(const CoVolumeStats& stats, const double& tStep)
+{
+	return stats.Max > 1.2 * tStep;
+}
+
+constexpr float JACOBIAN_COND_MIN = 1.0f;
+constexpr float JACOBIAN_COND_MAX = 1.5f;
+
+bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianConditionNumbers)
+{
+	float minVal = FLT_MAX;
+	float maxVal = -FLT_MAX;
+	for (const auto& val : equilateralJacobianConditionNumbers)
+	{
+		if (val < minVal) minVal = val;
+		if (val > maxVal) maxVal = val;
+	}
+	return !((minVal > JACOBIAN_COND_MIN && minVal < JACOBIAN_COND_MAX) &&
+		     (maxVal > JACOBIAN_COND_MIN && maxVal < JACOBIAN_COND_MAX));
+}
+
+bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues)
+{
+	const float minDist = *std::min(distancePerVertexValues.begin(), distancePerVertexValues.end());
+	const float maxDist = *std::max(distancePerVertexValues.begin(), distancePerVertexValues.end());
+	return minDist < 0.9f * maxDist;
+	//return true;
+}
+
+/// \brief A set of time percentages for edge length adjustment for remeshing.
+const std::unordered_set<unsigned int> ADJUSTMENT_TIME_PERCENTAGES{
+	5, 10, 20, 50//, 60, 80
+};
+
+const std::unordered_set<unsigned int> ADJUSTMENT_TIME_INDICES{
+	3, 10, 20, 50//, 60, 80
+};
+
+bool ShouldAdjustRemeshingLengths(const unsigned int& ti, const unsigned int& NSteps)
+{
+	//const auto timePercentage = static_cast<unsigned int>(static_cast<float>(ti) / static_cast<float>(NSteps) * 100);
+	//return ADJUSTMENT_TIME_PERCENTAGES.contains(timePercentage);
+	return ADJUSTMENT_TIME_INDICES.contains(ti);
+}
+
+void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, float& maxEdgeLength, float& approxError)
+{
+	minEdgeLength *= decayFactor;
+	maxEdgeLength *= decayFactor;
+	approxError = 0.1f * (minEdgeLength + maxEdgeLength);
 }

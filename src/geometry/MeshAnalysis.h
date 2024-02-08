@@ -42,7 +42,7 @@ namespace Geometry
 	void ComputeEdgeDihedralAngles(pmp::SurfaceMesh& mesh);
 
 	/// \brief Computes vertex principal curvatures and mean curvature.
-	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh);
+	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor = 2.0f);
 
 	/// \brief Computes z-level elevation values for each vertex.
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);

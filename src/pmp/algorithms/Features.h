@@ -54,4 +54,7 @@ private:
     EdgeProperty<bool> efeature_;
 };
 
+/// \brief verifies whether the principal curvatures satisfy the conditions of a convex dominant saddle
+[[nodiscard]] bool IsConvexDominantSaddle(const Scalar& vMinCurvature, const Scalar& vMaxCurvature, const Scalar& curvatureFactor);
+
 } // namespace pmp

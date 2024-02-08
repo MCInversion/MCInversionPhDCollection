@@ -5,6 +5,7 @@
 #include "pmp/algorithms/Curvature.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Normals.h"
+#include "pmp/algorithms/Features.h"
 
 namespace Geometry
 {
@@ -391,7 +392,7 @@ namespace Geometry
 		}
 	}
 
-	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh)
+	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor)
 	{
 		pmp::Curvature curvAlg{ mesh };
 		curvAlg.analyze_tensor(1);
@@ -399,12 +400,14 @@ namespace Geometry
 		auto vMinCurvature = mesh.vertex_property<pmp::Scalar>("v:minCurvature");
 		auto vMaxCurvature = mesh.vertex_property<pmp::Scalar>("v:maxCurvature");
 		auto vMeanCurvature = mesh.vertex_property<pmp::Scalar>("v:meanCurvature");
+		auto vIsCDSVal = mesh.vertex_property<pmp::Scalar>("v:isCDS", -1.0f);
 
 		for (const auto v : mesh.vertices())
 		{
 			vMinCurvature[v] = curvAlg.min_curvature(v);
 			vMaxCurvature[v] = curvAlg.max_curvature(v);
 			vMeanCurvature[v] = vMinCurvature[v] + vMaxCurvature[v];
+			vIsCDSVal[v] = pmp::IsConvexDominantSaddle(vMinCurvature[v], vMaxCurvature[v], principalCurvatureFactor) ? 1.0f : -1.0f;
 		}
 	}
 

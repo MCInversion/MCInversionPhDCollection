@@ -211,7 +211,7 @@ void SurfaceEvolver::Evolve()
 	const auto fieldNegGradient = Geometry::ComputeNormalizedNegativeGradient(field);
 
 	const auto& NSteps = m_EvolSettings.NSteps;
-	const auto& tStep = m_EvolSettings.TimeStep;
+	auto tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
 	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
@@ -235,6 +235,7 @@ void SurfaceEvolver::Evolve()
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
 	auto vFeature = m_EvolvingSurface->vertex_property<bool>("v:feature", false);
+	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0f);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -300,12 +301,15 @@ void SurfaceEvolver::Evolve()
 		const auto vPos = m_EvolvingSurface->position(v);
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
+		vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 	}
 	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
+	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
+
+	bool shouldDetectFeatures = false; // a changeable flag evaluated by ShouldDetectFeatures function.
 
 	// -------------------------------------------------------------------------------------------------------------
 	// ........................................ main loop ..........................................................
@@ -313,7 +317,7 @@ void SurfaceEvolver::Evolve()
 	for (unsigned int ti = 1; ti <= NSteps; ti++)
 	{
 #if REPORT_EVOL_STEPS
-		std::cout << "time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << "/" << tStep * NSteps
+		std::cout << "time step id: " << ti << "/" << NSteps << ", time: " << tStep * ti << " "
 		<< ", Procedure Name: " << m_EvolSettings.ProcedureName << "\n";
 		std::cout << "pmp::Normals::compute_vertex_normals ... ";
 #endif
@@ -375,44 +379,72 @@ void SurfaceEvolver::Evolve()
 		std::cout << "done\n";
 #endif
 
-		if (m_EvolSettings.DoRemeshing && ti > NSteps * m_EvolSettings.TopoParams.RemeshingStartTimeFactor)
+		// --------------------------------------------------------------------
+
+		if (m_EvolSettings.DoFeatureDetection && shouldDetectFeatures)
 		{
-			// remeshing
 #if REPORT_EVOL_STEPS
 			std::cout << "Detecting Features ...";
 #endif
-			if (m_EvolSettings.DoFeatureDetection && ti > NSteps * m_EvolSettings.TopoParams.FeatureDetectionStartTimeFactor)
-			{
-				const auto nEdges = DetectFeatures(m_EvolSettings.TopoParams.FeatureType);
+			const auto nEdges = DetectFeatures(m_EvolSettings.TopoParams.FeatureType);
 #if REPORT_EVOL_STEPS
-				std::cout << "done. " << nEdges << " feature edges detected.\n";
+			std::cout << "done. " << nEdges << " feature edges detected.\n";
 #endif
-			}
+		}
+
+		// --------------------------------------------------------------------
+
+		const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
+		if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
+		{
+			// remeshing
 #if REPORT_EVOL_STEPS
-			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ") ... ";
+			std::cout << "Remeshing ...";
 #endif
-			//std::cout << "pmp::Remeshing::uniform_remeshing(targetEdgeLength: " << targetEdgeLength << ") ... ";
+#if REPORT_EVOL_STEPS
+			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ", approxError: " << approxError << ") ... ";
+#endif
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing({
 				minEdgeLength, maxEdgeLength, approxError,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
 				m_EvolSettings.TopoParams.UseBackProjection });
-			//remeshing.uniform_remeshing(targetEdgeLength);
 #if REPORT_EVOL_STEPS
 			std::cout << "done\n";
 #endif
-			if (ti % m_EvolSettings.TopoParams.StepStrideForEdgeDecay == 0 &&
-				ti > NSteps * m_EvolSettings.TopoParams.RemeshingSizeDecayStartTimeFactor)
-			{
-				// shorter edges are needed for features close to the target.
-				minEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
-				maxEdgeLength *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
-				//approxError *= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
-			}
 		}
 
+		// --------------------------------------------------------------------
+
+		if (ShouldAdjustRemeshingLengths(ti, NSteps))
+		{
+			// shorter edges are needed for features close to the target.
+			AdjustRemeshingLengths(m_EvolSettings.TopoParams.EdgeLengthDecayFactor, minEdgeLength, maxEdgeLength, approxError);
+#if REPORT_EVOL_STEPS
+			std::cout << "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n";
+			std::cout << "Lengths for adaptive remeshing adjusted to:\n";
+			std::cout << "min: " << minEdgeLength << ", max: " << maxEdgeLength << ", error: " << approxError << "\n";
+			std::cout << "by a factor of " << m_EvolSettings.TopoParams.EdgeLengthDecayFactor << ".\n";
+			std::cout << "time step adjustment: " << tStep << " -> ";
+#endif
+			tStep *= pow(m_EvolSettings.TopoParams.EdgeLengthDecayFactor, 2);
+#if REPORT_EVOL_STEPS
+			std::cout << tStep << ".\n";
+			std::cout << "AdvectionMultiplier adjustment: " << m_EvolSettings.ADParams.AdvectionMultiplier << " -> ";
+#endif
+			m_EvolSettings.ADParams.AdvectionMultiplier /= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
+			//m_EvolSettings.ADParams.AdvectionSineMultiplier /= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
+#if REPORT_EVOL_STEPS
+			std::cout << m_EvolSettings.ADParams.AdvectionMultiplier << "\n";
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+#endif
+		}
+
+		// --------------------------------------------------------------------
+
 		coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface, m_LaplacianAreaFunction);
+
 #if REPORT_EVOL_STEPS
 		std::cout << "Co-Volume Measure Stats: { Mean: " << coVolStats.Mean << ", Min: " << coVolStats.Min << ", Max: " << coVolStats.Max << "},\n";
 		fileOStreamMins << coVolStats.Min << (ti < NSteps ? ", " : "");
@@ -425,10 +457,15 @@ void SurfaceEvolver::Evolve()
 			const auto vPos = m_EvolvingSurface->position(v);
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
+			vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 		}
 		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
+		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
 		ComputeTriangleMetrics();
+
+		// one-time feature detection flag
+		if (!shouldDetectFeatures)
+			shouldDetectFeatures = ti >= 7; //ShouldDetectFeatures(vDistance.vector());
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
 			ExportSurface(ti);

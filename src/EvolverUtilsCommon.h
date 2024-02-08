@@ -115,7 +115,7 @@ struct MeshTopologySettings
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
-	unsigned int NRemeshingIters{ 3 }; //>! the number of iterations for pmp::Remeshing.
+	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
 	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ true }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 
@@ -134,3 +134,31 @@ struct MeshTopologySettings
  * \return desired advection-diffusion parameters.
  */
 [[nodiscard]] AdvectionDiffusionParameters PreComputeAdvectionDiffusionParams(const double& distanceMax, const double& targetMinDimension);
+
+/// \brief Evaluates whether remeshing is necessary from the co-volume stats and time step.
+[[nodiscard]] bool IsRemeshingNecessary(const CoVolumeStats& stats, const double& tStep);
+
+/// \brief Evaluates whether remeshing is necessary from the condition number metric for equilateral triangles.
+[[nodiscard]] bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianConditionNumbers);
+
+/// \brief A (one-time) evaluation whether the distance to target reaches a lower bound.
+///	\param distancePerVertexValues    a vector of distance values on the evolving surface.
+///	\return true if the conditions for feature detection are satisfied.
+[[nodiscard]] bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues);
+
+/// 
+/// \brief Evaluates whether the target edge lengths for adaptive remeshing should be decreased.
+/// \param ti               time index from 1 to NSteps.
+/// \param NSteps           the maximum number of time steps. 
+/// \return true if the adjustment should take place.
+///
+[[nodiscard]] bool ShouldAdjustRemeshingLengths(const unsigned int& ti, const unsigned int& NSteps);
+
+///
+/// \brief Adjusts edge lengths for adaptive remeshing.
+///	\param decayFactor      decay factor from [0, 1] for edge length.
+///	\param minEdgeLength    the minimum edge length to be adjusted.
+///	\param maxEdgeLength    the maximum edge length to be adjusted.
+///	\param approxError      approximation error to be adjusted.
+///
+void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, float& maxEdgeLength, float& approxError);
