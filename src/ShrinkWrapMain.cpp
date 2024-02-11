@@ -1444,7 +1444,8 @@ int main()
 			//"spot_RepulsiveResult220",
 			"bunny_RepulsiveResult220",
 			"bunnyLSW150_Obstacle",
-			"bunnyLSW150_FullWrap"
+			"bunnyLSW150_FullWrap",
+			"bunnyLSW200_Daniel30k"
 		};
 
 		for (const auto& meshName : importedMeshNames)
