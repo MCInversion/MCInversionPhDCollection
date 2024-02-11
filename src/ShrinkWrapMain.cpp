@@ -59,8 +59,8 @@ constexpr bool performMMapOBJChunkMarkingTest = false;
 constexpr bool performSimpleBunnyOBJSamplingDemo = false;
 constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
-constexpr bool performPDanielPtCloudComparisonTest = true;
-constexpr bool performRepulsiveSurfResultEvaluation = false;
+constexpr bool performPDanielPtCloudComparisonTest = false;
+constexpr bool performRepulsiveSurfResultEvaluation = true;
 
 int main()
 {
@@ -1441,8 +1441,10 @@ int main()
 	if (performRepulsiveSurfResultEvaluation)
 	{
 		const std::vector<std::string> importedMeshNames{
-			"spot",
-			"bunny"
+			//"spot_RepulsiveResult220",
+			"bunny_RepulsiveResult220",
+			"bunnyLSW150_Obstacle",
+			"bunnyLSW150_FullWrap"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1454,7 +1456,7 @@ int main()
 			{
 				std::cout << "MetricsEval: " << meshName << "...\n";
 				pmp::SurfaceMesh mesh;
-				mesh.read(dataDirPath + meshName + "_RepulsiveResult220.obj");
+				mesh.read(dataDirPath + meshName + ".obj");
 
 				{
 					const auto meshSurfArea = surface_area(mesh);
