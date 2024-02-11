@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <functional>
+#include <unordered_set>
 
 namespace pmp
 {
@@ -146,13 +147,15 @@ struct MeshTopologySettings
 ///	\return true if the conditions for feature detection are satisfied.
 [[nodiscard]] bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues);
 
+/// \brief Sets a static container for time indices for a particular evolver setup.
+void SetRemeshingAdjustmentTimeIndices(const std::unordered_set<unsigned int>& valuesSet);
+
 /// 
 /// \brief Evaluates whether the target edge lengths for adaptive remeshing should be decreased.
 /// \param ti               time index from 1 to NSteps.
-/// \param NSteps           the maximum number of time steps. 
 /// \return true if the adjustment should take place.
 ///
-[[nodiscard]] bool ShouldAdjustRemeshingLengths(const unsigned int& ti, const unsigned int& NSteps);
+[[nodiscard]] bool ShouldAdjustRemeshingLengths(const unsigned int& ti /*, const unsigned int& NSteps*/);
 
 ///
 /// \brief Adjusts edge lengths for adaptive remeshing.

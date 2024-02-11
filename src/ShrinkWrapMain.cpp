@@ -53,12 +53,14 @@ constexpr bool pefrormCatmullClarkCounting = false;
 constexpr bool performRemeshingTests = false;
 constexpr bool performMobiusStripVoxelization = false;
 constexpr bool performMetaballTest = false;
-constexpr bool performImportedObjMetricsEval = true;
+constexpr bool performImportedObjMetricsEval = false;
 constexpr bool performMMapImportTest = false;
+constexpr bool performMMapOBJChunkMarkingTest = false;
 constexpr bool performSimpleBunnyOBJSamplingDemo = false;
 constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
-constexpr bool performPDanielPtCloudComparisonTest = false;
+constexpr bool performPDanielPtCloudComparisonTest = true;
+constexpr bool performRepulsiveSurfResultEvaluation = false;
 
 int main()
 {
@@ -1157,6 +1159,57 @@ int main()
 		}
 	}
 
+	if (performMMapOBJChunkMarkingTest)
+	{
+		const std::vector<std::string> importedMeshNames{
+			//"armadillo", /* ! non-manifold !? */
+			//"BentChair",
+			"blub",
+			"bunny",
+			"maxPlanck",
+			"nefertiti",
+			"ogre",
+			"spot",
+			"3holes", // messed up, also mutex issue?
+			"fertility",
+			//"happyBuddha", /* ! non-manifold !? */
+			"rockerArm" // messed up, also mutex issue?
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			std::cout << "Parallel loading mesh: " << meshName << ".obj ... ";
+
+			// load parallel
+			pmp::SurfaceMesh parImportedMesh;
+			std::optional<Geometry::BaseMeshGeometryData> baseDataOpt;
+
+			std::vector<float> threadIds;
+			baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", true, &threadIds);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "done.\nExporting ... ";
+
+			// verify by export
+			parImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(baseDataOpt.value());
+			if (parImportedMesh.n_vertices() != threadIds.size())
+			{
+				std::cerr << "parImportedMesh.n_vertices() != threadIds.size()!\n";
+				break;
+			}
+			auto vThreadIdProp = parImportedMesh.add_vertex_property<float>("v:threadId");
+			for (const auto& v : parImportedMesh.vertices())
+			{
+				vThreadIdProp[v] = threadIds[v.idx()];
+			}
+			parImportedMesh.write(dataOutPath + meshName + "_parallelImp.vtk");
+			std::cout << "done.\n";
+		}
+	}
+
 	if (performSimpleBunnyOBJSamplingDemo)
 	{
 		const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + "bunny.obj", true);
@@ -1284,6 +1337,8 @@ int main()
 			{"CaesarBustPts_3", 0.5 }
 		};
 
+		SetRemeshingAdjustmentTimeIndices({ 3, 10, 20, 50, 100, 120, 140, 145 });
+
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
 		constexpr double defaultOffsetFactor = 1.5;
@@ -1353,7 +1408,7 @@ int main()
 
 			SurfaceEvolutionSettings seSettings{
 				ptCloudName,
-				150,
+				146, // 150,
 				tau,
 				fieldIsoLevel,
 				2, // IcoSphereSubdivisionLevel
@@ -1380,6 +1435,55 @@ int main()
 			{
 				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
+		}
+	}
+
+	if (performRepulsiveSurfResultEvaluation)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"spot",
+			"bunny"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			// ===================================================================================
+			// Triangle quality metrics eval for repulsive surfaces results [Yu, et al., 2021]
+			// -----------------------------------------------------------------------------------
+			try
+			{
+				std::cout << "MetricsEval: " << meshName << "...\n";
+				pmp::SurfaceMesh mesh;
+				mesh.read(dataDirPath + meshName + "_RepulsiveResult220.obj");
+
+				{
+					const auto meshSurfArea = surface_area(mesh);
+					assert(meshSurfArea > 0.0f);
+					const size_t nVerts = mesh.n_vertices();
+					const auto vertexDensity = static_cast<float>(nVerts) / meshSurfArea;
+					std::cout << "Evaluated vertex density = (nVerts / meshSurfArea) = " << nVerts << "/" << meshSurfArea << " = " << vertexDensity << " verts / unit^2.\n";
+					const auto bbox = mesh.bounds();
+					const auto bboxVolume = bbox.volume();
+					const auto vertexDensityPerUnitVolume = static_cast<float>(nVerts) / meshSurfArea * pow(bboxVolume, 2.0f/3.0f);
+					std::cout << "Evaluated vertex density normalized per unit volume = nVerts / meshSurfArea * meshBBoxVolume^(2/3) = " <<
+						nVerts << " / " << meshSurfArea << " * (" << bboxVolume << ")^(2/3) = " << vertexDensityPerUnitVolume << " verts.\n";
+				}
+
+				if (!Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(mesh))
+				{
+					std::cout << "Error!\n";
+					continue;
+				}
+
+				std::cout << "Writing to " << meshName << "_Metric.vtk ...";
+				mesh.write(dataOutPath + meshName + "_Metric.vtk");
+				std::cout << "done\n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > MetricsEval subroutine has thrown an exception! Continue... < < < < < \n";
+			}
+			std::cout << "---------------------------------------------\n";
 		}
 	}
 }

@@ -3,8 +3,6 @@
 #include "pmp/SurfaceMesh.h"
 #include "geometry/IcoSphereBuilder.h"
 
-#include <unordered_set>
-
 CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
 {
 	// vertex property for co-volume measures.
@@ -119,15 +117,21 @@ bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues)
 }
 
 /// \brief A set of time percentages for edge length adjustment for remeshing.
-const std::unordered_set<unsigned int> ADJUSTMENT_TIME_PERCENTAGES{
-	5, 10, 20, 50//, 60, 80
+//static std::unordered_set<unsigned int> ADJUSTMENT_TIME_PERCENTAGES{
+//	5, 10, 20, 50//, 60, 80
+//};
+
+/// \brief A set of time indices for edge length adjustment for remeshing.
+static std::unordered_set<unsigned int> ADJUSTMENT_TIME_INDICES{
+	3, 10, 20, 50
 };
 
-const std::unordered_set<unsigned int> ADJUSTMENT_TIME_INDICES{
-	3, 10, 20, 50//, 60, 80
-};
+void SetRemeshingAdjustmentTimeIndices(const std::unordered_set<unsigned int>& valuesSet)
+{
+	ADJUSTMENT_TIME_INDICES = valuesSet;
+}
 
-bool ShouldAdjustRemeshingLengths(const unsigned int& ti, const unsigned int& NSteps)
+bool ShouldAdjustRemeshingLengths(const unsigned int& ti /*, const unsigned int& NSteps*/)
 {
 	//const auto timePercentage = static_cast<unsigned int>(static_cast<float>(ti) / static_cast<float>(NSteps) * 100);
 	//return ADJUSTMENT_TIME_PERCENTAGES.contains(timePercentage);

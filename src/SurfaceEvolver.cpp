@@ -417,7 +417,7 @@ void SurfaceEvolver::Evolve()
 
 		// --------------------------------------------------------------------
 
-		if (ShouldAdjustRemeshingLengths(ti, NSteps))
+		if (ShouldAdjustRemeshingLengths(ti))
 		{
 			// shorter edges are needed for features close to the target.
 			AdjustRemeshingLengths(m_EvolSettings.TopoParams.EdgeLengthDecayFactor, minEdgeLength, maxEdgeLength, approxError);
@@ -479,6 +479,17 @@ void SurfaceEvolver::Evolve()
 		}
 
 #if REPORT_EVOL_STEPS
+		{
+			const auto meshSurfArea = surface_area(*m_EvolvingSurface);
+			assert(meshSurfArea > 0.0f);
+			const auto vertexDensity = static_cast<float>(NVertices) / meshSurfArea;
+			std::cout << "Evaluated vertex density = (nVerts / meshSurfArea) = " << NVertices << "/" << meshSurfArea << " = " << vertexDensity << " verts / unit^2.\n";
+			const auto bbox = m_EvolvingSurface->bounds();
+			const auto bboxVolume = bbox.volume();
+			const auto vertexDensityPerUnitVolume = static_cast<float>(NVertices) / meshSurfArea * pow(bboxVolume, 2.0f / 3.0f);
+			std::cout << "Evaluated vertex density normalized per unit volume = nVerts / meshSurfArea * meshBBoxVolume^(2/3) = " <<
+				NVertices << " / " << meshSurfArea << " * (" << bboxVolume << ")^(2/3) = " << vertexDensityPerUnitVolume << " verts.\n";
+		}
 		std::cout << ">>> Time step " << ti << " finished.\n";
 		std::cout << "----------------------------------------------------------------------\n";
 #endif

@@ -4,6 +4,7 @@
 
 #include <set>
 #include <fstream>
+#include <numeric>
 #include <random>
 #include <thread>
 
@@ -425,7 +426,7 @@ namespace Geometry
 		return true;
 	}
 
-	std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel)
+	std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel, std::optional<std::vector<float>*> chunkIdsVertexPropPtrOpt)
 	{
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
 		if (extension != "obj")
@@ -495,11 +496,22 @@ namespace Geometry
 			t.join();
 		}
 
-		for (const auto& result : threadResults)
+		if (chunkIdsVertexPropPtrOpt.has_value() && !chunkIdsVertexPropPtrOpt.value()->empty())
 		{
+			chunkIdsVertexPropPtrOpt.value()->clear();
+		}
+		for (int threadId = 0; const auto& result : threadResults)
+		{
+			if (chunkIdsVertexPropPtrOpt.has_value())
+			{
+				const auto nVertsPerChunk = result.Vertices.size();
+				chunkIdsVertexPropPtrOpt.value()->insert(chunkIdsVertexPropPtrOpt.value()->end(), nVertsPerChunk, static_cast<float>(threadId));
+			}
 			resultData.Vertices.insert(resultData.Vertices.end(), result.Vertices.begin(), result.Vertices.end());
 			resultData.PolyIndices.insert(resultData.PolyIndices.end(), result.PolyIndices.begin(), result.PolyIndices.end());
 			resultData.VertexNormals.insert(resultData.VertexNormals.end(), result.VertexNormals.begin(), result.VertexNormals.end());
+
+			++threadId;
 		}
 
 		// Clean up

@@ -42,11 +42,12 @@ namespace Geometry
 
 	/**
 	 * \brief For importing very large OBJ mesh files with option for parallel.
-	 * \param absFileName        absolute file path for the opened file.
-	 * \param importInParallel   if true, a parallel version of the importer will be used.
+	 * \param absFileName                absolute file path for the opened file.
+	 * \param importInParallel           if true, a parallel version of the importer will be used.
+	 * \param chunkIdsVertexPropPtrOpt   an optional ptr to a vector of "chunk" ids (1 chunk = 1 thread).
 	 * \return optional BaseMeshGeometryData.
 	 */
-	[[nodiscard]] std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel = false);
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel = false, std::optional<std::vector<float>*> chunkIdsVertexPropPtrOpt = std::nullopt);
 
 	/**
 	 * \brief For importing PLY point cloud files with option for parallel.

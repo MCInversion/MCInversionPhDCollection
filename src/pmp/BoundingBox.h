@@ -82,18 +82,18 @@ public:
     [[nodiscard]] const Point& max() const { return max_; }
 
     //! Get center point.
-    Point center() const { return 0.5f * (min_ + max_); }
+    [[nodiscard]] Point center() const { return 0.5f * (min_ + max_); }
 
     //! Indicate if the bounding box is empty.
-    bool is_empty() const
+    [[nodiscard]] bool is_empty() const
     {
         return (max_[0] < min_[0] || max_[1] < min_[1] || max_[2] < min_[2]);
     }
 
     //! Get the size of the bounding box.
-    Scalar size() const
+    [[nodiscard]] Scalar size() const
     {
-        return is_empty() ? Scalar(0.0) : distance(max_, min_);
+        return is_empty() ? 0.0f : distance(max_, min_);
     }
 
     //! Get the intersection value of this box with another.
@@ -159,8 +159,55 @@ public:
         return *this;
     }
 
+    [[nodiscard]] Scalar volume() const
+    {
+        const auto dims = max_ - min_;
+        return dims[0] * dims[1] * dims[2];
+    }
+
+    [[nodiscard]] Scalar width() const
+    {
+        return max_[0] - min_[0];
+    }
+
+    [[nodiscard]] Scalar depth() const
+    {
+        return max_[1] - min_[1];
+    }
+
+    [[nodiscard]] Scalar height() const
+    {
+        return max_[2] - min_[2];
+    }
+
 private:
     Point min_, max_;
 };
+
+
+inline [[nodiscard]] mat4 CalculateTransformMatrixBetweenBoxes(const BoundingBox& fromBox, const BoundingBox& toBox, const bool forceUniform = false)
+{
+    const auto translationVector = toBox.min() - fromBox.min();
+    const mat4 translationMatrix = translation_matrix(translationVector);
+
+    // Calculate scale factors for each dimension
+    const float scaleX = toBox.width() / fromBox.width();
+    const float scaleY = toBox.height() / fromBox.height();
+    const float scaleZ = toBox.depth() / fromBox.depth();
+    mat4 scalingMatrix;
+    if (forceUniform)
+    {
+		const float uniformScale = (scaleX + scaleY + scaleZ) / 3.0f;
+        scalingMatrix = scaling_matrix(uniformScale);	    
+    }
+    else
+    {
+        const vec3 scaleVec{ scaleX, scaleY, scaleZ };
+        scalingMatrix = scaling_matrix(scaleVec);
+    }
+
+    // Combine translation and scaling
+    return translationMatrix * scalingMatrix;
+}
 
 } // namespace pmp
