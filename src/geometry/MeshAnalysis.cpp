@@ -186,7 +186,7 @@ namespace Geometry
 		const float e1Y = pmp::dot(e1, yVector);
 
 		const float detJ = (e0X * e1Y - e1X * e0Y);
-		if (std::fabs(detJ) < 1e-5f)
+		if (std::fabs(detJ) < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const pmp::mat3 J{
@@ -288,6 +288,8 @@ namespace Geometry
 					continue; // skipping triangle
 				mean += val;
 			}
+			if (mean < FLT_EPSILON)
+				return false;
 			const auto nAdjacentFaces = std::distance(mesh.faces(v).begin(), mesh.faces(v).end());
 			mean /= static_cast<float>(nAdjacentFaces);
 			vProp[v] = mean;
