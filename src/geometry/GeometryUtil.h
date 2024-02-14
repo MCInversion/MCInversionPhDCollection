@@ -32,6 +32,14 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool TriangleIntersectsBox(const std::vector<pmp::vec3>& vertices, const pmp::vec3& boxCenter, const pmp::vec3& boxHalfSize);
 
+	/**
+	 * \brief An intersection test between a two triangles
+	 * \param vertices0    first triangle vertices list.
+	 * \param vertices1    second triangle vertices list.
+	 * \return true if the triangles intersect.
+	 */
+	[[nodiscard]] bool TriangleIntersectsTriangle(const std::vector<pmp::vec3>& vertices0, const std::vector<pmp::vec3>& vertices1);
+
 	// ======================================================================
 
 	/// \brief a wrapper for the parameters of a ray intersecting KD-tree boxes.

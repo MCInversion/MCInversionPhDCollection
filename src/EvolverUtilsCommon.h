@@ -110,6 +110,7 @@ enum class [[nodiscard]] FeatureDetectionType
  */
 struct MeshTopologySettings
 {
+	bool FixSelfIntersections{ true }; //>! if true, self-intersecting faces within the evolving surface will be removed, and the holes will be patched by pmp::HoleFilling.
 	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
 	float EdgeLengthDecayFactor{ 0.98f }; //>! decay factor for minimum (and consequently maximum) edge length.

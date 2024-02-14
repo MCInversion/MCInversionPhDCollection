@@ -60,7 +60,9 @@ constexpr bool performSimpleBunnyOBJSamplingDemo = false;
 constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = false;
-constexpr bool performRepulsiveSurfResultEvaluation = true;
+constexpr bool performRepulsiveSurfResultEvaluation = false;
+constexpr bool performDirectHigherGenusPtCloudSampling = false;
+constexpr bool performHigherGenusPtCloudLSW = true;
 
 int main()
 {
@@ -357,6 +359,7 @@ int main()
 				(fieldIsoLevel < effectiveIsolevelsForMeshes.at(name) ? effectiveIsolevelsForMeshes.at(name) : 1.1 * fieldIsoLevel) : 5.0);
 
 			const MeshTopologySettings topoParams{
+				true,
 				0.4f,
 				0.0,
 				1.0f,
@@ -1393,6 +1396,7 @@ int main()
 			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
 			MeshTopologySettings topoParams;
+			topoParams.FixSelfIntersections = true;
 			topoParams.MinEdgeMultiplier = 0.14f;
 			topoParams.UseBackProjection = false;
 			topoParams.PrincipalCurvatureFactor = 3.2f;
@@ -1487,6 +1491,167 @@ int main()
 				std::cerr << "> > > > > > MetricsEval subroutine has thrown an exception! Continue... < < < < < \n";
 			}
 			std::cout << "---------------------------------------------\n";
+		}
+	}
+
+	if (performDirectHigherGenusPtCloudSampling)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"1Torus",
+			"2Torus",
+			"3Torus",
+			"4Torus",
+			"5Torus"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts.ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const auto nVerts = baseData.Vertices.size();
+			std::cout << "Sampling " << nVerts << "/" << nVerts << " vertices...\n";
+
+			// Export sampled vertices to PLY
+			std::string filename = dataOutPath + meshName + "Pts.ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+		}
+	}
+
+	if (performHigherGenusPtCloudLSW)
+	{
+		const std::vector<std::string> importedPtCloudNames{
+			//"1TorusPts",
+			"2TorusPts",
+			//"3TorusPts",
+			//"4TorusPts",
+			//"5TorusPts"
+		};
+		const std::map<std::string, double> timeStepSizesForPtClouds{
+			{"1TorusPts", 0.05 },
+			{"2TorusPts", 0.05 },
+			{"3TorusPts", 0.05 },
+			{"4TorusPts", 0.05 },
+			{"5TorusPts", 0.05 }
+		};
+		const std::map<std::string, double> isoLevelOffsetFactors{
+			{"1TorusPts", 1.5 },
+			{"2TorusPts", 1.5 },
+			{"3TorusPts", 1.5 },
+			{"4TorusPts", 1.5 },
+			{"5TorusPts", 1.5 }
+		};
+
+		SetRemeshingAdjustmentTimeIndices({ 3, 10, 20/*, 50 , 100, 120, 140, 145*/});
+
+		constexpr unsigned int NTimeSteps = 65;
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+		for (const auto& ptCloudName : importedPtCloudNames)
+		{
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+			constexpr float volExpansionFactor = 1.0f;
+			const SDF::PointCloudDistanceFieldSettings dfSettings{
+						cellSize,
+						volExpansionFactor,
+						Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+						SDF::BlurPostprocessingType::None
+			};
+
+			std::cout << "==================================================================\n";
+			std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << nVoxelsPerMinDimension << "voxPerMinDim.vti\n";
+			std::cout << "------------------------------------------------------------------\n";
+
+			const auto startSDF = std::chrono::high_resolution_clock::now();
+			auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
+			const auto endSDF = std::chrono::high_resolution_clock::now();
+
+			//NormalizeScalarGridValues(sdf);
+
+			SDF::ReportOutput(sdf, std::cout);
+			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			std::cout << "DF Time: " << timeDiff.count() << " s\n";
+			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			//ExportToVTI(dataOutPath + ptCloudName + "DF", sdf);
+
+			//const auto& sdfBox = sdf.Box();
+			//const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+			//const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+			const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+			MeshTopologySettings topoParams;
+			topoParams.FixSelfIntersections = true;
+			topoParams.MinEdgeMultiplier = 0.14f;
+			topoParams.UseBackProjection = false;
+			topoParams.PrincipalCurvatureFactor = 3.2f;
+			topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			topoParams.EdgeLengthDecayFactor = 0.7f;
+			topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+			topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+
+			AdvectionDiffusionParameters adParams{
+				1.0, 1.0,
+				2.0, 2.0
+			};
+
+			SurfaceEvolutionSettings seSettings{
+				ptCloudName,
+				NTimeSteps,
+				tau,
+				fieldIsoLevel,
+				2, // IcoSphereSubdivisionLevel
+				adParams,
+				topoParams,
+				minSize, maxSize,
+				ptCloudBBox.center(),
+				true, false,
+				dataOutPath,
+				MeshLaplacian::Voronoi,
+				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+				0.05f,
+				true,
+				false
+			};
+			ReportInput(seSettings, std::cout);
+			SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
 		}
 	}
 }
