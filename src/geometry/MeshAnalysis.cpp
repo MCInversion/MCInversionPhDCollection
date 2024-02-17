@@ -7,6 +7,7 @@
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Normals.h"
 #include "pmp/algorithms/Features.h"
+#include "pmp/algorithms/TriangleKdTree.h"
 
 namespace Geometry
 {
@@ -513,12 +514,12 @@ namespace Geometry
 			throw std::invalid_argument("PMPSurfaceMeshHasSelfIntersections: non-triangle SurfaceMesh not supported for this function!\n");
 		}
 
-		// Placeholder for a spatial partitioning structure
-		// This would be an AABB tree or similar, initialized with the mesh faces
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
 
 		for (const auto& f : mesh.faces()) 
 		{
 			std::vector<pmp::Point> vertices0;
+			vertices0.reserve(3);
 			for (const auto v : mesh.vertices(f)) 
 			{
 				vertices0.push_back(mesh.position(v));
