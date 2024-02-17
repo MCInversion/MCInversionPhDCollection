@@ -51,4 +51,13 @@ namespace Geometry
 	/// See: "Cavarga, Mesh Primitive Counting Formula for Subdivision Surfaces, SCG 2023".
 	[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel, const bool& evalOutput = false);
 
+	/// \brief Counts self-intersecting faces of the input mesh.
+	/// \param[in] mesh               the evaluated SurfaceMesh.
+	///	\param[in] setFaceProperty    if true, the evaluated mesh will be given a face property identifying the self-intersecting faces.
+	///	\return the total number of faces which intersect another face.
+	[[nodiscard]] size_t CountPMPSurfaceMeshSelfIntersectingFaces(pmp::SurfaceMesh& mesh, const bool& setFaceProperty = false);
+
+	/// \brief A fast verification for the presence of self-intersecting faces of the input mesh.
+	[[nodiscard]] bool PMPSurfaceMeshHasSelfIntersections(pmp::SurfaceMesh& mesh);
+
 } // namespace Geometry

@@ -2,6 +2,7 @@
 
 #include <set>
 
+#include "GeometryUtil.h"
 #include "pmp/algorithms/Curvature.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Normals.h"
@@ -402,6 +403,7 @@ namespace Geometry
 		auto vMinCurvature = mesh.vertex_property<pmp::Scalar>("v:minCurvature");
 		auto vMaxCurvature = mesh.vertex_property<pmp::Scalar>("v:maxCurvature");
 		auto vMeanCurvature = mesh.vertex_property<pmp::Scalar>("v:meanCurvature");
+		auto vGaussianCurvature = mesh.vertex_property<pmp::Scalar>("v:GaussianCurvature");
 		auto vIsCDSVal = mesh.vertex_property<pmp::Scalar>("v:isCDS", -1.0f);
 
 		for (const auto v : mesh.vertices())
@@ -409,6 +411,7 @@ namespace Geometry
 			vMinCurvature[v] = curvAlg.min_curvature(v);
 			vMaxCurvature[v] = curvAlg.max_curvature(v);
 			vMeanCurvature[v] = vMinCurvature[v] + vMaxCurvature[v];
+			vGaussianCurvature[v] = vMinCurvature[v] * vMaxCurvature[v];
 			vIsCDSVal[v] = pmp::IsConvexDominantSaddle(vMinCurvature[v], vMaxCurvature[v], principalCurvatureFactor) ? 1.0f : -1.0f;
 		}
 	}
@@ -496,6 +499,52 @@ namespace Geometry
 		}
 
 		return { edgeCounts, vertCounts };
+	}
+
+	size_t CountPMPSurfaceMeshSelfIntersectingFaces(pmp::SurfaceMesh& mesh, const bool& setFaceProperty)
+	{
+		return size_t();
+	}
+
+	bool PMPSurfaceMeshHasSelfIntersections(pmp::SurfaceMesh& mesh)
+	{
+		if (!mesh.is_triangle_mesh())
+		{
+			throw std::invalid_argument("PMPSurfaceMeshHasSelfIntersections: non-triangle SurfaceMesh not supported for this function!\n");
+		}
+
+		// Placeholder for a spatial partitioning structure
+		// This would be an AABB tree or similar, initialized with the mesh faces
+
+		for (const auto& f : mesh.faces()) 
+		{
+			std::vector<pmp::Point> vertices0;
+			for (const auto v : mesh.vertices(f)) 
+			{
+				vertices0.push_back(mesh.position(v));
+			}
+
+			// Query the spatial partitioning structure for candidates
+			std::vector<pmp::Face> candidates; // This should actually be filled by querying the spatial structure
+
+			for (const auto& cf : candidates) 
+			{
+				if (cf == f) continue; // Skip self
+
+				std::vector<pmp::Point> vertices1;
+				for (const auto cv : mesh.vertices(cf)) 
+				{
+					vertices1.push_back(mesh.position(cv));
+				}
+
+				if (TriangleIntersectsTriangle(vertices0, vertices1)) 
+				{
+					return true; // Found an intersection, return immediately
+				}
+			}
+		}
+
+		return false; // No intersections found
 	}
 
 } // namespace Geometry

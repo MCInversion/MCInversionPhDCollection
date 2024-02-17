@@ -62,7 +62,8 @@ constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
-constexpr bool performHigherGenusPtCloudLSW = true;
+constexpr bool performHigherGenusPtCloudLSW = false;
+constexpr bool performMeshSelfIntersectionTests = true;
 
 int main()
 {
@@ -1041,6 +1042,7 @@ int main()
 		constexpr double tau = 0.02;
 
 		const MeshTopologySettings topoSettings{
+			true,
 			0.45f,
 			0.0,
 			1.0
@@ -1652,6 +1654,30 @@ int main()
 			{
 				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
+		}
+	}
+
+	if (performMeshSelfIntersectionTests)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"3holes",
+			"SelfIntersection2TorusTest_1",
+			"SelfIntersection2TorusTest_2",
+			"SelfIntersection2TorusTest_3"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh Self-Intersection Test: " << meshName << ".obj\n";
+			std::cout << "------------------------------------------------------------------\n";
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + meshName + ".obj");
+
+			const auto hasSelfIntersections = Geometry::PMPSurfaceMeshHasSelfIntersections(mesh);
+			std::cout << (hasSelfIntersections ? "Self-intersections detected!\n" : "No self-intersections were detected.\n");
+			const auto nSelfIntFaces = Geometry::CountPMPSurfaceMeshSelfIntersectingFaces(mesh, true);
+			std::cout << "Detected " << nSelfIntFaces << " faces intersecting another face.\n";
 		}
 	}
 }
