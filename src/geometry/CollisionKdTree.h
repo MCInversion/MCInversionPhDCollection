@@ -3,15 +3,10 @@
 #include "pmp/SurfaceMesh.h"
 #include <vector>
 
-// forward decl
 namespace Geometry
 {
-	struct Ray;
-}
-
-namespace SDF
-{
 	// forward decl
+	struct Ray;
 	class CollisionKdTree;
 
 	/**

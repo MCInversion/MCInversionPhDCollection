@@ -1,6 +1,5 @@
 #include "GeometryUtil.h"
-
-#include "sdf/CollisionKdTree.h"
+#include "CollisionKdTree.h"
 
 #include "pmp/MatVec.h"
 #include "pmp/BoundingBox.h"

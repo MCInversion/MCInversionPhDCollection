@@ -8,7 +8,7 @@
 #include <stack>
 
 
-namespace SDF
+namespace Geometry
 {
 	//! \brief the amount by which boxes of kd-tree nodes are inflated to account for round-off errors.
 	constexpr float BOX_INFLATION = 1e-6f;

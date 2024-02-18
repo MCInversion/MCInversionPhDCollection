@@ -3,7 +3,6 @@
 #include "geometry/GeometryUtil.h"
 #include "geometry/GridUtil.h"
 
-#include "CollisionKdTree.h"
 #include "FastSweep.h"
 #include "OctreeVoxelizer.h"
 #include "pmp/algorithms/HoleFilling.h"
@@ -126,12 +125,12 @@ namespace SDF
 	 * \param splitType      split type identifier.
 	 * \return the split function identified by splitType.
 	 */
-	[[nodiscard]] SplitFunction GetSplitFunction(const KDTreeSplitType& splitType)
+	[[nodiscard]] Geometry::SplitFunction GetSplitFunction(const KDTreeSplitType& splitType)
 	{
 		if (splitType == KDTreeSplitType::Center)
-			return CenterSplitFunction;
+			return Geometry::CenterSplitFunction;
 
-		return AdaptiveSplitFunction;
+		return Geometry::AdaptiveSplitFunction;
 	}
 
 	/// \brief a blur function for postprocessing the distance field.
@@ -316,7 +315,7 @@ namespace SDF
 		std::cout << "truncationValue: " << truncationValue << "\n";
 		std::cout << "CollisionKdTree ... ";
 #endif
-		m_KdTree = std::make_unique<CollisionKdTree>(m_Mesh, GetSplitFunction(settings.KDTreeSplit));
+		m_KdTree = std::make_unique<Geometry::CollisionKdTree>(m_Mesh, GetSplitFunction(settings.KDTreeSplit));
 #if REPORT_SDF_STEPS
 		std::cout << "done\n";
 #endif

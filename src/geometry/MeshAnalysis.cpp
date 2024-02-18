@@ -1,8 +1,11 @@
 #include "MeshAnalysis.h"
 
 #include <set>
+#include <unordered_set>
 
+#include "CollisionKdTree.h"
 #include "GeometryUtil.h"
+
 #include "pmp/algorithms/Curvature.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Normals.h"
@@ -504,7 +507,67 @@ namespace Geometry
 
 	size_t CountPMPSurfaceMeshSelfIntersectingFaces(pmp::SurfaceMesh& mesh, const bool& setFaceProperty)
 	{
-		return size_t();
+		if (!mesh.is_triangle_mesh())
+		{
+			throw std::invalid_argument("CountPMPSurfaceMeshSelfIntersectingFaces: non-triangle SurfaceMesh not supported for this function!\n");
+		}
+
+		pmp::FaceProperty<bool> fIsSelfIntersecting;
+		if (setFaceProperty)
+		{
+			fIsSelfIntersecting = mesh.add_face_property<bool>("f:isSelfIntersecting", false);
+		}
+
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
+		size_t nSelfIntFaceCountResult = 0;
+		for (const auto f : mesh.faces())
+		{
+			pmp::BoundingBox fBBox;
+			std::vector<pmp::Point> vertices0;
+			vertices0.reserve(3);
+			std::unordered_set<unsigned int> neighboringFaceIds;
+			for (const auto v : mesh.vertices(f))
+			{
+				for (const auto nf : mesh.faces(v))
+					neighboringFaceIds.insert(nf.idx());
+				const auto& vPos = mesh.position(v);
+				vertices0.push_back(vPos);
+				fBBox += vPos;
+			}
+
+			// Query the kd-tree for candidates
+			std::vector<unsigned int> candidateIds;
+			ptrMeshCollisionKdTree->GetTrianglesInABox(fBBox, candidateIds);
+
+			for (const auto ci : candidateIds)
+			{
+				const auto cf = pmp::Face(ci);
+				if (cf == f || neighboringFaceIds.contains(ci))
+				{
+					continue; // Skip self and neighboring faces
+				}
+
+				std::vector<pmp::Point> vertices1;
+				vertices1.reserve(3);
+				for (const auto cv : mesh.vertices(cf))
+				{
+					vertices1.push_back(mesh.position(cv));
+				}
+
+				if (TriangleIntersectsTriangle(vertices0, vertices1))
+				{
+					++nSelfIntFaceCountResult; // Found an intersection
+					if (setFaceProperty) 
+					{
+						fIsSelfIntersecting[f] = true;
+						fIsSelfIntersecting[cf] = true;
+					}
+					break; // Only count once per face
+				}
+			}
+		}
+
+		return nSelfIntFaceCountResult;
 	}
 
 	bool PMPSurfaceMeshHasSelfIntersections(pmp::SurfaceMesh& mesh)
@@ -516,24 +579,36 @@ namespace Geometry
 
 		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
 
-		for (const auto& f : mesh.faces()) 
+		for (const auto f : mesh.faces()) 
 		{
+			pmp::BoundingBox fBBox;
 			std::vector<pmp::Point> vertices0;
 			vertices0.reserve(3);
-			for (const auto v : mesh.vertices(f)) 
+			std::unordered_set<unsigned int> neighboringFaceIds;
+			for (const auto v : mesh.vertices(f))
 			{
-				vertices0.push_back(mesh.position(v));
+				for (const auto nf : mesh.faces(v))
+					neighboringFaceIds.insert(nf.idx());
+				const auto& vPos = mesh.position(v);
+				vertices0.push_back(vPos);
+				fBBox += vPos;
 			}
 
-			// Query the spatial partitioning structure for candidates
-			std::vector<pmp::Face> candidates; // This should actually be filled by querying the spatial structure
+			// Query the kd-tree for candidates
+			std::vector<unsigned int> candidateIds;
+			ptrMeshCollisionKdTree->GetTrianglesInABox(fBBox, candidateIds);
 
-			for (const auto& cf : candidates) 
+			for (const auto ci : candidateIds)
 			{
-				if (cf == f) continue; // Skip self
+				const auto cf = pmp::Face(ci);
+				if (cf == f || neighboringFaceIds.contains(ci))
+				{
+					continue; // Skip self and neighboring faces
+				}
 
 				std::vector<pmp::Point> vertices1;
-				for (const auto cv : mesh.vertices(cf)) 
+				vertices1.reserve(3);
+				for (const auto cv : mesh.vertices(cf))
 				{
 					vertices1.push_back(mesh.position(cv));
 				}

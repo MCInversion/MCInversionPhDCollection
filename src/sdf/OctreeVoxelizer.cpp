@@ -47,7 +47,7 @@ namespace SDF
 		return { cubeBoxMin, cubeBoxMax };
 	}
 
-	OctreeVoxelizer::OctreeVoxelizer(const CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const float& targetLeafSize)
+	OctreeVoxelizer::OctreeVoxelizer(const Geometry::CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const float& targetLeafSize)
 		: m_KdTree(kdTree), m_LeafSize(targetLeafSize)
 	{
 		m_Root = new Node(this);

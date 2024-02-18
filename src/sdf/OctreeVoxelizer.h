@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CollisionKdTree.h"
+#include "geometry/CollisionKdTree.h"
 
 #include "pmp/BoundingBox.h"
 
@@ -25,7 +25,7 @@ namespace SDF
 		 * \param startBox          starting box, will be converted to a cube centered at the original box center.
 		 * \param targetLeafSize    the leaf size preference for this octree. This value will become the voxel size.
 		 */
-		OctreeVoxelizer(const CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const float& targetLeafSize);
+		OctreeVoxelizer(const Geometry::CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const float& targetLeafSize);
 
 		/**
 		 * \brief Collects leaf nodes' (cube) boxes and the distance values stored in the leaf nodes themselves.
@@ -83,7 +83,7 @@ namespace SDF
 
 		// =====================================================================
 
-		const CollisionKdTree& m_KdTree;
+		const Geometry::CollisionKdTree& m_KdTree;
 		float m_LeafSize{ 1.0 };
 		size_t m_NodeCount{ 0 };
 

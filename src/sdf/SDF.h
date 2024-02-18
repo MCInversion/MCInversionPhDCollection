@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CollisionKdTree.h"
+#include "geometry/CollisionKdTree.h"
 #include "geometry/Grid.h"
 #include "pmp/SurfaceMesh.h"
 
@@ -73,7 +73,7 @@ namespace SDF
 		
 	private:
 		inline static pmp::SurfaceMesh m_Mesh; //>! mesh to be (pre)processed.
-		inline static std::unique_ptr<CollisionKdTree> m_KdTree{ nullptr }; //>! mesh kd tree.
+		inline static std::unique_ptr<Geometry::CollisionKdTree> m_KdTree{ nullptr }; //>! mesh kd tree.
 
 		/**
 		 * \brief provides the SignFunction, a function from this generator's private interface that computes the sign of the distance field.
