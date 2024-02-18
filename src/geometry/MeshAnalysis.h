@@ -63,4 +63,7 @@ namespace Geometry
 	/// \brief Converts a face property to an averaged scalar vertex property.
 	void ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(pmp::SurfaceMesh& mesh, const std::string& propName);
 
+	/// \brief Extracts self-intersection multimap of each face to all intersecting faces.: f -> {f1, f2, ... , fN_intersecting}
+	[[nodiscard]] std::unordered_multimap<unsigned int, unsigned int> ExtractPMPSurfaceMeshFaceIntersectionMultimap(const pmp::SurfaceMesh& mesh);
+
 } // namespace Geometry

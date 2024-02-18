@@ -14,6 +14,7 @@
 #include "geometry/TorusBuilder.h"
 #include "sdf/SDF.h"
 #include "utils/TimingUtils.h"
+#include "utils/StringUtils.h"
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/Decimation.h"
@@ -1678,6 +1679,8 @@ int main()
 			std::cout << (hasSelfIntersections ? "Self-intersections detected!\n" : "No self-intersections were detected.\n");
 			const auto nSelfIntFaces = Geometry::CountPMPSurfaceMeshSelfIntersectingFaces(mesh, true);
 			std::cout << "Detected " << nSelfIntFaces << " faces intersecting another face.\n";
+			const auto fIntMMap = Geometry::ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+			Utils::PrintFaceIntersectionsMultimap(fIntMMap);
 
 			Geometry::ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(mesh, "f:isSelfIntersecting");
 			std::cout << "Writing to " << meshName << "_SelfIntersections.vtk ...";

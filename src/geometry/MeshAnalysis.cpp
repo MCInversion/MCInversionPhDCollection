@@ -648,4 +648,60 @@ namespace Geometry
 		}
 	}
 
+	std::unordered_multimap<unsigned int, unsigned int> ExtractPMPSurfaceMeshFaceIntersectionMultimap(const pmp::SurfaceMesh& mesh)
+	{
+		if (!mesh.is_triangle_mesh())
+		{
+			throw std::invalid_argument("PMPSurfaceMeshHasSelfIntersections: non-triangle SurfaceMesh not supported for this function!\n");
+		}
+
+		std::unordered_multimap<unsigned int, unsigned int> faceToIntersectingFaces;
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
+
+		for (const auto f : mesh.faces()) 
+		{
+			pmp::BoundingBox fBBox;
+			std::vector<pmp::Point> vertices0;
+			vertices0.reserve(3);
+			std::unordered_set<unsigned int> neighboringFaceIds;
+
+			for (const auto v : mesh.vertices(f)) 
+			{
+				for (const auto nf : mesh.faces(v)) 
+				{
+					neighboringFaceIds.insert(nf.idx());
+				}
+				const auto& vPos = mesh.position(v);
+				vertices0.push_back(vPos);
+				fBBox += vPos;
+			}
+
+			std::vector<unsigned int> candidateIds;
+			ptrMeshCollisionKdTree->GetTrianglesInABox(fBBox, candidateIds);
+
+			for (const auto& ci : candidateIds)
+			{
+				if (ci == f.idx() || neighboringFaceIds.contains(ci))
+				{
+					continue; // Skip self and neighboring faces
+				}
+
+				std::vector<pmp::Point> vertices1;
+				vertices1.reserve(3);
+				const auto cf = pmp::Face(ci);
+				for (const auto cv : mesh.vertices(cf))
+				{
+					vertices1.push_back(mesh.position(cv));
+				}
+
+				if (TriangleIntersectsTriangle(vertices0, vertices1))
+				{
+					faceToIntersectingFaces.emplace(f.idx(), ci);
+				}
+			}
+		}
+
+		return faceToIntersectingFaces;
+	}
+
 } // namespace Geometry
