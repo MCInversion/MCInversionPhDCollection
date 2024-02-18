@@ -1678,6 +1678,12 @@ int main()
 			std::cout << (hasSelfIntersections ? "Self-intersections detected!\n" : "No self-intersections were detected.\n");
 			const auto nSelfIntFaces = Geometry::CountPMPSurfaceMeshSelfIntersectingFaces(mesh, true);
 			std::cout << "Detected " << nSelfIntFaces << " faces intersecting another face.\n";
+
+			Geometry::ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(mesh, "f:isSelfIntersecting");
+			std::cout << "Writing to " << meshName << "_SelfIntersections.vtk ...";
+			mesh.write(dataOutPath + meshName + "_SelfIntersections.vtk");
+			std::cout << "done\n";
+
 		}
 	}
 }

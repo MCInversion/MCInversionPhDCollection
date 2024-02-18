@@ -570,7 +570,7 @@ namespace Geometry
 		return nSelfIntFaceCountResult;
 	}
 
-	bool PMPSurfaceMeshHasSelfIntersections(pmp::SurfaceMesh& mesh)
+	bool PMPSurfaceMeshHasSelfIntersections(const pmp::SurfaceMesh& mesh)
 	{
 		if (!mesh.is_triangle_mesh())
 		{
@@ -621,6 +621,31 @@ namespace Geometry
 		}
 
 		return false; // No intersections found
+	}
+
+	void ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(pmp::SurfaceMesh& mesh, const std::string& propName)
+	{
+		if (!mesh.has_face_property(propName))
+		{
+			std::cerr << "ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty: face property \"" << propName << "\" not found! Aborting...\n";
+			return;
+		}
+
+		auto fProp = mesh.get_face_property<bool>(propName);
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:" + propName, 0.0f);
+
+		for (const auto v : mesh.vertices())
+		{
+			pmp::Scalar mean = 0.0f;
+			for (const auto f : mesh.faces(v))
+			{
+				const auto val = (fProp[f] ? 1.0f : -1.0f);
+				mean += val;
+			}
+			const auto nAdjacentFaces = std::distance(mesh.faces(v).begin(), mesh.faces(v).end());
+			mean /= static_cast<float>(nAdjacentFaces);
+			vProp[v] = mean;
+		}
 	}
 
 } // namespace Geometry

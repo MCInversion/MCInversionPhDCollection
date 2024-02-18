@@ -58,6 +58,9 @@ namespace Geometry
 	[[nodiscard]] size_t CountPMPSurfaceMeshSelfIntersectingFaces(pmp::SurfaceMesh& mesh, const bool& setFaceProperty = false);
 
 	/// \brief A fast verification for the presence of self-intersecting faces of the input mesh.
-	[[nodiscard]] bool PMPSurfaceMeshHasSelfIntersections(pmp::SurfaceMesh& mesh);
+	[[nodiscard]] bool PMPSurfaceMeshHasSelfIntersections(const pmp::SurfaceMesh& mesh);
+
+	/// \brief Converts a face property to an averaged scalar vertex property.
+	void ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(pmp::SurfaceMesh& mesh, const std::string& propName);
 
 } // namespace Geometry
