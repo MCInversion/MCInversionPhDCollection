@@ -66,4 +66,6 @@ namespace Geometry
 	/// \brief Extracts self-intersection multimap of each face to all intersecting faces.: f -> {f1, f2, ... , fN_intersecting}
 	[[nodiscard]] std::unordered_multimap<unsigned int, unsigned int> ExtractPMPSurfaceMeshFaceIntersectionMultimap(const pmp::SurfaceMesh& mesh);
 
+	/// \brief Computes self-intersection polylines from intersection lines for each triangle-triangle intersection.
+	[[nodiscard]] std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh);
 } // namespace Geometry

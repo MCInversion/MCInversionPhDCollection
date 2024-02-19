@@ -765,4 +765,44 @@ namespace Geometry
 		return true;
 	}
 
+	bool ExportPolylinesToOBJ(const std::vector<std::vector<pmp::vec3>>& polylines, const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "obj")
+		{
+			std::cerr << absFileName << " has invalid extension!" << std::endl;
+			return false;
+		}
+
+		std::ofstream file(absFileName);
+		if (!file.is_open()) 
+		{
+			std::cerr << "Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Write vertices
+		size_t indexOffset = 1; // OBJ files are 1-indexed
+		for (const auto& polyline : polylines)
+		{
+			for (const auto& vertex : polyline) 
+			{
+				file << "v " << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+			}
+		}
+
+		// Write polyline connections as lines
+		for (const auto& polyline : polylines)
+		{
+			for (size_t i = 0; i < polyline.size() - 1; ++i)
+			{
+				file << "l " << (i + indexOffset) << " " << (i + indexOffset + 1) << "\n";
+			}
+			indexOffset += polyline.size();
+		}
+
+		file.close();
+		return true;
+	}
+
 } // namespace Geometry

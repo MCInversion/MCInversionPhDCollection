@@ -1661,9 +1661,9 @@ int main()
 	if (performMeshSelfIntersectionTests)
 	{
 		const std::vector<std::string> importedMeshNames{
-			"3holes",
-			"SelfIntersection2TorusTest_1",
-			"SelfIntersection2TorusTest_2",
+			//"3holes",
+			//"SelfIntersection2TorusTest_1",
+			//"SelfIntersection2TorusTest_2",
 			"SelfIntersection2TorusTest_3"
 		};
 
@@ -1679,8 +1679,16 @@ int main()
 			std::cout << (hasSelfIntersections ? "Self-intersections detected!\n" : "No self-intersections were detected.\n");
 			const auto nSelfIntFaces = Geometry::CountPMPSurfaceMeshSelfIntersectingFaces(mesh, true);
 			std::cout << "Detected " << nSelfIntFaces << " faces intersecting another face.\n";
-			const auto fIntMMap = Geometry::ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
-			Utils::PrintFaceIntersectionsMultimap(fIntMMap);
+			//const auto fIntMMap = Geometry::ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+			//Utils::PrintFaceIntersectionsMultimap(fIntMMap);
+			const auto cutPolylines = Geometry::ComputeSurfaceMeshSelfIntersectionPolylines(mesh);
+			if (!cutPolylines.empty())
+			{
+				if (!Geometry::ExportPolylinesToOBJ(cutPolylines, dataOutPath + meshName + "_cutPolylines.obj"))
+				{
+					break;
+				}
+			}
 
 			Geometry::ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(mesh, "f:isSelfIntersecting");
 			std::cout << "Writing to " << meshName << "_SelfIntersections.vtk ...";

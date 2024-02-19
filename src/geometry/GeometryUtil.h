@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "pmp/MatVec.h"
 
 // forward declarations
@@ -39,6 +41,14 @@ namespace Geometry
 	 * \return true if the triangles intersect.
 	 */
 	[[nodiscard]] bool TriangleIntersectsTriangle(const std::vector<pmp::vec3>& vertices0, const std::vector<pmp::vec3>& vertices1);
+
+	/**
+	 * \brief A utility that returns an intersector line between two triangles.
+	 * \param vertices0    first triangle vertices list.
+	 * \param vertices1    second triangle vertices list.
+	 * \return optional pair { start pt, end pt } of the intersection line. If std::nullopt, triangles do not intersect.
+	 */
+	[[nodiscard]] std::optional<std::pair<pmp::vec3, pmp::vec3>> ComputeTriangleTriangleIntersectionLine(const std::vector<pmp::vec3>& vertices0, const std::vector<pmp::vec3>& vertices1);
 
 	// ======================================================================
 

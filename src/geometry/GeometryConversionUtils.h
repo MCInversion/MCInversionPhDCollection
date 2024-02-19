@@ -73,5 +73,11 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName);
 
+	/**
+	 * \brief A utility for exporting polylines as Wavefront OBJ file.
+	 * \param polylines      vector of polylines to be exported.
+	 * \param absFileName    absolute file path for the opened file.
+	 */
+	[[nodiscard]] bool ExportPolylinesToOBJ(const std::vector<std::vector<pmp::vec3>>& polylines, const std::string& absFileName);
 
 } // namespace Geometry

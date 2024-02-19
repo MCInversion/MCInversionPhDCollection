@@ -704,4 +704,53 @@ namespace Geometry
 		return faceToIntersectingFaces;
 	}
 
+	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
+	{
+		std::vector<std::vector<pmp::vec3>> intersectionPolylines;
+
+		// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
+		const auto faceIntersections = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+
+		std::vector<pmp::vec3> currentPolyline; // polylines will contain each vertex once.
+		for (auto fIt = faceIntersections.begin(); fIt != faceIntersections.end();)
+		{
+			auto intersectingFaceRange = faceIntersections.equal_range(fIt->first);
+			const auto baseFace = pmp::Face(fIt->first);
+			std::vector<pmp::vec3> vertices0;
+			vertices0.reserve(3);
+			for (const auto v : mesh.vertices(baseFace))
+			{
+				vertices0.push_back(mesh.position(v));
+			}
+
+			for (auto rangeIt = intersectingFaceRange.first; rangeIt != intersectingFaceRange.second; ++rangeIt)
+			{
+				const auto intersectingFace = pmp::Face(rangeIt->second);
+				std::vector<pmp::vec3> vertices1;
+				vertices1.reserve(3);
+				for (const auto v : mesh.vertices(intersectingFace))
+				{
+					vertices1.push_back(mesh.position(v));
+				}
+
+				auto intersectionLineOpt = ComputeTriangleTriangleIntersectionLine(vertices0, vertices1);
+				if (!intersectionLineOpt.has_value())
+					continue;
+
+				const auto& intersectionLine = intersectionLineOpt.value();
+				currentPolyline.push_back(intersectionLine.first);
+				if (currentPolyline.size() > 1 && norm(intersectionLine.second - currentPolyline[0]) < FLT_EPSILON)
+				{
+					// this is the last segment of currentPolyline
+					intersectionPolylines.push_back(currentPolyline);
+					currentPolyline = std::vector<pmp::vec3>();
+					break;
+				}
+			}
+			fIt = intersectingFaceRange.second;
+		}
+
+		return intersectionPolylines;
+	}
+
 } // namespace Geometry
