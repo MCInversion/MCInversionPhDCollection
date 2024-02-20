@@ -12,6 +12,7 @@
 #include "geometry/MobiusStripBuilder.h"
 #include "geometry/PlaneBuilder.h"
 #include "geometry/TorusBuilder.h"
+#include "geometry/GeometryUtil.h"
 #include "sdf/SDF.h"
 #include "utils/TimingUtils.h"
 #include "utils/StringUtils.h"
@@ -64,7 +65,8 @@ constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
-constexpr bool performMeshSelfIntersectionTests = true;
+constexpr bool performTriTriIntersectionTests = true;
+constexpr bool performMeshSelfIntersectionTests = false;
 
 int main()
 {
@@ -1656,6 +1658,38 @@ int main()
 				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
 		}
+	}
+
+	if (performTriTriIntersectionTests)
+	{
+		const std::vector tri0Vertices{
+			pmp::vec3{0.0572398156f, - 0.0717622489f, - 1.03659534f},
+			pmp::vec3{0.198035538f, -0.0351596251f, -1.18061316f},
+			pmp::vec3{0.250069439f, -0.122829974f, -1.05019867f}
+		};
+		const std::vector tri1Vertices{
+			pmp::vec3{0.0789409578f, -0.0649886578f, -1.11610115f},
+			pmp::vec3{0.211945787f, 0.000253308594f, -1.07397616f},
+			pmp::vec3{0.233549535f, -0.0453912392f, -1.20364273f}
+		};
+
+		if (Geometry::TriangleIntersectsTriangle(tri0Vertices, tri1Vertices))
+			std::cout << "Geometry::TriangleIntersectsTriangle: tri0 intersects tri1.\n";
+		else
+			std::cout << "Geometry::TriangleIntersectsTriangle: tri0 does not intersect tri1.\n";
+
+		const auto iLineOpt = Geometry::ComputeTriangleTriangleIntersectionLine(tri0Vertices, tri1Vertices);
+		if (iLineOpt.has_value())
+		{
+			std::cout << "Geometry::ComputeTriangleTriangleIntersectionLine: tri0 intersects tri1 at (" << iLineOpt.value().first << ")->(" << iLineOpt.value().second << ").\n";
+			const std::vector<std::vector<pmp::vec3>> cutPolylines = { {iLineOpt.value().first, iLineOpt.value().second} };
+			if (!Geometry::ExportPolylinesToOBJ(cutPolylines, dataOutPath + "dummy_cutPolylines.obj"))
+			{
+				std::cerr << "Geometry::ExportPolylinesToOBJ failed!\n";
+			}
+		}
+		else
+			std::cout << "Geometry::ComputeTriangleTriangleIntersectionLine: tri0 does not intersect tri1.\n";
 	}
 
 	if (performMeshSelfIntersectionTests)

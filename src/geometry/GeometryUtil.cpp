@@ -539,29 +539,29 @@ namespace Geometry
 
 		/* Compute distance signs  of p1, q1 and r1 to the plane of
 		   triangle(p2,q2,r2) */
-		SUB(v1, p2, r2);
-		SUB(v2, q2, r2);
-		CROSS(N2, v1, v2);
+		SUB(v1, p2, r2)
+		SUB(v2, q2, r2)
+		CROSS(N2, v1, v2)
 
-		SUB(v1, p1, r2);
+		SUB(v1, p1, r2)
 		pmp::Scalar dp1 = DOT(v1, N2);
-		SUB(v1, q1, r2);
+		SUB(v1, q1, r2)
 		pmp::Scalar dq1 = DOT(v1, N2);
-		SUB(v1, r1, r2);
+		SUB(v1, r1, r2)
 		pmp::Scalar dr1 = DOT(v1, N2);
 
 		if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return 0;
 		/* Compute distance signs  of p2, q2 and r2 to the plane of
 		   triangle(p1,q1,r1) */
-		SUB(v1, q1, p1);
-		SUB(v2, r1, p1);
-		CROSS(N1, v1, v2);
+		SUB(v1, q1, p1)
+		SUB(v2, r1, p1)
+		CROSS(N1, v1, v2)
 
-		SUB(v1, p2, r1);
+		SUB(v1, p2, r1)
 		pmp::Scalar dp2 = DOT(v1, N1);
-		SUB(v1, q2, r1);
+		SUB(v1, q2, r1)
 		pmp::Scalar dq2 = DOT(v1, N1);
-		SUB(v1, r2, r1);
+		SUB(v1, r2, r1)
 		pmp::Scalar dr2 = DOT(v1, N1);
 		if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return 0;
 
@@ -606,6 +606,96 @@ namespace Geometry
 	*  Three-dimensional Triangle-Triangle Intersection
 	* =========================================================================
 	*/
+
+	// actual intersection function for debugging instead of the macro.
+	int construct_intersection(
+		const pmp::Scalar p1[3], const pmp::Scalar q1[3], const pmp::Scalar r1[3],
+		const pmp::Scalar p2[3], const pmp::Scalar q2[3], const pmp::Scalar r2[3],
+		const pmp::Scalar N1Orig[3], const pmp::Scalar N2Orig[3],
+		pmp::Scalar startPt[3], pmp::Scalar endPt[3])
+	{
+		pmp::Scalar v1[3], v2[3], v[3];
+		pmp::Scalar N1[3] = { N1Orig[0], N1Orig[1], N1Orig[2] }, N2[3] = { N2Orig[0], N2Orig[1], N2Orig[2] }, N[3];
+		pmp::Scalar alpha;
+
+		SUB(v1, q1, p1)
+		SUB(v2, r2, p1)
+		CROSS(N, v1, v2)
+		SUB(v, p2, p1)
+		if (DOT(v, N) > 0.0f) 
+		{
+			SUB(v1, r1, p1)
+			CROSS(N, v1, v2)
+			if (DOT(v, N) <= 0.0f)
+			{
+				SUB(v2, q2, p1)
+				CROSS(N,v1,v2)
+				if (DOT(v, N) > 0.0f)
+				{
+					SUB(v1, p1, p2)
+					SUB(v2, p1, r1)
+					alpha = DOT(v1, N2) / DOT(v2, N2);
+					SCALAR(v1, alpha, v2)
+					SUB(startPt, p1, v1)
+					SUB(v1, p2, p1)
+					SUB(v2, p2, r2)
+					alpha = DOT(v1, N1) / DOT(v2, N1);
+					SCALAR(v1, alpha, v2)
+					SUB(endPt, p2, v1)
+					return 1;
+				}
+
+				SUB(v1, p2, p1)
+				SUB(v2, p2, q2)
+				alpha = DOT(v1, N1) / DOT(v2, N1);
+				SCALAR(v1, alpha, v2)
+				SUB(startPt, p2, v1)
+				SUB(v1, p2, p1)
+				SUB(v2, p2, r2)
+				alpha = DOT(v1, N1) / DOT(v2, N1);
+				SCALAR(v1, alpha, v2)
+				SUB(endPt, p2, v1)
+				return 1;
+			}
+			
+			return 0;
+		}
+
+		SUB(v2, q2, p1)
+		CROSS(N, v1, v2)
+		if (DOT(v, N) < 0.0f)
+		{
+			return 0;
+		}
+		SUB(v1, r1, p1)
+		CROSS(N, v1, v2)
+		if (DOT(v, N) >= 0.0f)
+		{
+			SUB(v1, p1, p2)
+			SUB(v2, p1, r1)
+			alpha = DOT(v1, N2) / DOT(v2, N2);
+			SCALAR(v1, alpha, v2)
+			SUB(startPt, p1, v1)
+			SUB(v1, p1, p2)
+			SUB(v2, p1, q1)
+			alpha = DOT(v1, N2) / DOT(v2, N2);
+			SCALAR(v1, alpha, v2)
+			SUB(endPt, p1, v1)
+			return 1;
+		}
+
+		SUB(v1, p2, p1)
+		SUB(v2, p2, q2)
+		alpha = DOT(v1, N1) / DOT(v2, N1);
+		SCALAR(v1, alpha, v2)
+		SUB(startPt, p2, v1)
+		SUB(v1, p1, p2)
+		SUB(v2, p1, q1)
+		alpha = DOT(v1, N1) / DOT(v2, N1);
+		SCALAR(v1, alpha, v2)
+		SUB(endPt, p1, v1)
+		return 1;
+	}
 
 	/*
 	   This macro is called when the triangles surely intersect
@@ -685,6 +775,32 @@ namespace Geometry
 		return 1; \
 	      }}}} 
 
+	  // #define TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
+	  //if (dp2 > 0.0f) { \
+	  //   if (dq2 > 0.0f) return construct_intersection(p1,r1,q1,r2,p2, q2, N1, N2, source, target); \
+	  //   else if (dr2 > 0.0f) return construct_intersection(p1,r1,q1,q2,r2,p2, N1, N2, source, target);\
+	  //   else return construct_intersection(p1,q1,r1,p2,q2,r2, N1, N2, source, target); }\
+	  //else if (dp2 < 0.0f) { \
+	  //  if (dq2 < 0.0f) return construct_intersection(p1,q1,r1,r2,p2,q2, N1, N2, source, target);\
+	  //  else if (dr2 < 0.0f) return construct_intersection(p1,q1,r1,q2,r2,p2, N1, N2, source, target);\
+	  //  else return construct_intersection(p1,r1,q1,p2,q2,r2, N1, N2, source, target);\
+	  //} else { \
+	  //  if (dq2 < 0.0f) { \
+	  //    if (dr2 >= 0.0f)  return construct_intersection(p1,r1,q1,q2,r2,p2, N1, N2, source, target);\
+	  //    else return construct_intersection(p1,q1,r1,p2,q2,r2, N1, N2, source, target);\
+	  //  } \
+	  //  else if (dq2 > 0.0f) { \
+	  //    if (dr2 > 0.0f) return construct_intersection(p1,r1,q1,p2,q2,r2, N1, N2, source, target);\
+	  //    else  return construct_intersection(p1,q1,r1,q2,r2,p2, N1, N2, source, target);\
+	  //  } \
+	  //  else  { \
+	  //    if (dr2 > 0.0f) return construct_intersection(p1,q1,r1,r2,p2,q2, N1, N2, source, target);\
+	  //    else if (dr2 < 0.0f) return construct_intersection(p1,r1,q1,r2,p2,q2, N1, N2, source, target);\
+	  //    else { \
+      //    *coplanar = 1; \
+	  //    return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
+	  //   } \
+	  //}} }
 	#define TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
 	  if (dp2 > 0.0f) { \
 	     if (dq2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2) \
@@ -708,7 +824,7 @@ namespace Geometry
 	      else if (dr2 < 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2)\
 	      else { \
        		*coplanar = 1; \
-		     return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
+		return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
 	     } \
 	  }} }
 
@@ -718,38 +834,38 @@ namespace Geometry
 		const pmp::Scalar p2[3], const pmp::Scalar q2[3], const pmp::Scalar r2[3],
 		int* coplanar, pmp::Scalar source[3], pmp::Scalar target[3])
 	{
-		pmp::Scalar dp1, dq1, dr1, dp2, dq2, dr2;
-		pmp::Scalar v1[3], v2[3], v[3];
-		pmp::Scalar N1[3], N2[3], N[3];
+		pmp::Scalar v1[3], v2[3];
+		pmp::Scalar N1[3], N2[3];
+		pmp::Scalar v[3], N[3];
 		pmp::Scalar alpha;
 
 		// Compute distance signs  of p1, q1 and r1 
 		// to the plane of triangle(p2,q2,r2)
-		SUB(v1, p2, r2);
-		SUB(v2, q2, r2);
-		CROSS(N2, v1, v2);
+		SUB(v1, p2, r2)
+		SUB(v2, q2, r2)
+		CROSS(N2, v1, v2)
 
-		SUB(v1, p1, r2);
-		dp1 = DOT(v1, N2);
-		SUB(v1, q1, r2);
-		dq1 = DOT(v1, N2);
-		SUB(v1, r1, r2);
-		dr1 = DOT(v1, N2);
+		SUB(v1, p1, r2)
+		pmp::Scalar dp1 = DOT(v1, N2);
+		SUB(v1, q1, r2)
+		pmp::Scalar dq1 = DOT(v1, N2);
+		SUB(v1, r1, r2)
+		pmp::Scalar dr1 = DOT(v1, N2);
 
 		if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return 0;
 
 		// Compute distance signs  of p2, q2 and r2 
 		// to the plane of triangle(p1,q1,r1)
-		SUB(v1, q1, p1);
-		SUB(v2, r1, p1);
-		CROSS(N1, v1, v2);
+		SUB(v1, q1, p1)
+		SUB(v2, r1, p1)
+		CROSS(N1, v1, v2)
 
-		SUB(v1, p2, r1);
-		dp2 = DOT(v1, N1);
-		SUB(v1, q2, r1);
-		dq2 = DOT(v1, N1);
-		SUB(v1, r2, r1);
-		dr2 = DOT(v1, N1);
+		SUB(v1, p2, r1)
+		pmp::Scalar dp2 = DOT(v1, N1);
+		SUB(v1, q2, r1)
+		pmp::Scalar dq2 = DOT(v1, N1);
+		SUB(v1, r2, r1)
+		pmp::Scalar dr2 = DOT(v1, N1);
 
 		if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return 0;
 		// Permutation in a canonical form of T1's vertices
@@ -763,37 +879,34 @@ namespace Geometry
 			return 0;
 		  }
 		*/
-		if (dp1 > 0.0f) {
+		if (dp1 > 0.0f) 
+		{
 			if (dq1 > 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
-			else if (dr1 > 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
-
-			else TRI_TRI_INTER_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
+			if (dr1 > 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
+			TRI_TRI_INTER_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		else if (dp1 < 0.0f) {
+		if (dp1 < 0.0f)
+		{
 			if (dq1 < 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
-			else if (dr1 < 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
-			else TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 < 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
+			TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
 		}
-		else {
-			if (dq1 < 0.0f) {
-				if (dr1 >= 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
-				else TRI_TRI_INTER_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
-			}
-			else if (dq1 > 0.0f) {
-				if (dr1 > 0.0f) TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
-				else TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
-			}
-			else {
-				if (dr1 > 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
-				else if (dr1 < 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
-				else {
-					// triangles are co-planar
-					*coplanar = 1;
-					return coplanar_tri_tri3d(p1, q1, r1, p2, q2, r2, N1);
-				}
-			}
+		if (dq1 < 0.0f) 
+		{
+			if (dr1 >= 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
+			TRI_TRI_INTER_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
 		}
-	};
+		if (dq1 > 0.0f) 
+		{
+			if (dr1 > 0.0f) TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
+			TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
+		}
+		if (dr1 > 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
+		if (dr1 < 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
+		// triangles are co-planar
+		* coplanar = 1;
+		return coplanar_tri_tri3d(p1, q1, r1, p2, q2, r2, N1);
+	}
 
 	std::optional<std::pair<pmp::vec3, pmp::vec3>> ComputeTriangleTriangleIntersectionLine(const std::vector<pmp::vec3>& vertices0, const std::vector<pmp::vec3>& vertices1)
 	{
@@ -803,7 +916,7 @@ namespace Geometry
 		if (tri_tri_intersection_test_3d(
 			vertices0[0].data(), vertices0[1].data(), vertices0[2].data(),
 			vertices1[0].data(), vertices1[1].data(), vertices1[2].data(), 
-			&coplanar, startPt.data(), endPt.data()) > 0)
+			&coplanar, startPt.data(), endPt.data()) == 0)
 		{
 			return {};
 		}
