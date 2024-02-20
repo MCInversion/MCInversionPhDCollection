@@ -1,6 +1,7 @@
 #include "MeshAnalysis.h"
 
 #include <set>
+#include <stack>
 #include <unordered_set>
 
 #include "CollisionKdTree.h"
@@ -706,17 +707,24 @@ namespace Geometry
 
 	constexpr float POLYLINE_END_DISTANCE_TOLERANCE = 1e-6f;
 
+	// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
 	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
 	{
-		std::vector<std::vector<pmp::vec3>> intersectionPolylines;
-		// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
-		const auto faceIntersectionsBase = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
-		std::unordered_multimap faceIsectionsModifiable(faceIntersectionsBase);
+		auto faceIntersections = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+		std::vector<std::vector<pmp::vec3>> resultPolylines;
 
-		std::vector<pmp::vec3> currentPolyline; // polylines will contain each vertex once.
-		for (auto fIt = faceIsectionsModifiable.begin(); fIt != faceIsectionsModifiable.end();)
+		auto fIt = faceIntersections.begin();
+		std::stack<pmp::Halfedge> heStack;
+		while (!faceIntersections.empty())
 		{
-			auto intersectingFaceRange = faceIsectionsModifiable.equal_range(fIt->first);
+			//if (faceIntersections.size() < 90)
+			//	std::cout << "Here\n";
+
+			if (fIt == faceIntersections.end())
+				fIt = faceIntersections.begin();
+			std::vector<pmp::vec3> currentPolyline;
+
+			auto intersectingFaceRange = faceIntersections.equal_range(fIt->first);
 			const auto baseFace = pmp::Face(fIt->first);
 			std::vector<pmp::vec3> vertices0;
 			vertices0.reserve(3);
@@ -725,6 +733,7 @@ namespace Geometry
 				vertices0.push_back(mesh.position(v));
 			}
 
+			// process all faces intersecting baseFace
 			for (auto rangeIt = intersectingFaceRange.first; rangeIt != intersectingFaceRange.second; ++rangeIt)
 			{
 				const auto intersectingFace = pmp::Face(rangeIt->second);
@@ -747,21 +756,46 @@ namespace Geometry
 					currentPolyline.push_back(intersectionLine.first); // first point in the polyline
 
 				currentPolyline.push_back(intersectionLine.second);
-
-				//if (currentPolyline.size() > 2 &&
-				//	norm(intersectionLine.second - currentPolyline[0]) < POLYLINE_END_DISTANCE_TOLERANCE)
-				//{
-				//	// this is the last segment of currentPolyline
-				//	intersectionPolylines.push_back(currentPolyline);
-				//	currentPolyline = std::vector<pmp::vec3>();
-				//	break;
-				//}
 			}
-			faceIsectionsModifiable.erase(fIt->first); // erasing all entries for this face
-			fIt = intersectingFaceRange.second;
+
+			// fill the half-edge stack with current baseFace's half-edges
+			for (const auto he : mesh.halfedges(baseFace))
+				heStack.push(he);
+
+			// search for neighbors logged as self-intersecting faces
+			bool neighborFound = false;
+			do
+			{
+				const auto he = heStack.top();
+				heStack.pop();
+				const auto oppHe = mesh.opposite_halfedge(he);
+				if (!oppHe.is_valid())
+					continue;
+
+				const auto fNeighbor = mesh.face(oppHe);
+				const auto fItNew = faceIntersections.find(fNeighbor.idx());
+				if (fItNew == faceIntersections.cend())
+					continue;
+
+				neighborFound = true;
+				faceIntersections.erase(fIt->first); // erasing all entries for this face
+				fIt = fItNew;
+				break;
+			}
+			while (!heStack.empty());
+
+			if (!neighborFound)
+			{
+				// this is the last segment of currentPolyline
+				resultPolylines.push_back(currentPolyline);
+				currentPolyline = std::vector<pmp::vec3>();
+				faceIntersections.erase(fIt->first); // erasing all entries for this face
+				fIt = intersectingFaceRange.second;
+				heStack = {};
+			}
 		}
-		intersectionPolylines.push_back(currentPolyline);
-		return intersectionPolylines;
+
+		return resultPolylines;
 	}
 
 } // namespace Geometry
