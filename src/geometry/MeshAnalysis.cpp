@@ -709,14 +709,14 @@ namespace Geometry
 	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
 	{
 		std::vector<std::vector<pmp::vec3>> intersectionPolylines;
-
 		// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
-		const auto faceIntersections = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+		const auto faceIntersectionsBase = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+		std::unordered_multimap faceIsectionsModifiable(faceIntersectionsBase);
 
 		std::vector<pmp::vec3> currentPolyline; // polylines will contain each vertex once.
-		for (auto fIt = faceIntersections.begin(); fIt != faceIntersections.end();)
+		for (auto fIt = faceIsectionsModifiable.begin(); fIt != faceIsectionsModifiable.end();)
 		{
-			auto intersectingFaceRange = faceIntersections.equal_range(fIt->first);
+			auto intersectingFaceRange = faceIsectionsModifiable.equal_range(fIt->first);
 			const auto baseFace = pmp::Face(fIt->first);
 			std::vector<pmp::vec3> vertices0;
 			vertices0.reserve(3);
@@ -748,18 +748,19 @@ namespace Geometry
 
 				currentPolyline.push_back(intersectionLine.second);
 
-				if (currentPolyline.empty() > 2 &&
-					norm(intersectionLine.second - currentPolyline[0]) < POLYLINE_END_DISTANCE_TOLERANCE)
-				{
-					// this is the last segment of currentPolyline
-					intersectionPolylines.push_back(currentPolyline);
-					currentPolyline = std::vector<pmp::vec3>();
-					break;
-				}
+				//if (currentPolyline.size() > 2 &&
+				//	norm(intersectionLine.second - currentPolyline[0]) < POLYLINE_END_DISTANCE_TOLERANCE)
+				//{
+				//	// this is the last segment of currentPolyline
+				//	intersectionPolylines.push_back(currentPolyline);
+				//	currentPolyline = std::vector<pmp::vec3>();
+				//	break;
+				//}
 			}
+			faceIsectionsModifiable.erase(fIt->first); // erasing all entries for this face
 			fIt = intersectingFaceRange.second;
 		}
-
+		intersectionPolylines.push_back(currentPolyline);
 		return intersectionPolylines;
 	}
 
