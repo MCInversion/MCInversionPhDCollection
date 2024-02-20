@@ -65,8 +65,8 @@ constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
-constexpr bool performTriTriIntersectionTests = true;
-constexpr bool performMeshSelfIntersectionTests = false;
+constexpr bool performTriTriIntersectionTests = false;
+constexpr bool performMeshSelfIntersectionTests = true;
 
 int main()
 {
@@ -1697,8 +1697,8 @@ int main()
 		const std::vector<std::string> importedMeshNames{
 			//"3holes",
 			//"SelfIntersection2TorusTest_1",
-			//"SelfIntersection2TorusTest_2",
-			"SelfIntersection2TorusTest_3"
+			"SelfIntersection2TorusTest_2",
+			//"SelfIntersection2TorusTest_3"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1718,10 +1718,13 @@ int main()
 			const auto cutPolylines = Geometry::ComputeSurfaceMeshSelfIntersectionPolylines(mesh);
 			if (!cutPolylines.empty())
 			{
+				std::cout << "Writing " << cutPolylines.size() << " cutting polylines to " << meshName << "_cutPolylines.obj ...";
 				if (!Geometry::ExportPolylinesToOBJ(cutPolylines, dataOutPath + meshName + "_cutPolylines.obj"))
 				{
+					std::cerr << "Geometry::ExportPolylinesToOBJ failed!\n";
 					break;
 				}
+				std::cout << "done\n";
 			}
 
 			Geometry::ConvertPMPSurfaceMeshBoolFacePropertyToScalarVertexProperty(mesh, "f:isSelfIntersecting");

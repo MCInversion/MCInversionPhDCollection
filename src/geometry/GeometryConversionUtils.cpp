@@ -782,7 +782,6 @@ namespace Geometry
 		}
 
 		// Write vertices
-		size_t indexOffset = 1; // OBJ files are 1-indexed
 		for (const auto& polyline : polylines)
 		{
 			for (const auto& vertex : polyline) 
@@ -792,11 +791,12 @@ namespace Geometry
 		}
 
 		// Write polyline connections as lines
+		size_t indexOffset = 1; // OBJ files are 1-indexed
 		for (const auto& polyline : polylines)
 		{
-			for (size_t i = 0; i < polyline.size() - 1; ++i)
+			for (size_t i = 0; i < polyline.size(); ++i)
 			{
-				file << "l " << (i + indexOffset) << " " << (i + indexOffset + 1) << "\n";
+				file << "l " << (i + indexOffset) << " " << (i + (indexOffset + 1) % polyline.size()) << "\n";
 			}
 			indexOffset += polyline.size();
 		}

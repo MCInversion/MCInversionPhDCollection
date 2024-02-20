@@ -704,6 +704,8 @@ namespace Geometry
 		return faceToIntersectingFaces;
 	}
 
+	constexpr float POLYLINE_END_DISTANCE_TOLERANCE = 1e-6f;
+
 	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
 	{
 		std::vector<std::vector<pmp::vec3>> intersectionPolylines;
@@ -738,8 +740,16 @@ namespace Geometry
 					continue;
 
 				const auto& intersectionLine = intersectionLineOpt.value();
-				currentPolyline.push_back(intersectionLine.first);
-				if (currentPolyline.size() > 1 && norm(intersectionLine.second - currentPolyline[0]) < FLT_EPSILON)
+				if (norm(intersectionLine.second - intersectionLine.first) < POLYLINE_END_DISTANCE_TOLERANCE)
+					continue; // degenerate intersection line
+
+				if (currentPolyline.empty())
+					currentPolyline.push_back(intersectionLine.first); // first point in the polyline
+
+				currentPolyline.push_back(intersectionLine.second);
+
+				if (currentPolyline.empty() > 2 &&
+					norm(intersectionLine.second - currentPolyline[0]) < POLYLINE_END_DISTANCE_TOLERANCE)
 				{
 					// this is the last segment of currentPolyline
 					intersectionPolylines.push_back(currentPolyline);
