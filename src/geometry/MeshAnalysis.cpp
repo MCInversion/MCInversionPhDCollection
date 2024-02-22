@@ -6,6 +6,7 @@
 
 #include "CollisionKdTree.h"
 #include "GeometryUtil.h"
+#include "pmp/algorithms/BarycentricCoordinates.h"
 
 #include "pmp/algorithms/Curvature.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
@@ -707,24 +708,17 @@ namespace Geometry
 
 	constexpr float POLYLINE_END_DISTANCE_TOLERANCE = 1e-6f;
 
-	// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
-	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
+	static [[nodiscard]] std::unordered_map<unsigned int, std::vector<std::pair<pmp::vec3, pmp::vec3>>>
+		ExtractFaceToIntersectionSegmentsMap(const pmp::SurfaceMesh& mesh, const std::unordered_multimap<unsigned int, unsigned int>& faceIntersections)
 	{
-		auto faceIntersections = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
-		std::vector<std::vector<pmp::vec3>> resultPolylines;
+		// TODO: move the multimap creation to the beginning of this function rather than having the faceIntersections as an input param.
+		std::unordered_multimap faceToIntersectingClone(faceIntersections);
+		std::unordered_map<unsigned int, std::vector<std::pair<pmp::vec3, pmp::vec3>>> faceToIntersectionSegments;
 
-		auto fIt = faceIntersections.begin();
-		std::stack<pmp::Halfedge> heStack;
-		while (!faceIntersections.empty())
+		auto fIt = faceToIntersectingClone.begin();
+		while (!faceToIntersectingClone.empty())
 		{
-			//if (faceIntersections.size() < 90)
-			//	std::cout << "Here\n";
-
-			if (fIt == faceIntersections.end())
-				fIt = faceIntersections.begin();
-			std::vector<pmp::vec3> currentPolyline;
-
-			auto intersectingFaceRange = faceIntersections.equal_range(fIt->first);
+			auto intersectingFaceRange = faceToIntersectingClone.equal_range(fIt->first);
 			const auto baseFace = pmp::Face(fIt->first);
 			std::vector<pmp::vec3> vertices0;
 			vertices0.reserve(3);
@@ -752,47 +746,65 @@ namespace Geometry
 				if (norm(intersectionLine.second - intersectionLine.first) < POLYLINE_END_DISTANCE_TOLERANCE)
 					continue; // degenerate intersection line
 
-				if (currentPolyline.empty())
-					currentPolyline.push_back(intersectionLine.first); // first point in the polyline
-
-				currentPolyline.push_back(intersectionLine.second);
+				faceToIntersectionSegments[baseFace.idx()].push_back(intersectionLine);
 			}
 
-			// fill the half-edge stack with current baseFace's half-edges
-			for (const auto he : mesh.halfedges(baseFace))
-				heStack.push(he);
+			faceToIntersectingClone.erase(fIt->first); // erasing all entries for this face
+			fIt = intersectingFaceRange.second;
+		}
 
-			// search for neighbors logged as self-intersecting faces
-			bool neighborFound = false;
-			do
+		return faceToIntersectionSegments;
+	}
+
+	// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
+	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
+	{
+		const auto faceIntersections = ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+		const auto faceToIntersectionSegments = ExtractFaceToIntersectionSegmentsMap(mesh, faceIntersections);
+		std::vector<std::vector<pmp::vec3>> resultPolylines;
+		resultPolylines.reserve(faceToIntersectionSegments.size());
+
+		for (const auto& [faceId, intersectionSegments] : faceToIntersectionSegments)
+		{
+			const auto face = pmp::Face(faceId);
+			std::vector<pmp::vec3> vertices;
+			vertices.reserve(3);
+			for (const auto v : mesh.vertices(face))
 			{
-				const auto he = heStack.top();
-				heStack.pop();
-				const auto oppHe = mesh.opposite_halfedge(he);
-				if (!oppHe.is_valid())
-					continue;
-
-				const auto fNeighbor = mesh.face(oppHe);
-				const auto fItNew = faceIntersections.find(fNeighbor.idx());
-				if (fItNew == faceIntersections.cend())
-					continue;
-
-				neighborFound = true;
-				faceIntersections.erase(fIt->first); // erasing all entries for this face
-				fIt = fItNew;
-				break;
+				vertices.push_back(mesh.position(v));
 			}
-			while (!heStack.empty());
 
-			if (!neighborFound)
+			// Sort intersection segment endpoints based on barycentric coordinates
+			std::vector<std::pair<pmp::Point, pmp::vec3>> sortedEndPts;
+			sortedEndPts.reserve(intersectionSegments.size());
+			for (const auto& segment : intersectionSegments)
 			{
-				// this is the last segment of currentPolyline
-				resultPolylines.push_back(currentPolyline);
-				currentPolyline = std::vector<pmp::vec3>();
-				faceIntersections.erase(fIt->first); // erasing all entries for this face
-				fIt = intersectingFaceRange.second;
-				heStack = {};
+				const auto baryStart = barycentric_coordinates(segment.first, vertices[0], vertices[1], vertices[2]);
+				const auto baryEnd = barycentric_coordinates(segment.second, vertices[0], vertices[1], vertices[2]);
+				sortedEndPts.emplace_back(baryStart, segment.first);
+				sortedEndPts.emplace_back(baryEnd, segment.second);
 			}
+			std::ranges::sort(sortedEndPts, [](const auto& a, const auto& b) {
+				if (a.first[0] != b.first[0]) return a.first[0] < b.first[0];
+				return a.first[1] < b.first[1];
+			});
+
+			// Construct polyline after sorting
+			std::vector<pmp::vec3> currentPolyline;
+			currentPolyline.reserve(sortedEndPts.size());
+			for (size_t i = 0; i < sortedEndPts.size(); ++i) 
+			{
+				if (i + 1 < sortedEndPts.size() &&
+					norm(sortedEndPts[i].second - sortedEndPts[i + 1].second) < POLYLINE_END_DISTANCE_TOLERANCE)
+				{
+					// Skip the current point since it's too close to the next one
+					continue;
+				}
+				currentPolyline.push_back(sortedEndPts[i].second);
+			}
+			sortedEndPts.shrink_to_fit();
+
+			resultPolylines.push_back(currentPolyline);
 		}
 
 		return resultPolylines;

@@ -794,9 +794,10 @@ namespace Geometry
 		size_t indexOffset = 1; // OBJ files are 1-indexed
 		for (const auto& polyline : polylines)
 		{
-			for (size_t i = 0; i < polyline.size(); ++i)
+			if (polyline.size() < 2) continue; // Ensure there are at least two points to form a segment
+			for (size_t i = 0; i < polyline.size() - 1; ++i)
 			{
-				file << "l " << (i + indexOffset) << " " << (i + (indexOffset + 1) % polyline.size()) << "\n";
+				file << "l " << (i + indexOffset) << " " << (i + indexOffset + 1) << "\n";
 			}
 			indexOffset += polyline.size();
 		}
