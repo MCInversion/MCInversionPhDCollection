@@ -708,10 +708,12 @@ namespace Geometry
 
 	constexpr float POLYLINE_END_DISTANCE_TOLERANCE = 1e-6f;
 
+
+	// TODO: move the multimap creation to the beginning of this function rather than having the faceIntersections as an input param.
+
 	static [[nodiscard]] std::unordered_map<unsigned int, std::vector<std::pair<pmp::vec3, pmp::vec3>>>
 		ExtractFaceToIntersectionSegmentsMap(const pmp::SurfaceMesh& mesh, const std::unordered_multimap<unsigned int, unsigned int>& faceIntersections)
 	{
-		// TODO: move the multimap creation to the beginning of this function rather than having the faceIntersections as an input param.
 		std::unordered_multimap faceToIntersectingClone(faceIntersections);
 		std::unordered_map<unsigned int, std::vector<std::pair<pmp::vec3, pmp::vec3>>> faceToIntersectionSegments;
 
@@ -756,6 +758,28 @@ namespace Geometry
 		return faceToIntersectionSegments;
 	}
 
+	static [[nodiscard]] bool ShouldFlipFaceVertexOrder(const pmp::SurfaceMesh& mesh, const pmp::Face& face, std::optional<pmp::Normal>& baseNormalOpt)
+	{
+		if (!baseNormalOpt.has_value())
+		{
+			// this is the first sampling of the face normal
+			baseNormalOpt = pmp::Normals::compute_face_normal(mesh, face);
+			return false;
+		}
+
+		// possible new base normal
+		const auto newNormal = pmp::Normals::compute_face_normal(mesh, face);
+		const auto oldDotNew = dot(baseNormalOpt.value(), newNormal);
+		if (oldDotNew > 0.0f)
+		{
+			// update if not deviating too much
+			baseNormalOpt = newNormal;
+			return false;
+		}
+
+		return true;
+	}
+
 	// TODO: find a faster way to do this by integrating the intersection computation after successful face querying
 	std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh)
 	{
@@ -764,15 +788,19 @@ namespace Geometry
 		std::vector<std::vector<pmp::vec3>> resultPolylines;
 		resultPolylines.reserve(faceToIntersectionSegments.size());
 
+		std::optional<pmp::Normal> baseNormalOpt = std::nullopt;
 		for (const auto& [faceId, intersectionSegments] : faceToIntersectionSegments)
 		{
 			const auto face = pmp::Face(faceId);
+			const bool flipBaseFaceOrientation = ShouldFlipFaceVertexOrder(mesh, face, baseNormalOpt);
 			std::vector<pmp::vec3> vertices;
 			vertices.reserve(3);
 			for (const auto v : mesh.vertices(face))
 			{
 				vertices.push_back(mesh.position(v));
 			}
+			if (flipBaseFaceOrientation)
+				std::ranges::reverse(vertices);
 
 			// Sort intersection segment endpoints based on barycentric coordinates
 			std::vector<std::pair<pmp::Point, pmp::vec3>> sortedEndPts;
@@ -785,7 +813,7 @@ namespace Geometry
 				sortedEndPts.emplace_back(baryEnd, segment.second);
 			}
 			std::ranges::sort(sortedEndPts, [](const auto& a, const auto& b) {
-				if (a.first[0] != b.first[0]) return a.first[0] < b.first[0];
+				if (std::abs(a.first[0] - b.first[0]) > POLYLINE_END_DISTANCE_TOLERANCE) return a.first[0] < b.first[0];
 				return a.first[1] < b.first[1];
 			});
 
@@ -797,8 +825,7 @@ namespace Geometry
 				if (i + 1 < sortedEndPts.size() &&
 					norm(sortedEndPts[i].second - sortedEndPts[i + 1].second) < POLYLINE_END_DISTANCE_TOLERANCE)
 				{
-					// Skip the current point since it's too close to the next one
-					continue;
+					continue; // Skip the current point since it's too close to the next one
 				}
 				currentPolyline.push_back(sortedEndPts[i].second);
 			}
