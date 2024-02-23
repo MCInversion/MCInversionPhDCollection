@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace Geometry
 {
@@ -48,9 +49,6 @@ namespace Geometry
 			return m_BBox;
 		}
 
-		/// \brief Evaluates whether neighbors of a given face have been processed into this bucket instance.
-		[[nodiscard]] bool ContainsNeighbors(const pmp::Face& face, const pmp::SurfaceMesh& mesh);
-
 	private:
 
 		pmp::BoundingBox m_BBox{}; //> Bounds all the point and face vertex data of this bucket.
@@ -75,7 +73,7 @@ namespace Geometry
 			: m_Mesh(mesh) {}
 
 		/// \brief The main functionality of this collector object. Extracts the necessary data, and fills the buckets with intersection points.
-		[[nodiscard]] std::vector<MeshSelfIntersectionBucket> Retrieve();
+		[[nodiscard]] std::vector<MeshSelfIntersectionBucket> Retrieve(const bool& checkMesh = true);
 
 	private:
 		/**
@@ -96,6 +94,7 @@ namespace Geometry
 		std::unique_ptr<MeshSelfIntersectionBucket> m_ptrCurrentBucket{nullptr}; //> an instance of the bucket that is being filled by neighborhood querying.
 		FaceIntersectionMap m_FaceIntersections; //> a multimap mapping fId -> { ids of all faces intersecting f }
 
+		std::unordered_set<unsigned int> m_NeighborIds; //> a set for quick access to neighboring face ids.
 	};
 
 	

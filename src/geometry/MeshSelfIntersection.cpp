@@ -6,14 +6,13 @@
 #include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/Normals.h"
 
-#include <unordered_set>
-
 constexpr float POLYLINE_END_DISTANCE_TOLERANCE = 1e-6f;
 
 namespace
 {
 	void FillFaceVertices(const pmp::SurfaceMesh& mesh, const pmp::Face& face, std::vector<pmp::vec3>& result)
 	{
+		result.clear();
 		result.reserve(3);
 		for (const auto v : mesh.vertices(face))
 		{
@@ -21,14 +20,23 @@ namespace
 		}
 	}
 
-	void FillNeighboringFaceIds(const pmp::SurfaceMesh& mesh, const pmp::Face& face, std::unordered_set<unsigned int>& neighboringFaceIds)
+	void FillNeighboringFaceIds(const pmp::SurfaceMesh& mesh, const pmp::Face& face, const Geometry::FaceIntersectionMap& faceIntersections, std::unordered_set<unsigned int>& neighboringFaceIds)
 	{
-		for (const auto v : mesh.vertices(face))
+		neighboringFaceIds.reserve(3);
+		for (const auto he : mesh.halfedges(face))
 		{
-			for (const auto nf : mesh.faces(v))
-			{
-				neighboringFaceIds.insert(nf.idx());
-			}
+			const auto oppHe = mesh.opposite_halfedge(he);
+			if (!oppHe.is_valid())
+				continue;
+
+			const auto newNeighborId = mesh.face(oppHe).idx();
+			if (neighboringFaceIds.contains(newNeighborId))
+				continue; // Skip duplicates
+
+			if (!faceIntersections.contains(newNeighborId))
+				continue; // Skip non-intersecting faces
+
+			neighboringFaceIds.insert(mesh.face(oppHe).idx());
 		}
 	}
 
@@ -37,16 +45,20 @@ namespace
 		std::unordered_set<unsigned int>& neighboringFaceIds,
 		pmp::BoundingBox& fBBox)
 	{
+		vertices.clear();
+		neighboringFaceIds.clear();
 		vertices.reserve(3);
-		for (const auto v : mesh.vertices(face))
+		neighboringFaceIds.reserve(3);
+		for (const auto he : mesh.halfedges(face))
 		{
-			for (const auto nf : mesh.faces(v))
-			{
-				neighboringFaceIds.insert(nf.idx());
-			}
+			const auto v = mesh.to_vertex(he);
 			const auto& vPos = mesh.position(v);
 			vertices.push_back(vPos);
 			fBBox += vPos;
+			const auto oppHe = mesh.opposite_halfedge(he);
+			if (!oppHe.is_valid())
+				continue;
+			neighboringFaceIds.insert(mesh.face(oppHe).idx());
 		}
 	}
 
@@ -82,18 +94,18 @@ namespace
 } // namespace
 
 /// \brief A simple verification utility for the mesh. An empty initializer list (implicitly converted to an empty vector) is returned.
-#define VERIFY_MESH(msg)        \
-if (!m_Mesh.is_triangle_mesh()) \
-{                               \
-	std::cerr << msg;           \
-	return {};                  \
+#define VERIFY_MESH(msg, check)          \
+if (check && !m_Mesh.is_triangle_mesh()) \
+{                                        \
+	std::cerr << msg;                    \
+	return {};                           \
 }
 
 namespace Geometry
 {
-	std::vector<MeshSelfIntersectionBucket> MeshSelfIntersectionBucketCollector::Retrieve()
+	std::vector<MeshSelfIntersectionBucket> MeshSelfIntersectionBucketCollector::Retrieve(const bool& checkMesh)
 	{
-		VERIFY_MESH("MeshSelfIntersectionBucketCollector::Retrieve: non-triangle SurfaceMesh not supported for this function!\n")
+		VERIFY_MESH("MeshSelfIntersectionBucketCollector::Retrieve: non-triangle SurfaceMesh not supported for this function!\n", checkMesh)
 
 		std::vector<MeshSelfIntersectionBucket> buckets;
 		ExtractFaceIntersectionMap();
@@ -106,6 +118,7 @@ namespace Geometry
 			const auto baseFace = pmp::Face(fIt->first);
 			std::vector<pmp::vec3> vertices0;
 			FillFaceVertices(m_Mesh, baseFace, vertices0);
+			FillNeighboringFaceIds(m_Mesh, baseFace, m_FaceIntersections, m_NeighborIds);
 
 			// process all faces intersecting baseFace
 			std::vector<pmp::vec3> bucketPointData;
@@ -125,11 +138,13 @@ namespace Geometry
 				bucketPointData.push_back(intersectionLineOpt->first);
 				bucketPointData.push_back(intersectionLineOpt->second);
 			}
-			RemoveDuplicates(m_Mesh, baseFace, bucketPointData);
-			m_ptrCurrentBucket->AddFacePoints(m_Mesh, baseFace, bucketPointData);
-			const auto faceNormal = pmp::Normals::compute_face_normal(m_Mesh, baseFace);
-			m_ptrCurrentBucket->UpdateBucketOrientation(faceNormal);
-
+			if (!bucketPointData.empty())
+			{
+				RemoveDuplicates(m_Mesh, baseFace, bucketPointData);
+				m_ptrCurrentBucket->AddFacePoints(m_Mesh, baseFace, bucketPointData);
+				const auto faceNormal = pmp::Normals::compute_face_normal(m_Mesh, baseFace);
+				m_ptrCurrentBucket->UpdateBucketOrientation(faceNormal);
+			}
 			m_FaceIntersections.erase(fIt->first); // erasing all entries for this face
 
 			bool shouldTerminateBucket = false;
@@ -166,13 +181,9 @@ namespace Geometry
 					continue; // Skip self and neighboring faces
 				}
 
-				std::vector<pmp::Point> vertices1;
-				vertices1.reserve(3);
 				const auto cf = pmp::Face(ci);
-				for (const auto cv : m_Mesh.vertices(cf))
-				{
-					vertices1.push_back(m_Mesh.position(cv));
-				}
+				std::vector<pmp::Point> vertices1;
+				FillFaceVertices(m_Mesh, cf, vertices1);
 
 				if (TriangleIntersectsTriangle(vertices0, vertices1))
 				{
@@ -184,39 +195,24 @@ namespace Geometry
 
 	std::pair<FaceIntersectionMap::iterator, bool> MeshSelfIntersectionBucketCollector::Proceed(const pmp::Face& f)
 	{
-		std::unordered_set<unsigned int> neighborIds;
-		FillNeighboringFaceIds(m_Mesh, f, neighborIds);
-		for (auto neighborId : neighborIds)
+		if (!m_NeighborIds.empty())
 		{
-			const auto fIt = m_FaceIntersections.find(neighborId);
+			//  Because the mesh is supposedly watertight and manifold,
+			// if we iterate across neighboring faces, we fill the bucket with all the correct faces.
+			const auto nId = *m_NeighborIds.begin();
+			m_NeighborIds.erase(m_NeighborIds.begin());
+
+			const auto fIt = m_FaceIntersections.find(nId);
 			if (fIt != m_FaceIntersections.cend())
 			{
-				//  Because the mesh is supposedly watertight and manifold, if we iterate by picking the first available neighbor, we run in a loop.
 				return { fIt, false };
 			}
 		}
 
 		if (!m_FaceIntersections.empty() && m_ptrCurrentBucket)
 		{
-			// there could potentially be unprocessed non-neighboring faces
-			// that belong to this bucket, that are intersecting the bucket's bounding box
-			const auto& bucketBBox = m_ptrCurrentBucket->GetBoundingBox();
-			std::vector<unsigned int> candidateIds;
-			m_ptrKdTree->GetTrianglesInABox(bucketBBox, candidateIds);
-			for (const auto& cId : candidateIds)
-			{
-				if (!m_ptrCurrentBucket->ContainsNeighbors(pmp::Face(cId), m_Mesh))
-					continue;
-
-				const auto fIt = m_FaceIntersections.find(cId);
-				if (fIt == m_FaceIntersections.cend())
-					continue;
-
-				return { fIt, false };
-			}
-
-			const auto fIt = m_FaceIntersections.find(candidateIds.front());
-			return { fIt, true };
+			// If there are still faces in the map, but no more neighbors to process, we should terminate the bucket
+			return { m_FaceIntersections.begin(), true };
 		}
 
 		return { m_FaceIntersections.end(), true };
@@ -231,13 +227,6 @@ namespace Geometry
 		std::vector<pmp::vec3> vertices;
 		FillFaceVertices(mesh, face, vertices);
 		m_BBox += vertices;
-	}
-
-	bool MeshSelfIntersectionBucket::ContainsNeighbors(const pmp::Face& face, const pmp::SurfaceMesh& mesh)
-	{
-		std::unordered_set<unsigned int> neighborIds;
-		FillNeighboringFaceIds(mesh, face, neighborIds);
-		return std::ranges::any_of(neighborIds, [&](const auto& nId) { return m_Data.contains(nId); });
 	}
 
 } // namespace Geometry
