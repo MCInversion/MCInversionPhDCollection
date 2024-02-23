@@ -49,11 +49,26 @@ namespace Geometry
 			return m_BBox;
 		}
 
+		[[nodiscard]] std::unordered_map<unsigned int, std::vector<pmp::vec3>>::const_iterator begin() const
+		{
+			return m_Data.begin();
+		}
+
+		[[nodiscard]] std::unordered_map<unsigned int, std::vector<pmp::vec3>>::const_iterator end() const
+		{
+			return m_Data.end();
+		}
+
+		[[nodiscard]] size_t Size() const
+		{
+			return m_Data.size();
+		}
+
 	private:
+		std::unordered_map<unsigned int, std::vector<pmp::vec3>> m_Data{}; //> Maps the face id to the points intersecting the given face.
 
 		pmp::BoundingBox m_BBox{}; //> Bounds all the point and face vertex data of this bucket.
 		pmp::Normal m_Orientation{}; //> Represents the face orientation of this bucket.
-		std::unordered_map<unsigned int, std::vector<pmp::vec3>> m_Data{}; //> Maps the face id to the points intersecting the given face.
 	};
 
 	/// \brief Maps the index of a face to the indices of all faces that intersect it.

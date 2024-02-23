@@ -712,7 +712,20 @@ namespace Geometry
 		std::vector<std::vector<pmp::vec3>> resultPolylines;
 		resultPolylines.reserve(faceDataBuckets.size());
 
-		
+		for (const auto& bucket : faceDataBuckets)
+		{
+			std::vector<pmp::vec3> currentPolyline;
+			currentPolyline.reserve(bucket.Size());
+			//const auto bucketOrientation = bucket.GetOrientation();
+			for (const auto& [faceId, pts] : bucket)
+			{
+				for (const auto& p : pts)
+				{
+					currentPolyline.push_back(p);
+				}
+			}
+			resultPolylines.push_back(currentPolyline);
+		}
 
 		return resultPolylines;
 	}

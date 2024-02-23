@@ -1696,8 +1696,8 @@ int main()
 	{
 		const std::vector<std::string> importedMeshNames{
 			//"3holes",
-			"SelfIntersection2TorusTest_1",
-			//"SelfIntersection2TorusTest_2",
+			//"SelfIntersection2TorusTest_1",
+			"SelfIntersection2TorusTest_2",
 			//"SelfIntersection2TorusTest_3"
 		};
 

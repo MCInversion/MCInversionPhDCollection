@@ -40,6 +40,7 @@ namespace
 		}
 	}
 
+	/// \brief A utility for obtaining vertex and neighboring face data for self-intersection mapping evaluation
 	void FillFaceCombinatorialAndSpatialData(const pmp::SurfaceMesh& mesh, const pmp::Face& face,
 		std::vector<pmp::vec3>& vertices, 
 		std::unordered_set<unsigned int>& neighboringFaceIds,
@@ -49,16 +50,16 @@ namespace
 		neighboringFaceIds.clear();
 		vertices.reserve(3);
 		neighboringFaceIds.reserve(3);
-		for (const auto he : mesh.halfedges(face))
+		for (const auto v : mesh.vertices(face))
 		{
-			const auto v = mesh.to_vertex(he);
+			// we need to consider also vertex-adjacent faces
+			for (const auto nf : mesh.faces(v))
+			{
+				neighboringFaceIds.insert(nf.idx());
+			}
 			const auto& vPos = mesh.position(v);
 			vertices.push_back(vPos);
 			fBBox += vPos;
-			const auto oppHe = mesh.opposite_halfedge(he);
-			if (!oppHe.is_valid())
-				continue;
-			neighboringFaceIds.insert(mesh.face(oppHe).idx());
 		}
 	}
 
@@ -124,19 +125,23 @@ namespace Geometry
 			std::vector<pmp::vec3> bucketPointData;
 			for (auto rangeIt = intersectingFaceRange.first; rangeIt != intersectingFaceRange.second; ++rangeIt)
 			{
+				if (!m_FaceIntersections.contains(rangeIt->second))
+					continue;
+
 				const auto intersectingFace = pmp::Face(rangeIt->second);
 				std::vector<pmp::vec3> vertices1;
 				FillFaceVertices(m_Mesh, intersectingFace, vertices1);
 
-				auto intersectionLineOpt = ComputeTriangleTriangleIntersectionLine(vertices0, vertices1);
+				const auto intersectionLineOpt = ComputeTriangleTriangleIntersectionLine(vertices0, vertices1);
 				if (!intersectionLineOpt.has_value())
 					continue;
 
-				if (norm(intersectionLineOpt->second - intersectionLineOpt->first) < POLYLINE_END_DISTANCE_TOLERANCE)
+				const auto& intersectionLine = intersectionLineOpt.value();
+				if (norm(intersectionLine.second - intersectionLine.first) < POLYLINE_END_DISTANCE_TOLERANCE)
 					continue; // degenerate intersection line
 
-				bucketPointData.push_back(intersectionLineOpt->first);
-				bucketPointData.push_back(intersectionLineOpt->second);
+				bucketPointData.push_back(intersectionLine.first);
+				bucketPointData.push_back(intersectionLine.second);
 			}
 			if (!bucketPointData.empty())
 			{
