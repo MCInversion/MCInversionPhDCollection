@@ -69,6 +69,13 @@ public:
         return *this;
     }
 
+    BoundingBox& operator+=(const std::vector<Point>& pts)
+    {
+        for (const auto& pt : pts)
+            operator+=(pt);
+        return *this;
+    }
+
     //! Get min point.
     Point& min() { return min_; }
 
