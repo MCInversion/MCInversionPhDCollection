@@ -49,19 +49,28 @@ namespace Geometry
 			return m_BBox;
 		}
 
+		/// \brief A begin iterator for the bucket data.
 		[[nodiscard]] std::unordered_map<unsigned int, std::vector<pmp::vec3>>::const_iterator begin() const
 		{
 			return m_Data.begin();
 		}
 
+		/// \brief An end iterator for the bucket data.
 		[[nodiscard]] std::unordered_map<unsigned int, std::vector<pmp::vec3>>::const_iterator end() const
 		{
 			return m_Data.end();
 		}
 
+		/// \brief Returns the size of the bucket data.
 		[[nodiscard]] size_t Size() const
 		{
 			return m_Data.size();
+		}
+
+		/// \brief Returns the empty flag of the bucket data.
+		[[nodiscard]] bool Empty() const
+		{
+			return m_Data.empty();
 		}
 
 	private:
@@ -70,6 +79,9 @@ namespace Geometry
 		pmp::BoundingBox m_BBox{}; //> Bounds all the point and face vertex data of this bucket.
 		pmp::Normal m_Orientation{}; //> Represents the face orientation of this bucket.
 	};
+
+	/// \brief Extracts (faceId, point) data from a MeshSelfIntersectionBucket while also computing its barycenter.
+	[[nodiscard]] std::vector<std::pair<unsigned int, pmp::vec3>> ExtractFaceData(const MeshSelfIntersectionBucket& bucket, pmp::Point& barycenter);
 
 	/// \brief Maps the index of a face to the indices of all faces that intersect it.
 	using FaceIntersectionMap = std::unordered_multimap<unsigned int, unsigned int>;

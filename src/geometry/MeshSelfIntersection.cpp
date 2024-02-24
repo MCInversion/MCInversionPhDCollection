@@ -49,7 +49,8 @@ namespace
 		vertices.clear();
 		neighboringFaceIds.clear();
 		vertices.reserve(3);
-		neighboringFaceIds.reserve(3);
+		// an average vertex has valence 6 which yields 12 neighboring faces per 3 vertices sharing a triangle
+		neighboringFaceIds.reserve(12);
 		for (const auto v : mesh.vertices(face))
 		{
 			// we need to consider also vertex-adjacent faces
@@ -154,7 +155,7 @@ namespace Geometry
 
 			bool shouldTerminateBucket = false;
 			std::tie(fIt, shouldTerminateBucket) = Proceed(baseFace);
-			if (shouldTerminateBucket)
+			if (shouldTerminateBucket && !m_ptrCurrentBucket->Empty())
 			{
 				buckets.push_back(std::move(*m_ptrCurrentBucket));
 				m_ptrCurrentBucket = std::make_unique<MeshSelfIntersectionBucket>();
@@ -232,6 +233,24 @@ namespace Geometry
 		std::vector<pmp::vec3> vertices;
 		FillFaceVertices(mesh, face, vertices);
 		m_BBox += vertices;
+	}
+
+	std::vector<std::pair<unsigned int, pmp::vec3>> ExtractFaceData(const MeshSelfIntersectionBucket& bucket, pmp::Point& barycenter)
+	{
+		barycenter = pmp::Point(0, 0, 0);
+		std::vector<std::pair<unsigned int, pmp::vec3>> faceData;
+		size_t nPts = 0;
+		for (const auto& [faceId, points] : bucket)
+		{
+			for (const auto& pt : points) 
+			{
+				barycenter += pt;
+				faceData.emplace_back(faceId, pt);
+				++nPts;
+			}
+		}
+		barycenter /= static_cast<pmp::Scalar>(nPts);
+		return faceData;
 	}
 
 } // namespace Geometry

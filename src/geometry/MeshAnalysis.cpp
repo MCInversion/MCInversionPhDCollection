@@ -12,6 +12,7 @@
 
 #include <set>
 #include <unordered_set>
+#include <ranges>
 
 namespace Geometry
 {
@@ -714,16 +715,36 @@ namespace Geometry
 
 		for (const auto& bucket : faceDataBuckets)
 		{
+			if (bucket.Empty())
+				continue;
+
 			std::vector<pmp::vec3> currentPolyline;
 			currentPolyline.reserve(bucket.Size());
-			//const auto bucketOrientation = bucket.GetOrientation();
-			for (const auto& [faceId, pts] : bucket)
+			const auto bucketOrientation = bucket.GetOrientation();
+			pmp::Point barycenter;
+			auto facePtData = ExtractFaceData(bucket, barycenter);
+			const auto refPt = facePtData[0].second;
+			const auto refVec = refPt - barycenter;
+
+			// sort face points in CCW orientation in the plane defined by barycenter and bucketOrientation.
+			// DISCLAIMER: this sorting does NOT account for polylines with negative winding segments, this will require a subroutine to account for that.
+			std::ranges::sort(facePtData, [&](const auto& a, const auto& b) {
+				const auto vecA = a.second - barycenter;
+				const auto vecB = b.second - barycenter;
+				pmp::Scalar angleA = atan2(dot(cross(refVec, vecA), bucketOrientation), dot(refVec, vecA));
+				pmp::Scalar angleB = atan2(dot(cross(refVec, vecB), bucketOrientation), dot(refVec, vecB));
+				angleA = angleA < 0.0f ? (2.0f * static_cast<pmp::Scalar>(M_PI) + angleA) : angleA;
+				angleB = angleB < 0.0f ? (2.0f * static_cast<pmp::Scalar>(M_PI) + angleB) : angleB;
+				if (std::abs(angleA - angleB) < FLT_MIN)
+					return norm(vecA) < norm(vecB);
+				return angleA < angleB;
+			});
+
+			for (const auto& p : facePtData | std::views::values)
 			{
-				for (const auto& p : pts)
-				{
-					currentPolyline.push_back(p);
-				}
+				currentPolyline.push_back(p);
 			}
+			currentPolyline.push_back(refPt); // close the polyline
 			resultPolylines.push_back(currentPolyline);
 		}
 
