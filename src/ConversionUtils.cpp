@@ -230,7 +230,7 @@ bool IsNumber(const std::string& str)
 {
 	for (const auto& c : str)
 	{
-		if (std::isdigit(c) == 0) return false;
+		if (std::isdigit(c) == 0 && c != '-' && c != '.') return false;
 	}
 	return true;
 }
@@ -282,9 +282,9 @@ void ParseExtentValues(std::vector<size_t>& valueBuffer, const std::string& exte
 {
 	assert(AreExtentValuesValid(extentValues));
 	return {
-		extentValues[1] - extentValues[0] + 1,
-		extentValues[3] - extentValues[2] + 1,
-		extentValues[5] - extentValues[4] + 1
+		extentValues[1] - extentValues[0] + 1 /**/,
+		extentValues[3] - extentValues[2] + 1 /**/,
+		extentValues[5] - extentValues[4] + 1  /**/
 	};
 }
 
@@ -328,13 +328,14 @@ void Parse3DPointValues(std::vector<float>& valueBuffer, const std::string& str)
 [[nodiscard]] float GetCellSize(const std::vector<float>& spacingVec)
 {
 	assert(spacingVec.size() == 3);
-	if (spacingVec[0] != spacingVec[1] || spacingVec[1] != spacingVec[2])
+	if (std::fabs(spacingVec[0] - spacingVec[1]) < FLT_EPSILON && std::fabs(spacingVec[1] - spacingVec[2]) < FLT_EPSILON)
 	{
-		std::cerr << "ImportVTI::GetCellSize [WARNING]: >>>>>>>>>> unequal spacing not supported! <<<<<<<<<<<<< \n";
-		std::cerr << "ImportVTI::GetCellSize [WARNING]: unequal spacing values: " << spacingVec[0] << " " << spacingVec[1] << " " << spacingVec[2] << "!\n";
-		std::cerr << "ImportVTI::GetCellSize [WARNING]: only the first spacing value will be chosen for cell size! This may result in unevenly scaled fields!\n";
+		return spacingVec[0];
 	}
 
+	std::cerr << "ImportVTI::GetCellSize [WARNING]: >>>>>>>>>> unequal spacing not supported! <<<<<<<<<<<<< \n";
+	std::cerr << "ImportVTI::GetCellSize [WARNING]: unequal spacing values: " << spacingVec[0] << " " << spacingVec[1] << " " << spacingVec[2] << "!\n";
+	std::cerr << "ImportVTI::GetCellSize [WARNING]: only the first spacing value will be chosen for cell size! This may result in unevenly scaled fields!\n";
 	return spacingVec[0];
 }
 
@@ -373,7 +374,7 @@ Geometry::ScalarGrid ImportVTI(const std::string& fileName)
 
 	// ========== Data extent (index dimensions) ===========
 	const auto extentBeginId = line.find("WholeExtent=\"") + 13;
-	const auto extentEndId = line.find("\" Origin");
+	const auto extentEndId = line.find("\" Origin=\"");
 	const auto strExtent = line.substr(extentBeginId, extentEndId - extentBeginId);
 	std::vector<size_t> extentVals{};
 	ParseExtentValues(extentVals, strExtent);
@@ -417,9 +418,9 @@ Geometry::ScalarGrid ImportVTI(const std::string& fileName)
 		originPtCoords[2] + boxEpsilon // will be floored
 	};
 	const pmp::vec3 boxMaxVec{
-		originPtCoords[0] + cellSize * Nx - boxEpsilon, // will be ceil-ed
-		originPtCoords[1] + cellSize * Ny - boxEpsilon, // will be ceil-ed
-		originPtCoords[2] + cellSize * Nz - boxEpsilon  // will be ceil-ed
+		originPtCoords[0] + cellSize * (Nx - 1) - boxEpsilon, // will be ceil-ed
+		originPtCoords[1] + cellSize * (Ny - 1) - boxEpsilon, // will be ceil-ed
+		originPtCoords[2] + cellSize * (Nz - 1) - boxEpsilon  // will be ceil-ed
 	};
 	const pmp::BoundingBox gridBox(boxMinVec, boxMaxVec);
 
@@ -428,7 +429,7 @@ Geometry::ScalarGrid ImportVTI(const std::string& fileName)
 	// >>>>>>> load values <<<<<<<<<<<<<<<<
 	LoadTokenLine(line, fileIStream, "<DataArray");
 	auto& resultValues = result.Values();
-	const size_t gridExtent = Nx * Ny * Nz;
+	const unsigned int gridExtent = (Nx - 1) * (Ny - 1) * (Nz - 1);
 	unsigned int gridPos = 0;
 	std::string token;
 	while (token != "</DataArray>" && !fileIStream.eof())
@@ -447,7 +448,7 @@ Geometry::ScalarGrid ImportVTI(const std::string& fileName)
 			return result;
 		}
 		resultValues[gridPos] = std::stod(token);
-		gridPos++;
+		++gridPos;
 	}
 	if (gridExtent > gridPos + 1)
 	{

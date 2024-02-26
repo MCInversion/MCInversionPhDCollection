@@ -21,8 +21,14 @@
 constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.2f;
 
 /// \brief this value is verified for [Smith, 2002]
-//	constexpr double BET_NORMAL_INTENSITY_FACTOR = 0.05;
-constexpr double BET_NORMAL_INTENSITY_FACTOR = 100.0;
+//constexpr double BET_NORMAL_INTENSITY_FACTOR = 0.05;
+
+// Custom values
+//constexpr double BET_NORMAL_INTENSITY_FACTOR = -15.0;
+constexpr double BET_NORMAL_INTENSITY_FACTOR = 1.0;
+//constexpr double BET_NORMAL_INTENSITY_FACTOR = 100.0;
+
+constexpr double CURVATURE_INTENSITY_FACTOR = 0.5;
 
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
@@ -79,6 +85,8 @@ void BrainSurfaceEvolver::Preprocess()
 	m_ScalingFactor = scalingFactor;
 	m_EvolvingSurfaceRadiusEstimate = static_cast<double>(icoSphereRadius * scalingFactor);
 	//m_EvolSettings.IcoSphereSettings.Radius *= scalingFactor;
+
+	m_UnitNormalToGridScaleFactor = static_cast<float>(m_EvolvingSurfaceRadiusEstimate) / (maxDim * m_ScalingFactor);
 
 	// origin needs to be computed from bet2
 	const auto origin = m_EvolSettings.IcoSphereSettings.Center;
@@ -153,15 +161,12 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	const auto vShiftedByNormal = vPos - m_ScalingFactor * vNormal;
 
 	// transform vertex from real space to grid index space
-	const auto ix0 = static_cast<unsigned int>(std::floor((vShiftedByNormal[0] - fieldOrigin[0]) / cellSize));
-	const auto iy0 = static_cast<unsigned int>(std::floor((vShiftedByNormal[1] - fieldOrigin[1]) / cellSize));
-	const auto iz0 = static_cast<unsigned int>(std::floor((vShiftedByNormal[2] - fieldOrigin[2]) / cellSize));
+	const auto ix0 = static_cast<int>(std::floor((vShiftedByNormal[0] - fieldOrigin[0]) / cellSize));
+	const auto iy0 = static_cast<int>(std::floor((vShiftedByNormal[1] - fieldOrigin[1]) / cellSize));
+	const auto iz0 = static_cast<int>(std::floor((vShiftedByNormal[2] - fieldOrigin[2]) / cellSize));
+	if (ix0 < 0 || iy0 < 0 || iz0 < 0 || ix0 >= Nx || iy0 >= Ny || iz0 >= Nz)
+		return 0.0; // Leave if indices are out of bounds.
 	const unsigned int gridPos0 = Nx * Ny * iz0 + Nx * iy0 + ix0;
-	if (gridPos0 > gridExtent - 1)
-	{
-		//std::cerr << "BrainSurfaceEvolver::NormalIntensityWeightFunction: unable to evaluate valid index for vShiftedByNormal - fieldOrigin!\n";
-		return 0.0;
-	}
 	const double im0 = fieldValues[gridPos0];
 
 	if (im0 < Imin) Imin = im0;
@@ -170,17 +175,17 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	const auto d1 = m_EvolSettings.ThresholdSettings.MinIntensitySearchDepth;
 	const auto d2 = m_EvolSettings.ThresholdSettings.MaxIntensitySearchDepth;
 
-	const float normalScaleToGridValues = m_ScalingFactor / cellSize; // need to use scaling factor to access the correct grid voxels from normals
-	const auto iNormalStepX = static_cast<unsigned int>(std::floor(vNormal[0] * normalScaleToGridValues));
-	const auto iNormalStepY = static_cast<unsigned int>(std::floor(vNormal[1] * normalScaleToGridValues));
-	const auto iNormalStepZ = static_cast<unsigned int>(std::floor(vNormal[2] * normalScaleToGridValues));
+	const float normalStepFactor = m_UnitNormalToGridScaleFactor / static_cast<float>(d2 - d1);
+	const auto iNormalStepX = static_cast<int>(std::round(vNormal[0] * normalStepFactor));
+	const auto iNormalStepY = static_cast<int>(std::round(vNormal[1] * normalStepFactor));
+	const auto iNormalStepZ = static_cast<int>(std::round(vNormal[2] * normalStepFactor));
 
 	const auto ix1 = ix0 - (d1 - 1) * iNormalStepX;
 	const auto iy1 = iy0 - (d1 - 1) * iNormalStepY;
 	const auto iz1 = iz0 - (d1 - 1) * iNormalStepZ;
+	if (ix1 < 0 || iy1 < 0 || iz1 < 0 || ix1 >= Nx || iy1 >= Ny || iz1 >= Nz)
+		return 0.0; // Leave if indices are out of bounds.
 	const unsigned int gridPos1 = Nx * Ny * iz1 + Nx * iy1 + ix1;
-	if (gridPos1 > gridExtent - 1)
-		return 0.0;
 	const double im1 = fieldValues[gridPos1];
 
 	if (im1 < Imin) Imin = im1;
@@ -189,21 +194,27 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	auto ix = ix0;
 	auto iy = iy0;
 	auto iz = iz0;
-	const auto cellSizeCubed = pow(cellSize, 3);
-	for (double gi = 2.0; gi < d1; gi += cellSizeCubed)
+	//const auto cellSizeCubed = pow(cellSize, 3);
+	for (double gi = 2.0; gi < d1; gi += 1.0)
 	{
 		ix -= iNormalStepX;
 		iy -= iNormalStepY;
 		iz -= iNormalStepZ;
+		// Check bounds to ensure indices are within the grid dimensions.
+		if (ix < 0 || iy < 0 || iz < 0 || ix >= Nx || iy >= Ny || iz >= Nz)
+			break; // Break out of the loop if indices are out of bounds.
+
 		const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
-		if (gridPos > gridExtent - 1)
+		if (gridPos >= gridExtent)
 			continue;
 		const double im = fieldValues[gridPos];
-		if (im1 < Imin) Imin = im1;
-		if (gi >= d2)
-			continue;
-
-		if (im1 > Imax) Imax = im1;
+		// Update Imin and Imax based on the intensity value at the current position.
+		Imin = std::min(Imin, im);
+		// Only update Imax within the range specified by d2.
+		if (gi < d2)
+		{
+			Imax = std::max(Imax, im);
+		}
 	}
 
 	const auto t2 = m_EvolSettings.ThresholdSettings.Threshold2ndPercentile;
@@ -338,8 +349,8 @@ void BrainSurfaceEvolver::Evolve()
 			
 			const auto vNormal = vNormalsProp[v]; // vertex unit normal
 
-			const double absIntensity = std::abs(vIntensity[v]);
-			const double epsilonCtrlWeight = (absIntensity > 0.0 ? absIntensity : 1.0);
+			//const double absIntensity = std::abs(vIntensity[v]);
+			const double epsilonCtrlWeight = CURVATURE_INTENSITY_FACTOR; // (absIntensity > 0.0 ? absIntensity : 1.0);
 			const double etaCtrlWeight = BET_NORMAL_INTENSITY_FACTOR * meanInterVertexDistance * vIntensity[v];
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal /* + tStep * tanRedistWeight * vTanVelocity */;

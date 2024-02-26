@@ -1241,6 +1241,9 @@ namespace Geometry
 
 	ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid)
 	{
+		if (std::abs(newCellSize - origGrid.CellSize()) < FLT_EPSILON)
+			return origGrid;
+
 		ScalarGrid result(newCellSize, origGrid.Box());
 		auto& values = result.Values();
 

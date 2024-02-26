@@ -723,7 +723,7 @@ namespace Geometry
 			const auto bucketOrientation = bucket.GetOrientation();
 			pmp::Point barycenter;
 			auto facePtData = ExtractFaceData(bucket, barycenter);
-			const auto refPt = facePtData[0].second;
+			const auto& refPt = facePtData[0].second;
 			const auto refVec = refPt - barycenter;
 
 			// sort face points in CCW orientation in the plane defined by barycenter and bucketOrientation.
@@ -740,8 +740,13 @@ namespace Geometry
 				return angleA < angleB;
 			});
 
-			for (const auto& p : facePtData | std::views::values)
+			for (unsigned int i = 0; i < facePtData.size(); ++i)
 			{
+				const auto& p = facePtData[i].second;
+				if (i > 0 && norm(p - facePtData[i - 1].second) < 1e-6f)
+				{
+					continue; // duplicate pts
+				}
 				currentPolyline.push_back(p);
 			}
 			currentPolyline.push_back(refPt); // close the polyline

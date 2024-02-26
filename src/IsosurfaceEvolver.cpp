@@ -101,7 +101,7 @@ void IsoSurfaceEvolver::Preprocess()
 	(*m_EvolvingSurface) *= voxelTransformMat;
 
 	// basic 1-iter remesh for bad quality mesh from marching cubes
-	const float minEdgeLength = static_cast<float>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	const float minEdgeLength =static_cast<float>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	const float maxEdgeLength = 4.0f * minEdgeLength;
 	const float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
 	pmp::Remeshing remeshing(*m_EvolvingSurface);

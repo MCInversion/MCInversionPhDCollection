@@ -193,6 +193,8 @@ private:
 	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
 	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
 
+	pmp::Scalar m_UnitNormalToGridScaleFactor{ 1.0f }; //>! scaling factor for voxel rasterization of surface unit normals for NormalIntensityWeightFunction.
+
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.
 	

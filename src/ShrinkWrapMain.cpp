@@ -41,7 +41,7 @@ constexpr bool performEvolverTests = false;
 constexpr bool performIsosurfaceEvolverTests = false;
 constexpr bool performSheetEvolverTest = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
-constexpr bool performBrainEvolverTests = false;
+constexpr bool performBrainEvolverTests = true;
 constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
@@ -66,7 +66,9 @@ constexpr bool performRepulsiveSurfResultEvaluation = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
-constexpr bool performMeshSelfIntersectionTests = true;
+constexpr bool performMeshSelfIntersectionTests = false;
+constexpr bool performHurtadoMeshesIsosurfaceEvolverTests = false;
+constexpr bool performImportVTIDebugTests = false;
 
 int main()
 {
@@ -483,7 +485,7 @@ int main()
 			const auto& icoSphereSettings = bet2IcoSphereSettings.at(name);
 			BrainExtractionSettings beSettings{
 				name,
-				80,
+				30,
 				0.01,
 				3, // ico-sphere subdivision level: bet2 uses 5 by default
 				cSettings,
@@ -1460,7 +1462,8 @@ int main()
 		for (const auto& meshName : importedMeshNames)
 		{
 			// ===================================================================================
-			// Triangle quality metrics eval for repulsive surfaces results [Yu, et al., 2021]
+			// Triangle quality metrics eval for repulsive surfaces results [Yu, et al., 2021],
+			// and for point cloud LSW [Daniel, et al., 2015]
 			// -----------------------------------------------------------------------------------
 			try
 			{
@@ -1734,4 +1737,140 @@ int main()
 
 		}
 	}
+
+	if (performHurtadoMeshesIsosurfaceEvolverTests)
+	{
+		const std::vector<std::string> meshNames{
+			"drone",
+			//"engine",
+			//"trex"
+		};
+
+		//constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.02;
+		const std::map<std::string, double> timeStepSizesForMeshes{
+			{"drone", 0.02 },
+			{"engine", 0.02 },
+			{"trex", defaultTimeStep }
+		};
+		const std::map<std::string, double> effectiveIsolevelsForMeshes{
+			{"drone", 18.0 },
+			{"engine", 20.0 },
+			{"trex", 200.0 }
+		};
+		const std::map<std::string, float> resamplingFactors{
+			{"drone", 2.0f },
+			{"engine", 4.0f },
+			{"trex", 0.3f }
+		};
+
+		for (const auto& name : meshNames)
+		{
+			//pmp::SurfaceMesh mesh;
+			//mesh.read(dataDirPath + name + ".obj");
+			//const auto meshBBox = mesh.bounds();
+			//const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+			//const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			//const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			//const float cellSize = minSize / nVoxelsPerMinDimension;
+			//constexpr float volExpansionFactor = 1.0f;
+			//const SDF::DistanceFieldSettings sdfSettings{
+			//	cellSize,
+			//	volExpansionFactor,
+			//	//0.2, // TODO: will this truncation be OK?
+			//	Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+			//	SDF::KDTreeSplitType::Center,
+			//	SDF::SignComputation::VoxelFloodFill,
+			//	SDF::BlurPostprocessingType::None,
+			//	SDF::PreprocessingType::Octree
+			//};
+			//SDF::ReportInput(mesh, sdfSettings, std::cout);
+
+			//const auto startSDF = std::chrono::high_resolution_clock::now();
+			//const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+			//const auto endSDF = std::chrono::high_resolution_clock::now();
+
+			//SDF::ReportOutput(sdf, std::cout);
+			//const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			//std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+			//std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+			//ExportToVTI(dataOutPath + name + "SDF", sdf);
+
+			// DistanceFieldGenerator::Generate only supports pmp::Surface mesh which cannot have non-manifoldness
+			// TODO: be able to process BaseMeshGeometryData with DistanceFieldGenerator::Generate
+
+			std::cout << "Opening " << name << "_voxFieldSDF90_FSM_90.vti ...";
+			constexpr float volExpansionFactor = 1.0f;
+			const auto sdf = ImportVTI(dataOutPath + name + "_voxFieldSDF90_FSM_90.vti");
+			std::cout << " done.\n";
+			const auto cellSize = sdf.CellSize();
+
+			//ExportToVTI(dataOutPath + name + "_reexport", sdf);
+			//continue;
+
+			//constexpr double fieldIsoLevel = 0.0;
+			const double fieldIsoLevel = 0.01 * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+			const double isoLevel = (effectiveIsolevelsForMeshes.contains(name) ?
+				(fieldIsoLevel < effectiveIsolevelsForMeshes.at(name) ? effectiveIsolevelsForMeshes.at(name) : 1.1 * fieldIsoLevel) : 5.0);
+
+			const MeshTopologySettings topoParams{
+				true,
+				0.24f, //0.1f, //0.4f,
+				0.0,
+				1.0f,
+				0.0,
+				2,
+				0.0,
+				3,
+				5,
+				false,
+				FeatureDetectionType::MeanCurvature,
+				1.0 * M_PI_2 * 180.0, 2.0 * M_PI_2 * 180.0,
+				2.0f,
+				1.0f * static_cast<float>(M_PI_2),
+				true
+			};
+
+			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
+			const float resamplingFactor = (resamplingFactors.contains(name) ? resamplingFactors.at(name) : 1.5f);
+			IsoSurfaceEvolutionSettings seSettings{
+				name,
+				20,
+				tau,
+				fieldIsoLevel,
+				isoLevel,
+				cellSize * resamplingFactor,
+				{1.0f, 1.0, 2.0, 1.0},
+				topoParams,
+				true, false,
+				dataOutPath,
+				MeshLaplacian::Voronoi,
+				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+				0.05f,
+				true,
+				false
+			};
+			ReportInput(seSettings, std::cout);
+			IsoSurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+	} // endif performHurtadoMeshesIsosurfaceEvolverTests
+
+	if (performImportVTIDebugTests)
+	{
+		std::cout << "Importing MetaBallVals.vti ...";
+		const auto grid = ImportVTI(dataOutPath + "MetaBallVals.vti");
+		std::cout << " done.\n";
+		std::cout << "Exporting MetaBallVals_reexport.vti ...";
+		ExportToVTI(dataOutPath + "MetaBallVals_reexport", grid);
+		std::cout << " done.\n";
+	} // endif performImportVTIDebugTests
 }
