@@ -41,7 +41,7 @@ constexpr bool performEvolverTests = false;
 constexpr bool performIsosurfaceEvolverTests = false;
 constexpr bool performSheetEvolverTest = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
-constexpr bool performBrainEvolverTests = true;
+constexpr bool performBrainEvolverTests = false;
 constexpr bool performSubdivisionTests1 = false;
 constexpr bool performSubdivisionTests2 = false;
 constexpr bool performSubdivisionTests3 = false;
@@ -63,6 +63,7 @@ constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
+constexpr bool performRepulsiveDanielResultEvaluation = true;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
@@ -1493,6 +1494,67 @@ int main()
 				std::cout << "Writing to " << meshName << "_Metric.vtk ...";
 				mesh.write(dataOutPath + meshName + "_Metric.vtk");
 				std::cout << "done\n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > MetricsEval subroutine has thrown an exception! Continue... < < < < < \n";
+			}
+			std::cout << "---------------------------------------------\n";
+		}
+	}
+
+	if (performRepulsiveDanielResultEvaluation)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"bunny_RepulsiveResult220",
+			"bunnyLSW150_Obstacle",
+			"bunnyLSW150_FullWrap",
+			"bunnyLSW200_Daniel30k"
+		};
+
+		const std::map<std::string, std::string> correspondingPtCloudNames{
+			{"bunny_RepulsiveResult220", "bunny_PtCloudRep"},
+			{"bunnyLSW150_Obstacle", "bunnyPts_3"},
+			{"bunnyLSW150_FullWrap", "bunnyPts_3"},
+			{"bunnyLSW200_Daniel30k", "bunnyPts_3_Daniel"}
+		};
+
+		const std::map<std::string, pmp::vec3> correspondingCorrectionTranslations{
+			{"bunny_RepulsiveResult220", pmp::vec3{}},
+			{"bunnyLSW150_Obstacle", pmp::vec3{0.001f, 0.001f, 0.001f}},
+			{"bunnyLSW150_FullWrap", pmp::vec3{0.001f, 0.001f, 0.001f}},
+			{"bunnyLSW200_Daniel30k", pmp::vec3{}}
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			try
+			{
+				std::cout << "DistanceMetricsEval: " << meshName << "...\n";
+				pmp::SurfaceMesh mesh;
+				mesh.read(dataDirPath + meshName + ".obj");
+
+				const auto ptCloudName = correspondingPtCloudNames.at(meshName);
+				const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+				if (!ptCloudOpt.has_value())
+				{
+					std::cerr << "ptCloudOpt == nullopt!\n";
+					break;
+				}
+
+				const auto& ptCloud = ptCloudOpt.value();
+				const auto distHistogramOpt = Geometry::ComputeMeshDistanceToPointCloudPerVertexHistogram(mesh, ptCloud, 30);
+
+				if (!distHistogramOpt.has_value())
+				{
+					std::cerr << "distHistogramOpt evaluation error!\n";
+					break;
+				}
+
+				const auto& distHistogram = distHistogramOpt.value();
+				Geometry::PrintHistogramResultData(distHistogram, std::cout);
 			}
 			catch (...)
 			{

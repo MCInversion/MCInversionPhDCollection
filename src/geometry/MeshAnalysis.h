@@ -2,6 +2,8 @@
 
 #include "pmp/SurfaceMesh.h"
 
+#include <optional>
+
 namespace Geometry
 {
 	/// \brief Computes minimum internal angle per triangle averaged for each vertex over adjacent triangles
@@ -47,6 +49,17 @@ namespace Geometry
 	/// \brief Computes z-level elevation values for each vertex.
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);
 
+	/// \brief Computes an interpolated point cloud to mesh vertex distance histogram by computing the distance field.
+	/// \param[in] mesh      input mesh.
+	/// \param[in] ptCloud   input point cloud. 
+	/// \param[in] nBins     the number of histogram bins fitting [maxDistVal, minDistVal] interval.
+	/// \return optional histogram output as pair { [maxDistVal, minDistVal] range, bin counts }.
+	[[nodiscard]] std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>>
+		ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins);
+
+	/// \brief Prints the evaluated histogram data.
+	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os);
+
 	/// \brief A test function for subdivision mesh counts estimation.
 	/// See: "Cavarga, Mesh Primitive Counting Formula for Subdivision Surfaces, SCG 2023".
 	[[nodiscard]] std::pair<std::vector<size_t>, std::vector<size_t>> GetEdgeVertCountsTheoreticalEstimate(const pmp::SurfaceMesh& mesh, const size_t& maxSubdivLevel, const bool& evalOutput = false);
@@ -68,4 +81,5 @@ namespace Geometry
 
 	/// \brief Computes self-intersection polylines from intersection lines for each triangle-triangle intersection.
 	[[nodiscard]] std::vector<std::vector<pmp::vec3>> ComputeSurfaceMeshSelfIntersectionPolylines(const pmp::SurfaceMesh& mesh);
+
 } // namespace Geometry

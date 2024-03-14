@@ -2,7 +2,10 @@
 
 #include "CollisionKdTree.h"
 #include "GeometryUtil.h"
+#include "GridUtil.h"
 #include "MeshSelfIntersection.h"
+
+#include "sdf/SDF.h"
 
 #include "pmp/algorithms/Curvature.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
@@ -13,6 +16,8 @@
 #include <set>
 #include <unordered_set>
 #include <ranges>
+#include <limits>
+#include <iomanip> // for std::setprecision
 
 namespace Geometry
 {
@@ -429,6 +434,86 @@ namespace Geometry
 		{
 			const auto& vPos = mesh.position(v);
 			vProp[v] = vPos[2];
+		}
+	}
+
+	constexpr unsigned int DEFAULT_N_VOXELS_PER_MIN_DIMENSION = 40;
+
+	std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>> ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins)
+	{
+		// Check for empty mesh or point cloud
+		if (mesh.n_vertices() == 0 || ptCloud.empty())
+		{
+			return {};
+		}
+
+		// Compute distance field for the point cloud
+		const pmp::BoundingBox ptCloudBBox(ptCloud);
+		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float cellSize = minSize / DEFAULT_N_VOXELS_PER_MIN_DIMENSION;
+		constexpr float volExpansionFactor = 1.0f;
+		const SDF::PointCloudDistanceFieldSettings dfSettings{
+			cellSize,
+			volExpansionFactor,
+			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+			SDF::BlurPostprocessingType::None
+		};
+
+		auto df = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
+
+		// Prepare for histogram computation
+		std::vector<unsigned int> histogram(nBins, 0);
+		float maxDistVal = std::numeric_limits<float>::lowest();
+		float minDistVal = std::numeric_limits<float>::max();
+
+		// Iterate through vertices to compute distances and populate the histogram
+		for (const auto& v : mesh.vertices())
+		{
+			const auto vPos = mesh.position(v);
+			const double vDistanceToTarget = TrilinearInterpolateScalarValue(vPos, df);
+			maxDistVal = std::max(maxDistVal, static_cast<float>(vDistanceToTarget));
+			minDistVal = std::min(minDistVal, static_cast<float>(vDistanceToTarget));
+		}
+
+		// Calculate histogram bin size and populate histogram
+		const float binSize = (maxDistVal - minDistVal) / nBins;
+		for (const auto& v : mesh.vertices())
+		{
+			const auto vPos = mesh.position(v);
+			const double vDistanceToTarget = TrilinearInterpolateScalarValue(vPos, df);
+			int binIndex = static_cast<int>((vDistanceToTarget - minDistVal) / binSize);
+			binIndex = std::min(binIndex, static_cast<int>(nBins) - 1); // Ensure binIndex is within range
+			histogram[binIndex]++;
+		}
+
+		return { {{minDistVal, maxDistVal}, histogram} };
+	}
+
+	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os)
+	{
+		const auto& [range, bins] = histData;
+		const auto& [minDistVal, maxDistVal] = range;
+		float binSize = (maxDistVal - minDistVal) / bins.size();
+
+		// Print the first bin with -inf lower bound
+		os << "( -inf.. " << std::fixed << std::setprecision(7) << (minDistVal + binSize) << ") : " << bins.front() << '\n';
+
+		// Print the intermediate bins
+		for (size_t i = 1; i < bins.size() - 1; ++i) 
+		{
+			os << "[ "
+				<< std::fixed << std::setprecision(7) << (minDistVal + binSize * i) << ".. "
+				<< std::fixed << std::setprecision(7) << (minDistVal + binSize * (i + 1)) << ") : "
+				<< bins[i] << '\n';
+		}
+
+		// Print the last bin with +inf upper bound
+		if (bins.size() > 1) 
+		{
+			os << "[ "
+				<< std::fixed << std::setprecision(7) << (maxDistVal - binSize) << ".. +inf) : "
+				<< bins.back() << '\n';
 		}
 	}
 
