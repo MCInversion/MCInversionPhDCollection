@@ -39,7 +39,6 @@ struct SurfaceEvolutionSettings
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.
 	bool IdentityForFeatureVertices{ false }; //>! if true, feature vertices give rise to: updated vertex = previous vertex.
-
 	double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
 };
 

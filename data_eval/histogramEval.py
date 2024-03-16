@@ -66,7 +66,7 @@ for metric, datasets in hist_data.items():
     if metric == "Vertex distance eval":  # Make sure this matches exactly with your metric name
         ax.set_ylabel('Vertices')
     else:
-        ax.set_ylabel('Faces')
+        ax.set_ylabel('Facess')
     
     ax.set_title(metric)
     ax.legend()

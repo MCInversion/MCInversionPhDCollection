@@ -57,6 +57,16 @@ namespace Geometry
 	[[nodiscard]] std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>>
 		ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins);
 
+	/// \brief Computes Hausdorff distance between mesh and a point cloud.
+	/// \param[in] mesh                      input mesh.
+	/// \param[in] ptCloud                   input point cloud.
+	/// \param[in] nVoxelsPerMinDimension    the key parameter to compute distance voxel field resolution: sampling per minimum bbox dimension.
+	/// \return optional evaluated Hausdorff distance dH(X, Y) = max(sup d(x, Y), sup d(X, y)).
+	[[nodiscard]] std::optional<double> ComputeMeshToPointCloudHausdorffDistance(
+		const pmp::SurfaceMesh& mesh,
+		const std::vector<pmp::Point>& ptCloud,
+		const unsigned int& nVoxelsPerMinDimension);
+
 	/// \brief Prints the evaluated histogram data.
 	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os);
 

@@ -63,7 +63,8 @@ constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
-constexpr bool performRepulsiveDanielResultEvaluation = true;
+constexpr bool performRepulsiveDanielResultEvaluation = false;
+constexpr bool performHausdorffDistanceMeasurementsPerTimeStep = true;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
@@ -1536,16 +1537,20 @@ int main()
 				pmp::SurfaceMesh mesh;
 				mesh.read(dataDirPath + meshName + ".obj");
 
-				const auto ptCloudName = correspondingPtCloudNames.at(meshName);
+				const auto& ptCloudName = correspondingPtCloudNames.at(meshName);
 				const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 				if (!ptCloudOpt.has_value())
 				{
 					std::cerr << "ptCloudOpt == nullopt!\n";
 					break;
 				}
-
+				const auto& ptCloudTranslationVec = correspondingCorrectionTranslations.at(meshName);
 				const auto& ptCloud = ptCloudOpt.value();
-				const auto distHistogramOpt = Geometry::ComputeMeshDistanceToPointCloudPerVertexHistogram(mesh, ptCloud, 30);
+				auto adjustedPtCloud = std::vector<pmp::Point>(ptCloud);
+				for (auto& pt : adjustedPtCloud)
+					pt += ptCloudTranslationVec;
+
+				const auto distHistogramOpt = Geometry::ComputeMeshDistanceToPointCloudPerVertexHistogram(mesh, adjustedPtCloud, 30);
 
 				if (!distHistogramOpt.has_value())
 				{
@@ -1561,6 +1566,75 @@ int main()
 				std::cerr << "> > > > > > MetricsEval subroutine has thrown an exception! Continue... < < < < < \n";
 			}
 			std::cout << "---------------------------------------------\n";
+		}
+	}
+
+	if (performHausdorffDistanceMeasurementsPerTimeStep)
+	{
+		const std::vector<std::string> procedureNames{
+			"bunnyRepulsive",
+			"bunnyDanielLSW",
+			"bunnyLSWObstacle",
+			"bunnyLSWFullWrap"
+		};
+
+		const std::map<std::string, std::string> correspondingDataset{
+			{"bunnyRepulsive", dataOutPath + "bunny_RepulsiveObstacleEvol/frame"},
+			{"bunnyDanielLSW", dataOutPath + "bunnyPts_3_DanielEvol/"},
+			{"bunnyLSWObstacle", dataOutPath + "bunnyPts_3_40kVertZeroSineTwoAdvect/bunnyPts_3_Evol_"},
+			{"bunnyLSWFullWrap", dataOutPath + "bunnyPts_3_40kVertFullWrap/bunnyPts_3_Evol_"}
+		};
+
+		const std::map<std::string, std::string> correspondingDatasetFormat{
+			{"bunnyRepulsive", "obj"},
+			{"bunnyDanielLSW", "vtk"},
+			{"bunnyLSWObstacle", "vtk"},
+			{"bunnyLSWFullWrap", "vtk"}
+		};
+
+		const std::map<std::string, std::string> correspondingPtCloudNames{
+			{"bunnyRepulsive", "bunny_PtCloudRep"},
+			{"bunnyDanielLSW", "bunnyPts_3_Daniel"},
+			{"bunnyLSWObstacle", "bunnyPts_3"},
+			{"bunnyLSWFullWrap", "bunnyPts_3"}
+		};
+
+		const std::map<std::string, pmp::vec3> correspondingCorrectionTranslations{
+			{"bunnyRepulsive", pmp::vec3{}},
+			{"bunnyDanielLSW", pmp::vec3{0.001f, 0.001f, 0.001f}},
+			{"bunnyLSWObstacle", pmp::vec3{0.001f, 0.001f, 0.001f}},
+			{"bunnyLSWFullWrap", pmp::vec3{}}
+		};
+
+		const std::map<std::string, unsigned int> correspondingNSteps{
+			{"bunnyRepulsive", 220},
+			{"bunnyDanielLSW", 200},
+			{"bunnyLSWObstacle", 146},
+			{"bunnyLSWFullWrap", 146}
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+
+		for (const auto& procedureName : procedureNames)
+		{
+			const auto& ptCloudName = correspondingPtCloudNames.at(procedureName);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+			const auto& ptCloudTranslationVec = correspondingCorrectionTranslations.at(procedureName);
+			const auto& ptCloud = ptCloudOpt.value();
+			auto adjustedPtCloud = std::vector(ptCloud);
+			for (auto& pt : adjustedPtCloud)
+				pt += ptCloudTranslationVec;
+
+			const unsigned int nSteps = correspondingNSteps.at(procedureName);
+			for (unsigned int i = 0; i < nSteps; ++i)
+			{
+				// TODO:
+			}
 		}
 	}
 
