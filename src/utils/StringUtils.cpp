@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 namespace Utils
 {
@@ -43,6 +45,13 @@ namespace Utils
 	        std::cout << " }\n";
 	        it = range.second; // Move to the next distinct key
 	    }
+	}
+
+	std::string FormatIndex4DigitFill(const unsigned int& i)
+	{
+		std::stringstream ss;
+		ss << std::setfill('0') << std::setw(4) << i;
+		return ss.str();
 	}
 	
 } // namespace Utils

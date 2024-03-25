@@ -63,7 +63,7 @@ constexpr bool performPDanielPtCloudPLYExport = false;
 constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
-constexpr bool performRepulsiveDanielResultEvaluation = false;
+constexpr bool performHistogramResultEvaluation = false;
 constexpr bool performHausdorffDistanceMeasurementsPerTimeStep = true;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
@@ -76,8 +76,7 @@ int main()
 {
 	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
 	const std::vector<std::string> meshNames{
-		"armadillo",
-		//"BentChair",
+   	//"BentChair",
 		//"blub",
 		//"bunny",
 		//"maxPlanck",
@@ -1504,7 +1503,7 @@ int main()
 		}
 	}
 
-	if (performRepulsiveDanielResultEvaluation)
+	if (performHistogramResultEvaluation)
 	{
 		const std::vector<std::string> importedMeshNames{
 			"bunny_RepulsiveResult220",
@@ -1580,16 +1579,16 @@ int main()
 
 		const std::map<std::string, std::string> correspondingDataset{
 			{"bunnyRepulsive", dataOutPath + "bunny_RepulsiveObstacleEvol/frame"},
-			{"bunnyDanielLSW", dataOutPath + "bunnyPts_3_DanielEvol/"},
+			{"bunnyDanielLSW", dataOutPath + "bunnyPts_3_DanielEvol/ico02_bunnyPts_3_ply_df300__Evolution_time"},
 			{"bunnyLSWObstacle", dataOutPath + "bunnyPts_3_40kVertZeroSineTwoAdvect/bunnyPts_3_Evol_"},
 			{"bunnyLSWFullWrap", dataOutPath + "bunnyPts_3_40kVertFullWrap/bunnyPts_3_Evol_"}
 		};
 
 		const std::map<std::string, std::string> correspondingDatasetFormat{
-			{"bunnyRepulsive", "obj"},
-			{"bunnyDanielLSW", "vtk"},
-			{"bunnyLSWObstacle", "vtk"},
-			{"bunnyLSWFullWrap", "vtk"}
+			{"bunnyRepulsive", ".obj"},
+			{"bunnyDanielLSW", ".vtk"},
+			{"bunnyLSWObstacle", ".vtk"},
+			{"bunnyLSWFullWrap", ".vtk"}
 		};
 
 		const std::map<std::string, std::string> correspondingPtCloudNames{
@@ -1612,11 +1611,20 @@ int main()
 			{"bunnyLSWObstacle", 146},
 			{"bunnyLSWFullWrap", 146}
 		};
+		//const std::map<std::string, unsigned int> correspondingNSteps{
+		//	{"bunnyRepulsive", 5},
+		//	{"bunnyDanielLSW", 5},
+		//	{"bunnyLSWObstacle", 5},
+		//	{"bunnyLSWFullWrap", 5}
+		//};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 
 		for (const auto& procedureName : procedureNames)
 		{
+			std::cout << "----------------------------------------------------------------------\n";
+			std::cout << "Procedure: " << procedureName << " Hausdorff Distance per time step...\n";
+			std::cout << "----------------------------------------------------------------------\n";
 			const auto& ptCloudName = correspondingPtCloudNames.at(procedureName);
 			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 			if (!ptCloudOpt.has_value())
@@ -1630,10 +1638,47 @@ int main()
 			for (auto& pt : adjustedPtCloud)
 				pt += ptCloudTranslationVec;
 
-			const unsigned int nSteps = correspondingNSteps.at(procedureName);
-			for (unsigned int i = 0; i < nSteps; ++i)
+			const std::function timeIndexFormatFunction = (procedureName == "bunnyRepulsive") ?
+				Utils::FormatIndex4DigitFill :
+				Utils::FormatIndexSimple;
+
+			// Compute distance field for the point cloud
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float ptCloudCellSize = ptCloudMinSize / static_cast<float>(nVoxelsPerMinDimension);
+			const SDF::PointCloudDistanceFieldSettings ptCloudDfSettings{
+				ptCloudCellSize,
+				1.0f, // volExpansionFactor
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				SDF::BlurPostprocessingType::None
+			};
+			const auto ptCloudDf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, ptCloudDfSettings);
+
+			try
 			{
-				// TODO:
+				const unsigned int nSteps = correspondingNSteps.at(procedureName);
+				const auto& format = correspondingDatasetFormat.at(procedureName);
+				for (unsigned int i = 0; i < nSteps; ++i)
+				{
+					const auto timeStepIdString = timeIndexFormatFunction(i);
+					const auto meshName = correspondingDataset.at(procedureName) + timeStepIdString;
+					pmp::SurfaceMesh mesh;
+					mesh.read(meshName + format);
+
+					const auto hDistOpt = Geometry::ComputeMeshToPointCloudHausdorffDistance(mesh, ptCloud, ptCloudDf, nVoxelsPerMinDimension);
+					if (!hDistOpt.has_value())
+					{
+						std::cerr << "hDistOpt == nullopt!\n";
+						break;
+					}
+
+					std::cout << "step " << i << ": " << hDistOpt.value() << "\n";
+				}				
+			}
+			catch (...)
+			{
+				std::cerr << "> Procedure \"" << procedureName << "\" has thrown an exception! Continue... < < < < < \n";
 			}
 		}
 	}

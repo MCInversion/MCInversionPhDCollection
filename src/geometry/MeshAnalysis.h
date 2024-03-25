@@ -6,6 +6,9 @@
 
 namespace Geometry
 {
+	// forward declarations
+	class ScalarGrid;
+
 	/// \brief Computes minimum internal angle per triangle averaged for each vertex over adjacent triangles
 	///        & stores the values as vertex scalar data.
 	///        This metric takes values from [0, M_PI / 3]. Preferred values are from [M_PI / 6, M_PI / 3].
@@ -65,6 +68,18 @@ namespace Geometry
 	[[nodiscard]] std::optional<double> ComputeMeshToPointCloudHausdorffDistance(
 		const pmp::SurfaceMesh& mesh,
 		const std::vector<pmp::Point>& ptCloud,
+		const unsigned int& nVoxelsPerMinDimension);
+
+	/// \brief Computes Hausdorff distance between mesh and a point cloud.
+	/// \param[in] mesh                      input mesh.
+	/// \param[in] ptCloud                   input point cloud.
+	/// \param[in] ptCloudDf                 input point cloud's pre-computed distance field.
+	/// \param[in] nVoxelsPerMinDimension    the key parameter to compute distance voxel field resolution: sampling per minimum bbox dimension.
+	/// \return optional evaluated Hausdorff distance dH(X, Y) = max(sup d(x, Y), sup d(X, y)).
+	[[nodiscard]] std::optional<double> ComputeMeshToPointCloudHausdorffDistance(
+		const pmp::SurfaceMesh& mesh,
+		const std::vector<pmp::Point>& ptCloud,
+		const ScalarGrid& ptCloudDf, // Use the existing ScalarGrid
 		const unsigned int& nVoxelsPerMinDimension);
 
 	/// \brief Prints the evaluated histogram data.

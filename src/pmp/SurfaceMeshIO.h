@@ -27,6 +27,7 @@ public:
 private:
     void read_off(SurfaceMesh& mesh) const;
     void read_obj(SurfaceMesh& mesh) const;
+    void read_vtk(SurfaceMesh& mesh) const;
     void read_stl(SurfaceMesh& mesh) const;
     void read_ply(SurfaceMesh& mesh) const;
     void read_pmp(SurfaceMesh& mesh) const;

@@ -499,23 +499,23 @@ namespace Geometry
 
 		// Compute distance field for the point cloud
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
-		auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		float ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		float ptCloudCellSize = ptCloudMinSize / nVoxelsPerMinDimension;
-		SDF::PointCloudDistanceFieldSettings ptCloudDfSettings{
+		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+		const float ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float ptCloudCellSize = ptCloudMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const SDF::PointCloudDistanceFieldSettings ptCloudDfSettings{
 			ptCloudCellSize,
 			1.0f, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::BlurPostprocessingType::None
 		};
-		auto ptCloudDf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, ptCloudDfSettings);
+		const auto ptCloudDf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, ptCloudDfSettings);
 
 		// Compute distance field for the mesh
 		const auto meshBBox = mesh.bounds();
-		auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		float meshCellSize = meshMinSize / nVoxelsPerMinDimension;
-		SDF::DistanceFieldSettings meshDfSettings{
+		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
 			1.0f, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
@@ -524,13 +524,58 @@ namespace Geometry
 			SDF::BlurPostprocessingType::None,
 			SDF::PreprocessingType::Octree
 		};
-		auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
 
 		double maxDistMeshToPointCloud = std::numeric_limits<double>::lowest();
 		double maxDistPointCloudToMesh = std::numeric_limits<double>::lowest();
 
 		// Mesh to Point Cloud: Compute max distance using the distance field
-		for (const auto& v : mesh.vertices())
+		for (const auto v : mesh.vertices())
+		{
+			const auto vPos = mesh.position(v);
+			const double vDistanceToPointCloud = TrilinearInterpolateScalarValue(vPos, ptCloudDf);
+			maxDistMeshToPointCloud = std::max(maxDistMeshToPointCloud, vDistanceToPointCloud);
+		}
+
+		// Point Cloud to Mesh: Compute max distance using the distance field
+		for (const auto& p : ptCloud)
+		{
+			const double pDistanceToMesh = TrilinearInterpolateScalarValue(p, meshDf);
+			maxDistPointCloudToMesh = std::max(maxDistPointCloudToMesh, pDistanceToMesh);
+		}
+
+		// Compute Hausdorff Distance as the maximum of these two distances
+		return std::max(maxDistMeshToPointCloud, maxDistPointCloudToMesh);
+	}
+
+	std::optional<double> ComputeMeshToPointCloudHausdorffDistance(const pmp::SurfaceMesh& mesh, const std::vector<pmp::Point>& ptCloud, const ScalarGrid& ptCloudDf, const unsigned int& nVoxelsPerMinDimension)
+	{
+		if (mesh.n_vertices() == 0)
+		{
+			return {};
+		}
+
+		// Compute distance field for the mesh
+		const auto meshBBox = mesh.bounds();
+		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const SDF::DistanceFieldSettings meshDfSettings{
+			meshCellSize,
+			1.0f, // volExpansionFactor
+			DEFAULT_SCALAR_GRID_INIT_VAL,
+			SDF::KDTreeSplitType::Center,
+			SDF::SignComputation::None, // Unsigned distance field
+			SDF::BlurPostprocessingType::None,
+			SDF::PreprocessingType::Octree
+		};
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
+
+		double maxDistMeshToPointCloud = std::numeric_limits<double>::lowest();
+		double maxDistPointCloudToMesh = std::numeric_limits<double>::lowest();
+
+		// Mesh to Point Cloud: Compute max distance using the distance field
+		for (const auto v : mesh.vertices())
 		{
 			const auto vPos = mesh.position(v);
 			const double vDistanceToPointCloud = TrilinearInterpolateScalarValue(vPos, ptCloudDf);
@@ -550,9 +595,14 @@ namespace Geometry
 
 	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os)
 	{
+		if (std::abs(histData.first.first - histData.first.second) < FLT_EPSILON || histData.second.empty())
+		{
+			std::cerr << "PrintHistogramResultData: INVALID HISTOGRAM DATA!\n";
+			return;
+		}
 		const auto& [range, bins] = histData;
 		const auto& [minDistVal, maxDistVal] = range;
-		const float binSize = (maxDistVal - minDistVal) / bins.size();
+		const float binSize = (maxDistVal - minDistVal) / static_cast<float>(bins.size());
 
 		// Print the first bin with -inf lower bound
 		os << "( -inf.. " << std::fixed << std::setprecision(7) << (minDistVal + binSize) << ") : " << bins.front() << '\n';

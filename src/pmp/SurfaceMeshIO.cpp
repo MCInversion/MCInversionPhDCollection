@@ -54,6 +54,8 @@ void SurfaceMeshIO::read(SurfaceMesh& mesh)
         read_off(mesh);
     else if (ext == "obj")
         read_obj(mesh);
+    else if (ext == "vtk")
+        read_vtk(mesh);
     else if (ext == "stl")
         read_stl(mesh);
     else if (ext == "ply")
@@ -255,6 +257,73 @@ void SurfaceMeshIO::read_obj(SurfaceMesh& mesh) const
     if (!with_tex_coord)
     {
         mesh.remove_halfedge_property(tex_coords);
+    }
+
+    fclose(in);
+}
+
+void SurfaceMeshIO::read_vtk(SurfaceMesh& mesh) const
+{
+    std::array<char, 1024> s;
+    FILE* in = fopen(filename_.c_str(), "r");
+    if (!in)
+        throw IOException("Failed to open file: " + filename_);
+
+    // Clear line once
+    memset(s.data(), 0, s.size());
+
+    // Temporary storage for parsing the file
+    std::vector<Vertex> vertices;
+
+    // Parse line by line
+    while (in && !feof(in) && fgets(s.data(), s.size(), in))
+    {
+        // Skip comments and empty lines
+        if (s[0] == '#' || isspace(s[0]))
+            continue;
+
+        // Read vertex positions
+        if (strncmp(s.data(), "POINTS", 6) == 0)
+        {
+            int nPoints;
+            sscanf(s.data() + 6, "%d", &nPoints); // Assumes "POINTS" is followed by the number of points
+            vertices.reserve(nPoints);
+            for (int i = 0; i < nPoints; ++i)
+            {
+                float x, y, z;
+                if (fscanf(in, "%f %f %f", &x, &y, &z) == 3)
+                {
+                    auto v = mesh.add_vertex(Point(x, y, z));
+                    vertices.push_back(v);
+                }
+            }
+        }
+
+        // Read polygons
+        else if (strncmp(s.data(), "POLYGONS", 8) == 0)
+        {
+            int nPolygons, totalIndices;
+            sscanf(s.data() + 8, "%d %d", &nPolygons, &totalIndices); // Assumes "POLYGONS" is followed by the number of polygons and total indices
+
+            for (int i = 0; i < nPolygons; ++i)
+            {
+                int nVerts;
+                fscanf(in, "%d", &nVerts); // Read the number of vertices for this polygon
+
+                std::vector<Vertex> faceVertices;
+                faceVertices.reserve(nVerts);
+                for (int j = 0; j < nVerts; ++j)
+                {
+                    int idx;
+                    fscanf(in, "%d", &idx); // Read vertex index
+                    faceVertices.push_back(vertices.at(idx));
+                }
+                mesh.add_face(faceVertices);
+            }
+        }
+
+        // Clear line for next read
+        memset(s.data(), 0, s.size());
     }
 
     fclose(in);
