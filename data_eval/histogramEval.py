@@ -50,24 +50,35 @@ for file_path in file_paths:
                     hist_data[current_metric][dataset_name].append((min_val, max_val, count))
 
 # Create a figure for the plots
-fig, axs = plt.subplots(len(hist_data), 1, figsize=(8, 6))
+fig, axs = plt.subplots(len(hist_data), 1, figsize=(7, 5.5))
 
 metric_index = 0
+jacobian_x_cutoff = 8
 for metric, datasets in hist_data.items():
     ax = axs[metric_index]
     for dataset_name, bins in datasets.items():
-        bin_edges = [b[0] for b in bins] + [bins[-1][1]]
-        counts = [b[2] for b in bins]
-        # Adjust the label to include conversion factor if applicable
-        label = f"{dataset_name}"
-        ax.plot(bin_edges[:-1], counts, label=label, drawstyle='steps-post')
-    
-    # Here, we use 'metric' instead of 'current_metric'
-    if metric == "Vertex distance eval":  # Make sure this matches exactly with your metric name
-        ax.set_ylabel('Vertices')
+        # Adjust bin edges and counts for general case
+        bin_edges = [bins[0][0]] + [b[0] for b in bins] + [bins[-1][1]]
+        counts = [0] + [b[2] for b in bins] + [0]
+        
+        # Clip data at x=jacobian_x_cutoff for "Bunny LSW200 Daniel" in "Equilateral tri Jacobian condition number" metric
+        if metric == "Equilateral tri Jacobian condition number" and dataset_name == "Bunny LSW200 Daniel":
+            # Find the index where bin_edges exceed jacobian_x_cutoff and clip arrays
+            clip_index = next((i for i, edge in enumerate(bin_edges) if edge > jacobian_x_cutoff), len(bin_edges))
+            bin_edges = bin_edges[:clip_index+1]  # Include the boundary bin
+            counts = counts[:clip_index+1]
+            # Ensure the last visible bin edge is exactly at jacobian_x_cutoff
+            bin_edges[-1] = jacobian_x_cutoff
+
+        # Plot the histogram as a full curve
+        ax.plot(bin_edges, counts, label=dataset_name, drawstyle='steps-pre')
+        ax.fill_between(bin_edges, counts, step="pre", alpha=0.4)
+
+    if metric == "Vertex distance eval":
+        ax.set_ylabel('# of vertices')
     else:
-        ax.set_ylabel('Facess')
-    
+        ax.set_ylabel('# of faces')
+
     ax.set_title(metric)
     ax.legend()
     ax.grid(True)

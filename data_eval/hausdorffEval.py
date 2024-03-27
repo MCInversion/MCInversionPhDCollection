@@ -11,6 +11,14 @@ scaling_factors = {
     "bunnyLSWFullWrap": 1  # Base
 }
 
+# Time steps to mark with a triangle symbol
+remeshing_time_steps = {
+    "bunnyRepulsive": [],
+    "bunnyDanielLSW": [20, 80, 140, 150],
+    "bunnyLSWObstacle": [3, 10, 20, 50, 100, 120, 140, 145],
+    "bunnyLSWFullWrap": [3, 10, 20, 50, 100, 120, 140, 145]
+}
+
 # Initialize data structures for storing parsed data
 procedure_data = {}
 
@@ -30,13 +38,19 @@ with open(file_path, 'r') as file:
             procedure_data[current_procedure].append(scaled_distance)
 
 # Plotting the data
-plt.figure(figsize=(8, 4))
+plt.figure(figsize=(8, 3))
 for procedure, distances in procedure_data.items():
     # Plot line with line width of 2
     line, = plt.plot(distances, label=procedure, linewidth=2)
     # Mark start and end points with a circle of the same color as the line
     plt.scatter([0], [distances[0]], color=line.get_color(), s=40)  # Start point
     plt.scatter([len(distances)-1], [distances[-1]], color=line.get_color(), s=40)  # End point
+    
+    # Mark specified time steps with a triangle symbol
+    for time_step in remeshing_time_steps[procedure]:
+        if time_step < len(distances):  # Ensure the time step index is within bounds
+            #plt.scatter(time_step, distances[time_step], color=line.get_color(), marker='^', s=50)
+            plt.scatter(time_step, distances[time_step], edgecolors=line.get_color(), facecolors='white', marker='^', s=50, linewidths=1.5)
 
 plt.title('Evolution of Mesh to Point Cloud Hausdorff Distance')
 plt.xlabel('Time Step')

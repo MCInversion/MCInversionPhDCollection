@@ -38,6 +38,7 @@ const std::string dataOutPath = fsDataOutPath.string();
 constexpr bool performSDFTests = false;
 constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
+constexpr bool performOldArmadilloLSWTest = false;
 constexpr bool performIsosurfaceEvolverTests = false;
 constexpr bool performSheetEvolverTest = false;
 // constexpr bool performNiftiTests = true; // TODO: nifti import not supported yet
@@ -64,12 +65,14 @@ constexpr bool performPtCloudToDF = false;
 constexpr bool performPDanielPtCloudComparisonTest = false;
 constexpr bool performRepulsiveSurfResultEvaluation = false;
 constexpr bool performHistogramResultEvaluation = false;
-constexpr bool performHausdorffDistanceMeasurementsPerTimeStep = true;
+constexpr bool performOldResultJacobianMetricEval = false;
+constexpr bool performHausdorffDistanceMeasurementsPerTimeStep = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
 constexpr bool performMeshSelfIntersectionTests = false;
 constexpr bool performHurtadoMeshesIsosurfaceEvolverTests = false;
+constexpr bool performHurtadoTrexIcosphereLSW = true;
 constexpr bool performImportVTIDebugTests = false;
 
 int main()
@@ -297,6 +300,88 @@ int main()
 			}
 		}
 	} // endif performEvolverTests
+
+	if (performOldArmadilloLSWTest)
+	{
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		const std::string name = "armadillo";
+		pmp::SurfaceMesh mesh;
+		mesh.read(dataDirPath + name + ".obj");
+		const auto meshBBox = mesh.bounds();
+		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr float volExpansionFactor = 1.0f;
+		const SDF::DistanceFieldSettings sdfSettings{
+			cellSize,
+			volExpansionFactor,
+			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
+			SDF::KDTreeSplitType::Center,
+			SDF::SignComputation::VoxelFloodFill,
+			SDF::BlurPostprocessingType::None,
+			SDF::PreprocessingType::Octree
+		};
+		SDF::ReportInput(mesh, sdfSettings, std::cout);
+
+		const auto startSDF = std::chrono::high_resolution_clock::now();
+		const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+		const auto endSDF = std::chrono::high_resolution_clock::now();
+
+		SDF::ReportOutput(sdf, std::cout);
+		const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+		std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+		std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+		ExportToVTI(dataOutPath + name + "SDF", sdf);
+
+		const auto& sdfBox = sdf.Box();
+		const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+		const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+		const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+		const double tau = defaultTimeStep; // time step
+
+		MeshTopologySettings topoParams;
+		topoParams.EdgeLengthDecayFactor = 0.95f;
+		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+		topoParams.NRemeshingIters = 5;
+		topoParams.PrincipalCurvatureFactor = 2.0f;
+		topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+		topoParams.UseBackProjection = false;
+		AdvectionDiffusionParameters adParams = PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize);
+		adParams.AdvectionSineMultiplier *= 1.5;
+		SurfaceEvolutionSettings seSettings{
+			name,
+			80,
+			tau,
+			fieldIsoLevel,
+			3,
+			adParams,
+			topoParams,
+			minSize, maxSize,
+			meshBBox.center(),
+			true, false,
+			dataOutPath,
+			MeshLaplacian::Voronoi,
+			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+			0.05f,
+			true,
+			//false
+		};
+		ReportInput(seSettings, std::cout);
+		SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+	} // endif performOldArmadilloLSWTest
 
 	if (performIsosurfaceEvolverTests)
 	{
@@ -1568,6 +1653,29 @@ int main()
 		}
 	}
 
+	if (performOldResultJacobianMetricEval)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"armadillo_ResultOLD",
+			"rockerArm_ResultOLD"
+		};
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			std::cout << "MetricsEval: " << meshName << "...\n";
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + meshName + ".obj");
+
+			if (!Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(mesh))
+			{
+				std::cout << "Error!\n";
+				continue;
+			}
+
+			mesh.write(dataOutPath + meshName + "_Metric.vtk");
+		}
+	}
+
 	if (performHausdorffDistanceMeasurementsPerTimeStep)
 	{
 		const std::vector<std::string> procedureNames{
@@ -2044,6 +2152,73 @@ int main()
 			}
 		}
 	} // endif performHurtadoMeshesIsosurfaceEvolverTests
+
+	if (performHurtadoTrexIcosphereLSW)
+	{
+		constexpr double defaultTimeStep = 0.05;
+		SetRemeshingAdjustmentTimeIndices({ 3, 8, 10, 20, 50, 100, /* 120, 140, 145*/ });
+
+		constexpr float minSize = 3996.9329f;
+		constexpr float maxSize = 11613.2236f;
+		const pmp::vec3 center{ 5806.6118f, 2353.8142f, 2005.4388f };
+
+		std::cout << "Opening " << "trex_voxFieldSDF90_FSM_90.vti ...";
+		const auto sdf = ImportVTI(dataOutPath + "trex_voxFieldSDF90_FSM_90.vti");
+		std::cout << " done.\n";
+		const auto cellSize = sdf.CellSize();
+
+		const double isoLvlOffsetFactor = 1.5;
+		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+		const double tau = defaultTimeStep; // time step
+
+		MeshTopologySettings topoParams;
+		topoParams.FixSelfIntersections = true;
+		topoParams.MinEdgeMultiplier = 0.14f;
+		topoParams.UseBackProjection = false;
+		topoParams.PrincipalCurvatureFactor = 3.2f;
+		topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+		topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+
+		AdvectionDiffusionParameters adParams{
+			1.0, 1.0,
+			1.0, 1.5
+		};
+
+		SurfaceEvolutionSettings seSettings{
+			"TRex",
+			146, // 150,
+			tau,
+			fieldIsoLevel,
+			3, // IcoSphereSubdivisionLevel
+			adParams,
+			topoParams,
+			minSize, maxSize,
+			center,
+			true, false,
+			dataOutPath,
+			MeshLaplacian::Voronoi,
+			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+			0.05f,
+			true,
+			false
+		};
+		ReportInput(seSettings, std::cout);
+		SurfaceEvolver evolver(sdf, 1.0f, seSettings);
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+
+
+	} // endif performHurtadoTrexIcosphereLSW
 
 	if (performImportVTIDebugTests)
 	{
