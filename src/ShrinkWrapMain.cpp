@@ -72,8 +72,9 @@ constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
 constexpr bool performMeshSelfIntersectionTests = false;
 constexpr bool performHurtadoMeshesIsosurfaceEvolverTests = false;
-constexpr bool performHurtadoTrexIcosphereLSW = true;
+constexpr bool performHurtadoTrexIcosphereLSW = false;
 constexpr bool performImportVTIDebugTests = false;
+constexpr bool performConvexHullTests = true;
 
 int main()
 {
@@ -2229,4 +2230,34 @@ int main()
 		ExportToVTI(dataOutPath + "MetaBallVals_reexport", grid);
 		std::cout << " done.\n";
 	} // endif performImportVTIDebugTests
+
+	if (performConvexHullTests)
+	{
+		const std::vector<std::string> importedPtCloudNames{
+			"bunnyPts_3"//,
+			//"CaesarBustPts_3"
+		};
+
+		for (const auto& ptCloudName : importedPtCloudNames)
+		{
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+
+			const auto convexHullMeshOpt = Geometry::ComputePointCloudConvexHull(ptCloud);
+			if (!convexHullMeshOpt.has_value())
+			{
+				std::cerr << "convexHullMeshOpt == nullopt!\n";
+				break;
+			}
+			const auto& convexHull = convexHullMeshOpt.value();
+
+			convexHull.write(dataOutPath + ptCloudName + "_convexHull.obj");
+		}
+	} // performConvexHullTests
 }

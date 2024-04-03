@@ -80,4 +80,11 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool ExportPolylinesToOBJ(const std::vector<std::vector<pmp::vec3>>& polylines, const std::string& absFileName);
 
+	/**
+	 * \brief Computes the convex hull of an input point cloud.
+	 * \param points           input point cloud.
+	 * \param distTolerance    distance tolerance.
+	 * \return optional resulting pmp::SurfaceMesh if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<pmp::SurfaceMesh> ComputePointCloudConvexHull(const std::vector<pmp::Point>& points, const pmp::Scalar& distTolerance = 0.0f);
 } // namespace Geometry
