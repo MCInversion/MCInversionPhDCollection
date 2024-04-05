@@ -296,10 +296,9 @@ Face SurfaceMesh::add_face(const std::vector<Vertex>& vertices)
     next_cache.clear();
     next_cache.reserve(3 * n);
 
-    // test for topological errors
     for (i = 0, ii = 1; i < n; ++i, ++ii, ii %= n)
     {
-        if (!is_boundary(vertices[i]))
+        if (!is_boundary(vertices[i]) && !is_deleted(vertices[i]))
         {
             auto what = "SurfaceMesh::add_face: Complex vertex.";
             throw TopologyException(what);
@@ -308,7 +307,7 @@ Face SurfaceMesh::add_face(const std::vector<Vertex>& vertices)
         halfedges[i] = find_halfedge(vertices[i], vertices[ii]);
         is_new[i] = !halfedges[i].is_valid();
 
-        if (!is_new[i] && !is_boundary(halfedges[i]))
+        if (!is_new[i] && !is_boundary(halfedges[i]) && !is_deleted(halfedges[i]))
         {
             auto what = "SurfaceMesh::add_face: Complex edge.";
             throw TopologyException(what);
@@ -1059,6 +1058,27 @@ void SurfaceMesh::delete_edge(Edge e)
         delete_face(f1);
 }
 
+void SurfaceMesh::delete_edge_with_raw_face_deletion(Edge e)
+{
+    if (is_deleted(e))
+        return;
+
+    Face f0 = face(halfedge(e, 0));
+    Face f1 = face(halfedge(e, 1));
+
+    if (f0.is_valid())
+        delete_face_raw(f0);
+    if (f1.is_valid())
+        delete_face_raw(f1);
+
+    // Mark the edge itself for deletion
+    edeleted_[e] = true;
+    ++deleted_edges_;
+
+    // Indicate that the mesh now contains deleted elements
+    has_garbage_ = true;
+}
+
 void SurfaceMesh::delete_face(Face f)
 {
     if (fdeleted_[f])
@@ -1162,6 +1182,48 @@ void SurfaceMesh::delete_face(Face f)
     for (; vit != vend; ++vit)
         adjust_outgoing_halfedge(*vit);
 
+    has_garbage_ = true;
+}
+
+//void SurfaceMesh::delete_vertex_raw(Vertex v)
+//{
+//    // Directly mark the vertex as deleted, without checking for isolation or modifying connectivity
+//    vdeleted_[v] = true;
+//    ++deleted_vertices_;
+//
+//    // Set the has_garbage_ flag to indicate the presence of deleted elements
+//    has_garbage_ = true;
+//}
+
+void SurfaceMesh::delete_face_raw(Face f)
+{
+    // Directly mark the face as deleted, assuming is_deleted checks are handled externally
+    fdeleted_[f] = true;
+    ++deleted_faces_;
+
+    // Set the has_garbage_ flag to indicate the presence of deleted elements
+    has_garbage_ = true;
+}
+
+void SurfaceMesh::mark_vertex_and_connections_for_deletion(Vertex v)
+{
+    // First, ensure the vertex is not already marked for deletion
+    if (is_deleted(v))
+        return;
+
+    // Iterate over all outgoing halfedges from the vertex
+    for (const auto h : halfedges(v))
+    {
+        const Edge e = edge(h);
+        // Use the specialized edge deletion method to handle incident faces
+        delete_edge_with_raw_face_deletion(e);
+    }
+
+    // Finally, mark the vertex itself for deletion
+    vdeleted_[v] = true;
+    ++deleted_vertices_;
+
+    // Flag the mesh as containing deleted elements, ready for garbage collection
     has_garbage_ = true;
 }
 

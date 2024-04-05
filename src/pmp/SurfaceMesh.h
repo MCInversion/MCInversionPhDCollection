@@ -1945,8 +1945,20 @@ public:
     //! deletes the edge \p e from the mesh
     void delete_edge(Edge e);
 
+    //! deletion of edge \p e from the mesh (with some connectivity cleanup)
+    void delete_edge_with_raw_face_deletion(Edge e);
+
     //! deletes the face \p f from the mesh
     void delete_face(Face f);
+
+    //! raw deletion of vertex \p v from the mesh (without connectivity cleanup)
+    //void delete_vertex_raw(Vertex v);
+
+    //! raw deletion of face \p f from the mesh (without connectivity cleanup)
+    void delete_face_raw(Face f);
+
+    //! deletion of vertex \p v from the mesh (with some connectivity cleanup)
+    void mark_vertex_and_connections_for_deletion(Vertex v);
 
     //!@}
     //! \name Geometry-related Functions
