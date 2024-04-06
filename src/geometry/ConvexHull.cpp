@@ -49,7 +49,7 @@ namespace
 				}
 			}
 		}
-		visitedTetraPtIds.insert(tetra.i0, tetra.i1);
+		visitedTetraPtIds.insert({ tetra.i0, tetra.i1 });
 
 		// third point to create the tetrahedron base
 		maxDistSq = 0.0f;
@@ -365,10 +365,9 @@ namespace Geometry
 		auto fNormalsProp = convexHull.face_property<pmp::Normal>("f:normal");
 
 		// Build a list of visible vertices for each face of the initial convex hull and find the farthest point
-		auto [pointsPerConvexHullFace, farthestVertexPerFace] = CollectVisibilityListsAndFarthestPointsPerFace(convexHull, remainingPoints, points, fNormalsProp, distTolerance);
+		auto [pointsPerConvexHullFace, farthestVertexPerFace] = 
+			CollectVisibilityListsAndFarthestPointsPerFace(convexHull, remainingPoints, points, fNormalsProp, distTolerance);
 
-		std::vector<std::unordered_set<unsigned int>> facesToDelete(pointsPerConvexHullFace.size());
-		std::vector<std::unordered_set<unsigned int>> boundaryFacesPerPoint(pointsPerConvexHullFace.size());
 		for (unsigned int i = 0; i < pointsPerConvexHullFace.size(); i++)
 		{
 			if (pointsPerConvexHullFace[i].empty())
@@ -377,6 +376,7 @@ namespace Geometry
 			const auto& newVertId = farthestVertexPerFace[i].first; // ID of the farthest point for this face
 			std::queue<unsigned int> faceQueue; // Queue to process faces in breadth-first search manner
 			std::unordered_set<unsigned int> processedFaces; // Track processed faces to avoid repetition
+			std::vector<unsigned int> boundaryFaceIds; // Track boundary faces for hole filling
 
 			faceQueue.push(i); // Start with the current face
 			while (!faceQueue.empty())
@@ -403,130 +403,78 @@ namespace Geometry
 					if (dist > distTolerance) 
 					{
 						// This neighboring face is visible to the new vertex and should be marked for deletion
-						facesToDelete[i].insert(neighborF.idx());
+						processedFaces.insert(neighborF.idx());
 						faceQueue.push(neighborF.idx());
 					}
 					else
 					{
 						// This face is on the boundary relative to the new vertex
-						boundaryFacesPerPoint[i].insert(neighborF.idx());
+						boundaryFaceIds.push_back(neighborF.idx());
 					}
 				}
 			}
 
+			// Atomically delete all processed faces (includes connectivity cleanups)
+			for (const auto& fDelId : processedFaces)
+				convexHull.delete_face(pmp::Face(fDelId));
+
+			// Insert a new vertex if there are faces to connect it to.
 			pmp::Vertex newConvexHullVertHandle{};
-			if (!boundaryFacesPerPoint[i].empty())
+			if (!boundaryFaceIds.empty())
 			{
 				newConvexHullVertHandle = convexHull.add_vertex(points[newVertId]);
 				visitedPts.insert(newVertId);
+				remainingPoints.erase(remainingPoints.begin() + newVertId);
 			}
 
-			// Add a new face for each border
-			std::unordered_map<unsigned int, std::vector<unsigned int>> newFacesMap;
-
-			// TODO: I'm not sure this will work
-			// Assuming `boundaryFacesPerPoint[i]` contains indices of boundary faces for the current point
-			for (const auto& boundaryFaceIdx : boundaryFacesPerPoint[i]) 
+			// Re-triangulate the hole with the new vertex
+			for (const auto& boundaryFaceIdx : boundaryFaceIds)
 			{
 				for (const auto h : convexHull.halfedges(pmp::Face(boundaryFaceIdx)))
 				{
+					// iterate along the boundary face half-edges until finding a half-edge whose opposite belongs to a face-to-be-deleted.
 					auto oppH = convexHull.opposite_halfedge(h);
-					auto fromV = convexHull.from_vertex(h);
-					auto toV = convexHull.to_vertex(h);
+					auto neighboringFace = convexHull.face(oppH);
+					if (!processedFaces.contains(neighboringFace.idx()))
+						continue;
 
 					// Create a new face using the new vertex and the edge vertices of the current boundary face
+					auto fromV = convexHull.from_vertex(h);
+					auto toV = convexHull.to_vertex(h);
 					auto newFace = convexHull.add_triangle(newConvexHullVertHandle, fromV, toV);
 
-					// Store the new face information for potential further topology updates
-					newFacesMap[boundaryFaceIdx].push_back(newFace.idx());
-				}
-			}
+					fNormalsProp[newFace] = pmp::Normals::compute_face_normal(convexHull, newFace);
 
-			// TODO: more work
+					// collect the visibility data for the new face
+					std::vector<unsigned int> tempPtIds;
+					std::vector<unsigned int> pointsToTest(pointsPerConvexHullFace[boundaryFaceIdx].size() + pointsPerConvexHullFace[neighboringFace.idx()].size());
+					std::ranges::set_union(pointsPerConvexHullFace[boundaryFaceIdx],pointsPerConvexHullFace[neighboringFace.idx()], std::back_inserter(pointsToTest));
 
-			std::unordered_map< CHVertexPointer, std::pair<int, char> > fanMap;
-			for (const auto& bdFaceId : bdFaceIds)
-			{
-				CHFacePointer f = &convexHull.face[bdFaceId];
-				for (int j = 0; j < 3; j++)
-				{
-					if (f->IsB(j))
+					auto newInfo = std::make_pair(UINT_MAX, 0.0f);
+					for (const auto& ptToTestId : pointsToTest)
 					{
-						f->ClearB(j);
-						//Add new face
-						CHFaceIterator fi = vcg::tri::Allocator<CHMesh>::AddFace(convexHull, &convexHull.vert.back(), f->V1(j), f->V0(j));
-						(*fi).N() = vcg::NormalizedTriangleNormal(*fi);
-						f = &convexHull.face[indexFace];
-						int newFace = vcg::tri::Index(convexHull, *fi);
-						//Update convex hull FF topology
-						CHVertexPointer vp[] = { f->V1(j), f->V0(j) };
-						for (int ii = 0; ii < 2; ii++)
-						{
-							int indexE = ii * 2;
-							typename std::unordered_map< CHVertexPointer, std::pair<int, char> >::iterator vIter = fanMap.find(vp[ii]);
-							if (vIter != fanMap.end())
-							{
-								CHFacePointer f2 = &convexHull.face[(*vIter).second.first];
-								char edgeIndex = (*vIter).second.second;
-								f2->FFp(edgeIndex) = &convexHull.face.back();
-								f2->FFi(edgeIndex) = indexE;
-								fi->FFp(indexE) = f2;
-								fi->FFi(indexE) = edgeIndex;
-							}
-							else
-							{
-								fanMap[vp[ii]] = std::make_pair(newFace, indexE);
-							}
-						}
-						//Build the visibility list for the new face
-						std::vector<InputVertexPointer> tempVect;
-						int indices[2] = { indexFace, int(vcg::tri::Index(convexHull, f->FFp(j))) };
-						std::vector<InputVertexPointer> vertexToTest(pointsPerConvexHullFace[indices[0]].size() + pointsPerConvexHullFace[indices[1]].size());
-						typename std::vector<InputVertexPointer>::iterator tempIt = std::set_union(pointsPerConvexHullFace[indices[0]].begin(), pointsPerConvexHullFace[indices[0]].end(), pointsPerConvexHullFace[indices[1]].begin(), pointsPerConvexHullFace[indices[1]].end(), vertexToTest.begin());
-						vertexToTest.resize(tempIt - vertexToTest.begin());
+						if (visitedPts.contains(ptToTestId))
+							continue;
 
-						Pair newInfo = std::make_pair((InputVertexPointer)NULL, 0.0f);
-						for (size_t ii = 0; ii < vertexToTest.size(); ii++)
+						auto fVit = convexHull.vertices(newFace).begin();
+						const pmp::Scalar dist = dot(points[ptToTestId] - convexHull.position(*fVit), fNormalsProp[newFace]);
+						if (dist < distTolerance)
+							continue;
+
+						tempPtIds.push_back(ptToTestId);
+						pointsPerConvexHullFace[newFace.idx()].push_back(ptToTestId);
+						if (dist > newInfo.second)
 						{
-							if (!(*vertexToTest[ii]).IsV())
-							{
-								float dist = ((*vertexToTest[ii]).P() - (*fi).P(0)).dot((*fi).N());
-								if (dist > distTolerance)
-								{
-									tempVect.push_back(vertexToTest[ii]);
-									if (dist > newInfo.second)
-									{
-										newInfo.second = dist;
-										newInfo.first = vertexToTest[ii];
-									}
-								}
-							}
+							newInfo.second = dist;
+							newInfo.first = ptToTestId;
 						}
-						pointsPerConvexHullFace.push_back(tempVect);
-						farthestVertexPerFace.push_back(newInfo);
-						//Update topology of the new face
-						CHFacePointer ffp = f->FFp(j);
-						int ffi = f->FFi(j);
-						ffp->FFp(ffi) = ffp;
-						ffp->FFi(ffi) = ffi;
-						f->FFp(j) = &convexHull.face.back();
-						f->FFi(j) = 1;
-						fi->FFp(1) = f;
-						fi->FFi(1) = j;
 					}
-				}
-			}
-			//Delete the faces inside the updated convex hull
-			for (size_t j = 0; j < visFace.size(); j++)
-			{
-				if (!convexHull.face[visFace[j]].IsD())
-				{
-					std::vector<InputVertexPointer> emptyVec;
-					vcg::tri::Allocator<CHMesh>::DeleteFace(convexHull, convexHull.face[visFace[j]]);
-					pointsPerConvexHullFace[visFace[j]].swap(emptyVec);
+					pointsPerConvexHullFace.push_back(tempPtIds);
+					farthestVertexPerFace.push_back(newInfo);
 				}
 			}
 		}
+		convexHull.garbage_collection();
 
 		return convexHull;
 	}
