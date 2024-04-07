@@ -4,12 +4,11 @@
 
 #include <set>
 #include <fstream>
-#include <numeric>
 #include <random>
 #include <thread>
 #include <unordered_set>
 
-#include "ConvexHull.h"
+#include "quickhull/QuickHull.hpp"
 #include "pmp/algorithms/Normals.h"
 
 #ifdef _WINDOWS
@@ -810,7 +809,7 @@ namespace Geometry
 		return true;
 	}
 
-	std::optional<pmp::SurfaceMesh> ComputePointCloudConvexHull(const std::vector<pmp::Point>& points, const pmp::Scalar& distTolerance)
+	std::optional<BaseMeshGeometryData> ComputeConvexHullFromPoints(const std::vector<pmp::Point>& points)
 	{
 		if (points.size() < 4)
 		{
@@ -818,15 +817,49 @@ namespace Geometry
 			return {};
 		}
 
-		const pmp::SurfaceMesh convexHull = ComputeConvexHullFromPoints(points, distTolerance);
+		using namespace quickhull;
+		// convert to quickhull-compatible data
+		std::vector<Vector3<float>> qhPtCloud;
+		std::ranges::transform(points, std::back_inserter(qhPtCloud),
+			[](const pmp::Point& pmpPt) { return Vector3(pmpPt[0], pmpPt[1], pmpPt[2]); });
+		QuickHull<float> qh;
+		const auto hullResult = qh.getConvexHull(qhPtCloud, true, false);
+		const auto& hullVertBuffer = hullResult.getVertexBuffer();
 
-		if (convexHull.n_vertices() < 4)
+		if (hullVertBuffer.size() < 4)
 		{
 			// The resulting hull must be at least a tetrahedron
 			return {};
 		}
 
-		return convexHull;
+		const auto& hullVertIdBuffer = hullResult.getIndexBuffer();
+		if (hullVertIdBuffer.size() % 3 != 0)
+		{
+			// invalid indexing
+			return {};
+		}
+
+		BaseMeshGeometryData baseMesh;
+		std::ranges::transform(hullVertBuffer, std::back_inserter(baseMesh.Vertices),
+			[](const auto& qhVert) { return pmp::vec3(qhVert.x, qhVert.y, qhVert.z); });
+		for (unsigned int i = 0; i < hullVertIdBuffer.size(); i += 3)
+		{
+			baseMesh.PolyIndices.push_back({
+				static_cast<unsigned int>(hullVertIdBuffer[i]),
+				static_cast<unsigned int>(hullVertIdBuffer[i + 1]),
+				static_cast<unsigned int>(hullVertIdBuffer[i + 2])
+				});
+		}
+		return baseMesh;
+	}
+	
+	std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFromPoints(const std::vector<pmp::Point>& points)
+	{
+		const auto baseMeshOpt = ComputeConvexHullFromPoints(points);
+		if (!baseMeshOpt.has_value())
+			return {};
+
+		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
 	}
 
 } // namespace Geometry

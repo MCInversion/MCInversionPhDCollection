@@ -206,6 +206,7 @@ endif()
 # ----------- Shrink wrap executable --------------------
 add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
+add_subdirectory(src/quickhull)
 add_subdirectory(src/utils)
 file(GLOB ShrinkWrap_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
 add_executable(ShrinkWrap ${ShrinkWrap_Src})

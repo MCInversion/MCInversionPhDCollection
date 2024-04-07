@@ -83,8 +83,15 @@ namespace Geometry
 	/**
 	 * \brief Computes the convex hull of an input point cloud.
 	 * \param points           input point cloud.
-	 * \param distTolerance    distance tolerance.
 	 * \return optional resulting pmp::SurfaceMesh if the computation is successful.
 	 */
-	[[nodiscard]] std::optional<pmp::SurfaceMesh> ComputePointCloudConvexHull(const std::vector<pmp::Point>& points, const pmp::Scalar& distTolerance = 0.0f);
+	[[nodiscard]] std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFromPoints(const std::vector<pmp::Point>& points);
+
+	/**
+	 * \brief Computes the convex hull of an input point cloud.
+	 * \param points           input point cloud.
+	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeConvexHullFromPoints(const std::vector<pmp::Point>& points);
+
 } // namespace Geometry

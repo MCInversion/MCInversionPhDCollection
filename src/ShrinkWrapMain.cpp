@@ -2249,7 +2249,7 @@ int main()
 
 			const auto& ptCloud = ptCloudOpt.value();
 
-			const auto convexHullMeshOpt = Geometry::ComputePointCloudConvexHull(ptCloud);
+			const auto convexHullMeshOpt = Geometry::ComputePMPConvexHullFromPoints(ptCloud);
 			if (!convexHullMeshOpt.has_value())
 			{
 				std::cerr << "convexHullMeshOpt == nullopt!\n";
