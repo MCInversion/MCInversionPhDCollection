@@ -74,7 +74,8 @@ constexpr bool performMeshSelfIntersectionTests = false;
 constexpr bool performHurtadoMeshesIsosurfaceEvolverTests = false;
 constexpr bool performHurtadoTrexIcosphereLSW = false;
 constexpr bool performImportVTIDebugTests = false;
-constexpr bool performConvexHullTests = true;
+constexpr bool performConvexHullTests = false;
+constexpr bool performConvexHullRemeshingTests = true;
 
 int main()
 {
@@ -2260,4 +2261,41 @@ int main()
 			convexHull.write(dataOutPath + ptCloudName + "_convexHull.obj");
 		}
 	} // performConvexHullTests
+
+	if (performConvexHullRemeshingTests)
+	{
+		const std::vector<std::string> importedPtCloudNames{
+			"bunnyPts_3"//,
+			//"CaesarBustPts_3"
+		};
+
+		for (const auto& ptCloudName : importedPtCloudNames)
+		{
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+
+			auto convexHullMeshOpt = Geometry::ComputePMPConvexHullFromPoints(ptCloud);
+			if (!convexHullMeshOpt.has_value())
+			{
+				std::cerr << "convexHullMeshOpt == nullopt!\n";
+				break;
+			}
+			auto& convexHull = convexHullMeshOpt.value();
+			// mark all current convex-hull mesh vertices as feature:
+			//auto vFeature = convexHull.add_vertex_property<bool>("v:feature", true);
+			const auto [lengthMin, lengthMean, lengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(convexHull);
+			pmp::Remeshing remeshing(convexHull);
+			remeshing.adaptive_remeshing({
+				2.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
+				5, 10, false
+			});
+			convexHull.write(dataOutPath + ptCloudName + "_convexHullRemeshed.obj");
+		}
+	} // performConvexHullRemeshingTests
 }

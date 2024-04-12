@@ -52,6 +52,9 @@ namespace Geometry
 	/// \brief Computes z-level elevation values for each vertex.
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);
 
+	/// \brief Computes edge length range and average.
+	[[nodiscard]] std::tuple<pmp::Scalar, pmp::Scalar, pmp::Scalar> ComputeEdgeLengthMinAverageAndMax(const pmp::SurfaceMesh& mesh);
+
 	/// \brief Computes an interpolated point cloud to mesh vertex distance histogram by computing the distance field.
 	/// \param[in] mesh      input mesh.
 	/// \param[in] ptCloud   input point cloud. 

@@ -437,6 +437,24 @@ namespace Geometry
 		}
 	}
 
+	std::tuple<pmp::Scalar, pmp::Scalar, pmp::Scalar> ComputeEdgeLengthMinAverageAndMax(const pmp::SurfaceMesh& mesh)
+	{
+		pmp::Scalar lengthSqMin = FLT_MAX;
+		pmp::Scalar lengthSqMax = -FLT_MAX;
+		pmp::Scalar lengthSqMean= 0.0f;
+		for (const auto e : mesh.edges())
+		{
+			const pmp::Scalar edgeLengthSq = mesh.edge_length_sq(e);
+			if (edgeLengthSq > lengthSqMax)
+				lengthSqMax = edgeLengthSq;
+			if (edgeLengthSq < lengthSqMin)
+				lengthSqMin = edgeLengthSq;
+			lengthSqMean += sqrt(edgeLengthSq);
+		}
+		lengthSqMean /= mesh.n_edges();
+		return { sqrt(lengthSqMin), lengthSqMean, sqrt(lengthSqMax) };
+	}
+
 	constexpr unsigned int DEFAULT_N_VOXELS_PER_MIN_DIMENSION = 40;
 
 	std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>> ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins)
