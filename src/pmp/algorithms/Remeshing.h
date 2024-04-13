@@ -48,11 +48,17 @@ public:
     //! \param settings      input settings.
     void adaptive_remeshing(const AdaptiveRemeshingSettings& settings);
 
+    //! \brief Perform adaptive remeshing on a convex hull starting surface. Prioritizes splitting of elongated triangles.
+    //! \param settings      input settings.
+    void convex_hull_adaptive_remeshing(const AdaptiveRemeshingSettings& settings);
+
 private:
     void preprocessing();
     void postprocessing();
+    void convex_hull_preprocessing();
+    void convex_hull_postprocessing();
 
-    void split_long_edges();
+    void split_long_edges(unsigned int nIterations = 10);
     void collapse_short_edges();
     void flip_edges();
     void tangential_smoothing(unsigned int iterations);

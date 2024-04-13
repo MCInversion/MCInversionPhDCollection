@@ -713,7 +713,7 @@ namespace Geometry
 		return vertices;
 	}
 
-	bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName)
+	bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed)
 	{
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
 		if (extension != "ply")
@@ -731,8 +731,16 @@ namespace Geometry
 
 		// Generate nVerts random indices
 		std::vector<size_t> indices;
-		std::random_device rd;
-		std::mt19937 gen(rd());
+		std::mt19937 gen;
+		if (seed.has_value())
+		{
+			gen.seed(seed.value());
+		}
+		else
+		{
+			std::random_device rd;
+			gen = std::mt19937(rd());
+		}
 		std::uniform_int_distribution<> distrib(0, meshData.Vertices.size() - 1);
 
 		for (size_t i = 0; i < nVerts; ++i)

@@ -4,6 +4,7 @@
 #include "geometry/Grid.h"
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 
 /**
@@ -69,12 +70,49 @@ private:
      */
     void ComputeDistanceField();
 
+	// ================================================================
+
+	/**
+	 * \brief Weight function for Laplacian flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
+	 * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
+	 * \return weight function value.
+	 */
+	[[nodiscard]] double LaplacianDistanceWeightFunction(const double& distanceAtVertex) const;
+
+	/**
+	 * \brief Weight function for advection flow term, inspired by [Huska, Medla, Mikula, Morigi 2021].
+	 * \param distanceAtVertex          the value of distance from evolving mesh vertex to target mesh.
+	 * \param negDistanceGradient       negative gradient vector of distance field at vertex position.
+	 * \param vertexNormal              unit normal to vertex.
+	 * \return weight function value.
+	 */
+	[[nodiscard]] double AdvectionDistanceWeightFunction(const double& distanceAtVertex,
+		const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal) const;
+
+	// ================================================================
+
+	/**
+	 * \brief Writes m_EvolvingSurface using m_OutputMeshExtension.
+	 * \param tId                     index of the current time step.
+	 * \paran isResult                if true, a different "connecting name" is chosen for resulting surface after all time steps are completed.
+	 * \param transformToOriginal     if true, m_TransformToOriginal matrix is used to transform stabilized geometry back to original.
+	 */
+	void ExportSurface(const unsigned int& tId, const bool& isResult = false, const bool& transformToOriginal = true) const;
+
+	/**
+	 * \brief Computes triangle metrics interpolated to vertices according to list m_EvolSettings.TriMetrics.
+	 */
+	void ComputeTriangleMetrics() const;
+
+	// ----------------------------------------------------------------
+
     // Members
     std::vector<pmp::Point> m_PointCloud;
 	ConvexHullSurfaceEvolutionSettings m_EvolSettings; //>! settings.
 
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
     std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
+	std::shared_ptr<pmp::Remeshing> m_Remesher{ nullptr };  //>! a remesher which keeps the evolving surface with its vlocked_ info for initial convex hull vertices.
 
 	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
@@ -95,4 +133,14 @@ private:
  * \param evolSettings    settings for ConvexHullEvolver.
  * \param os              output stream.
  */
-void ReportInput(const ConvexHullSurfaceEvolutionSettings& evolSettings, std::ostream& os);
+void ReportCHEvolverInput(const ConvexHullSurfaceEvolutionSettings& evolSettings, std::ostream& os);
+
+/**
+ * \brief Computes scaling factor for stabilizing the finite volume method on assumed convex hull surface meshes based on time step.
+ * \param timeStep               time step size.
+ * \param convexHullMesh         a remeshed convex hull mesh.
+ * \param areaFunction           a Laplacian area function measuring the actual co-volume per vertex (Barycentric or Voronoi).
+ * \param stabilizationFactor    a multiplier for stabilizing mean co-volume area.
+ * \return scaling factor for mesh and scalar grid.
+ */
+[[nodiscard]] float GetConvexHullStabilizationScalingFactor(const double& timeStep, pmp::SurfaceMesh& convexHullMesh, const AreaFunction& areaFunction, const float& stabilizationFactor = 1.0f);

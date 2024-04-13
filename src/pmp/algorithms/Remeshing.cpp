@@ -87,14 +87,33 @@ void Remeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
     postprocessing();
 }
 
+void Remeshing::convex_hull_adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
+{
+    max_edge_length_ = settings.MaxEdgeLength; // needed for the initial split_long_edges
+    convex_hull_preprocessing();
+    split_long_edges(3);
+
+    // Now proceed with general adaptive remeshing
+    adaptive_remeshing(settings);
+
+    // marks all locked vertices as feature
+    convex_hull_postprocessing();
+}
+
+
 void Remeshing::preprocessing()
 {
     // properties
-    vfeature_ = mesh_.vertex_property<bool>("v:feature", false);
-    efeature_ = mesh_.edge_property<bool>("e:feature", false);
-    vlocked_ = mesh_.add_vertex_property<bool>("v:locked", false);
-    elocked_ = mesh_.add_edge_property<bool>("e:locked", false);
-    vsizing_ = mesh_.add_vertex_property<Scalar>("v:sizing");
+    if (!vfeature_)
+		vfeature_ = mesh_.vertex_property<bool>("v:feature", false);
+    if (!efeature_)
+		efeature_ = mesh_.edge_property<bool>("e:feature", false);
+    if (!vlocked_)
+		vlocked_ = mesh_.add_vertex_property<bool>("v:locked", false);
+    if (!elocked_)
+		elocked_ = mesh_.add_edge_property<bool>("e:locked", false);
+    if (!vsizing_)
+		vsizing_ = mesh_.add_vertex_property<Scalar>("v:sizing");
 
     // lock unselected vertices if some vertices are selected
     auto vselected = mesh_.get_vertex_property<bool>("v:selected");
@@ -270,6 +289,67 @@ void Remeshing::postprocessing()
     }
 }
 
+void Remeshing::convex_hull_preprocessing()
+{
+    // Initialize and lock vertex features
+    vfeature_ = mesh_.vertex_property<bool>("v:feature", false);
+    efeature_ = mesh_.edge_property<bool>("e:feature", false);
+    vlocked_ = mesh_.vertex_property<bool>("v:locked", false);
+    elocked_ = mesh_.edge_property<bool>("e:locked", false);
+    vsizing_ = mesh_.vertex_property<Scalar>("v:sizing", max_edge_length_);
+
+    // Compute vertex normals for the mesh
+    Normals::compute_vertex_normals(mesh_);
+
+    // Manage edge features based on length
+    for (const auto e : mesh_.edges())
+    {
+        if (mesh_.edge_length(e) > max_edge_length_) 
+            continue;
+        // DISCLAIMER: splitting a feature edge will propagate the feature property to its split vertex which should be subject to further remeshing.
+        //efeature_[e] = true;
+        elocked_[e] = true;
+        const auto v0 = mesh_.vertex(e, 0);
+        const auto v1 = mesh_.vertex(e, 1);
+        //vfeature_[v0] = true;
+        //vfeature_[v1] = true;
+        vlocked_[v0] = true;
+        vlocked_[v1] = true;
+    }
+
+    if (use_projection_)
+    {
+        // build reference mesh
+        refmesh_ = std::make_shared<SurfaceMesh>();
+        refmesh_->assign(mesh_);
+        Normals::compute_vertex_normals(*refmesh_);
+        refpoints_ = refmesh_->vertex_property<Point>("v:point");
+        refnormals_ = refmesh_->vertex_property<Point>("v:normal");
+
+        // copy sizing field from mesh_
+        refsizing_ = refmesh_->add_vertex_property<Scalar>("v:sizing");
+        for (auto v : refmesh_->vertices())
+        {
+            refsizing_[v] = vsizing_[v];
+        }
+
+        // build kd-tree
+        kd_tree_ = std::make_unique<TriangleKdTree>(refmesh_, 0);
+    }
+}
+
+void Remeshing::convex_hull_postprocessing()
+{
+    for (const auto v : mesh_.vertices())
+    {
+        if (!vlocked_[v])
+            continue;
+
+        vfeature_[v] = true;
+    }
+}
+
+
 void Remeshing::project_to_reference(Vertex v)
 {
     if (!use_projection_)
@@ -319,15 +399,14 @@ void Remeshing::project_to_reference(Vertex v)
     vsizing_[v] = s;
 }
 
-void Remeshing::split_long_edges()
+void Remeshing::split_long_edges(unsigned int nIterations)
 {
     Vertex vnew, v0, v1;
-    Edge enew, e0, e1;
-    Face f0, f1, f2, f3;
+    Edge enew;
     bool ok, is_feature, is_boundary;
-    int i;
+    unsigned int i;
 
-    for (ok = false, i = 0; !ok && i < 10; ++i)
+    for (ok = false, i = 0; !ok && i < nIterations; ++i)
     {
         ok = true;
 

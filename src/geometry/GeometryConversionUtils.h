@@ -71,7 +71,7 @@ namespace Geometry
 	 * \param absFileName    absolute file path for the opened file.
 	 * \return if true, the export was successful.
 	 */
-	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName);
+	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
 
 	/**
 	 * \brief A utility for exporting polylines as Wavefront OBJ file.

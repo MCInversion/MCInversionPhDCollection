@@ -451,7 +451,7 @@ namespace Geometry
 				lengthSqMin = edgeLengthSq;
 			lengthSqMean += sqrt(edgeLengthSq);
 		}
-		lengthSqMean /= mesh.n_edges();
+		lengthSqMean /= static_cast<pmp::Scalar>(mesh.n_edges());
 		return { sqrt(lengthSqMin), lengthSqMean, sqrt(lengthSqMax) };
 	}
 
