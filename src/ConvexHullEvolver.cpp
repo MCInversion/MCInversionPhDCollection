@@ -222,8 +222,7 @@ void ConvexHullEvolver::Evolve()
 #if REPORT_EVOL_STEPS
 			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ", approxError: " << approxError << ") ... ";
 #endif
-			pmp::Remeshing remeshing(*m_EvolvingSurface);
-			remeshing.adaptive_remeshing({
+			m_Remesher->adaptive_remeshing({
 				minEdgeLength, maxEdgeLength, approxError,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
