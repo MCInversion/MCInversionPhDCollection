@@ -376,7 +376,7 @@ void ConvexHullEvolver::Preprocess()
 	std::cout << "ConvexHullEvolver::Preprocess: {lengthMin: " << lengthMin << ", lengthMean: " << lengthMean << ", lengthMax: " << lengthMax << "},\n";
 	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
 	m_Remesher->convex_hull_adaptive_remeshing({
-	2.0f * lengthMin, 4.0f * lengthMin, 0.5f * lengthMin,
+	4.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
 	3, 5, true
 	});
 #if REPORT_EVOL_STEPS
