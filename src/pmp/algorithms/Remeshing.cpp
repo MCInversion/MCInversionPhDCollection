@@ -59,7 +59,7 @@ void Remeshing::uniform_remeshing(Scalar edge_length, unsigned int iterations,
     postprocessing();
 }
 
-void Remeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
+void Remeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings, const bool& is_convex_hull)
 {
     uniform_ = false;
     min_edge_length_ = settings.MinEdgeLength;
@@ -84,7 +84,8 @@ void Remeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
 
     remove_caps();
 
-    postprocessing();
+    if (!is_convex_hull)
+		postprocessing();
 }
 
 void Remeshing::convex_hull_adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
@@ -94,7 +95,7 @@ void Remeshing::convex_hull_adaptive_remeshing(const AdaptiveRemeshingSettings& 
     split_long_edges(3);
 
     // Now proceed with general adaptive remeshing
-    adaptive_remeshing(settings);
+    adaptive_remeshing(settings, true);
 
     // marks all locked vertices as feature
     convex_hull_postprocessing();
@@ -307,12 +308,9 @@ void Remeshing::convex_hull_preprocessing()
         if (mesh_.edge_length(e) > max_edge_length_) 
             continue;
         // DISCLAIMER: splitting a feature edge will propagate the feature property to its split vertex which should be subject to further remeshing.
-        //efeature_[e] = true;
         elocked_[e] = true;
         const auto v0 = mesh_.vertex(e, 0);
         const auto v1 = mesh_.vertex(e, 1);
-        //vfeature_[v0] = true;
-        //vfeature_[v1] = true;
         vlocked_[v0] = true;
         vlocked_[v1] = true;
     }
@@ -347,6 +345,9 @@ void Remeshing::convex_hull_postprocessing()
 
         vfeature_[v] = true;
     }
+
+    has_feature_vertices_ = true;
+    postprocessing();
 }
 
 

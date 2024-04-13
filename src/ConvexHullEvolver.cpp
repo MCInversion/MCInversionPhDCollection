@@ -68,8 +68,10 @@ void ConvexHullEvolver::Evolve()
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
+	if (!m_EvolvingSurface->has_vertex_property("v:feature"))
+		throw std::logic_error("ConvexHullEvolver::Evolve: vertex property \"v:feature\" not found in m_EvolvingSurface!\n");
 	auto vFeature = m_EvolvingSurface->get_vertex_property<bool>("v:feature");
-	//auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0f);
+	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0f);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -134,7 +136,7 @@ void ConvexHullEvolver::Evolve()
 		const auto vPos = m_EvolvingSurface->position(v);
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-		//vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
+		vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 	}
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
@@ -273,7 +275,7 @@ void ConvexHullEvolver::Evolve()
 			const auto vPos = m_EvolvingSurface->position(v);
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-			// vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
+			vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 		}
 		ComputeTriangleMetrics();
 
@@ -374,8 +376,8 @@ void ConvexHullEvolver::Preprocess()
 	std::cout << "ConvexHullEvolver::Preprocess: {lengthMin: " << lengthMin << ", lengthMean: " << lengthMean << ", lengthMax: " << lengthMax << "},\n";
 	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
 	m_Remesher->convex_hull_adaptive_remeshing({
-	2.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
-	3, 10, true
+	2.0f * lengthMin, 4.0f * lengthMin, 0.5f * lengthMin,
+	3, 5, true
 	});
 #if REPORT_EVOL_STEPS
 	std::cout << "... done.\n";
@@ -386,8 +388,7 @@ void ConvexHullEvolver::Preprocess()
 	const float scalingFactor = GetConvexHullStabilizationScalingFactor(m_EvolSettings.TimeStep, *m_EvolvingSurface, m_LaplacianAreaFunction);
 	m_ScalingFactor = scalingFactor;
 	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
-	const auto convexHullBBox = m_EvolvingSurface->bounds();
-	const auto origin = convexHullBBox.center();
+	const auto origin = m_EvolSettings.TargetOrigin;
 #if REPORT_EVOL_STEPS
 	std::cout << "ConvexHullEvolver::Preprocess: Stabilization Scaling Factor: " << scalingFactor << ",\n";
 	std::cout << "ConvexHullEvolver::Preprocess: Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
@@ -408,8 +409,9 @@ void ConvexHullEvolver::Preprocess()
 	m_TransformToOriginal = inverse(transfMatrixFull);
 
 	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
-	(*m_Field) *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
-	(*m_Field) *= static_cast<double>(scalingFactor); // scale also distance values.
+	auto& field = *m_Field;
+	field *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
+	field *= static_cast<double>(scalingFactor); // scale also distance values.
 }
 
 void ConvexHullEvolver::ConstructConvexHull()

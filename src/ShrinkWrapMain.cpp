@@ -2339,7 +2339,7 @@ int main()
 		constexpr size_t nSamplings = 10;
 		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
 
-		constexpr unsigned int seed = 9999; // seed for the pt cloud sampling RNG
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -2418,7 +2418,9 @@ int main()
 				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
 				0.05f,
 				true,
-				false
+				false,
+				false,
+				true
 			};
 			ReportCHEvolverInput(seSettings, std::cout);
 			ConvexHullEvolver evolver(ptCloud, seSettings);

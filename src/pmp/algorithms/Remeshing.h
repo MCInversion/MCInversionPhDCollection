@@ -45,8 +45,9 @@ public:
                            bool use_projection = true);
 
     //! \brief Perform adaptive remeshing.
-    //! \param settings      input settings.
-    void adaptive_remeshing(const AdaptiveRemeshingSettings& settings);
+    //! \param settings         input settings.
+    //! \param is_convex_hull   if true post-processing will be postponed for later.
+    void adaptive_remeshing(const AdaptiveRemeshingSettings& settings, const bool& is_convex_hull = false);
 
     //! \brief Perform adaptive remeshing on a convex hull starting surface. Prioritizes splitting of elongated triangles.
     //! \param settings      input settings.
