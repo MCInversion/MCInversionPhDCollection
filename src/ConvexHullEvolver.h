@@ -24,9 +24,8 @@ struct ConvexHullSurfaceEvolutionSettings
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
-	float MinTargetSize{ 1.0f }; //>! minimum size of the target mesh bounding box.
-	float MaxTargetSize{ 1.0f }; //>! maximum size of the target mesh bounding box.
 	pmp::vec3 TargetOrigin{}; //>! origin of the evolution's target.
+	float MaxDim{}; //>! max dimension of the bounding box of the evolution's target.
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.
@@ -35,7 +34,6 @@ struct ConvexHullSurfaceEvolutionSettings
 	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
-	// TODO: clear the unnecessary settings
 
 	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
@@ -99,6 +97,8 @@ private:
 	 */
 	void ExportSurface(const unsigned int& tId, const bool& isResult = false, const bool& transformToOriginal = true) const;
 
+	void ExportField(const bool& transformToOriginal = true) const;
+
 	/**
 	 * \brief Computes triangle metrics interpolated to vertices according to list m_EvolSettings.TriMetrics.
 	 */
@@ -114,8 +114,6 @@ private:
     std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 	std::shared_ptr<pmp::Remeshing> m_Remesher{ nullptr };  //>! a remesher which keeps the evolving surface with its vlocked_ info for initial convex hull vertices.
 
-	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
-	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
 	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.

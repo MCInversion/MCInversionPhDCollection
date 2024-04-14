@@ -108,6 +108,26 @@ bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianCondition
 		     (maxVal > JACOBIAN_COND_MIN && maxVal < JACOBIAN_COND_MAX));
 }
 
+bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh)
+{
+	float minVal = FLT_MAX;
+	float maxVal = -FLT_MAX;
+	const auto vQualityProp = mesh.get_vertex_property<float>("v:equilateralJacobianCondition");
+	const auto vIsFeature = mesh.get_vertex_property<bool>("v:feature");
+
+	for (const auto v : mesh.vertices())
+	{
+		if (vIsFeature[v])
+			continue;
+
+		const auto& val = vQualityProp[v];
+		if (val < minVal) minVal = val;
+		if (val > maxVal) maxVal = val;
+	}
+	return !((minVal > JACOBIAN_COND_MIN && minVal < JACOBIAN_COND_MAX) &&
+		(maxVal > JACOBIAN_COND_MIN && maxVal < JACOBIAN_COND_MAX));
+}
+
 bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues)
 {
 	const float minDist = *std::min(distancePerVertexValues.begin(), distancePerVertexValues.end());

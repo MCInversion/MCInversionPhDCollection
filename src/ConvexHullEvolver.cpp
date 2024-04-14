@@ -9,6 +9,8 @@
 //#include "ConversionUtils.h"
 #include <fstream>
 
+#include "ConversionUtils.h"
+
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
 
@@ -53,10 +55,14 @@ void ConvexHullEvolver::Evolve()
 	const auto& NSteps = m_EvolSettings.NSteps;
 	auto tStep = m_EvolSettings.TimeStep;
 
+	// compute mesh sizings from the percentage within the total mesh dimensions
 	const auto [remeshedLengthMin, remeshedLengthMean, remeshedLengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(*m_EvolvingSurface);
-	auto minEdgeLength = remeshedLengthMean;
-	auto maxEdgeLength = 4.0f * remeshedLengthMean;
-	auto approxError = 0.25f * (minEdgeLength + maxEdgeLength);
+#if REPORT_EVOL_STEPS
+	std::cout << "minEdgeLength is: " << (remeshedLengthMin / (m_EvolSettings.MaxDim * m_ScalingFactor)) * 100 << " % of MaxDim.\n";
+#endif
+	auto minEdgeLength = 4.0f * remeshedLengthMin;
+	auto maxEdgeLength = 8.0f * minEdgeLength;
+	auto approxError = 0.5f * minEdgeLength;
 
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
@@ -212,8 +218,9 @@ void ConvexHullEvolver::Evolve()
 
 		// --------------------------------------------------------------------
 
-		const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
-		if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
+		//const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
+		//if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
+		if (m_EvolSettings.DoRemeshing && IsNonFeatureRemeshingNecessary(*m_EvolvingSurface))
 		{
 			// remeshing
 #if REPORT_EVOL_STEPS
@@ -333,6 +340,11 @@ double ConvexHullEvolver::AdvectionDistanceWeightFunction(const double& distance
 
 void ConvexHullEvolver::ExportSurface(const unsigned int& tId, const bool& isResult, const bool& transformToOriginal) const
 {
+	if (!m_EvolvingSurface)
+	{
+		std::cerr << "ConvexHullEvolver::ExportSurface: m_EvolvingSurface == nullptr!\n";
+		return;
+	}
 	const std::string connectingName = (isResult ? "_Result" : "_Evol_" + std::to_string(tId));
 	if (!transformToOriginal)
 	{
@@ -342,6 +354,23 @@ void ConvexHullEvolver::ExportSurface(const unsigned int& tId, const bool& isRes
 	auto exportedSurface = *m_EvolvingSurface;
 	exportedSurface *= m_TransformToOriginal;
 	exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
+}
+
+void ConvexHullEvolver::ExportField(const bool& transformToOriginal) const
+{
+	if (!m_Field)
+	{
+		std::cerr << "ConvexHullEvolver::ExportField: m_Field == nullptr!\n";
+		return;
+	}
+	if (!transformToOriginal)
+	{
+		ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_SDF", *m_Field);
+		return;
+	}
+	auto exportedField = *m_Field;
+	exportedField *= m_TransformToOriginal;
+	ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_SDF", exportedField);
 }
 
 void ConvexHullEvolver::ComputeTriangleMetrics() const
@@ -364,8 +393,8 @@ void ConvexHullEvolver::ComputeTriangleMetrics() const
 
 void ConvexHullEvolver::Preprocess()
 {
-    ConstructConvexHull();
     ComputeDistanceField();
+    ConstructConvexHull();
 
 #if REPORT_EVOL_STEPS
 	std::cout << "ConvexHullEvolver::Preprocess: pmp::Remeshing::convex_hull_adaptive_remeshing ... \n";
@@ -407,10 +436,12 @@ void ConvexHullEvolver::Preprocess()
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
 
-	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
+	(*m_EvolvingSurface) *= transfMatrixFull; // the convex hull is not centered at (0,0,0).
 	auto& field = *m_Field;
 	field *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
 	field *= static_cast<double>(scalingFactor); // scale also distance values.
+	// Export field for debugging purposes
+	//ExportField();
 }
 
 void ConvexHullEvolver::ConstructConvexHull()
@@ -441,14 +472,14 @@ void ConvexHullEvolver::ComputeDistanceField()
 	const SDF::PointCloudDistanceFieldSettings dfSettings{
 				cellSize,
 				volExpansionFactor,
-				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				m_EvolSettings.MaxDim * 1.0, //Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 				SDF::BlurPostprocessingType::None
 	};
 	m_Field = std::make_shared<Geometry::ScalarGrid>(
 		SDF::PointCloudDistanceFieldGenerator::Generate(m_PointCloud, dfSettings));
 #if REPORT_EVOL_STEPS
 	std::cout << "done.\n";
-	const auto dims = m_Field->Dimensions();
+	const auto& dims = m_Field->Dimensions();
 	std::cout << "ConvexHullEvolver::ComputeDistanceField: field resolution: " << dims.Nx << " x " << dims.Ny << " x " << dims.Nz << " voxels.\n";
 #endif
 }
@@ -471,8 +502,7 @@ void ReportCHEvolverInput(const ConvexHullSurfaceEvolutionSettings& evolSettings
 	const auto& d2 = evolSettings.ADParams.AdvectionSineMultiplier;
 	os << "Advection weight: " << d1 << " * d * ((-grad(d) . N) - " << d2 << " * sqrt(1 - (grad(d) . N)^2)),\n";
 	os << "......................................................................\n";
-	os << "Min. Target Size: " << evolSettings.MinTargetSize << ",\n";
-	os << "Max. Target Size: " << evolSettings.MaxTargetSize << ",\n";
+	os << "Target Origin: " << evolSettings.TargetOrigin << ",\n";
 	os << "Export Surface per Time Step: " << (evolSettings.ExportSurfacePerTimeStep ? "true" : "false") << ",\n";
 	os << "Output Path: " << evolSettings.OutputPath << ",\n";
 	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
@@ -483,7 +513,7 @@ void ReportCHEvolverInput(const ConvexHullSurfaceEvolutionSettings& evolSettings
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 5.0f;
+constexpr float INV_SHRINK_FACTOR = 1.0f;
 
 float GetConvexHullStabilizationScalingFactor(const double& timeStep, pmp::SurfaceMesh& convexHullMesh, const AreaFunction& areaFunction, const float& stabilizationFactor)
 {
@@ -491,7 +521,7 @@ float GetConvexHullStabilizationScalingFactor(const double& timeStep, pmp::Surfa
 	const auto nVertices = convexHullMesh.n_vertices();
 	const auto coVolStats = AnalyzeMeshCoVolumes(convexHullMesh, areaFunction);
 	float expectedMeanCoVolArea = stabilizationFactor * (surfaceArea / static_cast<float>(nVertices));
-	expectedMeanCoVolArea += static_cast<float>(coVolStats.Mean);
+	expectedMeanCoVolArea += stabilizationFactor * static_cast<float>(coVolStats.Mean);
 	expectedMeanCoVolArea /= 2.0f;
 	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }

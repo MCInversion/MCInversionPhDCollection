@@ -2341,6 +2341,8 @@ int main()
 
 		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
+		SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+
 		for (const auto& meshName : meshForPtCloudNames)
 		{
 			std::cout << "==================================================================\n";
@@ -2388,14 +2390,8 @@ int main()
 			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
 			MeshTopologySettings topoParams;
-			topoParams.FixSelfIntersections = true;
-			topoParams.MinEdgeMultiplier = 0.14f;
-			topoParams.UseBackProjection = false;
-			topoParams.PrincipalCurvatureFactor = 3.2f;
-			topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
 			topoParams.EdgeLengthDecayFactor = 0.7f;
 			topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
-			topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
 			AdvectionDiffusionParameters adParams{
 				1.0, 1.0,
@@ -2410,9 +2406,9 @@ int main()
 				nVoxelsPerMinDimension,
 				adParams,
 				topoParams,
-				minSize, maxSize,
 				ptCloudBBox.center(),
-				true, false,
+				maxSize,
+				true, true,
 				dataOutPath,
 				MeshLaplacian::Voronoi,
 				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
