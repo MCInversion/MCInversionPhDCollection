@@ -94,4 +94,12 @@ namespace Geometry
 	 */
 	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeConvexHullFromPoints(const std::vector<pmp::Point>& points);
 
+	/// \brief Returns a bounding sphere with a center and a radius combined in a pair.
+	///	\throw std::invalid_argument if the mesh is empty.
+	[[nodiscard]] std::pair<pmp::Point, pmp::Scalar> ComputeMeshBoundingSphere(const pmp::SurfaceMesh& mesh);
+
+	/// \brief Returns a bounding sphere with a center and a radius combined in a pair.
+	///	\throw std::invalid_argument if the point cloud is empty.
+	[[nodiscard]] std::pair<pmp::Point, pmp::Scalar> ComputePointCloudBoundingSphere(const std::vector<pmp::Point>& points);
+
 } // namespace Geometry

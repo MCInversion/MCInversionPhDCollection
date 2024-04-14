@@ -1,4 +1,4 @@
-#include "ConvexHullEvolver.h"
+#include "IcoSphereEvolver.h"
 
 #include "pmp/algorithms/Normals.h"
 #include "geometry/GeometryConversionUtils.h"
@@ -9,6 +9,8 @@
 
 #include <fstream>
 
+#include "geometry/IcoSphereBuilder.h"
+
 
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
 #define REPORT_EVOL_STEPS true // Note: may affect performance
@@ -16,9 +18,9 @@
 /// \brief if true, upon computing trilinear system solution, new vertices are verified for belonging in the field bounds.
 #define VERIFY_SOLUTION_WITHIN_BOUNDS false // Note: useful for detecting numerical explosions of the solution.
 
-ConvexHullEvolver::ConvexHullEvolver(const std::vector<pmp::Point>& pointCloud, const ConvexHullSurfaceEvolutionSettings& settings)
-    : m_PointCloud(pointCloud),
-	  m_EvolSettings(settings)
+IcoSphereEvolver::IcoSphereEvolver(const std::vector<pmp::Point>& pointCloud, const IcoSphereEvolutionSettings& settings)
+	: m_PointCloud(pointCloud),
+	m_EvolSettings(settings)
 {
 	m_ImplicitLaplacianFunction =
 		(m_EvolSettings.LaplacianType == MeshLaplacian::Barycentric ?
@@ -28,22 +30,238 @@ ConvexHullEvolver::ConvexHullEvolver(const std::vector<pmp::Point>& pointCloud, 
 			pmp::voronoi_area_barycentric : pmp::voronoi_area);
 }
 
-void ConvexHullEvolver::Evolve()
+//
+// ================================================================================================
+//
+
+void IcoSphereEvolver::ExportSurface(const unsigned int& tId, const bool& isResult, const bool& transformToOriginal) const
+{
+	if (!m_EvolvingSurface)
+	{
+		std::cerr << "IcoSphereEvolver::ExportSurface: m_EvolvingSurface == nullptr!\n";
+		return;
+	}
+	const std::string connectingName = (isResult ? "_Result" : "_Evol_" + std::to_string(tId));
+	if (!transformToOriginal)
+	{
+		m_EvolvingSurface->write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
+		return;
+	}
+	auto exportedSurface = *m_EvolvingSurface;
+	exportedSurface *= m_TransformToOriginal;
+	exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
+}
+
+void IcoSphereEvolver::ExportField(const bool& transformToOriginal) const
+{
+	if (!m_Field)
+	{
+		std::cerr << "IcoSphereEvolver::ExportField: m_Field == nullptr!\n";
+		return;
+	}
+	if (!transformToOriginal)
+	{
+		ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_SDF", *m_Field);
+		return;
+	}
+	auto exportedField = *m_Field;
+	exportedField *= m_TransformToOriginal;
+	ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_SDF", exportedField);
+}
+
+void IcoSphereEvolver::ComputeTriangleMetrics() const
+{
+	for (const auto& metricName : m_EvolSettings.TriMetrics)
+	{
+		if (!Geometry::IsMetricRegistered(metricName))
+			continue;
+
+		const auto metricFunction = Geometry::IdentifyMetricFunction(metricName);
+
+		if (!metricFunction(*m_EvolvingSurface))
+		{
+			std::cerr << "IcoSphereEvolver::ComputeTriangleMetrics: [WARNING] Computation of metric " << metricName << " finished with errors!\n";
+		}
+	}
+}
+
+//
+// ================================================================================================
+//
+
+void IcoSphereEvolver::ComputeDistanceField()
+{
+#if REPORT_EVOL_STEPS
+	std::cout << "IcoSphereEvolver::ComputeDistanceField: with " << m_EvolSettings.NVoxelsPerMinDimension << " voxels per min dimension ... ";
+#endif
+	const pmp::BoundingBox ptCloudBBox(m_PointCloud);
+	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+	const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+	const float cellSize = minSize / static_cast<float>(m_EvolSettings.NVoxelsPerMinDimension);
+	constexpr float volExpansionFactor = 1.0f;
+	const SDF::PointCloudDistanceFieldSettings dfSettings{
+				cellSize,
+				volExpansionFactor,
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // m_EvolSettings.MaxDim * 1.0
+				SDF::BlurPostprocessingType::None
+	};
+	m_Field = std::make_shared<Geometry::ScalarGrid>(
+		SDF::PointCloudDistanceFieldGenerator::Generate(m_PointCloud, dfSettings));
+#if REPORT_EVOL_STEPS
+	std::cout << "done.\n";
+	const auto& dims = m_Field->Dimensions();
+	std::cout << "IcoSphereEvolver::ComputeDistanceField: field resolution: " << dims.Nx << " x " << dims.Ny << " x " << dims.Nz << " voxels.\n";
+#endif
+}
+
+/// \brief a multiplier allowing some deviation from the bounding sphere.
+constexpr float ICO_SPHERE_RADIUS_FACTOR = 1.001f;
+
+void IcoSphereEvolver::ConstructIcoSphere()
+{
+	const auto [boundingSphereCenter, boundingSphereRadius] = Geometry::ComputePointCloudBoundingSphere(m_PointCloud);
+	m_StartingSurfaceRadius = boundingSphereRadius * ICO_SPHERE_RADIUS_FACTOR;
+	m_StartingSurfaceCenter = boundingSphereCenter;
+#if REPORT_EVOL_STEPS
+	std::cout << "Ico-Sphere Radius: " << m_StartingSurfaceRadius << ",\n";
+#endif
+	const unsigned int icoSphereSubdiv = m_EvolSettings.IcoSphereSubdivisionLevel;
+	Geometry::IcoSphereBuilder icoBuilder({ icoSphereSubdiv, m_StartingSurfaceRadius });
+	icoBuilder.BuildBaseData();
+	icoBuilder.BuildPMPSurfaceMesh();
+	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
+}
+
+void IcoSphereEvolver::DetectFeatureVerticesFromDistanceField() const
+{
+	if (!m_EvolvingSurface)
+	{
+		throw std::runtime_error("IcoSphereEvolver::DetectFeatureVerticesFromDistanceField: m_EvolvingSurface not initialized!\n");
+	}
+
+	if (!m_Field)
+	{
+		throw std::runtime_error("IcoSphereEvolver::DetectFeatureVerticesFromDistanceField: m_Field not initialized!\n");
+	}
+
+	const auto& field = *m_Field;
+	auto vIsFeature = m_EvolvingSurface->add_vertex_property<bool>("v:feature", false);
+#if REPORT_EVOL_STEPS
+	unsigned int nFeatureVerts = 0;
+#endif
+	for (const auto v : m_EvolvingSurface->vertices())
+	{
+		const auto vPos = m_EvolvingSurface->position(v);
+		const auto vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
+
+		if (vDistanceToTarget > 2 * m_EvolSettings.FieldIsoLevel)
+			continue;
+
+		vIsFeature[v] = true;
+#if REPORT_EVOL_STEPS
+		nFeatureVerts++;
+#endif
+	}
+#if REPORT_EVOL_STEPS
+	if (nFeatureVerts > 0)
+	{
+		std::cout << "IcoSphereEvolver::DetectFeatureVerticesFromDistanceField: detected " << nFeatureVerts << " vertices within " << m_EvolSettings.FieldIsoLevel << " units to the target point cloud.\n";
+	}
+#endif
+}
+
+void IcoSphereEvolver::StabilizeEvolutionData()
+{
+	if (!m_EvolvingSurface)
+	{
+		throw std::runtime_error("IcoSphereEvolver::StabilizeEvolutionData: m_EvolvingSurface not initialized!\n");
+	}
+
+	// transform mesh and grid
+	const unsigned int& icoSphereSubdiv = m_EvolSettings.IcoSphereSubdivisionLevel;
+	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, m_StartingSurfaceRadius, icoSphereSubdiv);
+	m_ScalingFactor = scalingFactor;
+	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
+	const auto origin = m_StartingSurfaceCenter;
+#if REPORT_EVOL_STEPS
+	std::cout << "Stabilization Scaling Factor: " << scalingFactor << ",\n";
+	std::cout << "Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
+#endif
+	const pmp::mat4 transfMatrixGeomScale{
+		scalingFactor, 0.0f, 0.0f, 0.0f,
+		0.0f, scalingFactor, 0.0f, 0.0f,
+		0.0f, 0.0f, scalingFactor, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const pmp::mat4 transfMatrixGeomMove{
+		1.0f, 0.0f, 0.0f, -origin[0],
+		0.0f, 1.0f, 0.0f, -origin[1],
+		0.0f, 0.0f, 1.0f, -origin[2],
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	m_TransformToOriginal = inverse(transfMatrixFull);
+
+	(*m_EvolvingSurface) *= transfMatrixGeomScale; // ico sphere is already centered at (0,0,0).
+	(*m_Field) *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
+	(*m_Field) *= static_cast<double>(scalingFactor); // scale also distance values.
+
+	// Export field for debugging purposes
+	//ExportField();
+}
+
+// ================================================================================================
+
+double IcoSphereEvolver::LaplacianDistanceWeightFunction(const double& distanceAtVertex) const
+{
+	if (distanceAtVertex < 0.0 && m_EvolSettings.ADParams.MCFSupportPositive)
+		return 0.0;
+	const auto& c1 = m_EvolSettings.ADParams.MCFMultiplier;
+	const auto& c2 = m_EvolSettings.ADParams.MCFVariance;
+	return c1 * (1.0 - exp(-(distanceAtVertex * distanceAtVertex) / c2));
+}
+
+double IcoSphereEvolver::AdvectionDistanceWeightFunction(const double& distanceAtVertex,
+	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal) const
+{
+	if (distanceAtVertex < 0.0 && m_EvolSettings.ADParams.AdvectionSupportPositive)
+		return 0.0;
+	const auto& d1 = m_EvolSettings.ADParams.AdvectionMultiplier;
+	const auto& d2 = m_EvolSettings.ADParams.AdvectionSineMultiplier;
+	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
+	return d1 * distanceAtVertex * (negGradDotNormal - d2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+}
+
+//
+// ================================================================================================
+//
+
+void IcoSphereEvolver::Preprocess()
+{
+	ComputeDistanceField();
+	ConstructIcoSphere();
+	DetectFeatureVerticesFromDistanceField();
+	StabilizeEvolutionData();
+}
+
+//
+// ================================================================================================
+//
+
+void IcoSphereEvolver::Evolve()
 {
 	if (m_PointCloud.empty())
-		throw std::invalid_argument("ConvexHullEvolver::Evolve: m_PointCloud.empty()!\n");
+		throw std::invalid_argument("IcoSphereEvolver::Evolve: m_PointCloud.empty()!\n");
 
-    Preprocess();
+	Preprocess();
 
 	if (!m_Field)
 		throw std::invalid_argument("ConvexHullEvolver::Evolve: m_Field not set! Terminating!\n");
 	if (!m_Field->IsValid())
 		throw std::invalid_argument("ConvexHullEvolver::Evolve: m_Field is invalid! Terminating!\n");
-	if (!m_Remesher)
-		throw std::invalid_argument("ConvexHullEvolver::Evolve: m_Remesher not set! Terminating!\n");
 	if (!m_EvolvingSurface)
 		throw std::invalid_argument("ConvexHullEvolver::Evolve: m_EvolvingSurface not set! Terminating!\n");
-    
+
 	const auto& field = *m_Field;
 
 #if VERIFY_SOLUTION_WITHIN_BOUNDS
@@ -54,28 +272,28 @@ void ConvexHullEvolver::Evolve()
 	const auto& NSteps = m_EvolSettings.NSteps;
 	auto tStep = m_EvolSettings.TimeStep;
 
-	// compute mesh sizings from the percentage within the total mesh dimensions
-	const auto [remeshedLengthMin, remeshedLengthMean, remeshedLengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(*m_EvolvingSurface);
-#if REPORT_EVOL_STEPS
-	std::cout << "minEdgeLength is: " << (remeshedLengthMin / (m_EvolSettings.MaxDim * m_ScalingFactor)) * 100 << " % of MaxDim.\n";
-#endif
-	auto minEdgeLength = 4.0f * remeshedLengthMin;
-	auto maxEdgeLength = 8.0f * minEdgeLength;
-	auto approxError = 0.5f * minEdgeLength;
+	// ........ evaluate edge lengths for remeshing ....................
+	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
+	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
+	constexpr float baseIcoHalfAngle = 2.0f * M_PI / 10.0f;
+	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
+
+	auto minEdgeLength = minEdgeMultiplier * 2.0f * r * sin(baseIcoHalfAngle * pow(2.0f, -subdiv)); // from icosahedron edge length
+	auto maxEdgeLength = 4.0f * minEdgeLength;
+	auto approxError = 0.25f * (minEdgeLength + maxEdgeLength);
+	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
 
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
 	// .................................................................
-	// DISCLAIMER: the dimensionality of the system depends on the number of mesh vertices which can change if remeshing is used.
 
+	// DISCLAIMER: the dimensionality of the system depends on the number of mesh vertices which can change if remeshing is used.
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
-	if (!m_EvolvingSurface->has_vertex_property("v:feature"))
-		throw std::logic_error("ConvexHullEvolver::Evolve: vertex property \"v:feature\" not found in m_EvolvingSurface!\n");
-	auto vFeature = m_EvolvingSurface->get_vertex_property<bool>("v:feature");
+	auto vFeature = m_EvolvingSurface->vertex_property<bool>("v:feature", false);
 	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0f);
 
 	// property container for surface vertex normals
@@ -124,6 +342,7 @@ void ConvexHullEvolver::Evolve()
 		}
 	};
 	// -----------------------------------------------------------------
+
 	// write initial surface
 	auto coVolStats = AnalyzeMeshCoVolumes(*m_EvolvingSurface, m_LaplacianAreaFunction);
 #if REPORT_EVOL_STEPS
@@ -143,6 +362,8 @@ void ConvexHullEvolver::Evolve()
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 	}
+	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
+	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
@@ -217,9 +438,8 @@ void ConvexHullEvolver::Evolve()
 
 		// --------------------------------------------------------------------
 
-		//const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
-		//if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
-		if (m_EvolSettings.DoRemeshing && IsNonFeatureRemeshingNecessary(*m_EvolvingSurface))
+		const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
+		if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
 		{
 			// remeshing
 #if REPORT_EVOL_STEPS
@@ -228,7 +448,8 @@ void ConvexHullEvolver::Evolve()
 #if REPORT_EVOL_STEPS
 			std::cout << "pmp::Remeshing::adaptive_remeshing(minEdgeLength: " << minEdgeLength << ", maxEdgeLength: " << maxEdgeLength << ", approxError: " << approxError << ") ... ";
 #endif
-			m_Remesher->adaptive_remeshing({
+			pmp::Remeshing remeshing(*m_EvolvingSurface);
+			remeshing.adaptive_remeshing({
 				minEdgeLength, maxEdgeLength, approxError,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
@@ -282,6 +503,8 @@ void ConvexHullEvolver::Evolve()
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 			vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 		}
+		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
+		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
 		ComputeTriangleMetrics();
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
@@ -302,7 +525,7 @@ void ConvexHullEvolver::Evolve()
 
 	} // end main loop
 	// -------------------------------------------------------------------------------------------------------------
-	
+
 	if (m_EvolSettings.ExportResultSurface)
 		ExportSurface(NSteps, true);
 
@@ -313,180 +536,14 @@ void ConvexHullEvolver::Evolve()
 #endif
 }
 
+//
 // ================================================================================================
+//
 
-double ConvexHullEvolver::LaplacianDistanceWeightFunction(const double& distanceAtVertex) const
-{
-	if (distanceAtVertex < 0.0 && m_EvolSettings.ADParams.MCFSupportPositive)
-		return 0.0;
-	const auto& c1 = m_EvolSettings.ADParams.MCFMultiplier;
-	const auto& c2 = m_EvolSettings.ADParams.MCFVariance;
-	return c1 * (1.0 - exp(-(distanceAtVertex * distanceAtVertex) / c2));
-}
-
-double ConvexHullEvolver::AdvectionDistanceWeightFunction(const double& distanceAtVertex,
-	const pmp::dvec3& negDistanceGradient, const pmp::Point& vertexNormal) const
-{
-	if (distanceAtVertex < 0.0 && m_EvolSettings.ADParams.AdvectionSupportPositive)
-		return 0.0;
-	const auto& d1 = m_EvolSettings.ADParams.AdvectionMultiplier;
-	const auto& d2 = m_EvolSettings.ADParams.AdvectionSineMultiplier;
-	const auto negGradDotNormal = pmp::ddot(negDistanceGradient, vertexNormal);
-	return d1 * distanceAtVertex * (negGradDotNormal - d2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-}
-
-// ================================================================================================
-
-void ConvexHullEvolver::ExportSurface(const unsigned int& tId, const bool& isResult, const bool& transformToOriginal) const
-{
-	if (!m_EvolvingSurface)
-	{
-		std::cerr << "ConvexHullEvolver::ExportSurface: m_EvolvingSurface == nullptr!\n";
-		return;
-	}
-	const std::string connectingName = (isResult ? "_Result" : "_Evol_" + std::to_string(tId));
-	if (!transformToOriginal)
-	{
-		m_EvolvingSurface->write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
-		return;
-	}
-	auto exportedSurface = *m_EvolvingSurface;
-	exportedSurface *= m_TransformToOriginal;
-	exportedSurface.write(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + connectingName + m_OutputMeshExtension);
-}
-
-void ConvexHullEvolver::ExportField(const bool& transformToOriginal) const
-{
-	if (!m_Field)
-	{
-		std::cerr << "ConvexHullEvolver::ExportField: m_Field == nullptr!\n";
-		return;
-	}
-	if (!transformToOriginal)
-	{
-		ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_SDF", *m_Field);
-		return;
-	}
-	auto exportedField = *m_Field;
-	exportedField *= m_TransformToOriginal;
-	ExportToVTI(m_EvolSettings.OutputPath + m_EvolSettings.ProcedureName + "_SDF", exportedField);
-}
-
-void ConvexHullEvolver::ComputeTriangleMetrics() const
-{
-	for (const auto& metricName : m_EvolSettings.TriMetrics)
-	{
-		if (!Geometry::IsMetricRegistered(metricName))
-			continue;
-
-		const auto metricFunction = Geometry::IdentifyMetricFunction(metricName);
-
-		if (!metricFunction(*m_EvolvingSurface))
-		{
-			std::cerr << "SurfaceEvolver::ComputeTriangleMetrics: [WARNING] Computation of metric " << metricName << " finished with errors!\n";
-		}
-	}
-}
-
-// ================================================================================================
-
-void ConvexHullEvolver::Preprocess()
-{
-    ComputeDistanceField();
-    ConstructConvexHull();
-
-#if REPORT_EVOL_STEPS
-	std::cout << "ConvexHullEvolver::Preprocess: pmp::Remeshing::convex_hull_adaptive_remeshing ... \n";
-#endif
-	// initialize remesher and remesh the starting convex hull surface
-	const auto [lengthMin, lengthMean, lengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(*m_EvolvingSurface);
-	std::cout << "ConvexHullEvolver::Preprocess: {lengthMin: " << lengthMin << ", lengthMean: " << lengthMean << ", lengthMax: " << lengthMax << "},\n";
-	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
-	m_Remesher->convex_hull_adaptive_remeshing({
-	4.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
-	3, 5, true
-	});
-#if REPORT_EVOL_STEPS
-	std::cout << "... done.\n";
-#endif
-
-	// transform mesh and grid
-	// >>> uniform scale to ensure numerical method's stability.
-	const float scalingFactor = GetConvexHullStabilizationScalingFactor(m_EvolSettings.TimeStep, *m_EvolvingSurface, m_LaplacianAreaFunction);
-	m_ScalingFactor = scalingFactor;
-	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
-	const auto origin = m_EvolSettings.TargetOrigin;
-#if REPORT_EVOL_STEPS
-	std::cout << "ConvexHullEvolver::Preprocess: Stabilization Scaling Factor: " << scalingFactor << ",\n";
-	std::cout << "ConvexHullEvolver::Preprocess: Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
-#endif
-	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
-	};
-	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
-	};
-	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
-	m_TransformToOriginal = inverse(transfMatrixFull);
-
-	(*m_EvolvingSurface) *= transfMatrixFull; // the convex hull is not centered at (0,0,0).
-	auto& field = *m_Field;
-	field *= transfMatrixFull; // field needs to be moved to (0,0,0) and also scaled.
-	field *= static_cast<double>(scalingFactor); // scale also distance values.
-	// Export field for debugging purposes
-	//ExportField();
-}
-
-void ConvexHullEvolver::ConstructConvexHull()
-{
-#if REPORT_EVOL_STEPS
-	std::cout << "ConvexHullEvolver::ConstructConvexHull: ... ";
-#endif
-    auto convexHullMeshOpt = Geometry::ComputePMPConvexHullFromPoints(m_PointCloud);
-    if (!convexHullMeshOpt.has_value())
-        throw std::logic_error("ConvexHullEvolver::ConstructConvexHull: m_PointCloud ComputePMPConvexHullFromPoints error! Terminating!\n");
-
-    m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(convexHullMeshOpt.value());
-#if REPORT_EVOL_STEPS
-	std::cout << "done.\n";
-#endif
-}
-
-void ConvexHullEvolver::ComputeDistanceField()
-{
-#if REPORT_EVOL_STEPS
-	std::cout << "ConvexHullEvolver::ComputeDistanceField: with " << m_EvolSettings.NVoxelsPerMinDimension << " voxels per min dimension ... ";
-#endif
-	const pmp::BoundingBox ptCloudBBox(m_PointCloud);
-	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-	const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-	const float cellSize = minSize / static_cast<float>(m_EvolSettings.NVoxelsPerMinDimension);
-	constexpr float volExpansionFactor = 1.0f;
-	const SDF::PointCloudDistanceFieldSettings dfSettings{
-				cellSize,
-				volExpansionFactor,
-				m_EvolSettings.MaxDim * 1.0, //Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
-				SDF::BlurPostprocessingType::None
-	};
-	m_Field = std::make_shared<Geometry::ScalarGrid>(
-		SDF::PointCloudDistanceFieldGenerator::Generate(m_PointCloud, dfSettings));
-#if REPORT_EVOL_STEPS
-	std::cout << "done.\n";
-	const auto& dims = m_Field->Dimensions();
-	std::cout << "ConvexHullEvolver::ComputeDistanceField: field resolution: " << dims.Nx << " x " << dims.Ny << " x " << dims.Nz << " voxels.\n";
-#endif
-}
-
-void ReportCHEvolverInput(const ConvexHullSurfaceEvolutionSettings& evolSettings, std::ostream& os)
+void ReportIcoEvolverInput(const IcoSphereEvolutionSettings& evolSettings, std::ostream& os)
 {
 	os << "======================================================================\n";
-	os << "> > > > > > > > > > Initiating ConvexHullEvolver: < < < < < < < < < < < <\n";
+	os << "> > > > > > > > > > Initiating IcoSphereEvolver: < < < < < < < < < < < <\n";
 	os << "Target Name: " << evolSettings.ProcedureName << ",\n";
 	os << "NSteps: " << evolSettings.NSteps << ",\n";
 	os << "TimeStep: " << evolSettings.TimeStep << ",\n";
@@ -507,20 +564,4 @@ void ReportCHEvolverInput(const ConvexHullSurfaceEvolutionSettings& evolSettings
 	os << "Do Remeshing: " << (evolSettings.DoRemeshing ? "true" : "false") << ",\n";
 	os << "Do Feature Detection: " << (evolSettings.DoFeatureDetection ? "true" : "false") << ",\n";
 	os << "----------------------------------------------------------------------\n";
-}
-
-/// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
-/// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 1.0f;
-
-float GetConvexHullStabilizationScalingFactor(const double& timeStep, pmp::SurfaceMesh& convexHullMesh, const AreaFunction& areaFunction, const float& stabilizationFactor)
-{
-	const auto surfaceArea = surface_area(convexHullMesh);
-	const auto nVertices = convexHullMesh.n_vertices();
-	const auto coVolStats = AnalyzeMeshCoVolumes(convexHullMesh, areaFunction);
-	float expectedMeanCoVolArea = stabilizationFactor * (surfaceArea / static_cast<float>(nVertices));
-	expectedMeanCoVolArea += stabilizationFactor * static_cast<float>(coVolStats.Mean);
-	expectedMeanCoVolArea /= 2.0f;
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }

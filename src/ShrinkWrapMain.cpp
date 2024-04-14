@@ -4,6 +4,7 @@
 #include "SurfaceEvolver.h"
 #include "SheetMembraneEvolver.h"
 #include "ConvexHullEvolver.h"
+#include "IcoSphereEvolver.h"
 #include "SphereTest.h"
 
 #include "geometry/GridUtil.h"
@@ -77,7 +78,8 @@ constexpr bool performHurtadoTrexIcosphereLSW = false;
 constexpr bool performImportVTIDebugTests = false;
 constexpr bool performConvexHullTests = false;
 constexpr bool performConvexHullRemeshingTests = false;
-constexpr bool performConvexHullEvolverTests = true;
+constexpr bool performConvexHullEvolverTests = false;
+constexpr bool performIcoSphereEvolverTests = true;
 
 int main()
 {
@@ -2430,5 +2432,137 @@ int main()
 				std::cerr << "> > > > > > > > > > > > > > ConvexHullEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 			}
 		}
-	}
+	} // endif performConvexHullEvolverTests
+
+	if (performIcoSphereEvolverTests)
+	{
+		const std::vector<std::string> meshForPtCloudNames{
+			//"armadillo",
+			//"blub",
+			"bunny",
+			//"maxPlanck",
+			//"nefertiti",
+			//"ogre",
+			//"spot"
+		};
+		const std::map<std::string, double> timeStepSizesForPtClouds{
+			{"armadillo", 0.05 },
+			{"blub", 0.05 },
+			{"bunny", 0.05 },
+			{"maxPlanck", 0.05 },
+			{"nefertiti", 0.05 },
+			{"ogre", 0.05 },
+			{"spot", 0.05 }
+		};
+		const std::map<std::string, double> isoLevelOffsetFactors{
+			{"armadillo", 0.5 },
+			{"blub", 0.5 },
+			{"bunny", 1.5 },
+			{"maxPlanck", 0.5 },
+			{"nefertiti", 0.5 },
+			{"ogre", 0.5 },
+			{"spot", 0.5 }
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+		SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			// Export sampled vertices to PLY
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+
+			const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+			const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+			MeshTopologySettings topoParams;
+			topoParams.EdgeLengthDecayFactor = 0.7f;
+			topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+
+			AdvectionDiffusionParameters adParams{
+				1.0, 1.0,
+				2.0, 1.0
+			};
+
+			IcoSphereEvolutionSettings seSettings{
+				meshName,
+				80,
+				tau,
+				fieldIsoLevel,
+				nVoxelsPerMinDimension,
+				2,
+				adParams,
+				topoParams,
+				ptCloudBBox.center(),
+				maxSize,
+				true, true,
+				dataOutPath,
+				MeshLaplacian::Voronoi,
+				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+				0.05f,
+				true,
+				false,
+				false,
+				true
+			};
+			ReportIcoEvolverInput(seSettings, std::cout);
+			IcoSphereEvolver evolver(ptCloud, seSettings);
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > IcoSphereEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+	} // endif performIcoSphereEvolverTests
 }

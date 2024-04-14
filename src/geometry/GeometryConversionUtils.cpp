@@ -870,4 +870,87 @@ namespace Geometry
 		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
 	}
 
+	std::pair<pmp::Point, pmp::Scalar> ComputeMeshBoundingSphere(const pmp::SurfaceMesh& mesh)
+	{
+		if (mesh.is_empty())
+		{
+			throw std::invalid_argument("Geometry::ComputeMeshBoundingSphere: Vertex positions are not available in the mesh.\n");
+		}
+
+		const auto vFirst = mesh.vertices().begin();
+		auto vCurrent = vFirst;
+		pmp::Point center = mesh.position(*vFirst);
+		pmp::Scalar radius = 0.0f;
+
+		// Find the initial point farthest from the arbitrary start point
+		for (const auto v : mesh.vertices()) 
+		{
+			if (norm(mesh.position(v) - center) < radius)
+				continue;
+
+			radius = norm(mesh.position(v)- center);
+			vCurrent = v;
+		}
+
+		// Set sphere center to the midpoint of the initial and farthest point, radius as half the distance
+		center = (center + mesh.position(*vCurrent)) * 0.5f;
+		radius = norm(mesh.position(*vCurrent) - center);
+
+		// Ensure all points are within the sphere, adjust if necessary
+		for (const auto v : mesh.vertices()) 
+		{
+			const pmp::Scalar dist = norm(mesh.position(v) - center);
+			if (dist < radius)
+				continue;
+
+			const pmp::Scalar newRadius = (radius + dist) / 2;
+			const pmp::Scalar moveBy = newRadius - radius;
+			const pmp::Point direction = normalize(mesh.position(v) - center);
+			center += direction * moveBy;
+			radius = newRadius;
+		}
+
+		return { center, radius };
+	}
+
+	std::pair<pmp::Point, pmp::Scalar> ComputePointCloudBoundingSphere(const std::vector<pmp::Point>& points)
+	{
+		if (points.empty())
+		{
+			throw std::invalid_argument("Geometry::ComputePointCloudBoundingSphere: points.empty()!\n");
+		}
+
+		// Start with the first point as the center
+		pmp::Point center = points[0];
+		pmp::Scalar radius = 0.0f;
+
+		// First pass: find the farthest point from the initial point to set a rough sphere
+		for (const auto& point : points)
+		{
+			const pmp::Scalar dist = norm(point - center);
+			if (dist < radius)
+				continue;
+			radius = dist;
+		}
+
+		// Set initial sphere
+		center = (center + points[0] + radius * normalize(points[0] - center)) / 2.0;
+		radius /= 2.0f;
+
+		// Second pass: expand sphere to include all points
+		for (const auto& point : points)
+		{
+			const pmp::Scalar dist = norm(point - center);
+			if (dist < radius) // Point is inside the sphere
+				continue;
+			const pmp::Scalar newRadius = (radius + dist) / 2;
+			const pmp::Scalar moveBy = newRadius - radius;
+			const pmp::Point direction = normalize(point - center);
+			center += direction * moveBy;
+			radius = newRadius;
+		}
+
+		return { center, radius };
+	}
+
 } // namespace Geometry
