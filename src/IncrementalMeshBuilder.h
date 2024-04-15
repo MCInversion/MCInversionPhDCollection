@@ -5,6 +5,8 @@
 #include "utils/IFileMappingWrapper.h"
 
 #include "MeshUpdateHandler.h"
+#include "PointCloudMeshingStrategies.h"
+#include "VertexSamplingStrategies.h"
 
 namespace IMB
 {
@@ -25,15 +27,6 @@ namespace IMB
 		NormalRandom            = 2, //>! selects vertices with a normal distribution.
 		SoftMaxFeatureDetecting = 3, //>! selects vertices using a softmax function with feature detection.
 	};
-
-    /// \brief A functor for mesh reconstruction.
-    using ReconstructionFunction = std::function<void(std::vector<unsigned int>&, const std::vector<pmp::Point>&, const std::vector<pmp::Normal>&)>;
-
-    /// \brief A functor for vertex selection from a file mapping range.
-    using VertexSelectionFunction = std::function<void(const char* /* start */, const char* /* end */, std::vector<pmp::Point>& /* result */, const std::optional<unsigned int>& /* seed */)>;
-
-    /// \brief A functor for vertex and normal selection from a file mapping range.
-    //using VertexAndNormalSelectionFunction = std::function<void(const char*, const char*, std::vector<pmp::Point>&, std::vector<pmp::Normal>&)>;
 
     /// ==================================================================
     /// \brief The main singleton class for incremental mesh building.
@@ -66,24 +59,17 @@ namespace IMB
         /// \brief default constructor.
         IncrementalMeshBuilder() = default;
 
-        /// \brief triangulates the mesh using m_ReconstructPtCloud.
-        void Triangulate();
-
         /// \brief Samples vertices from the mesh using m_SelectVertices.
-        void SampleVertices();
+        void ProcessVertices(const std::optional<unsigned int>& seed = std::nullopt, const unsigned int& nThreads = 0);
 
-        /// \brief Samples vertices and normals from the mesh using m_SelectVerticesAndNormals.
-        //void SampleVerticesAndNormals();
-
-        // TODO: New data structure for mesh data?
-        /// \brief Refines the mesh using m_MeshData.
-        //void RefineMesh();
+        //
+        // ================================================================
+        //
 
         Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
 
-        ReconstructionFunction m_ReconstructPtCloud;                 //>! mesh reconstruction function.
-        VertexSelectionFunction m_SelectVertices;                    //>! vertex selection function.
-        //VertexAndNormalSelectionFunction m_SelectVerticesAndNormals; //>! vertex and normal selection function.
+        std::unique_ptr<PointCloudMeshingStrategy> m_PtCloudMeshingStrategy{nullptr};   //>! mesh reconstruction functionality.
+        std::unique_ptr<VertexSamplingStrategy> m_VertexSamplingStrategy{nullptr};      //>! vertex selection functionality.
 
         std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping; //>! file mapping wrapper.
 

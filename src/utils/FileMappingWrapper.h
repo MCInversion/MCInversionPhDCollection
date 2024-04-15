@@ -22,19 +22,21 @@ namespace Utils
     class FileMappingWrapper : public IFileMappingWrapper
     {
     public:
-        FileMappingWrapper(const std::string& filePath);
-        virtual ~FileMappingWrapper();
+        explicit FileMappingWrapper(const std::string& filePath);
 
-        const void* GetFileMemory() const override;
-        size_t GetFileSize() const override;
+        ~FileMappingWrapper() override;
+
+        [[nodiscard]] const void* GetFileMemory() const override;
+
+        [[nodiscard]] size_t GetFileSize() const override;
 
     private:
-        HANDLE FileHandle = INVALID_HANDLE_VALUE;
-        HANDLE FileMapping = nullptr;
-        LPVOID FileMemory = nullptr;
-        LARGE_INTEGER FileSize;
-
         void OpenFile(const std::string& filePath);
+
+        HANDLE m_FileHandle = INVALID_HANDLE_VALUE;
+        HANDLE m_FileMapping = nullptr;
+        LPVOID m_FileMemory = nullptr;
+        LARGE_INTEGER m_FileSize;
     };
 
 } // namespace Utils

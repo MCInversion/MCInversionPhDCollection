@@ -2,63 +2,65 @@
 
 #include <iostream>
 
-using namespace Utils;
-
-FileMappingWrapper::FileMappingWrapper(const std::string& filePath)
+namespace Utils
 {
-    OpenFile(filePath);
-}
+	FileMappingWrapper::FileMappingWrapper(const std::string& filePath)
+	{
+	    OpenFile(filePath);
+	}
 
-FileMappingWrapper::~FileMappingWrapper() 
-{
-    if (FileMemory) UnmapViewOfFile(FileMemory);
-    if (FileMapping) CloseHandle(FileMapping);
-    if (FileHandle != INVALID_HANDLE_VALUE) CloseHandle(FileHandle);
-}
+	FileMappingWrapper::~FileMappingWrapper()
+	{
+	    if (m_FileMemory) UnmapViewOfFile(m_FileMemory);
+	    if (m_FileMapping) CloseHandle(m_FileMapping);
+	    if (m_FileHandle != INVALID_HANDLE_VALUE) CloseHandle(m_FileHandle);
+	}
 
-const void* FileMappingWrapper::GetFileMemory() const
-{
-    return FileMemory;
-}
+	const void* FileMappingWrapper::GetFileMemory() const
+	{
+	    return m_FileMemory;
+	}
 
-size_t FileMappingWrapper::GetFileSize() const
-{
-    return static_cast<size_t>(FileSize.QuadPart);
-}
+	size_t FileMappingWrapper::GetFileSize() const
+	{
+	    return static_cast<size_t>(m_FileSize.QuadPart);
+	}
 
-void FileMappingWrapper::OpenFile(const std::string& filePath)
-{
-    // Open the file with GENERIC_READ access and FILE_SHARE_READ mode.
-    FileHandle = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (FileHandle == INVALID_HANDLE_VALUE)
-    {
-        std::cerr << "FileMappingWrapper::OpenFile: Failed to open file.";
-        return;
-    }
+	void FileMappingWrapper::OpenFile(const std::string& filePath)
+	{
+	    // Open the file with GENERIC_READ access and FILE_SHARE_READ mode.
+		m_FileHandle = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	    if (m_FileHandle == INVALID_HANDLE_VALUE)
+	    {
+	        std::cerr << "FileMappingWrapper::OpenFile: Failed to open file.";
+	        return;
+	    }
 
-    // Retrieve the size of the file.
-    if (!GetFileSizeEx(FileHandle, &FileSize)) 
-    {
-        CloseHandle(FileHandle);
-        std::cerr << "FileMappingWrapper::OpenFile: Failed to get file size.";
-        return;
-    }
+	    // Retrieve the size of the file.
+	    if (!GetFileSizeEx(m_FileHandle, &m_FileSize))
+	    {
+	        CloseHandle(m_FileHandle);
+	        std::cerr << "FileMappingWrapper::OpenFile: Failed to get file size.";
+	        return;
+	    }
 
-    // Create the file mapping object.
-    FileMapping = CreateFileMapping(FileHandle, nullptr, PAGE_READONLY, FileSize.HighPart, FileSize.LowPart, nullptr);
-    if (!FileMapping)
-    {
-        CloseHandle(FileHandle);
-        std::cerr << "FileMappingWrapper::OpenFile: Failed to create file mapping.";
-        return;
-    }
+	    // Create the file mapping object.
+		m_FileMapping = CreateFileMapping(m_FileHandle, nullptr, PAGE_READONLY, m_FileSize.HighPart, m_FileSize.LowPart, nullptr);
+	    if (!m_FileMapping)
+	    {
+	        CloseHandle(m_FileHandle);
+	        std::cerr << "FileMappingWrapper::OpenFile: Failed to create file mapping.";
+	        return;
+	    }
 
-    // Map a view of the file into the address space of the calling process.
-    FileMemory = MapViewOfFile(FileMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!FileMemory) 
-    {
-        CloseHandle(FileMapping);
-        CloseHandle(FileHandle);
-        std::cerr << "FileMappingWrapper::OpenFile: Failed to map view of file.";
-    }
-}
+	    // Map a view of the file into the address space of the calling process.
+		m_FileMemory = MapViewOfFile(m_FileMapping, FILE_MAP_READ, 0, 0, 0);
+	    if (!m_FileMemory)
+	    {
+	        CloseHandle(m_FileMapping);
+	        CloseHandle(m_FileHandle);
+	        std::cerr << "FileMappingWrapper::OpenFile: Failed to map view of file.";
+	    }
+	}
+	
+} // namespace utils
