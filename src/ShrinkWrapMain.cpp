@@ -7,6 +7,8 @@
 #include "IcoSphereEvolver.h"
 #include "SphereTest.h"
 
+#include "IncrementalMeshBuilder.h"
+
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MarchingCubes.h"
@@ -79,19 +81,20 @@ constexpr bool performImportVTIDebugTests = false;
 constexpr bool performConvexHullTests = false;
 constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
-constexpr bool performIcoSphereEvolverTests = true;
+constexpr bool performIcoSphereEvolverTests = false;
+constexpr bool performIncrementalMeshBuilderTests = true;
 
 int main()
 {
 	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
 	const std::vector<std::string> meshNames{
-   	//"BentChair",
-		//"blub",
-		//"bunny",
-		//"maxPlanck",
-		//"nefertiti",
-		//"ogre",
-		//"spot"
+		//"BentChair",
+			//"blub",
+			//"bunny",
+			//"maxPlanck",
+			//"nefertiti",
+			//"ogre",
+			//"spot"
 	};
 
 	if (performSDFTests)
@@ -110,12 +113,12 @@ int main()
 			const float cellSize = minSize / nVoxelsPerMinDimension;
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
-				1.0f,
-				DBL_MAX,
-				SDF::KDTreeSplitType::Center,
-				SDF::SignComputation::VoxelFloodFill,
-				SDF::BlurPostprocessingType::None,
-				SDF::PreprocessingType::Octree
+					1.0f,
+					DBL_MAX,
+					SDF::KDTreeSplitType::Center,
+					SDF::SignComputation::VoxelFloodFill,
+					SDF::BlurPostprocessingType::None,
+					SDF::PreprocessingType::Octree
 			};
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
@@ -229,13 +232,13 @@ int main()
 		constexpr double defaultTimeStep = 0.05;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"armadillo", 0.05 },
-			{"BentChair", 0.05 },
-			{"blub", 0.05 },
-			{"bunny", 0.0025 },
-			{"maxPlanck", 0.05 },
-			{"nefertiti", 0.05 },
-			{"ogre", 0.05 },
-			{"spot", 0.05 }
+			{ "BentChair", 0.05 },
+			{ "blub", 0.05 },
+			{ "bunny", 0.0025 },
+			{ "maxPlanck", 0.05 },
+			{ "nefertiti", 0.05 },
+			{ "ogre", 0.05 },
+			{ "spot", 0.05 }
 		};
 
 		for (const auto& name : meshNames)
@@ -250,12 +253,12 @@ int main()
 			constexpr float volExpansionFactor = 1.0f;
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
-				volExpansionFactor,
-				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
-				SDF::KDTreeSplitType::Center,
-				SDF::SignComputation::VoxelFloodFill,
-				SDF::BlurPostprocessingType::None,
-				SDF::PreprocessingType::Octree
+					volExpansionFactor,
+					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
+					SDF::KDTreeSplitType::Center,
+					SDF::SignComputation::VoxelFloodFill,
+					SDF::BlurPostprocessingType::None,
+					SDF::PreprocessingType::Octree
 			};
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
@@ -322,12 +325,12 @@ int main()
 		constexpr float volExpansionFactor = 1.0f;
 		const SDF::DistanceFieldSettings sdfSettings{
 			cellSize,
-			volExpansionFactor,
-			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
-			SDF::KDTreeSplitType::Center,
-			SDF::SignComputation::VoxelFloodFill,
-			SDF::BlurPostprocessingType::None,
-			SDF::PreprocessingType::Octree
+				volExpansionFactor,
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation::VoxelFloodFill,
+				SDF::BlurPostprocessingType::None,
+				SDF::PreprocessingType::Octree
 		};
 		SDF::ReportInput(mesh, sdfSettings, std::cout);
 
@@ -393,30 +396,30 @@ int main()
 	{
 		const std::vector<std::string> higherGenusMeshNames{
 			"3holes",
-			"fertility",
-			"happyBuddha",
-			"rockerArm"
+				"fertility",
+				"happyBuddha",
+				"rockerArm"
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"3holes", defaultTimeStep },
-			{"fertility", defaultTimeStep },
-			{"happyBuddha", defaultTimeStep },
-			{"rockerArm", defaultTimeStep }
+			{ "fertility", defaultTimeStep },
+			{ "happyBuddha", defaultTimeStep },
+			{ "rockerArm", defaultTimeStep }
 		};
 		const std::map<std::string, double> effectiveIsolevelsForMeshes{
 			{"3holes", 0.02 },
-			{"fertility", 4.0 },
-			{"happyBuddha", 1.5e-3 },
-			{"rockerArm", 0.06 }
+			{ "fertility", 4.0 },
+			{ "happyBuddha", 1.5e-3 },
+			{ "rockerArm", 0.06 }
 		};
 		const std::map<std::string, float> resamplingFactors{
 			{"3holes", 3.0f },
-			{"fertility", 2.0f },
-			{"happyBuddha", 1.0f },
-			{"rockerArm", 2.0f }
+			{ "fertility", 2.0f },
+			{ "happyBuddha", 1.0f },
+			{ "rockerArm", 2.0f }
 		};
 
 		for (const auto& name : higherGenusMeshNames)
@@ -431,13 +434,13 @@ int main()
 			constexpr float volExpansionFactor = 1.0f;
 			const SDF::DistanceFieldSettings sdfSettings{
 				cellSize,
-				volExpansionFactor,
-				//0.2, // TODO: will this truncation be OK?
-				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
-				SDF::KDTreeSplitType::Center,
-				SDF::SignComputation::VoxelFloodFill,
-				SDF::BlurPostprocessingType::None,
-				SDF::PreprocessingType::Octree
+					volExpansionFactor,
+					//0.2, // TODO: will this truncation be OK?
+					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+					SDF::KDTreeSplitType::Center,
+					SDF::SignComputation::VoxelFloodFill,
+					SDF::BlurPostprocessingType::None,
+					SDF::PreprocessingType::Octree
 			};
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
@@ -509,7 +512,7 @@ int main()
 	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.vti)
 	const std::vector<std::string> brainNames{
 		"talairach",
-		//"actual_brain" // TODO: use git lfs to upload ascii vti file of size > 50 MB or implement nifti import
+			//"actual_brain" // TODO: use git lfs to upload ascii vti file of size > 50 MB or implement nifti import
 	};
 
 	/*if (performNiftiTests)
@@ -544,7 +547,7 @@ int main()
 		};
 		const std::map<std::string, BE_ThresholdSettings> bet2ThresholdSettings{
 			{"talairach", talairachThresholdSettings},
-			{"actual_brain", actualBrainThresholdSettings },
+			{ "actual_brain", actualBrainThresholdSettings },
 		};
 
 		// ico-sphere params
@@ -558,7 +561,7 @@ int main()
 		const BE_IcoSphereSettings actualBrainIcoSettings{ actualBrainCenter, actualBrainRadius };
 		const std::map<std::string, BE_IcoSphereSettings> bet2IcoSphereSettings{
 			{"talairach", talairachIcoSettings},
-			{"actual_brain", actualBrainIcoSettings },
+			{ "actual_brain", actualBrainIcoSettings },
 		};
 
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -659,9 +662,9 @@ int main()
 
 		const pmp::mat4 matrixGeomScale{
 			2.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f
 		};
 		icoMesh *= matrixGeomScale;
 
@@ -694,10 +697,10 @@ int main()
 	{
 		constexpr Geometry::TorusSettings tSettings{
 			1.0f,
-			0.4f,
-			5,
-			3,
-			false
+				0.4f,
+				5,
+				3,
+				false
 		};
 		Geometry::TorusBuilder tb(tSettings);
 		tb.BuildBaseData();
@@ -774,7 +777,7 @@ int main()
 			std::cout << "------------------------------------------------\n";
 
 			icoMesh.write(dataOutPath + "icoMeshDeleteFaces" + std::to_string(s) + ".obj");
-		}		
+		}
 	}
 
 	if (performSubdivTestsMultiTorus)
@@ -820,11 +823,11 @@ int main()
 
 		const std::vector<std::string> subdivMeshNames{
 			/* 1 */ "armadillo_Simple",
-			/* 2 */ "blub_Simple",
-			/* 3 */ "bunny_Simple",
-			/* 4 */ "maxPlanck_Simple",
-			/* 5 */ "3holes",
-			/* 6 */ "rockerArm_Simple"
+				/* 2 */ "blub_Simple",
+				/* 3 */ "bunny_Simple",
+				/* 4 */ "maxPlanck_Simple",
+				/* 5 */ "3holes",
+				/* 6 */ "rockerArm_Simple"
 		};
 
 		constexpr size_t maxSubdivLevel = 6;
@@ -943,7 +946,7 @@ int main()
 				for (size_t i = 0; i < nSphereRuns; i++)
 				{
 					Geometry::IcoSphereBuilder ico1({ subdiv, 1.0f, true, false });
-					ico1.BuildBaseData();					
+					ico1.BuildBaseData();
 				}
 
 				const auto endPreallocSubdiv = std::chrono::high_resolution_clock::now();
@@ -1011,11 +1014,11 @@ int main()
 	{
 		constexpr Geometry::MobiusStripSettings mSettings{
 			1.0f,
-			1.0f,
-			40,
-			10,
-			false,
-			true
+				1.0f,
+				40,
+				10,
+				false,
+				true
 		};
 		Geometry::MobiusStripBuilder mb(mSettings);
 		mb.BuildBaseData();
@@ -1042,7 +1045,7 @@ int main()
 		// grid containing a clipped voxel field of the balls
 		/**/Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{
 			pmp::vec3{2.1f, 3.0f, 1.6f},
-			pmp::vec3{7.3f, 8.3f, 6.2f} }, initVal);
+				pmp::vec3{7.3f, 8.3f, 6.2f} }, initVal);
 
 		const Geometry::ScalarGridBoolOpFunction opFnc = Geometry::SimpleUnion;
 
@@ -1088,12 +1091,12 @@ int main()
 
 		constexpr Geometry::PlaneSettings mSettings{
 			pmp::vec3{},
-			roiDim,
-			roiDim,
-			nXSegments,
-			nYSegments,
-			true,
-			true
+				roiDim,
+				roiDim,
+				nXSegments,
+				nYSegments,
+				true,
+				true
 		};
 		Geometry::PlaneBuilder pb(mSettings);
 		pb.BuildBaseData();
@@ -1194,17 +1197,17 @@ int main()
 		{
 			//try
 			//{
-				std::cout << "MetricsEval: " << meshName << "...\n";
-				pmp::SurfaceMesh mesh;
-				mesh.read(dataDirPath + meshName + ".obj");
+			std::cout << "MetricsEval: " << meshName << "...\n";
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + meshName + ".obj");
 
-				if (!Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(mesh))
-				{
-					std::cout << "Error!\n";
-					continue;
-				}
-				
-				mesh.write(dataOutPath + meshName + "_Metric.vtk");
+			if (!Geometry::ComputeEquilateralTriangleJacobianConditionNumbers(mesh))
+			{
+				std::cout << "Error!\n";
+				continue;
+			}
+
+			mesh.write(dataOutPath + meshName + "_Metric.vtk");
 			//}
 			//catch(...)
 			//{
@@ -1235,7 +1238,7 @@ int main()
 					std::cerr << "baseDataOpt == nullopt!\n";
 					break;
 				}
-			}, true);
+				}, true);
 
 			// verify by export
 			parImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(baseDataOpt.value());
@@ -1252,12 +1255,12 @@ int main()
 					std::cerr << "stBaseDataOpt == nullopt!\n";
 					break;
 				}
-			}, true);
+				}, true);
 
 			// verify by export
 			stImportedMesh = ConvertBufferGeomToPMPSurfaceMesh(stBaseDataOpt.value());
 			stImportedMesh.write(dataOutPath + meshName + "_stImp.obj");
-			
+
 		}
 	}
 
@@ -1267,15 +1270,15 @@ int main()
 			//"armadillo", /* ! non-manifold !? */
 			//"BentChair",
 			"blub",
-			"bunny",
-			"maxPlanck",
-			"nefertiti",
-			"ogre",
-			"spot",
-			"3holes", // messed up, also mutex issue?
-			"fertility",
-			//"happyBuddha", /* ! non-manifold !? */
-			"rockerArm" // messed up, also mutex issue?
+				"bunny",
+				"maxPlanck",
+				"nefertiti",
+				"ogre",
+				"spot",
+				"3holes", // messed up, also mutex issue?
+				"fertility",
+				//"happyBuddha", /* ! non-manifold !? */
+				"rockerArm" // messed up, also mutex issue?
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1341,7 +1344,7 @@ int main()
 	{
 		const std::vector<std::string> importedMeshNames{
 			"bunny",
-			"CaesarBust"
+				"CaesarBust"
 		};
 
 		constexpr size_t samplingLevel = 3;
@@ -1381,7 +1384,7 @@ int main()
 	{
 		const std::vector<std::string> importedPtCloudNames{
 			"bunnyPts_3",
-			"CaesarBustPts_3"
+				"CaesarBustPts_3"
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 20;
@@ -1402,10 +1405,10 @@ int main()
 			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
 			const float cellSize = minSize / nVoxelsPerMinDimension;
 			const SDF::PointCloudDistanceFieldSettings dfSettings{
-						cellSize,
-						1.0f,
-						DBL_MAX,
-						SDF::BlurPostprocessingType::None
+				cellSize,
+					1.0f,
+					DBL_MAX,
+					SDF::BlurPostprocessingType::None
 			};
 
 			std::cout << "==================================================================\n";
@@ -1432,11 +1435,11 @@ int main()
 		};
 		const std::map<std::string, double> timeStepSizesForPtClouds{
 			{"bunnyPts_3", 0.07 },
-			{"CaesarBustPts_3", 0.05 }
+			{ "CaesarBustPts_3", 0.05 }
 		};
 		const std::map<std::string, double> isoLevelOffsetFactors{
 			{"bunnyPts_3", 2.0 },
-			{"CaesarBustPts_3", 0.5 }
+			{ "CaesarBustPts_3", 0.5 }
 		};
 
 		SetRemeshingAdjustmentTimeIndices({ 3, 10, 20, 50, 100, 120, 140, 145 });
@@ -1463,10 +1466,10 @@ int main()
 			const float cellSize = minSize / nVoxelsPerMinDimension;
 			constexpr float volExpansionFactor = 1.0f;
 			const SDF::PointCloudDistanceFieldSettings dfSettings{
-						cellSize,
-						volExpansionFactor,
-						Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
-						SDF::BlurPostprocessingType::None
+				cellSize,
+					volExpansionFactor,
+					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+					SDF::BlurPostprocessingType::None
 			};
 
 			std::cout << "==================================================================\n";
@@ -1546,9 +1549,9 @@ int main()
 		const std::vector<std::string> importedMeshNames{
 			//"spot_RepulsiveResult220",
 			"bunny_RepulsiveResult220",
-			"bunnyLSW150_Obstacle",
-			"bunnyLSW150_FullWrap",
-			"bunnyLSW200_Daniel30k"
+				"bunnyLSW150_Obstacle",
+				"bunnyLSW150_FullWrap",
+				"bunnyLSW200_Daniel30k"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1571,7 +1574,7 @@ int main()
 					std::cout << "Evaluated vertex density = (nVerts / meshSurfArea) = " << nVerts << "/" << meshSurfArea << " = " << vertexDensity << " verts / unit^2.\n";
 					const auto bbox = mesh.bounds();
 					const auto bboxVolume = bbox.volume();
-					const auto vertexDensityPerUnitVolume = static_cast<float>(nVerts) / meshSurfArea * pow(bboxVolume, 2.0f/3.0f);
+					const auto vertexDensityPerUnitVolume = static_cast<float>(nVerts) / meshSurfArea * pow(bboxVolume, 2.0f / 3.0f);
 					std::cout << "Evaluated vertex density normalized per unit volume = nVerts / meshSurfArea * meshBBoxVolume^(2/3) = " <<
 						nVerts << " / " << meshSurfArea << " * (" << bboxVolume << ")^(2/3) = " << vertexDensityPerUnitVolume << " verts.\n";
 				}
@@ -1598,23 +1601,23 @@ int main()
 	{
 		const std::vector<std::string> importedMeshNames{
 			"bunny_RepulsiveResult220",
-			"bunnyLSW150_Obstacle",
-			"bunnyLSW150_FullWrap",
-			"bunnyLSW200_Daniel30k"
+				"bunnyLSW150_Obstacle",
+				"bunnyLSW150_FullWrap",
+				"bunnyLSW200_Daniel30k"
 		};
 
 		const std::map<std::string, std::string> correspondingPtCloudNames{
 			{"bunny_RepulsiveResult220", "bunny_PtCloudRep"},
-			{"bunnyLSW150_Obstacle", "bunnyPts_3"},
-			{"bunnyLSW150_FullWrap", "bunnyPts_3"},
-			{"bunnyLSW200_Daniel30k", "bunnyPts_3_Daniel"}
+			{ "bunnyLSW150_Obstacle", "bunnyPts_3" },
+			{ "bunnyLSW150_FullWrap", "bunnyPts_3" },
+			{ "bunnyLSW200_Daniel30k", "bunnyPts_3_Daniel" }
 		};
 
 		const std::map<std::string, pmp::vec3> correspondingCorrectionTranslations{
 			{"bunny_RepulsiveResult220", pmp::vec3{}},
-			{"bunnyLSW150_Obstacle", pmp::vec3{0.001f, 0.001f, 0.001f}},
-			{"bunnyLSW150_FullWrap", pmp::vec3{0.001f, 0.001f, 0.001f}},
-			{"bunnyLSW200_Daniel30k", pmp::vec3{}}
+			{ "bunnyLSW150_Obstacle", pmp::vec3{0.001f, 0.001f, 0.001f} },
+			{ "bunnyLSW150_FullWrap", pmp::vec3{0.001f, 0.001f, 0.001f} },
+			{ "bunnyLSW200_Daniel30k", pmp::vec3{} }
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -1663,7 +1666,7 @@ int main()
 	{
 		const std::vector<std::string> importedMeshNames{
 			"armadillo_ResultOLD",
-			"rockerArm_ResultOLD"
+				"rockerArm_ResultOLD"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1686,44 +1689,44 @@ int main()
 	{
 		const std::vector<std::string> procedureNames{
 			"bunnyRepulsive",
-			"bunnyDanielLSW",
-			"bunnyLSWObstacle",
-			"bunnyLSWFullWrap"
+				"bunnyDanielLSW",
+				"bunnyLSWObstacle",
+				"bunnyLSWFullWrap"
 		};
 
 		const std::map<std::string, std::string> correspondingDataset{
 			{"bunnyRepulsive", dataOutPath + "bunny_RepulsiveObstacleEvol/frame"},
-			{"bunnyDanielLSW", dataOutPath + "bunnyPts_3_DanielEvol/ico02_bunnyPts_3_ply_df300__Evolution_time"},
-			{"bunnyLSWObstacle", dataOutPath + "bunnyPts_3_40kVertZeroSineTwoAdvect/bunnyPts_3_Evol_"},
-			{"bunnyLSWFullWrap", dataOutPath + "bunnyPts_3_40kVertFullWrap/bunnyPts_3_Evol_"}
+			{ "bunnyDanielLSW", dataOutPath + "bunnyPts_3_DanielEvol/ico02_bunnyPts_3_ply_df300__Evolution_time" },
+			{ "bunnyLSWObstacle", dataOutPath + "bunnyPts_3_40kVertZeroSineTwoAdvect/bunnyPts_3_Evol_" },
+			{ "bunnyLSWFullWrap", dataOutPath + "bunnyPts_3_40kVertFullWrap/bunnyPts_3_Evol_" }
 		};
 
 		const std::map<std::string, std::string> correspondingDatasetFormat{
 			{"bunnyRepulsive", ".obj"},
-			{"bunnyDanielLSW", ".vtk"},
-			{"bunnyLSWObstacle", ".vtk"},
-			{"bunnyLSWFullWrap", ".vtk"}
+			{ "bunnyDanielLSW", ".vtk" },
+			{ "bunnyLSWObstacle", ".vtk" },
+			{ "bunnyLSWFullWrap", ".vtk" }
 		};
 
 		const std::map<std::string, std::string> correspondingPtCloudNames{
 			{"bunnyRepulsive", "bunny_PtCloudRep"},
-			{"bunnyDanielLSW", "bunnyPts_3_Daniel"},
-			{"bunnyLSWObstacle", "bunnyPts_3"},
-			{"bunnyLSWFullWrap", "bunnyPts_3"}
+			{ "bunnyDanielLSW", "bunnyPts_3_Daniel" },
+			{ "bunnyLSWObstacle", "bunnyPts_3" },
+			{ "bunnyLSWFullWrap", "bunnyPts_3" }
 		};
 
 		const std::map<std::string, pmp::vec3> correspondingCorrectionTranslations{
 			{"bunnyRepulsive", pmp::vec3{}},
-			{"bunnyDanielLSW", pmp::vec3{0.001f, 0.001f, 0.001f}},
-			{"bunnyLSWObstacle", pmp::vec3{0.001f, 0.001f, 0.001f}},
-			{"bunnyLSWFullWrap", pmp::vec3{}}
+			{ "bunnyDanielLSW", pmp::vec3{0.001f, 0.001f, 0.001f} },
+			{ "bunnyLSWObstacle", pmp::vec3{0.001f, 0.001f, 0.001f} },
+			{ "bunnyLSWFullWrap", pmp::vec3{} }
 		};
 
 		const std::map<std::string, unsigned int> correspondingNSteps{
 			{"bunnyRepulsive", 220},
-			{"bunnyDanielLSW", 200},
-			{"bunnyLSWObstacle", 146},
-			{"bunnyLSWFullWrap", 146}
+			{ "bunnyDanielLSW", 200 },
+			{ "bunnyLSWObstacle", 146 },
+			{ "bunnyLSWFullWrap", 146 }
 		};
 		//const std::map<std::string, unsigned int> correspondingNSteps{
 		//	{"bunnyRepulsive", 5},
@@ -1763,9 +1766,9 @@ int main()
 			const float ptCloudCellSize = ptCloudMinSize / static_cast<float>(nVoxelsPerMinDimension);
 			const SDF::PointCloudDistanceFieldSettings ptCloudDfSettings{
 				ptCloudCellSize,
-				1.0f, // volExpansionFactor
-				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
-				SDF::BlurPostprocessingType::None
+					1.0f, // volExpansionFactor
+					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+					SDF::BlurPostprocessingType::None
 			};
 			const auto ptCloudDf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, ptCloudDfSettings);
 
@@ -1788,7 +1791,7 @@ int main()
 					}
 
 					std::cout << "step " << i << ": " << hDistOpt.value() << "\n";
-				}				
+				}
 			}
 			catch (...)
 			{
@@ -1801,10 +1804,10 @@ int main()
 	{
 		const std::vector<std::string> importedMeshNames{
 			"1Torus",
-			"2Torus",
-			"3Torus",
-			"4Torus",
-			"5Torus"
+				"2Torus",
+				"3Torus",
+				"4Torus",
+				"5Torus"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -1838,26 +1841,26 @@ int main()
 		const std::vector<std::string> importedPtCloudNames{
 			//"1TorusPts",
 			"2TorusPts",
-			//"3TorusPts",
-			//"4TorusPts",
-			//"5TorusPts"
+				//"3TorusPts",
+				//"4TorusPts",
+				//"5TorusPts"
 		};
 		const std::map<std::string, double> timeStepSizesForPtClouds{
 			{"1TorusPts", 0.05 },
-			{"2TorusPts", 0.05 },
-			{"3TorusPts", 0.05 },
-			{"4TorusPts", 0.05 },
-			{"5TorusPts", 0.05 }
+			{ "2TorusPts", 0.05 },
+			{ "3TorusPts", 0.05 },
+			{ "4TorusPts", 0.05 },
+			{ "5TorusPts", 0.05 }
 		};
 		const std::map<std::string, double> isoLevelOffsetFactors{
 			{"1TorusPts", 1.5 },
-			{"2TorusPts", 1.5 },
-			{"3TorusPts", 1.5 },
-			{"4TorusPts", 1.5 },
-			{"5TorusPts", 1.5 }
+			{ "2TorusPts", 1.5 },
+			{ "3TorusPts", 1.5 },
+			{ "4TorusPts", 1.5 },
+			{ "5TorusPts", 1.5 }
 		};
 
-		SetRemeshingAdjustmentTimeIndices({ 3, 10, 20/*, 50 , 100, 120, 140, 145*/});
+		SetRemeshingAdjustmentTimeIndices({ 3, 10, 20/*, 50 , 100, 120, 140, 145*/ });
 
 		constexpr unsigned int NTimeSteps = 65;
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -1880,10 +1883,10 @@ int main()
 			const float cellSize = minSize / nVoxelsPerMinDimension;
 			constexpr float volExpansionFactor = 1.0f;
 			const SDF::PointCloudDistanceFieldSettings dfSettings{
-						cellSize,
-						volExpansionFactor,
-						Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
-						SDF::BlurPostprocessingType::None
+				cellSize,
+					volExpansionFactor,
+					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+					SDF::BlurPostprocessingType::None
 			};
 
 			std::cout << "==================================================================\n";
@@ -1961,14 +1964,14 @@ int main()
 	if (performTriTriIntersectionTests)
 	{
 		const std::vector tri0Vertices{
-			pmp::vec3{0.0572398156f, - 0.0717622489f, - 1.03659534f},
-			pmp::vec3{0.198035538f, -0.0351596251f, -1.18061316f},
-			pmp::vec3{0.250069439f, -0.122829974f, -1.05019867f}
+			pmp::vec3{0.0572398156f, -0.0717622489f, -1.03659534f},
+				pmp::vec3{0.198035538f, -0.0351596251f, -1.18061316f},
+				pmp::vec3{0.250069439f, -0.122829974f, -1.05019867f}
 		};
 		const std::vector tri1Vertices{
 			pmp::vec3{0.0789409578f, -0.0649886578f, -1.11610115f},
-			pmp::vec3{0.211945787f, 0.000253308594f, -1.07397616f},
-			pmp::vec3{0.233549535f, -0.0453912392f, -1.20364273f}
+				pmp::vec3{0.211945787f, 0.000253308594f, -1.07397616f},
+				pmp::vec3{0.233549535f, -0.0453912392f, -1.20364273f}
 		};
 
 		if (Geometry::TriangleIntersectsTriangle(tri0Vertices, tri1Vertices))
@@ -1995,8 +1998,8 @@ int main()
 		const std::vector<std::string> importedMeshNames{
 			//"3holes",
 			"SelfIntersection2TorusTest_1",
-			"SelfIntersection2TorusTest_2",
-			"SelfIntersection2TorusTest_3"
+				"SelfIntersection2TorusTest_2",
+				"SelfIntersection2TorusTest_3"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -2037,26 +2040,26 @@ int main()
 	{
 		const std::vector<std::string> meshNames{
 			"drone",
-			//"engine",
-			//"trex"
+				//"engine",
+				//"trex"
 		};
 
 		//constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.02;
 		const std::map<std::string, double> timeStepSizesForMeshes{
 			{"drone", 0.02 },
-			{"engine", 0.02 },
-			{"trex", defaultTimeStep }
+			{ "engine", 0.02 },
+			{ "trex", defaultTimeStep }
 		};
 		const std::map<std::string, double> effectiveIsolevelsForMeshes{
 			{"drone", 18.0 },
-			{"engine", 20.0 },
-			{"trex", 200.0 }
+			{ "engine", 20.0 },
+			{ "trex", 200.0 }
 		};
 		const std::map<std::string, float> resamplingFactors{
 			{"drone", 2.0f },
-			{"engine", 4.0f },
-			{"trex", 0.3f }
+			{ "engine", 4.0f },
+			{ "trex", 0.3f }
 		};
 
 		for (const auto& name : meshNames)
@@ -2296,7 +2299,7 @@ int main()
 			remeshing.convex_hull_adaptive_remeshing({
 				2.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
 				3, 10, true
-			});
+				});
 			const auto [newLengthMin, newLengthMean, newLengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(convexHull);
 			std::cout << "Edge lengths stats: [" << lengthMin << ", " << lengthMean << ", " << lengthMax << "] -> [" << newLengthMin << ", " << newLengthMean << ", " << newLengthMax << "]\n";
 			convexHull.write(dataOutPath + ptCloudName + "_convexHullRemeshed.obj");
@@ -2306,31 +2309,31 @@ int main()
 	if (performConvexHullEvolverTests)
 	{
 		const std::vector<std::string> meshForPtCloudNames{
-		    //"armadillo",
+			//"armadillo",
 			//"blub",
 			"bunny",
-			//"maxPlanck",
-			//"nefertiti",
-			//"ogre",
-			//"spot"
+				//"maxPlanck",
+				//"nefertiti",
+				//"ogre",
+				//"spot"
 		};
 		const std::map<std::string, double> timeStepSizesForPtClouds{
 			{"armadillo", 0.05 },
-			{"blub", 0.05 },
-			{"bunny", 0.05 },
-			{"maxPlanck", 0.05 },
-			{"nefertiti", 0.05 },
-			{"ogre", 0.05 },
-			{"spot", 0.05 }
+			{ "blub", 0.05 },
+			{ "bunny", 0.05 },
+			{ "maxPlanck", 0.05 },
+			{ "nefertiti", 0.05 },
+			{ "ogre", 0.05 },
+			{ "spot", 0.05 }
 		};
 		const std::map<std::string, double> isoLevelOffsetFactors{
 			{"armadillo", 0.5 },
-			{"blub", 0.5 },
-			{"bunny", 0.5 },
-			{"maxPlanck", 0.5 },
-			{"nefertiti", 0.5 },
-			{"ogre", 0.5 },
-			{"spot", 0.5 }
+			{ "blub", 0.5 },
+			{ "bunny", 0.5 },
+			{ "maxPlanck", 0.5 },
+			{ "nefertiti", 0.5 },
+			{ "ogre", 0.5 },
+			{ "spot", 0.5 }
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2440,28 +2443,28 @@ int main()
 			//"armadillo",
 			//"blub",
 			"bunny",
-			//"maxPlanck",
-			//"nefertiti",
-			//"ogre",
-			//"spot"
+				//"maxPlanck",
+				//"nefertiti",
+				//"ogre",
+				//"spot"
 		};
 		const std::map<std::string, double> timeStepSizesForPtClouds{
 			{"armadillo", 0.05 },
-			{"blub", 0.05 },
-			{"bunny", 0.05 },
-			{"maxPlanck", 0.05 },
-			{"nefertiti", 0.05 },
-			{"ogre", 0.05 },
-			{"spot", 0.05 }
+			{ "blub", 0.05 },
+			{ "bunny", 0.05 },
+			{ "maxPlanck", 0.05 },
+			{ "nefertiti", 0.05 },
+			{ "ogre", 0.05 },
+			{ "spot", 0.05 }
 		};
 		const std::map<std::string, double> isoLevelOffsetFactors{
 			{"armadillo", 0.5 },
-			{"blub", 0.5 },
-			{"bunny", 1.5 },
-			{"maxPlanck", 0.5 },
-			{"nefertiti", 0.5 },
-			{"ogre", 0.5 },
-			{"spot", 0.5 }
+			{ "blub", 0.5 },
+			{ "bunny", 1.5 },
+			{ "maxPlanck", 0.5 },
+			{ "nefertiti", 0.5 },
+			{ "ogre", 0.5 },
+			{ "spot", 0.5 }
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2565,4 +2568,41 @@ int main()
 			}
 		}
 	} // endif performIcoSphereEvolverTests
+
+	if (performIncrementalMeshBuilderTests)
+	{
+		const std::vector<std::string> meshForPtCloudNames{
+			//"armadillo",
+			//"blub",
+			"bunny",
+			//"maxPlanck",
+			//"nefertiti",
+			//"ogre",
+			//"spot"
+		};
+
+		unsigned int lodIndex = 0;
+		constexpr size_t nUpdates = 5;
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+				const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
+				if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
+				{
+					std::cout << "Failed to export mesh data." << "\n";
+					return;
+				}
+				std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+				++lodIndex;
+			};
+
+			// Initialize the update handler with standard obj export
+			IMB::MeshUpdateHandler meshHandler(exportToOBJ);
+
+			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
+			meshBuilder.Init(dataDirPath + meshName + ".obj", nUpdates, IMB::ReconstructionFunctionType::BallPivoting, IMB::VertexSelectionType::UniformRandom);
+
+		}
+	} // endif performIncrementalMeshBuilderTests
 }
