@@ -1,4 +1,4 @@
-#include "IncrementalProgressTracker.h"
+#include "IncrementalProgressUtils.h"
 
 namespace IMB
 {

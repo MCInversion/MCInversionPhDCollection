@@ -5,6 +5,7 @@
 #include "utils/IFileMappingWrapper.h"
 
 #include "MeshUpdateHandler.h"
+#include "IncrementalProgressUtils.h"
 #include "PointCloudMeshingStrategies.h"
 #include "VertexSamplingStrategies.h"
 
@@ -72,6 +73,7 @@ namespace IMB
         std::unique_ptr<VertexSamplingStrategy> m_VertexSamplingStrategy{nullptr};      //>! vertex selection functionality.
 
         std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping; //>! file mapping wrapper.
+        std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
 
         MeshRenderFunction m_RenderCallback; //>! mesh render callback.
     };
