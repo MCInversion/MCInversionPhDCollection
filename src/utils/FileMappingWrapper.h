@@ -26,7 +26,7 @@ namespace Utils
 
         ~FileMappingWrapper() override;
 
-        [[nodiscard]] const void* GetFileMemory() const override;
+        [[nodiscard]] char* GetFileMemory() const override;
 
         [[nodiscard]] size_t GetFileSize() const override;
 

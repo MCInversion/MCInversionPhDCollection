@@ -6,8 +6,6 @@
 
 #include "MeshUpdateHandler.h"
 #include "IncrementalProgressUtils.h"
-#include "PointCloudMeshingStrategies.h"
-#include "VertexSamplingStrategies.h"
 
 namespace IMB
 {
@@ -63,15 +61,17 @@ namespace IMB
         /// \brief Samples vertices from the mesh using m_SelectVertices.
         void ProcessVertices(const std::optional<unsigned int>& seed = std::nullopt, const unsigned int& nThreads = 0);
 
+        void UpdateMesh(const std::vector<pmp::Point>& vertices, const std::vector<std::vector<unsigned int>>& polyIndices);
+
         //
         // ================================================================
         //
 
         Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
+        std::mutex m_MeshDataMutex;                 // Mutex for protecting m_MeshData
 
         std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping; //>! file mapping wrapper.
         std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
-
         MeshRenderFunction m_RenderCallback; //>! mesh render callback.
     };
 } // namespace IMB

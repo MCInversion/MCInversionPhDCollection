@@ -2,9 +2,9 @@
 
 #include "VertexSamplingStrategies.h"
 
-#include <random>
+#include "IncrementalProgressUtils.h"
 
-#include "IncrementalProgressTracker.h"
+#include <random>
 
 namespace
 {
@@ -52,8 +52,9 @@ namespace
 		}
 	}
 
-	void SampleVerticesFromIndices(const char* start, const char* end, const std::vector<size_t>& indices, std::vector<pmp::Point>& result, IMB::IncrementalProgressTracker& tracker)
+	void SampleVerticesFromIndices(const char* start, const char* end, const std::vector<size_t>& indices, const size_t& updateThreshold, std::vector<pmp::Point>& result, IMB::IncrementalProgressTracker& tracker)
 	{
+		size_t localVertexCount = 0;
 		const char* cursor = start + indices[0];
 		for (size_t i = 0; i < indices.size(); i++)
 		{
@@ -85,7 +86,14 @@ namespace
 				cursor = tempCursor;
 
 				result.push_back(vec);
-				tracker.Update(result.size());
+				localVertexCount++;
+
+				// Check if it's time to update the tracker
+				if (localVertexCount >= updateThreshold) 
+				{
+					tracker.Update(localVertexCount);
+					localVertexCount = 0; // Reset local count after update
+				}
 			}
 			else
 			{
@@ -94,6 +102,12 @@ namespace
 					cursor = start + indices[(i + 1) % indices.size()];
 			}
 		}
+
+		// Ensure any remaining vertices are accounted for
+		if (localVertexCount > 0)
+		{
+			tracker.Update(localVertexCount);
+		}
 	}
 }
 
@@ -101,6 +115,7 @@ namespace IMB
 {
 	void SequentialVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
+		size_t localVertexCount = 0;
 		const char* cursor = start;
 
 		while (cursor < end)
@@ -129,7 +144,14 @@ namespace IMB
 				cursor = tempCursor;
 
 				result.push_back(vec);
-				tracker.Update(result.size());
+				localVertexCount++;
+
+				// Check if it's time to update the tracker
+				if (localVertexCount >= m_UpdateThreshold)
+				{
+					tracker.Update(localVertexCount);
+					localVertexCount = 0; // Reset local count after update
+				}
 			}
 			else
 			{
@@ -138,20 +160,26 @@ namespace IMB
 					cursor++;
 			}
 		}
+
+		// Ensure any remaining vertices are accounted for
+		if (localVertexCount > 0) 
+		{
+			tracker.Update(localVertexCount);
+		}
 	}
 
 	void UniformRandomVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
 		SampleIndicesUniformly(start, end, indices, seed);
-		SampleVerticesFromIndices(start, end, indices, result, tracker);
+		SampleVerticesFromIndices(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void NormalRandomVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
 		SampleIndicesNormalRandomly(start, end, indices, seed);
-		SampleVerticesFromIndices(start, end, indices, result, tracker);
+		SampleVerticesFromIndices(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void SoftmaxFeatureDetectingVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)

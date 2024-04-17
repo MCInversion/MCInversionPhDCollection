@@ -16,9 +16,9 @@ namespace Utils
 	    if (m_FileHandle != INVALID_HANDLE_VALUE) CloseHandle(m_FileHandle);
 	}
 
-	const void* FileMappingWrapper::GetFileMemory() const
+	char* FileMappingWrapper::GetFileMemory() const
 	{
-	    return m_FileMemory;
+	    return static_cast<char*>(m_FileMemory);
 	}
 
 	size_t FileMappingWrapper::GetFileSize() const

@@ -4,10 +4,6 @@
 
 #include "utils/FileMappingWrapper.h"
 
-#include <iostream>
-
-constexpr unsigned int DEFAULT_MAX_VERTEX_CAPACITY = 1'000'000;
-
 // --------------------------------------------------------------------------------------------------------
 
 [[nodiscard]] std::unique_ptr<IMB::PointCloudMeshingStrategy> GetReconstructionStrategy(const IMB::ReconstructionFunctionType& reconstructType)
@@ -55,6 +51,63 @@ namespace IMB
 
 	void IncrementalMeshBuilder::ProcessVertices(const std::optional<unsigned int>& seed, const unsigned int& nThreads)
 	{
-		
+		// m_MeshData (Geometry::BaseMeshGeometryData) will be filled
+		const auto invokeDispatcherChunkProcess = [this](const char* start, const char* end, const std::optional<unsigned int>& seed)
+		{ m_Dispatcher->ProcessChunk(start, end, seed);	};
+		m_Dispatcher->SetProgressCallback([this](const std::vector<pmp::Point>& vertices, const std::vector<std::vector<unsigned int>>& polyIndices)
+			{ UpdateMesh(vertices, polyIndices); });
+
+		// initiate threads
+		const size_t nAvailableThreads = std::thread::hardware_concurrency() - 1;
+		const size_t threadCount = nThreads == 0 ? 1 : (nThreads >= nAvailableThreads ? nAvailableThreads : nThreads);
+		const size_t chunkSize = m_FileMapping->GetFileSize() / threadCount;
+		std::vector<std::thread> threads(threadCount);
+		std::vector<std::vector<pmp::Point>> threadResults(threadCount);
+
+		char* fileStart = m_FileMapping->GetFileMemory();
+		char* fileEnd = fileStart + m_FileMapping->GetFileSize();
+		for (size_t i = 0; i < threadCount; ++i)
+		{
+			char* chunkStart = fileStart + (i * chunkSize);
+			char* chunkEnd = (i == threadCount - 1) ? fileEnd : chunkStart + chunkSize;
+
+			// Adjust chunk_end to point to the end of a line
+			while (*chunkEnd != '\n' && chunkEnd < fileEnd) {
+				chunkEnd++;
+			}
+			if (chunkEnd != fileEnd) {
+				chunkEnd++;  // move past the newline character
+			}
+
+			// Start a thread to process this chunk
+			threads[i] = std::thread(invokeDispatcherChunkProcess, chunkStart, chunkEnd, std::ref(threadResults[i]));
+		}
+
+		// Wait for all threads to finish
+		for (auto& t : threads) {
+			t.join();
+		}
+
+		// Combine results from all threads
+		std::vector<pmp::Point> combinedVertices;
+		std::vector<std::vector<unsigned int>> combinedPolyIndices;
+		for (const auto& result : threadResults) {
+			combinedVertices.insert(combinedVertices.end(), result.begin(), result.end());
+		}
+
+		// Locking not necessary here if this section is single-threaded after joining
+		UpdateMesh(combinedVertices, combinedPolyIndices);  // This now calls the mesh strategy internally
+	}
+
+	void IncrementalMeshBuilder::UpdateMesh(const std::vector<pmp::Point>& vertices, const std::vector<std::vector<unsigned int>>& polyIndices)
+	{
+		std::lock_guard lock(m_MeshDataMutex);
+		m_MeshData.Vertices.insert(m_MeshData.Vertices.end(), vertices.begin(), vertices.end());
+		m_MeshData.PolyIndices.insert(m_MeshData.PolyIndices.end(), polyIndices.begin(), polyIndices.end());
+
+		// Now invoke meshing strategy
+		m_Dispatcher->ProcessMeshUpdate();
+
+		m_RenderCallback(m_MeshData);
 	}
 } // namespace IMB
