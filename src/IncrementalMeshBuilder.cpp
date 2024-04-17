@@ -42,15 +42,15 @@ namespace IMB
 		const ReconstructionFunctionType& reconstructType, 
 		const VertexSelectionType& vertSelType)
 	{
-		m_PtCloudMeshingStrategy = std::move(GetReconstructionStrategy(reconstructType));
-		m_VertexSamplingStrategy = std::move(GetVertexSelectionStrategy(vertSelType));
+		auto ptCloudMeshingStrategy = std::move(GetReconstructionStrategy(reconstructType));
+		auto vertexSamplingStrategy = std::move(GetVertexSelectionStrategy(vertSelType));
 
 		m_FileMapping = std::make_unique<Utils::FileMappingWrapper>(fileName);
 		const auto fileSize = m_FileMapping->GetFileSize();
 		const auto nExpectedVertices = fileSize / 3;
 
 		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(
-			nExpectedVertices, completionFrequency, std::move(m_VertexSamplingStrategy), std::move(m_PtCloudMeshingStrategy));
+			nExpectedVertices, completionFrequency, std::move(vertexSamplingStrategy), std::move(ptCloudMeshingStrategy));
 	}
 
 	void IncrementalMeshBuilder::ProcessVertices(const std::optional<unsigned int>& seed, const unsigned int& nThreads)

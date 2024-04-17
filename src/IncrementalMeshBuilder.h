@@ -69,9 +69,6 @@ namespace IMB
 
         Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
 
-        std::unique_ptr<PointCloudMeshingStrategy> m_PtCloudMeshingStrategy{nullptr};   //>! mesh reconstruction functionality.
-        std::unique_ptr<VertexSamplingStrategy> m_VertexSamplingStrategy{nullptr};      //>! vertex selection functionality.
-
         std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping; //>! file mapping wrapper.
         std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
 
