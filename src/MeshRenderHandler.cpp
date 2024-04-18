@@ -1,10 +1,10 @@
-#include "MeshUpdateHandler.h"
+#include "MeshRenderHandler.h"
 
 #include "IncrementalMeshBuilder.h"
 
 using namespace IMB;
 
-MeshUpdateHandler::MeshUpdateHandler(const MeshRenderFunction& renderFunc)
+MeshRenderHandler::MeshRenderHandler(const MeshRenderFunction& renderFunc)
 {
     auto& meshBuilder = IncrementalMeshBuilder::GetInstance();
     meshBuilder.SetRenderCallback(renderFunc);

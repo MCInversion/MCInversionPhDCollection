@@ -2,54 +2,82 @@
 
 namespace IMB
 {
+	IncrementalMeshBuilderDispatcher::~IncrementalMeshBuilderDispatcher()
+	{
+		m_UpdateQueue.Shutdown();
+		if (m_UpdateThread.joinable())
+		{
+			m_UpdateThread.join();
+		}
+	}
+
 	void IncrementalMeshBuilderDispatcher::ProcessChunk(const char* start, const char* end, const std::optional<unsigned int>& seed)
 	{
 		std::vector<pmp::Point> localResults;
 		m_VertexSamplingStrategy->Sample(start, end, localResults, seed, m_ProgressTracker);
-
-		// Locking to safely update shared resources
-		{
-			std::lock_guard lock(m_UpdateMutex);
-			m_ThreadResult.insert(m_ThreadResult.end(), localResults.begin(), localResults.end());
-		}
-
-		// Check if it's time to update the mesh
-		if (m_ProgressTracker.ShouldTriggerUpdate()) 
-		{
-			ProcessMeshUpdate();
-		}
 	}
 
-	void IncrementalMeshBuilderDispatcher::ProcessMeshUpdate()
+	void IncrementalMeshBuilderDispatcher::ProcessMeshUpdate(const std::vector<pmp::Point>& data)
 	{
-		std::vector<std::vector<unsigned int>> resultVertexIds;
-		m_MeshingStrategy->Process(m_ThreadResult, resultVertexIds);
+		// Process mesh update with isolated data
+		m_MeshUpdateCallback(data);
+		m_ThreadResult.clear();
+	}
 
-		m_ProgressCallback(m_ThreadResult, resultVertexIds);
+	void IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate()
+	{
+		auto dataCopy = m_ThreadResult;  // Copy data for the task
+		m_UpdateQueue.Enqueue([this, &dataCopy]() { this->ProcessMeshUpdate(dataCopy); });
 	}
 
 	void IncrementalProgressTracker::Update(const size_t& nLocalVerts)
 	{
 		// increment a shared value for the amount of processed vertices
 		auto currentCount = m_ProcessedVertices.fetch_add(nLocalVerts, std::memory_order_relaxed);
-		if (!ShouldTriggerUpdate())
+		if (!ShouldTriggerUpdate(currentCount))
 			return;
-
 		m_DispatcherCallback();
 	}
 
 	constexpr unsigned int DEFAULT_MAX_VERTEX_CAPACITY = 1'000'000;
 
-	bool IncrementalProgressTracker::ShouldTriggerUpdate() const
+	bool IncrementalProgressTracker::ShouldTriggerUpdate(const size_t& currentCount) const
 	{
-		const size_t count = m_ProcessedVertices.load(std::memory_order_relaxed);
+		return (currentCount >= m_nTotalExpectedVertices * m_CompletionFrequency) ||
+			(currentCount >= DEFAULT_MAX_VERTEX_CAPACITY);
+	}
 
-		if (count >= DEFAULT_MAX_VERTEX_CAPACITY)
-			return true; // exceeding max mesh memory capacity
+	void MeshUpdateQueue::Enqueue(const std::function<void()>& task)
+	{
+		{ // ensure that the lock is held only for the duration of the operations that need synchronization
+			std::lock_guard<std::mutex> lock(m_QueueMutex);
+			m_Tasks.push(task);
+		}
+		m_Condition.notify_one();
+	}
 
-		if (static_cast<double>(count) < (static_cast<double>(m_nTotalExpectedVertices) / 100.0) * m_CompletionFrequency)
-			return false;
+	void MeshUpdateQueue::ProcessTasks()
+	{
+		while (!m_ShutDown) 
+		{
+			std::function<void()> task;
+			{ // ensure that the lock is held only for the duration of the operations that need synchronization
+				std::unique_lock<std::mutex> lock(m_QueueMutex);
+				m_Condition.wait(lock, [this] { return !m_Tasks.empty() || m_ShutDown; });
+				if (m_ShutDown) break;
+				task = std::move(m_Tasks.front());
+				m_Tasks.pop();
+			}
+			task();
+		}
+	}
 
-		return true;
+	void MeshUpdateQueue::Shutdown()
+	{
+		{ // ensure that the lock is held only for the duration of the operations that need synchronization
+			std::lock_guard<std::mutex> lock(m_QueueMutex);
+			m_ShutDown = true;
+		}
+		m_Condition.notify_all();
 	}
 }

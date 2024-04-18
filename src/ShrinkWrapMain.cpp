@@ -2597,8 +2597,8 @@ int main()
 				++lodIndex;
 			};
 
-			// Initialize the update handler with standard obj export
-			IMB::MeshUpdateHandler meshHandler(exportToOBJ);
+			// Initialize the render handler with standard obj export
+			IMB::MeshRenderHandler meshHandler(exportToOBJ);
 
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 			meshBuilder.Init(dataDirPath + meshName + ".obj", nUpdates, IMB::ReconstructionFunctionType::BallPivoting, IMB::VertexSelectionType::UniformRandom);

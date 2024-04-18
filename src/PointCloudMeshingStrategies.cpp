@@ -6,27 +6,39 @@
 
 namespace IMB
 {
-	void BallPivotingMeshingStrategy::Process(const std::vector<pmp::Point>& points, std::vector<std::vector<unsigned int>>& result)
+	void PointCloudMeshingStrategy::Process(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "BallPivotingMeshingStrategy: Not implemented!\n";
-		std::cerr << "BallPivotingMeshingStrategy: attempting to triangulate a mesh with " << points.size() << " vertices.\n";
+		if (ioPoints.empty())
+		{
+			std::cerr << "PointCloudMeshingStrategy::Process: No points to triangulate.\n";
+			return;
+		}
+		// TODO: this is the right place for the new dynamic mesh data structure which will be the novel research contribution of this project.
+		resultPolyIds.clear(); // there is a pre-existing triangulation from previous steps, so clear it
+		ProcessImpl(ioPoints, resultPolyIds);
 	}
 
-	void PoissonMeshingStrategy::Process(const std::vector<pmp::Point>& points, std::vector<std::vector<unsigned int>>& result)
+	void BallPivotingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "PoissonMeshingStrategy: Not implemented!\n";
-		std::cerr << "PoissonMeshingStrategy: attempting to triangulate a mesh with " << points.size() << " vertices.\n";
+		std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: Not implemented!\n";
+		std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 	}
 
-	void MarchingCubesMeshingStrategy::Process(const std::vector<pmp::Point>& points, std::vector<std::vector<unsigned int>>& result)
+	void PoissonMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "MarchingCubesMeshingStrategy: Not implemented!\n";
-		std::cerr << "MarchingCubesMeshingStrategy: attempting to triangulate a mesh with " << points.size() << " vertices.\n";
+		std::cerr << "PoissonMeshingStrategy::ProcessImpl: Not implemented!\n";
+		std::cerr << "PoissonMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 	}
 
-	void LagrangianShrinkWrappingMeshingStrategy::Process(const std::vector<pmp::Point>& points, std::vector<std::vector<unsigned int>>& result)
+	void MarchingCubesMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "LagrangianShrinkWrappingMeshingStrategy: Not implemented!\n";
-		std::cerr << "LagrangianShrinkWrappingMeshingStrategy: attempting to triangulate a mesh with " << points.size() << " vertices.\n";
+		std::cerr << "MarchingCubesMeshingStrategy::ProcessImpl: Not implemented!\n";
+		std::cerr << "MarchingCubesMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
+	}
+
+	void LagrangianShrinkWrappingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
+	{
+		std::cerr << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: Not implemented!\n";
+		std::cerr << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 	}
 } // namespace IMB

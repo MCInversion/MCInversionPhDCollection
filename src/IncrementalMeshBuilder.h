@@ -4,7 +4,7 @@
 
 #include "utils/IFileMappingWrapper.h"
 
-#include "MeshUpdateHandler.h"
+#include "MeshRenderHandler.h"
 #include "IncrementalProgressUtils.h"
 
 namespace IMB
@@ -43,12 +43,19 @@ namespace IMB
         IncrementalMeshBuilder(const IncrementalMeshBuilder&) = delete;
         IncrementalMeshBuilder& operator=(const IncrementalMeshBuilder&) = delete;
 
+        /// ==================================================================
+        /// \brief Initializes the mesh builder with the given parameters.
+        /// \param fileName the file name of the mesh to be loaded.
+        /// \param completionFrequency the frequency of mesh completion.
+        /// \param reconstructType the type of mesh reconstruction function.
+        /// \param vertSelType the type of vertex selection function.
+        /// 
+        /// ==================================================================
         void Init(const std::string& fileName, const unsigned int& completionFrequency, 
             const ReconstructionFunctionType& reconstructType = ReconstructionFunctionType::BallPivoting, 
             const VertexSelectionType& vertSelType = VertexSelectionType::UniformRandom);
 
-        //void UpdateMesh();
-
+        /// \brief A render callback setter.
         void SetRenderCallback(const MeshRenderFunction& renderCallback) 
         {
             m_RenderCallback = renderCallback; 
@@ -61,14 +68,19 @@ namespace IMB
         /// \brief Samples vertices from the mesh using m_SelectVertices.
         void ProcessVertices(const std::optional<unsigned int>& seed = std::nullopt, const unsigned int& nThreads = 0);
 
-        void UpdateMesh(const std::vector<pmp::Point>& vertices, const std::vector<std::vector<unsigned int>>& polyIndices);
+        /// \brief Reconstructs the mesh using m_MeshingStrategy.
+        void UpdateMesh(const std::vector<pmp::Point>& vertices);
+
+        /// \brief Invoke destructor of all owned objects including the file mapping.
+        void Terminate();
 
         //
         // ================================================================
         //
 
         Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
-        std::mutex m_MeshDataMutex;                 // Mutex for protecting m_MeshData
+        std::mutex m_MeshDataMutex;                //>! Mutex for protecting m_MeshData
+        std::unique_ptr<PointCloudMeshingStrategy> m_MeshingStrategy{ nullptr }; //>! a strategy to convert point cloud to mesh.
 
         std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping; //>! file mapping wrapper.
         std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.

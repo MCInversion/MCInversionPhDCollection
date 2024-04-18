@@ -38,7 +38,7 @@ namespace IMB
 		const ReconstructionFunctionType& reconstructType, 
 		const VertexSelectionType& vertSelType)
 	{
-		auto ptCloudMeshingStrategy = std::move(GetReconstructionStrategy(reconstructType));
+		m_MeshingStrategy = std::move(GetReconstructionStrategy(reconstructType));
 		auto vertexSamplingStrategy = std::move(GetVertexSelectionStrategy(vertSelType));
 
 		m_FileMapping = std::make_unique<Utils::FileMappingWrapper>(fileName);
@@ -46,7 +46,7 @@ namespace IMB
 		const auto nExpectedVertices = fileSize / 3;
 
 		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(
-			nExpectedVertices, completionFrequency, std::move(vertexSamplingStrategy), std::move(ptCloudMeshingStrategy));
+			nExpectedVertices, completionFrequency, std::move(vertexSamplingStrategy));
 	}
 
 	void IncrementalMeshBuilder::ProcessVertices(const std::optional<unsigned int>& seed, const unsigned int& nThreads)
@@ -54,8 +54,8 @@ namespace IMB
 		// m_MeshData (Geometry::BaseMeshGeometryData) will be filled
 		const auto invokeDispatcherChunkProcess = [this](const char* start, const char* end, const std::optional<unsigned int>& seed)
 		{ m_Dispatcher->ProcessChunk(start, end, seed);	};
-		m_Dispatcher->SetProgressCallback([this](const std::vector<pmp::Point>& vertices, const std::vector<std::vector<unsigned int>>& polyIndices)
-			{ UpdateMesh(vertices, polyIndices); });
+		m_Dispatcher->SetMeshUpdateCallback([this](const std::vector<pmp::Point>& vertices)
+			{ UpdateMesh(vertices); });
 
 		// initiate threads
 		const size_t nAvailableThreads = std::thread::hardware_concurrency() - 1;
@@ -96,18 +96,34 @@ namespace IMB
 		}
 
 		// Locking not necessary here if this section is single-threaded after joining
-		UpdateMesh(combinedVertices, combinedPolyIndices);  // This now calls the mesh strategy internally
+		UpdateMesh(combinedVertices);  // This now calls the mesh strategy internally
+
+		// Terminate all owned objects
+		Terminate();
 	}
 
-	void IncrementalMeshBuilder::UpdateMesh(const std::vector<pmp::Point>& vertices, const std::vector<std::vector<unsigned int>>& polyIndices)
+	void IncrementalMeshBuilder::UpdateMesh(const std::vector<pmp::Point>& vertices)
 	{
 		std::lock_guard lock(m_MeshDataMutex);
 		m_MeshData.Vertices.insert(m_MeshData.Vertices.end(), vertices.begin(), vertices.end());
-		m_MeshData.PolyIndices.insert(m_MeshData.PolyIndices.end(), polyIndices.begin(), polyIndices.end());
 
-		// Now invoke meshing strategy
-		m_Dispatcher->ProcessMeshUpdate();
-
-		m_RenderCallback(m_MeshData);
+		if (m_MeshingStrategy) 
+		{
+			// computing m_MeshData.PolyIndices, and for some strategies also modifying m_MeshData.Vertices!
+			m_MeshingStrategy->Process(m_MeshData.Vertices, m_MeshData.PolyIndices);
+		}
+		if (m_RenderCallback) 
+		{
+			m_RenderCallback(m_MeshData);
+		}
 	}
+
+	void IncrementalMeshBuilder::Terminate()
+	{
+		// Invoke destructor of all owned objects
+		m_Dispatcher.reset();
+		m_MeshingStrategy.reset();
+		m_FileMapping.reset();
+	}
+
 } // namespace IMB
