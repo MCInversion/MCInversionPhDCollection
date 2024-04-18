@@ -61,12 +61,16 @@ namespace IMB
             m_RenderCallback = renderCallback; 
         }
 
+        /// ==================================================================
+        /// \brief Samples vertices from the mesh using m_Dispatcher->m_VertexSamplingStrategy.
+        /// \param[in] seed       the seed value for the vertex sampler.
+        /// \param[in] nThreads   the preference for the amount of threads used. 0: means one thread will be used, >= nAvailableThreads: means nAvailableThreads will be used.
+        /// ================================================================== 
+        void DispatchAndSyncWorkers(const std::optional<unsigned int>& seed = std::nullopt, const unsigned int& nThreads = 0);
+
     private:
         /// \brief default constructor.
         IncrementalMeshBuilder() = default;
-
-        /// \brief Samples vertices from the mesh using m_SelectVertices.
-        void ProcessVertices(const std::optional<unsigned int>& seed = std::nullopt, const unsigned int& nThreads = 0);
 
         /// \brief Reconstructs the mesh using m_MeshingStrategy.
         void UpdateMesh(const std::vector<pmp::Point>& vertices);

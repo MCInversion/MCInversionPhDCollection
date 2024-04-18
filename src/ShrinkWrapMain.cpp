@@ -2602,7 +2602,9 @@ int main()
 
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 			meshBuilder.Init(dataDirPath + meshName + ".obj", nUpdates, IMB::ReconstructionFunctionType::BallPivoting, IMB::VertexSelectionType::UniformRandom);
-
+			const unsigned int seed = 4999;
+			const unsigned int nThreads = 0;
+			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests
 }
