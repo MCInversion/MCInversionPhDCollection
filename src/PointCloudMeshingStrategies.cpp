@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "geometry/GeometryConversionUtils.h"
+
 namespace IMB
 {
 	void PointCloudMeshingStrategy::Process(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
@@ -18,8 +20,15 @@ namespace IMB
 
 	void BallPivotingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: Not implemented!\n";
-		std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
+		std::cout << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
+		const auto meshDataOpt = Geometry::ComputeBallPivotingMeshFromPoints(ioPoints, 1.0f);
+		if (!meshDataOpt.has_value())
+		{
+			std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: Internal algorithm error!\n";
+			return;
+		}
+		const auto& meshData = meshDataOpt.value();
+		resultPolyIds = meshData.PolyIndices;
 	}
 
 	void PoissonMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)

@@ -455,6 +455,22 @@ namespace Geometry
 		return { sqrt(lengthSqMin), lengthSqMean, sqrt(lengthSqMax) };
 	}
 
+	size_t CountUnreferencedVertices(const BaseMeshGeometryData& data)
+	{
+		if (data.Vertices.empty())
+			return 0;
+		std::vector visited(data.Vertices.size(), false);
+		for (const auto& polyIds : data.PolyIndices)
+		{
+			for (const auto& vId : polyIds)
+			{
+				visited[vId] = true;
+			}
+		}
+		const size_t nVertsTotal = data.Vertices.size();
+		return nVertsTotal - std::ranges::count_if(visited, [](const auto& vis) { return vis; });
+	}
+
 	constexpr unsigned int DEFAULT_N_VOXELS_PER_MIN_DIMENSION = 40;
 
 	std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>> ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins)

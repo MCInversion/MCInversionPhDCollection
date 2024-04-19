@@ -82,7 +82,8 @@ constexpr bool performConvexHullTests = false;
 constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
-constexpr bool performIncrementalMeshBuilderTests = true;
+constexpr bool performBPATest = true;
+constexpr bool performIncrementalMeshBuilderTests = false;
 
 int main()
 {
@@ -1062,7 +1063,7 @@ int main()
 		ExportToVTI(dataOutPath + "MetaBallVals", grid);
 
 		/*constexpr double isoLevel = 0.1;
-		const auto mcMesh = GetMarchingCubesMesh<double>(
+		const auto mcMesh = MarchingCubes::GetMarchingCubesMesh<double>(
 			grid.Values().data(),
 			grid.Dimensions().Nx, grid.Dimensions().Ny, grid.Dimensions().Nz,
 			isoLevel);
@@ -2569,6 +2570,89 @@ int main()
 		}
 	} // endif performIcoSphereEvolverTests
 
+	if (performBPATest)
+	{
+		const std::vector<std::string> meshForPtCloudNames{
+			"armadillo",
+			"blub",
+			"bunny",
+			"maxPlanck",
+			"nefertiti",
+			"ogre",
+			"spot"
+		};
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+		constexpr float radiusPercentageOfMinDim = 0.05f;
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << meshName << ".obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			// Export sampled vertices to PLY
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+
+			const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float bpaRadius = radiusPercentageOfMinDim * minSize;
+			std::cout << "BPA radius: " << bpaRadius << " units, i.e.: " << radiusPercentageOfMinDim * 100 << " % of min dim.\n";
+
+			const auto bpaMeshOpt = Geometry::ComputeBallPivotingMeshFromPoints(ptCloud, bpaRadius);
+			if (!bpaMeshOpt.has_value())
+			{
+				std::cerr << "bpaMeshOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& bpaMesh = bpaMeshOpt.value();
+
+			const auto nUnvisitedVerts = CountUnreferencedVertices(bpaMesh);
+			std::cout << "We detected " << nUnvisitedVerts << "/" << bpaMesh.Vertices.size() << " unvisited vertices!\n";
+
+			if (!Geometry::ExportBaseMeshGeometryDataToOBJ(bpaMesh, dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + "BPAResult.obj"))
+			{
+				std::cerr << "ExportBaseMeshGeometryDataToOBJ failed!\n";
+				break;
+			}
+		}
+		
+	} // endif performBPATest
+
 	if (performIncrementalMeshBuilderTests)
 	{
 		const std::vector<std::string> meshForPtCloudNames{
@@ -2585,9 +2669,19 @@ int main()
 		{
 			unsigned int lodIndex = 0;
 			constexpr size_t nUpdates = 5;
-			const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-				const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
-				if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
+			//const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+			//	const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
+			//	if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
+			//	{
+			//		std::cout << "Failed to export mesh data." << "\n";
+			//		return;
+			//	}
+			//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+			//	++lodIndex;
+			//};
+			const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+				const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
+				if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
 				{
 					std::cout << "Failed to export mesh data." << "\n";
 					return;
@@ -2598,10 +2692,10 @@ int main()
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 			meshBuilder.Init(
 				dataDirPath + meshName + ".obj", 
-				1.0 / nUpdates, 
+				1.0 / static_cast<double>(nUpdates), 
 				IMB::ReconstructionFunctionType::BallPivoting, 
 				IMB::VertexSelectionType::UniformRandom,
-				exportToOBJ);
+				exportPtsToPLY);
 			constexpr unsigned int seed = 4999;
 			constexpr unsigned int nThreads = 0;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);

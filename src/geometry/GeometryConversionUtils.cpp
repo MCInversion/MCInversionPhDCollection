@@ -8,8 +8,12 @@
 #include <thread>
 #include <unordered_set>
 
-#include "quickhull/QuickHull.hpp"
+#include <vcg/complex/complex.h>
+#include <vcg/complex/algorithms/update/bounding.h>
+#include <vcg/complex/algorithms/create/ball_pivoting.h>
+
 #include "pmp/algorithms/Normals.h"
+#include "quickhull/QuickHull.hpp"
 
 #ifdef _WINDOWS
 // Windows-specific headers
@@ -20,10 +24,61 @@
 #error "Unsupported platform"
 #endif
 
-// TODO: different representations, e.g.: ProgressiveMeshData which would then be exported into a disk file
+
+// VCG mesh types
+class VCG_Vertex; class VCG_Edge; class VCG_Face;
+struct VCG_UsedTypes : public vcg::UsedTypes<vcg::Use<VCG_Vertex>   ::AsVertexType,
+	vcg::Use<VCG_Edge>     ::AsEdgeType,
+	vcg::Use<VCG_Face>     ::AsFaceType> {};
+
+class VCG_Vertex : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::Normal3f, vcg::vertex::BitFlags  > {};
+class VCG_Face : public vcg::Face<   VCG_UsedTypes, vcg::face::FFAdj, vcg::face::VertexRef, vcg::face::BitFlags > {};
+class VCG_Edge : public vcg::Edge<   VCG_UsedTypes> {};
+
+class VCG_Mesh : public vcg::tri::TriMesh< std::vector<VCG_Vertex>, std::vector<VCG_Face>, std::vector<VCG_Edge>  > {};
+
+class MyVertex0 : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::BitFlags  > {};
+class MyVertex1 : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::Normal3f, vcg::vertex::BitFlags  > {};
+class MyVertex2 : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::Color4b, vcg::vertex::CurvatureDirf,
+	vcg::vertex::Qualityf, vcg::vertex::Normal3f, vcg::vertex::BitFlags  > {};
+
 
 namespace
 {
+	void FillVCGMeshWithPoints(const std::vector<pmp::Point>& points, VCG_Mesh& vcgMesh)
+	{
+		vcgMesh.Clear();  // Clear existing mesh data
+
+		// Add vertices to the VCG_Mesh
+		for (const auto& point : points) {
+			VCG_Vertex v;
+			v.P() = vcg::Point3f(point[0], point[1], point[2]);  // Set the vertex coordinates
+			vcgMesh.vert.push_back(v);  // Add the vertex to the mesh
+		}
+		vcgMesh.vn = vcgMesh.vert.size();  // Update the vertex count
+		vcg::tri::UpdateBounding<VCG_Mesh>::Box(vcgMesh);
+	}
+
+	[[nodiscard]] std::vector<std::vector<unsigned int>> ExtractVertexIndicesFromVCGMesh(const VCG_Mesh& vcgMesh)
+	{
+		std::vector<std::vector<unsigned int>> indices;
+		indices.reserve(vcgMesh.face.size());
+		for (const auto& f : vcgMesh.face) {
+			std::vector<unsigned int> faceIndices;
+			faceIndices.reserve(f.VN()); // Assuming VN() is the number of vertices per face, typically 3 for a triangular mesh
+
+			for (int i = 0; i < f.VN(); ++i) {
+				if (f.cV(i)) { // Check if the vertex pointer is not null
+					faceIndices.push_back(vcg::tri::Index(vcgMesh, f.cV(i))); // Get the index of the vertex in the mesh
+				}
+			}
+			indices.push_back(faceIndices);
+		}
+		return indices;
+	}
+
+
+	// TODO: different representations, e.g.: ProgressiveMeshData which would then be exported into a disk file
 	/**
 	 * \brief a thread-specific wrapper for mesh data.
 	 */
@@ -336,7 +391,7 @@ namespace Geometry
 		return result;
 	}
 
-	pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MC_Mesh& mcMesh)
+	pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MarchingCubes::MC_Mesh& mcMesh)
 	{
 		pmp::SurfaceMesh result;
 
@@ -776,6 +831,51 @@ namespace Geometry
 		return true;
 	}
 
+	bool ExportPointsToPLY(const BaseMeshGeometryData& meshData, const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "ply")
+		{
+			std::cerr << absFileName << " has invalid extension!" << std::endl;
+			return false;
+		}
+
+		std::ofstream file(absFileName);
+		if (!file.is_open())
+		{
+			std::cerr << "Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Write to a .ply file
+		std::ofstream outFile(absFileName);
+		if (!outFile.is_open())
+		{
+			std::cerr << "Unable to open file: " << absFileName << std::endl;
+			return false;
+		}
+
+		const unsigned int nVerts = meshData.Vertices.size();
+
+		// PLY header
+		outFile << "ply\n";
+		outFile << "format ascii 1.0\n";
+		outFile << "element vertex " << nVerts << "\n";
+		outFile << "property float x\n";
+		outFile << "property float y\n";
+		outFile << "property float z\n";
+		outFile << "end_header\n";
+
+		// Write sampled vertices
+		for (const auto& vertex : meshData.Vertices)
+		{
+			outFile << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+		}
+
+		outFile.close();
+		return true;
+	}
+
 	bool ExportPolylinesToOBJ(const std::vector<std::vector<pmp::vec3>>& polylines, const std::string& absFileName)
 	{
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
@@ -951,6 +1051,36 @@ namespace Geometry
 		}
 
 		return { center, radius };
+	}
+
+	std::optional<BaseMeshGeometryData> ComputeBallPivotingMeshFromPoints(const std::vector<pmp::Point>& points, const pmp::Scalar& ballRadius, const pmp::Scalar& clusteringPercentageOfBallRadius, const pmp::Scalar& angleThreshold)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::ComputeBallPivotingMeshFromPoints: No points to triangulate.\n";
+			return {};
+		}
+		if (ballRadius < FLT_EPSILON)
+		{
+			std::cerr << "Geometry::ComputeBallPivotingMeshFromPoints: Invalid radius value: " << ballRadius << ".\n";
+			return {};
+		}
+
+		// prepare data
+		BaseMeshGeometryData resultData;
+		resultData.Vertices = points;
+
+		const auto clustering = clusteringPercentageOfBallRadius / 100.0f;
+		const auto angleRad = angleThreshold / 180.0f * M_PI;
+
+		VCG_Mesh ptsMesh;
+		FillVCGMeshWithPoints(points, ptsMesh);
+		vcg::tri::BallPivoting bpa(ptsMesh, ballRadius, clustering, angleRad);
+		bpa.BuildMesh();
+
+		resultData.PolyIndices = ExtractVertexIndicesFromVCGMesh(ptsMesh);
+
+		return resultData;
 	}
 
 } // namespace Geometry

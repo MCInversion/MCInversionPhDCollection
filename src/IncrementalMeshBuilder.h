@@ -63,7 +63,9 @@ namespace IMB
         // ================================================================
         //
 
-        bool m_IsWorking{ false }; //>! a safety status flag to avoid re-dispatching threads before they're finished.
+        std::atomic<bool> m_IsWorking{ false }; //>! a safety status flag to avoid re-dispatching threads before they're finished.
+
+        bool m_IsInitialized{ false }; //>! initialization flag. Need to call Init if false.
 
         Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
         std::mutex m_MeshDataMutex;                //>! Mutex for protecting m_MeshData

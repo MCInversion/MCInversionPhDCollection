@@ -23,12 +23,21 @@ namespace IMB
 		const auto fileSize = m_FileMapping->GetFileSize();
 		const auto nExpectedVertices = fileSize / 3;
 		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(nExpectedVertices, completionFrequency, vertSelType);
+		m_IsInitialized = true;
 	}
 
 	void IncrementalMeshBuilder::DispatchAndSyncWorkers(const std::optional<unsigned int>& seed, const unsigned int& nThreads)
 	{
-		if (m_IsWorking)
+		if (!m_IsInitialized)
+		{
+			std::cerr << "IncrementalMeshBuilder::DispatchAndSyncWorkers: This service needs initialization! Use IncrementalMeshBuilder::Init to initialize! Terminating.\n";
 			return;
+		}
+		if (m_IsWorking.exchange(true)) 
+		{
+			std::cerr << "IncrementalMeshBuilder::DispatchAndSyncWorkers: Processing is already underway.\n";
+			return;
+		}
 
 		m_IsWorking = true;
 
@@ -39,7 +48,7 @@ namespace IMB
 				m_Dispatcher->ProcessChunk(start, end, seed);
 			}
 			catch (const std::exception& e) {
-				std::cerr << "Error processing chunk: [" << std::stoi(start) << ", " << std::stoi(end) << "]: " << e.what() << '\n';
+				std::cerr << "IncrementalMeshBuilder::DispatchAndSyncWorkers: Error processing chunk: [" << std::stoi(start) << ", " << std::stoi(end) << "]: " << e.what() << '\n';
 				throw;  // Rethrow to propagate the exception
 			}
 		};
@@ -47,9 +56,9 @@ namespace IMB
 			{ UpdateMesh(vertices); });
 
 		try {
-			// initiate threads
-			const size_t nAvailableThreads = std::thread::hardware_concurrency() - 1;
-			const size_t threadCount = nThreads == 0 ? 1 : (nThreads >= nAvailableThreads ? nAvailableThreads : nThreads);
+			// initiate worker threads
+			const size_t nAvailableWorkerThreads = std::thread::hardware_concurrency() - 2;
+			const size_t threadCount = nThreads == 0 ? 1 : (nThreads >= nAvailableWorkerThreads ? nAvailableWorkerThreads : nThreads);
 			const size_t chunkSize = m_FileMapping->GetFileSize() / threadCount;
 			std::vector<std::thread> threads(threadCount);
 
@@ -77,19 +86,9 @@ namespace IMB
 				t.join();
 			}
 
-			//// Combine results from all threads
-			//std::vector<pmp::Point> combinedVertices;
-			//std::vector<std::vector<unsigned int>> combinedPolyIndices;
-			//for (const auto& result : threadResults) {
-			//	combinedVertices.insert(combinedVertices.end(), result.begin(), result.end());
-			//}
-
-			//// Locking not necessary here if this section is single-threaded after joining
-			//UpdateMesh(combinedVertices);  // This now calls the mesh strategy internally
-
 		}
 		catch (...) {
-			std::cerr << "A thread encountered a severe error. Terminating all operations.\n";
+			std::cerr << "IncrementalMeshBuilder::DispatchAndSyncWorkers: A thread encountered a severe error. Terminating all operations.\n";
 		}
 
 		m_IsWorking = false;
@@ -119,6 +118,7 @@ namespace IMB
 		m_Dispatcher.reset();
 		m_MeshingStrategy.reset();
 		m_FileMapping.reset();
+		m_IsInitialized = false;
 	}
 
 } // namespace IMB

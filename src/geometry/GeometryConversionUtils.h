@@ -30,7 +30,7 @@ namespace Geometry
 	 * \param mcMesh       Marching cubes mesh to be converted.
 	 * \return pmp::SurfaceMesh result.
 	 */
-	[[nodiscard]] pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MC_Mesh& mcMesh);
+	[[nodiscard]] pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MarchingCubes::MC_Mesh& mcMesh);
 
 	/**
 	 * \brief For testing out the BaseMeshGeometryData by exporting it to a Wavefront OBJ file.
@@ -65,13 +65,21 @@ namespace Geometry
 	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudDataMainThread(const std::string& absFileName);
 
 	/**
-	 * \brief At this point this is a demo function for MeshLab's ball-pivoting.
+	 * \brief Randomly sample vertices and export them as *.ply point cloud.
 	 * \param meshData       input geom data.
 	 * \param nVerts         the number of vertices to be sampled from meshData.
 	 * \param absFileName    absolute file path for the opened file.
 	 * \return if true, the export was successful.
 	 */
 	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
+
+	/**
+	 * \brief Export mesh data vertices as *.ply point cloud.
+	 * \param meshData       input geom data.
+	 * \param absFileName    absolute file path for the opened file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportPointsToPLY(const BaseMeshGeometryData& meshData, const std::string& absFileName);
 
 	/**
 	 * \brief A utility for exporting polylines as Wavefront OBJ file.
@@ -101,5 +109,19 @@ namespace Geometry
 	/// \brief Returns a bounding sphere with a center and a radius combined in a pair.
 	///	\throw std::invalid_argument if the point cloud is empty.
 	[[nodiscard]] std::pair<pmp::Point, pmp::Scalar> ComputePointCloudBoundingSphere(const std::vector<pmp::Point>& points);
+
+	/**
+	 * \brief Computes a mesh from the given point cloud using the Ball-Pivoting algorithm.
+	 *        F. Bernardini, J. Mittleman, H. Rushmeier, C. Silva and G. Taubin, "The ball-pivoting algorithm for surface reconstruction," in IEEE Transactions on Visualization and Computer Graphics, vol. 5, no. 4, pp. 349-359, Oct.-Dec. 1999
+	 * \param points                                 input point cloud.
+	 * \param ballRadius                             ball radius parameter.
+	 * \param clusteringPercentageOfBallRadius       this percentage of ballRadius will be used for clustering.
+	 * \param angleThreshold                         angle threshold.
+	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeBallPivotingMeshFromPoints(const std::vector<pmp::Point>& points, 
+		const pmp::Scalar& ballRadius, 
+		const pmp::Scalar& clusteringPercentageOfBallRadius = 20, 
+		const pmp::Scalar& angleThreshold = 90.0);
 
 } // namespace Geometry

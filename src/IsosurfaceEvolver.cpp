@@ -87,7 +87,7 @@ void IsoSurfaceEvolver::Preprocess()
 	const auto Nx = static_cast<unsigned int>(dim.Nx);
 	const auto Ny = static_cast<unsigned int>(dim.Ny);
 	const auto Nz = static_cast<unsigned int>(dim.Nz);
-	const auto mcMesh = GetMarchingCubesMesh<double>(reSampledField.Values().data(), Nx, Ny, Nz, isoLevel);
+	const auto mcMesh = MarchingCubes::GetMarchingCubesMesh<double>(reSampledField.Values().data(), Nx, Ny, Nz, isoLevel);
 	m_EvolvingSurface = std::make_shared<pmp::SurfaceMesh>(Geometry::ConvertMCMeshToPMPSurfaceMesh(mcMesh));
 
 	// Ilatsik's Marching cubes implementation outputs a mesh from a grid with unit cell size, and zero origin (0,0,0)

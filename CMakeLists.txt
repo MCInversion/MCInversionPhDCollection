@@ -77,6 +77,10 @@ add_subdirectory(${RPLY_SOURCE_DIR})
 set(NANOFLANN_SRC_DIR "external/nanoflann")
 include_directories(${NANOFLANN_SRC_DIR})
 
+# setup VCG
+set(VCG_SRC_DIR "external/vcglib")
+include_directories(${VCG_SRC_DIR})
+
 include(AddFileDependencies)
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 
@@ -210,7 +214,7 @@ add_subdirectory(src/quickhull)
 add_subdirectory(src/utils)
 file(GLOB ShrinkWrap_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
 add_executable(ShrinkWrap ${ShrinkWrap_Src})
-target_link_libraries(ShrinkWrap 
+target_link_libraries(ShrinkWrap
     pmp
     SDF
     Geometry

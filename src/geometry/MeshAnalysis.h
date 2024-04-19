@@ -2,6 +2,8 @@
 
 #include "pmp/SurfaceMesh.h"
 
+#include "GeometryConversionUtils.h"
+
 #include <optional>
 
 namespace Geometry
@@ -54,6 +56,9 @@ namespace Geometry
 
 	/// \brief Computes edge length range and average.
 	[[nodiscard]] std::tuple<pmp::Scalar, pmp::Scalar, pmp::Scalar> ComputeEdgeLengthMinAverageAndMax(const pmp::SurfaceMesh& mesh);
+
+	/// \brief Counts all unreferenced vertices in BaseMeshGeometryData.
+	[[nodiscard]] size_t CountUnreferencedVertices(const BaseMeshGeometryData& data);
 
 	/// \brief Computes an interpolated point cloud to mesh vertex distance histogram by computing the distance field.
 	/// \param[in] mesh      input mesh.
