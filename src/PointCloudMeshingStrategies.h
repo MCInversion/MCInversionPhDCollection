@@ -1,9 +1,21 @@
 #pragma once
 
 #include <vector>
+#include <memory>
+
+#include "pmp/Types.h"
 
 namespace IMB
 {
+	/// \brief enumerator for mesh reconstruction function type.
+	enum class [[nodiscard]] ReconstructionFunctionType
+	{
+		BallPivoting = 0, //>! reconstructs a mesh using the ball-pivoting algorithm.
+		Poisson = 1, //>! reconstructs a mesh using the Poisson surface reconstruction algorithm (requires normals).
+		MarchingCubes = 2, //>! reconstructs a mesh using the marching cubes algorithm.
+		LagrangianShrinkWrapping = 3, //>! reconstructs a mesh using the Lagrangian shrink-wrapping algorithm.
+	};
+
 	class PointCloudMeshingStrategy
 	{
 	public:
@@ -68,5 +80,18 @@ namespace IMB
 		/// =====================================================================================================
 		void ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds) override;
 	};
+
+	// --------------------------------------------------------------------------------------------------------
+
+	inline [[nodiscard]] std::unique_ptr<PointCloudMeshingStrategy> GetReconstructionStrategy(const ReconstructionFunctionType& reconstructType)
+	{
+		if (reconstructType == ReconstructionFunctionType::BallPivoting)
+			return std::make_unique<BallPivotingMeshingStrategy>();
+		if (reconstructType == ReconstructionFunctionType::Poisson)
+			return std::make_unique<PoissonMeshingStrategy>();
+		if (reconstructType == ReconstructionFunctionType::MarchingCubes)
+			return std::make_unique<MarchingCubesMeshingStrategy>();
+		return std::make_unique<LagrangianShrinkWrappingMeshingStrategy>();
+	}
 	
 } // namespace IMB

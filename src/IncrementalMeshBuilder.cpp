@@ -4,29 +4,7 @@
 
 #include "utils/FileMappingWrapper.h"
 
-// --------------------------------------------------------------------------------------------------------
-
-[[nodiscard]] std::unique_ptr<IMB::PointCloudMeshingStrategy> GetReconstructionStrategy(const IMB::ReconstructionFunctionType& reconstructType)
-{
-	if (reconstructType == IMB::ReconstructionFunctionType::BallPivoting)
-		return std::make_unique<IMB::BallPivotingMeshingStrategy>();
-	if (reconstructType == IMB::ReconstructionFunctionType::Poisson)
-		return std::make_unique<IMB::PoissonMeshingStrategy>();
-	if (reconstructType == IMB::ReconstructionFunctionType::MarchingCubes)
-		return std::make_unique<IMB::MarchingCubesMeshingStrategy>();
-	return std::make_unique<IMB::LagrangianShrinkWrappingMeshingStrategy>();
-}
-
-[[nodiscard]] std::unique_ptr<IMB::VertexSamplingStrategy> GetVertexSelectionStrategy(const IMB::VertexSelectionType& vertSelType)
-{
-	if (vertSelType == IMB::VertexSelectionType::Sequential)
-		return std::make_unique<IMB::SequentialVertexSamplingStrategy>();
-	if (vertSelType == IMB::VertexSelectionType::UniformRandom)
-		return std::make_unique<IMB::UniformRandomVertexSamplingStrategy>();
-	if (vertSelType == IMB::VertexSelectionType::NormalRandom)
-		return std::make_unique<IMB::NormalRandomVertexSamplingStrategy>();
-	return std::make_unique<IMB::SoftmaxFeatureDetectingVertexSamplingStrategy>();
-}
+#include <thread>
 
 namespace IMB
 {
@@ -36,17 +14,15 @@ namespace IMB
 	void IncrementalMeshBuilder::Init(
 		const std::string& fileName, const unsigned int& completionFrequency, 
 		const ReconstructionFunctionType& reconstructType, 
-		const VertexSelectionType& vertSelType)
+		const VertexSelectionType& vertSelType,
+		const MeshRenderFunction& renderCallback)
 	{
-		m_MeshingStrategy = std::move(GetReconstructionStrategy(reconstructType));
-		auto vertexSamplingStrategy = std::move(GetVertexSelectionStrategy(vertSelType));
-
+		m_RenderCallback = renderCallback;
+		m_MeshingStrategy = GetReconstructionStrategy(reconstructType);
 		m_FileMapping = std::make_unique<Utils::FileMappingWrapper>(fileName);
 		const auto fileSize = m_FileMapping->GetFileSize();
 		const auto nExpectedVertices = fileSize / 3;
-
-		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(
-			nExpectedVertices, completionFrequency, std::move(vertexSamplingStrategy));
+		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(nExpectedVertices, completionFrequency, vertSelType);
 	}
 
 	void IncrementalMeshBuilder::DispatchAndSyncWorkers(const std::optional<unsigned int>& seed, const unsigned int& nThreads)
@@ -57,7 +33,7 @@ namespace IMB
 		m_IsWorking = true;
 
 		// m_MeshData (Geometry::BaseMeshGeometryData) will be filled
-		const auto invokeDispatcherChunkProcess = [this](const char* start, const char* end, const std::optional<unsigned int>& seed)
+		const auto invokeDispatcherChunkProcess = [this, &seed](const char* start, const char* end)
 		{
 			try {
 				m_Dispatcher->ProcessChunk(start, end, seed);
@@ -76,7 +52,6 @@ namespace IMB
 			const size_t threadCount = nThreads == 0 ? 1 : (nThreads >= nAvailableThreads ? nAvailableThreads : nThreads);
 			const size_t chunkSize = m_FileMapping->GetFileSize() / threadCount;
 			std::vector<std::thread> threads(threadCount);
-			std::vector<std::vector<pmp::Point>> threadResults(threadCount);
 
 			char* fileStart = m_FileMapping->GetFileMemory();
 			char* fileEnd = fileStart + m_FileMapping->GetFileSize();
@@ -94,7 +69,7 @@ namespace IMB
 				}
 
 				// Start a thread to process this chunk
-				threads[i] = std::thread(invokeDispatcherChunkProcess, chunkStart, chunkEnd, std::ref(threadResults[i]));
+				threads[i] = std::thread(invokeDispatcherChunkProcess, chunkStart, chunkEnd);
 			}
 
 			// Wait for all threads to finish

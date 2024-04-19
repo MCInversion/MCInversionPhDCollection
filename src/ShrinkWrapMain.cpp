@@ -2581,11 +2581,10 @@ int main()
 			//"spot"
 		};
 
-		unsigned int lodIndex = 0;
-		constexpr size_t nUpdates = 5;
-
 		for (const auto& meshName : meshForPtCloudNames)
 		{
+			unsigned int lodIndex = 0;
+			constexpr size_t nUpdates = 5;
 			const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
 				const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
 				if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
@@ -2596,14 +2595,15 @@ int main()
 				std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 				++lodIndex;
 			};
-
-			// Initialize the render handler with standard obj export
-			IMB::MeshRenderHandler meshHandler(exportToOBJ);
-
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
-			meshBuilder.Init(dataDirPath + meshName + ".obj", nUpdates, IMB::ReconstructionFunctionType::BallPivoting, IMB::VertexSelectionType::UniformRandom);
-			const unsigned int seed = 4999;
-			const unsigned int nThreads = 0;
+			meshBuilder.Init(
+				dataDirPath + meshName + ".obj", 
+				1.0 / nUpdates, 
+				IMB::ReconstructionFunctionType::BallPivoting, 
+				IMB::VertexSelectionType::UniformRandom,
+				exportToOBJ);
+			constexpr unsigned int seed = 4999;
+			constexpr unsigned int nThreads = 0;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests

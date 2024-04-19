@@ -1,5 +1,3 @@
-#include "pmp/Types.h"
-
 #include "PointCloudMeshingStrategies.h"
 
 #include <iostream>

@@ -3,29 +3,15 @@
 #include "pmp/SurfaceMesh.h"
 
 #include "utils/IFileMappingWrapper.h"
+#include "geometry/GeometryConversionUtils.h"
 
-#include "MeshRenderHandler.h"
 #include "IncrementalProgressUtils.h"
+#include "PointCloudMeshingStrategies.h"
 
 namespace IMB
 {
-	/// \brief enumerator for mesh reconstruction function type.
-	enum class [[nodiscard]] ReconstructionFunctionType
-	{
-		BallPivoting             = 0, //>! reconstructs a mesh using the ball-pivoting algorithm.
-		Poisson                  = 1, //>! reconstructs a mesh using the Poisson surface reconstruction algorithm (requires normals).
-		MarchingCubes            = 2, //>! reconstructs a mesh using the marching cubes algorithm.
-		LagrangianShrinkWrapping = 3, //>! reconstructs a mesh using the Lagrangian shrink-wrapping algorithm.
-	};
-
-	/// \brief enumerator for mesh simplification function type.
-	enum class [[nodiscard]] VertexSelectionType
-	{
-		Sequential              = 0, //>! selects vertices sequentially.
-		UniformRandom           = 1, //>! selects vertices uniformly at random.
-		NormalRandom            = 2, //>! selects vertices with a normal distribution.
-		SoftMaxFeatureDetecting = 3, //>! selects vertices using a softmax function with feature detection.
-	};
+    /// \brief A functor for rendering a mesh.
+    using MeshRenderFunction = std::function<void(const Geometry::BaseMeshGeometryData&)>;
 
     /// ==================================================================
     /// \brief The main singleton class for incremental mesh building.
@@ -45,21 +31,16 @@ namespace IMB
 
         /// ==================================================================
         /// \brief Initializes the mesh builder with the given parameters.
-        /// \param fileName the file name of the mesh to be loaded.
-        /// \param completionFrequency the frequency of mesh completion.
-        /// \param reconstructType the type of mesh reconstruction function.
-        /// \param vertSelType the type of vertex selection function.
-        /// 
+        /// \param fileName                the file name of the mesh to be loaded.
+        /// \param completionFrequency     the frequency of mesh completion.
+        /// \param reconstructType         the type of mesh reconstruction function.
+        /// \param vertSelType             the type of vertex selection function.
+        /// \param renderCallback          gets called when the updated mesh is ready.
         /// ==================================================================
         void Init(const std::string& fileName, const unsigned int& completionFrequency, 
             const ReconstructionFunctionType& reconstructType = ReconstructionFunctionType::BallPivoting, 
-            const VertexSelectionType& vertSelType = VertexSelectionType::UniformRandom);
-
-        /// \brief A render callback setter.
-        void SetRenderCallback(const MeshRenderFunction& renderCallback) 
-        {
-            m_RenderCallback = renderCallback; 
-        }
+            const VertexSelectionType& vertSelType = VertexSelectionType::UniformRandom,
+            const MeshRenderFunction& renderCallback = [](const Geometry::BaseMeshGeometryData&) {});
 
         /// ==================================================================
         /// \brief Samples vertices from the mesh using m_Dispatcher->m_VertexSamplingStrategy.
@@ -81,6 +62,8 @@ namespace IMB
         //
         // ================================================================
         //
+
+        bool m_IsWorking{ false }; //>! a safety status flag to avoid re-dispatching threads before they're finished.
 
         Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
         std::mutex m_MeshDataMutex;                //>! Mutex for protecting m_MeshData

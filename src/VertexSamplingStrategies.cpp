@@ -1,5 +1,3 @@
-#include "pmp/Types.h"
-
 #include "VertexSamplingStrategies.h"
 
 #include "IncrementalProgressUtils.h"
@@ -59,7 +57,7 @@ namespace
 		for (size_t i = 0; i < indices.size(); i++)
 		{
 			// skip if indices not in range
-			if (indices[i] < 0 || indices[i] >= end - start)
+			if (indices[i] < 0 || indices[i] >= static_cast<size_t>(end - start))
 				continue;
 
 			// If the current line is incomplete, skip to the next line

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VertexSamplingStrategies.h"
-#include "PointCloudMeshingStrategies.h"
 
 #include <atomic>
 #include <functional>
@@ -10,11 +9,9 @@
 #include <vector>
 #include <queue>
 
-namespace pmp
-{
-    class Point;
-}
+#include "pmp/Types.h"
 
+/// \brief A function to call when enough points are counted.
 using MeshUpdateCallback = std::function<void(const std::vector<pmp::Point>&)>;
 
 namespace IMB
@@ -83,11 +80,11 @@ namespace IMB
 	class IncrementalMeshBuilderDispatcher
 	{
 	public:
-        IncrementalMeshBuilderDispatcher(const size_t& totalExpectedVertices, const double& frequency,
-            std::unique_ptr<VertexSamplingStrategy> vertStrategy)
-            : m_ProgressTracker(totalExpectedVertices, frequency, [this]() { this->EnqueueMeshUpdate(); }),
-            m_VertexSamplingStrategy(std::move(vertStrategy))
+        IncrementalMeshBuilderDispatcher(const size_t& totalExpectedVertices, 
+            const double& frequency, const VertexSelectionType& selectionType)
+            : m_ProgressTracker(totalExpectedVertices, frequency, [this] { EnqueueMeshUpdate(); })
         {
+            m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, totalExpectedVertices);
             m_UpdateThread = std::thread([this] { m_UpdateQueue.ProcessTasks(); });
         }
 
