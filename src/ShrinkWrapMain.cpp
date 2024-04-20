@@ -2667,10 +2667,10 @@ int main()
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
-			unsigned int lodIndex = 0;
 			constexpr size_t nUpdates = 5;
+			unsigned int lodIndex = 0;
 			//const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-			//	const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
+			//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_Bunny/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
 			//	if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
 			//	{
 			//		std::cout << "Failed to export mesh data." << "\n";
@@ -2680,7 +2680,7 @@ int main()
 			//	++lodIndex;
 			//};
 			const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-				const std::string outputFileName = dataOutPath + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
+				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_Bunny/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
 				if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
 				{
 					std::cout << "Failed to export mesh data." << "\n";
@@ -2695,10 +2695,11 @@ int main()
 				nUpdates,
 				//IMB::ReconstructionFunctionType::BallPivoting, 
 				IMB::ReconstructionFunctionType::None,
-				IMB::VertexSelectionType::UniformRandom,
+				//IMB::VertexSelectionType::UniformRandom,
+				IMB::VertexSelectionType::Sequential,
 				exportPtsToPLY);
 			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 0;
+			constexpr unsigned int nThreads = 1;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests

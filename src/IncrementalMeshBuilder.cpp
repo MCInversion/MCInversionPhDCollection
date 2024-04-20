@@ -95,8 +95,8 @@ namespace IMB
 				throw;  // Rethrow to propagate the exception
 			}
 		};
-		m_Dispatcher->SetMeshUpdateCallback([this](const std::vector<pmp::Point>& vertices)
-			{ UpdateMesh(vertices); });
+		m_Dispatcher->SetMeshUpdateCallback([this](const std::vector<pmp::Point>& newVertices)
+			{ UpdateMesh(newVertices); });
 
 		try {
 			// initiate worker threads
@@ -145,24 +145,34 @@ namespace IMB
 		Terminate();
 	}
 
-	void IncrementalMeshBuilder::UpdateMesh(const std::vector<pmp::Point>& vertices)
+	void IncrementalMeshBuilder::UpdateMesh(const std::vector<pmp::Point>& newVertices)
 	{
-#if DEBUG_PRINT
-		DBG_OUT << "IncrementalMeshBuilder::UpdateMesh: About to triangulate m_MeshData with " << m_MeshData.Vertices.size() + vertices.size() << " vertices ... \n";
-#endif
-		std::lock_guard lock(m_MeshDataMutex);
-		m_MeshData.Vertices.insert(m_MeshData.Vertices.end(), vertices.begin(), vertices.end());
-
-		if (m_MeshingStrategy)
+		if (newVertices.empty())
 		{
-			// computing m_MeshData.PolyIndices, and for some strategies also modifying m_MeshData.Vertices!
-			m_MeshingStrategy->Process(m_MeshData.Vertices, m_MeshData.PolyIndices);
+#if DEBUG_PRINT
+			DBG_OUT << "IncrementalMeshBuilder::UpdateMesh: Nothing to triangulate. Terminating.\n";
+#endif
+			return;
 		}
+
+		{ // ensure that the lock is held only for the duration of the operations that need synchronization
+			std::lock_guard lock(m_MeshDataMutex);
+			m_MeshData.Vertices.insert(m_MeshData.Vertices.end(), newVertices.begin(), newVertices.end());
+#if DEBUG_PRINT
+		DBG_OUT << "IncrementalMeshBuilder::UpdateMesh: About to triangulate m_MeshData with " << m_MeshData.Vertices.size() << " vertices ... \n";
+#endif
+
+			if (m_MeshingStrategy)
+			{
+				// computing m_MeshData.PolyIndices, and for some strategies also modifying m_MeshData.Vertices!
+				m_MeshingStrategy->Process(m_MeshData.Vertices, m_MeshData.PolyIndices);
+			}
 #if DEBUG_PRINT
 		DBG_OUT << "IncrementalMeshBuilder::UpdateMesh: done.\n";
 		DBG_OUT << "IncrementalMeshBuilder::UpdateMesh: Rendering ... \n";
 #endif
-		m_RenderCallback(m_MeshData);
+			m_RenderCallback(m_MeshData);
+		}
 #if DEBUG_PRINT
 		DBG_OUT << "IncrementalMeshBuilder::UpdateMesh: done.\n";
 #endif

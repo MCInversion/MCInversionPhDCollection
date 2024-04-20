@@ -54,7 +54,7 @@ namespace IMB
         IncrementalMeshBuilder() = default;
 
         /// \brief Reconstructs the mesh using m_MeshingStrategy.
-        void UpdateMesh(const std::vector<pmp::Point>& vertices);
+        void UpdateMesh(const std::vector<pmp::Point>& newVertices);
 
         /// \brief Invoke destructor of all owned objects including the file mapping.
         void Terminate();

@@ -32,7 +32,7 @@ namespace
 			resultIndices.push_back(distrib(gen));
 		}
 #if DEBUG_PRINT
-		DBG_OUT << "SampleIndicesUniformly: ... done.\n";
+		DBG_OUT << "SampleIndicesUniformly: from " << nLines << " lines ... done.\n";
 #endif
 	}
 
@@ -60,7 +60,7 @@ namespace
 			resultIndices.push_back(distrib(gen));
 		}
 #if DEBUG_PRINT
-		DBG_OUT << "SampleIndicesUniformly: ... done.\n";
+		DBG_OUT << "SampleIndicesNormalRandomly: from " << nLines << " lines ... done.\n";
 #endif
 	}
 
@@ -196,7 +196,7 @@ namespace IMB
 #endif
 
 		// Ensure any remaining vertices are accounted for
-		// if (localVertexCount > 0) 
+		if (localVertexCount > 0) 
 		// Also no vertices are a valid chunk output
 		{
 #if DEBUG_PRINT
@@ -225,7 +225,7 @@ namespace IMB
 		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
 	}
 
-	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 10;
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 1;
 
 	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
 		: m_UpdateThreshold(

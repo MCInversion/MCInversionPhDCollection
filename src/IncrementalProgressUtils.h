@@ -15,6 +15,7 @@
 using MeshUpdateCallback = std::function<void(const std::vector<pmp::Point>&)>;
 
 /// \brief A function to call when enough points are counted. Moves the result data to its inner scope.
+/// TODO: Utilize this for dynamic update
 using MeshUpdateMoveCallback = std::function<void(std::vector<pmp::Point>&&)>;
 
 namespace IMB
@@ -66,7 +67,7 @@ namespace IMB
 
         void ProcessTasks();
 
-        void Shutdown();
+        void ShutDown();
 
         [[nodiscard]] size_t Size() const
         {
@@ -74,7 +75,7 @@ namespace IMB
         }
     private:
         std::queue<std::function<void()>> m_Tasks;
-        std::mutex m_QueueMutex;
+        mutable std::mutex m_QueueMutex;
         std::condition_variable m_Condition;
         bool m_ShutDown{ false };
     };
@@ -90,22 +91,23 @@ namespace IMB
 	public:
         IncrementalMeshBuilderDispatcher(const size_t& totalExpectedVertices, 
             const unsigned int& frequency, const VertexSelectionType& selectionType)
-            : m_ProgressTracker(totalExpectedVertices, frequency, [this] { EnqueueMeshUpdate(); })
+            : m_UpdateFrequency(frequency),
+			  m_ProgressTracker(totalExpectedVertices, frequency, [this] { EnqueueMeshUpdate(); })
         {
             m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, totalExpectedVertices);
-            m_UpdateThread = std::thread([this] { m_UpdateQueue.ProcessTasks(); });
+            m_UpdateThread = std::thread([this] { ProcessQueue(); });
         }
 
         ~IncrementalMeshBuilderDispatcher();
 
         void ProcessChunk(const char* start, const char* end, const std::optional<unsigned int>& seed);
 
-        void SetMeshUpdateCallback(const MeshUpdateMoveCallback& callback)
+        void SetMeshUpdateCallback(const MeshUpdateCallback& callback)
         {
             m_MeshUpdateCallback = callback;
         }
 
-        void ProcessMeshUpdate(std::vector<pmp::Point>&& data) const;
+        void ProcessMeshUpdate(const std::vector<pmp::Point>& data) const;
 
         void EnqueueMeshUpdate();
 
@@ -116,11 +118,14 @@ namespace IMB
             m_UpdateQueue.ProcessTasks();
         }
 
-        //MeshUpdateCallback m_MeshUpdateCallback;
-        MeshUpdateMoveCallback m_MeshUpdateCallback;
+        MeshUpdateCallback m_MeshUpdateCallback;
         MeshUpdateQueue m_UpdateQueue;
         std::thread m_UpdateThread;
         std::vector<pmp::Point> m_ThreadResult;
+        std::mutex m_ThreadResultMutex;
+
+        const unsigned int& m_UpdateFrequency;
+        std::atomic<unsigned int> m_UpdateCounter{ 0 };
 
         IncrementalProgressTracker m_ProgressTracker;
         std::unique_ptr<VertexSamplingStrategy> m_VertexSamplingStrategy{ nullptr };
