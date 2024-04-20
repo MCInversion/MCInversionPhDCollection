@@ -836,14 +836,20 @@ namespace Geometry
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
 		if (extension != "ply")
 		{
-			std::cerr << absFileName << " has invalid extension!" << std::endl;
+			std::cerr << "Geometry::ExportPointsToPLY:" << absFileName << " has invalid extension!" << std::endl;
+			return false;
+		}
+
+		if (meshData.Vertices.empty())
+		{
+			std::cerr << "Geometry::ExportPointsToPLY: No vertices to write!\n";
 			return false;
 		}
 
 		std::ofstream file(absFileName);
 		if (!file.is_open())
 		{
-			std::cerr << "Failed to open file for writing: " << absFileName << std::endl;
+			std::cerr << "Geometry::ExportPointsToPLY: Failed to open file for writing: " << absFileName << std::endl;
 			return false;
 		}
 
@@ -851,7 +857,7 @@ namespace Geometry
 		std::ofstream outFile(absFileName);
 		if (!outFile.is_open())
 		{
-			std::cerr << "Unable to open file: " << absFileName << std::endl;
+			std::cerr << "Geometry::ExportPointsToPLY: Unable to open file: " << absFileName << std::endl;
 			return false;
 		}
 

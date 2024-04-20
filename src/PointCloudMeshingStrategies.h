@@ -107,5 +107,18 @@ namespace IMB
 			return std::make_unique<MarchingCubesMeshingStrategy>();
 		return std::make_unique<LagrangianShrinkWrappingMeshingStrategy>();
 	}
+
+	inline [[nodiscard]] std::string GetReconstructionStrategyName(const ReconstructionFunctionType& reconstructType)
+	{
+		if (reconstructType == ReconstructionFunctionType::None)
+			return "ReconstructionFunctionType::None";
+		if (reconstructType == ReconstructionFunctionType::BallPivoting)
+			return " ReconstructionFunctionType::BallPivoting";
+		if (reconstructType == ReconstructionFunctionType::Poisson)
+			return "ReconstructionFunctionType::Poisson";
+		if (reconstructType == ReconstructionFunctionType::MarchingCubes)
+			return "ReconstructionFunctionType::MarchingCubes";
+		return "ReconstructionFunctionType::LagrangianShrinkWrapping";
+	}
 	
 } // namespace IMB

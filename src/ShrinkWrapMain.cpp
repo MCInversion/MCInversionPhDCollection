@@ -2692,8 +2692,9 @@ int main()
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 			meshBuilder.Init(
 				dataDirPath + meshName + ".obj", 
-				1.0 / static_cast<double>(nUpdates), 
-				IMB::ReconstructionFunctionType::BallPivoting, 
+				nUpdates,
+				//IMB::ReconstructionFunctionType::BallPivoting, 
+				IMB::ReconstructionFunctionType::None,
 				IMB::VertexSelectionType::UniformRandom,
 				exportPtsToPLY);
 			constexpr unsigned int seed = 4999;

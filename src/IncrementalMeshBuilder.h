@@ -67,12 +67,12 @@ namespace IMB
 
         bool m_IsInitialized{ false }; //>! initialization flag. Need to call Init if false.
 
-        Geometry::BaseMeshGeometryData m_MeshData; //>! mesh data structure.
-        std::mutex m_MeshDataMutex;                //>! Mutex for protecting m_MeshData
+        Geometry::BaseMeshGeometryData m_MeshData{}; //>! mesh data structure.
+        std::mutex m_MeshDataMutex{};                //>! Mutex for protecting m_MeshData
         std::unique_ptr<PointCloudMeshingStrategy> m_MeshingStrategy{ nullptr }; //>! a strategy to convert point cloud to mesh.
 
-        std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping; //>! file mapping wrapper.
+        std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping{ nullptr }; //>! file mapping wrapper.
         std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
-        MeshRenderFunction m_RenderCallback; //>! mesh render callback.
+        MeshRenderFunction m_RenderCallback{}; //>! mesh render callback.
     };
 } // namespace IMB

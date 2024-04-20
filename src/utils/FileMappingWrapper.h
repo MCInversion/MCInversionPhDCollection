@@ -30,6 +30,8 @@ namespace Utils
 
         [[nodiscard]] size_t GetFileSize() const override;
 
+        [[nodiscard]] size_t GetLineCount() const override;
+
     private:
         void OpenFile(const std::string& filePath);
 

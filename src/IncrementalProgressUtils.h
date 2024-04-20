@@ -14,6 +14,9 @@
 /// \brief A function to call when enough points are counted.
 using MeshUpdateCallback = std::function<void(const std::vector<pmp::Point>&)>;
 
+/// \brief A function to call when enough points are counted. Moves the result data to its inner scope.
+using MeshUpdateMoveCallback = std::function<void(std::vector<pmp::Point>&&)>;
+
 namespace IMB
 {
     /// =======================================================================================
@@ -25,15 +28,15 @@ namespace IMB
     class IncrementalProgressTracker
 	{
     public:
-        IncrementalProgressTracker(const size_t& nTotal, const double& frequency, const std::function<void()>& callback)
+        IncrementalProgressTracker(const size_t& nTotal, const unsigned int& frequency, const std::function<void()>& callback)
             : m_nTotalExpectedVertices(nTotal), m_CompletionFrequency(frequency)
         {
             SetDispatcherCallback(callback);
         }
 
-        void Update(const size_t& nLocalVerts);
+        void Update(const size_t& nLocalVerts, const bool& forceUpdate = false);
 
-        [[nodiscard]] bool ShouldTriggerUpdate(const size_t& currentCount) const;
+        [[nodiscard]] bool ShouldTriggerUpdate(const size_t& newCount) const;
 
         void SetDispatcherCallback(const std::function<void()>& callback)
         {
@@ -46,7 +49,7 @@ namespace IMB
 
         size_t m_nTotalExpectedVertices; //>! the total amount of expected mesh vertices.
         std::atomic<size_t> m_ProcessedVertices{ 0 }; //>! a counter for the total amount of processed vertices in all threads.
-        double m_CompletionFrequency; //>! the frequency under which updates are triggered.
+        unsigned int m_CompletionFrequency; //>! the frequency under which updates are triggered.
         std::mutex m_Mutex; //>! mutex for ensuring thread safety of this object.
     };
 
@@ -64,6 +67,11 @@ namespace IMB
         void ProcessTasks();
 
         void Shutdown();
+
+        [[nodiscard]] size_t Size() const
+        {
+            return m_Tasks.size();
+        }
     private:
         std::queue<std::function<void()>> m_Tasks;
         std::mutex m_QueueMutex;
@@ -81,7 +89,7 @@ namespace IMB
 	{
 	public:
         IncrementalMeshBuilderDispatcher(const size_t& totalExpectedVertices, 
-            const double& frequency, const VertexSelectionType& selectionType)
+            const unsigned int& frequency, const VertexSelectionType& selectionType)
             : m_ProgressTracker(totalExpectedVertices, frequency, [this] { EnqueueMeshUpdate(); })
         {
             m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, totalExpectedVertices);
@@ -92,12 +100,12 @@ namespace IMB
 
         void ProcessChunk(const char* start, const char* end, const std::optional<unsigned int>& seed);
 
-        void SetMeshUpdateCallback(const MeshUpdateCallback& callback)
+        void SetMeshUpdateCallback(const MeshUpdateMoveCallback& callback)
         {
             m_MeshUpdateCallback = callback;
         }
 
-        void ProcessMeshUpdate(const std::vector<pmp::Point>& data);
+        void ProcessMeshUpdate(std::vector<pmp::Point>&& data) const;
 
         void EnqueueMeshUpdate();
 
@@ -108,7 +116,8 @@ namespace IMB
             m_UpdateQueue.ProcessTasks();
         }
 
-        MeshUpdateCallback m_MeshUpdateCallback;
+        //MeshUpdateCallback m_MeshUpdateCallback;
+        MeshUpdateMoveCallback m_MeshUpdateCallback;
         MeshUpdateQueue m_UpdateQueue;
         std::thread m_UpdateThread;
         std::vector<pmp::Point> m_ThreadResult;

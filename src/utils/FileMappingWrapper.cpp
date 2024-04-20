@@ -26,6 +26,13 @@ namespace Utils
 	    return static_cast<size_t>(m_FileSize.QuadPart);
 	}
 
+	size_t FileMappingWrapper::GetLineCount() const
+	{
+		char* fileStart = GetFileMemory();
+		char* fileEnd = fileStart + GetFileSize();
+		return std::count(fileStart, fileEnd, '\n');
+	}
+
 	void FileMappingWrapper::OpenFile(const std::string& filePath)
 	{
 	    // Open the file with GENERIC_READ access and FILE_SHARE_READ mode.

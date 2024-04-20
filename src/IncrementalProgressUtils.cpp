@@ -1,5 +1,7 @@
 #include "IncrementalProgressUtils.h"
 
+#include "utils/IncrementalUtils.h"
+
 namespace IMB
 {
 	IncrementalMeshBuilderDispatcher::~IncrementalMeshBuilderDispatcher()
@@ -13,44 +15,70 @@ namespace IMB
 
 	void IncrementalMeshBuilderDispatcher::ProcessChunk(const char* start, const char* end, const std::optional<unsigned int>& seed)
 	{
-		std::vector<pmp::Point> localResults;
-		m_VertexSamplingStrategy->Sample(start, end, localResults, seed, m_ProgressTracker);
+#if DEBUG_PRINT
+		DBG_OUT << "IncrementalMeshBuilderDispatcher::ProcessChunk: [" << FormatAddresses(start, end) << "] ...\n";
+#endif
+		//std::vector<pmp::Point> localResults;
+		m_VertexSamplingStrategy->Sample(start, end, m_ThreadResult, seed, m_ProgressTracker);
 	}
 
-	void IncrementalMeshBuilderDispatcher::ProcessMeshUpdate(const std::vector<pmp::Point>& data)
+	void IncrementalMeshBuilderDispatcher::ProcessMeshUpdate(std::vector<pmp::Point>&& data) const
 	{
 		// Process mesh update with isolated data
-		m_MeshUpdateCallback(data);
-		m_ThreadResult.clear();
+		m_MeshUpdateCallback(std::move(data));
 	}
 
 	void IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate()
 	{
-		auto dataCopy = m_ThreadResult;  // Copy data for the task
-		m_UpdateQueue.Enqueue([this, &dataCopy]() { this->ProcessMeshUpdate(dataCopy); });
+#if DEBUG_PRINT
+		DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: with "<< m_ThreadResult.size() << " points ...\n";
+#endif
+		m_UpdateQueue.Enqueue([this](){ this->ProcessMeshUpdate(std::move(m_ThreadResult)); });
+#if DEBUG_PRINT
+		DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: Job Queue contains " << m_UpdateQueue.Size() << " jobs.\n";
+#endif
 	}
 
-	void IncrementalProgressTracker::Update(const size_t& nLocalVerts)
+	void IncrementalProgressTracker::Update(const size_t& nLocalVerts, const bool& forceUpdate)
 	{
-		// increment a shared value for the amount of processed vertices
-		const auto currentCount = m_ProcessedVertices.fetch_add(nLocalVerts, std::memory_order_relaxed);
-		if (!ShouldTriggerUpdate(currentCount))
+		if (forceUpdate)
+		{
+#if DEBUG_PRINT
+			DBG_OUT << "IncrementalProgressTracker::Update: Forced update.\n";
+#endif
+			m_DispatcherCallback();
+#if DEBUG_PRINT
+			DBG_OUT << "IncrementalProgressTracker::Update: invoking m_DispatcherCallback.\n";
+#endif
 			return;
+		}
+
+		// increment a shared value for the amount of processed vertices
+		const auto newCount = m_ProcessedVertices.fetch_add(nLocalVerts, std::memory_order_relaxed);
+#if DEBUG_PRINT
+		DBG_OUT << "IncrementalProgressTracker::Update: newCount  = " << newCount << "\n";
+#endif
+		if (!ShouldTriggerUpdate(newCount))
+			return;
+#if DEBUG_PRINT
+		DBG_OUT << "IncrementalProgressTracker::Update: invoking m_DispatcherCallback.\n";
+#endif
 		m_DispatcherCallback();
 	}
 
 	constexpr unsigned int DEFAULT_MAX_VERTEX_CAPACITY = 1'000'000;
 
-	bool IncrementalProgressTracker::ShouldTriggerUpdate(const size_t& currentCount) const
+	bool IncrementalProgressTracker::ShouldTriggerUpdate(const size_t& newCount) const
 	{
-		return (static_cast<double>(currentCount) >= static_cast<double>(m_nTotalExpectedVertices) * m_CompletionFrequency) ||
-			(currentCount >= DEFAULT_MAX_VERTEX_CAPACITY);
+		// Calculate the threshold for updates based on the total expected vertices and completion frequency
+		const double progressTrackerUpdateThreshold = static_cast<double>(m_nTotalExpectedVertices) / m_CompletionFrequency;
+		return static_cast<double>(newCount) >= progressTrackerUpdateThreshold || m_ProcessedVertices + newCount >= DEFAULT_MAX_VERTEX_CAPACITY;
 	}
 
 	void MeshUpdateQueue::Enqueue(const std::function<void()>& task)
 	{
 		{ // ensure that the lock is held only for the duration of the operations that need synchronization
-			std::lock_guard<std::mutex> lock(m_QueueMutex);
+			std::lock_guard lock(m_QueueMutex);
 			m_Tasks.push(task);
 		}
 		m_Condition.notify_one();

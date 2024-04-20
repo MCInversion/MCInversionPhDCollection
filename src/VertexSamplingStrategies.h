@@ -22,9 +22,7 @@ namespace IMB
 	class VertexSamplingStrategy
 	{
 	public:
-		VertexSamplingStrategy(const double& completionFrequency, const size_t& totalExpectedVertices)
-			: m_UpdateThreshold(static_cast<size_t>(totalExpectedVertices * completionFrequency))
-		{ }
+		VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices);
 
 		virtual ~VertexSamplingStrategy() = default;
 
@@ -38,7 +36,7 @@ namespace IMB
 	class SequentialVertexSamplingStrategy : public VertexSamplingStrategy
 	{
 	public:
-		SequentialVertexSamplingStrategy(const double& completionFrequency, const size_t& totalExpectedVertices)
+		SequentialVertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
 			: VertexSamplingStrategy(completionFrequency, totalExpectedVertices) {}
 
 		void Sample(const char* start, const char* end,
@@ -48,7 +46,7 @@ namespace IMB
 	class UniformRandomVertexSamplingStrategy : public VertexSamplingStrategy
 	{
 	public:
-		UniformRandomVertexSamplingStrategy(const double& completionFrequency, const size_t& totalExpectedVertices)
+		UniformRandomVertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
 			: VertexSamplingStrategy(completionFrequency, totalExpectedVertices) {}
 
 		void Sample(const char* start, const char* end,
@@ -59,7 +57,7 @@ namespace IMB
 	class NormalRandomVertexSamplingStrategy : public VertexSamplingStrategy
 	{
 	public:
-		NormalRandomVertexSamplingStrategy(const double& completionFrequency, const size_t& totalExpectedVertices)
+		NormalRandomVertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
 			: VertexSamplingStrategy(completionFrequency, totalExpectedVertices) {}
 
 		void Sample(const char* start, const char* end,
@@ -69,14 +67,14 @@ namespace IMB
 	class SoftmaxFeatureDetectingVertexSamplingStrategy : public VertexSamplingStrategy
 	{
 	public:
-		SoftmaxFeatureDetectingVertexSamplingStrategy(const double& completionFrequency, const size_t& totalExpectedVertices)
+		SoftmaxFeatureDetectingVertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
 			: VertexSamplingStrategy(completionFrequency, totalExpectedVertices) {}
 
 		void Sample(const char* start, const char* end,
 			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
 	};
 
-	inline [[nodiscard]] std::unique_ptr<VertexSamplingStrategy> GetVertexSelectionStrategy(const VertexSelectionType& vertSelType, const double& completionFrequency, const size_t& totalExpectedVertices)
+	inline [[nodiscard]] std::unique_ptr<VertexSamplingStrategy> GetVertexSelectionStrategy(const VertexSelectionType& vertSelType, const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
 	{
 		if (vertSelType == VertexSelectionType::Sequential)
 			return std::make_unique<SequentialVertexSamplingStrategy>(completionFrequency, totalExpectedVertices);
@@ -85,6 +83,17 @@ namespace IMB
 		if (vertSelType == VertexSelectionType::NormalRandom)
 			return std::make_unique<NormalRandomVertexSamplingStrategy>(completionFrequency, totalExpectedVertices);
 		return std::make_unique<SoftmaxFeatureDetectingVertexSamplingStrategy>(completionFrequency, totalExpectedVertices);
+	}
+
+	inline [[nodiscard]] std::string GetVertexSelectionStrategyName(const VertexSelectionType& vertSelType)
+	{
+		if (vertSelType == VertexSelectionType::Sequential)
+			return "VertexSelectionType::Sequential";
+		if (vertSelType == VertexSelectionType::UniformRandom)
+			return "VertexSelectionType::UniformRandom";
+		if (vertSelType == VertexSelectionType::NormalRandom)
+			return "VertexSelectionType::NormalRandom";
+		return "VertexSelectionType::SoftMaxFeatureDetecting";
 	}
 
 } // namespace IMB

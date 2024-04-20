@@ -13,6 +13,7 @@ namespace Utils
 
        virtual [[nodiscard]] char* GetFileMemory() const = 0;
        [[nodiscard]] virtual size_t GetFileSize() const = 0;
+       [[nodiscard]] virtual size_t GetLineCount() const = 0;
     };
 
 } // namespace Utils

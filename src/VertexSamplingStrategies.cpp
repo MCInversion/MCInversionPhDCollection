@@ -2,12 +2,17 @@
 
 #include "IncrementalProgressUtils.h"
 
+#include "utils/IncrementalUtils.h"
+
 #include <random>
 
 namespace
 {
 	void SampleIndicesUniformly(const char* start, const char* end, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
 	{
+#if DEBUG_PRINT
+		DBG_OUT << "SampleIndicesUniformly: ... \n";
+#endif
 		resultIndices.clear();
 		std::mt19937 gen;
 		if (seed.has_value())
@@ -26,10 +31,16 @@ namespace
 		{
 			resultIndices.push_back(distrib(gen));
 		}
+#if DEBUG_PRINT
+		DBG_OUT << "SampleIndicesUniformly: ... done.\n";
+#endif
 	}
 
 	void SampleIndicesNormalRandomly(const char* start, const char* end, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
 	{
+#if DEBUG_PRINT
+		DBG_OUT << "SampleIndicesNormalRandomly: ... \n";
+#endif
 		resultIndices.clear();
 		std::mt19937 gen;
 		if (seed.has_value())
@@ -48,10 +59,16 @@ namespace
 		{
 			resultIndices.push_back(distrib(gen));
 		}
+#if DEBUG_PRINT
+		DBG_OUT << "SampleIndicesUniformly: ... done.\n";
+#endif
 	}
 
 	void SampleVerticesFromIndices(const char* start, const char* end, const std::vector<size_t>& indices, const size_t& updateThreshold, std::vector<pmp::Point>& result, IMB::IncrementalProgressTracker& tracker)
 	{
+#if DEBUG_PRINT
+		DBG_OUT << "SampleVerticesFromIndices: ... \n";
+#endif
 		size_t localVertexCount = 0;
 		const char* cursor = start + indices[0];
 		for (size_t i = 0; i < indices.size(); i++)
@@ -89,6 +106,9 @@ namespace
 				// Check if it's time to update the tracker
 				if (localVertexCount >= updateThreshold) 
 				{
+#if DEBUG_PRINT
+					DBG_OUT << "SampleVerticesFromIndices: Time to update the tracker with " << localVertexCount << " collected vertices.\n";
+#endif
 					tracker.Update(localVertexCount);
 					localVertexCount = 0; // Reset local count after update
 				}
@@ -97,14 +117,21 @@ namespace
 			{
 				// Skip to the next line if the current line isn't recognized
 				while (*cursor != '\n' && cursor < end)
-					cursor = start + indices[(i + 1) % indices.size()];
+					cursor++;
 			}
 		}
 
+#if DEBUG_PRINT
+		DBG_OUT << "SampleVerticesFromIndices: ... done.\n";
+#endif
 		// Ensure any remaining vertices are accounted for
-		if (localVertexCount > 0)
+		// if (localVertexCount > 0)
+		// Also no vertices are a valid chunk output
 		{
-			tracker.Update(localVertexCount);
+#if DEBUG_PRINT
+			DBG_OUT << "SampleVerticesFromIndices: Time for a final tracker update with " << localVertexCount << " collected vertices.\n";
+#endif
+			tracker.Update(localVertexCount, true);
 		}
 	}
 }
@@ -113,6 +140,9 @@ namespace IMB
 {
 	void SequentialVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
+#if DEBUG_PRINT
+		DBG_OUT << "SequentialVertexSamplingStrategy::Sample: ... \n";
+#endif
 		size_t localVertexCount = 0;
 		const char* cursor = start;
 
@@ -147,6 +177,9 @@ namespace IMB
 				// Check if it's time to update the tracker
 				if (localVertexCount >= m_UpdateThreshold)
 				{
+#if DEBUG_PRINT
+					DBG_OUT << "SequentialVertexSamplingStrategy::Sample: Time to update the tracker with " << localVertexCount << " collected vertices.\n";
+#endif
 					tracker.Update(localVertexCount);
 					localVertexCount = 0; // Reset local count after update
 				}
@@ -158,11 +191,18 @@ namespace IMB
 					cursor++;
 			}
 		}
+#if DEBUG_PRINT
+		DBG_OUT << "SequentialVertexSamplingStrategy::Sample: ... done.\n";
+#endif
 
 		// Ensure any remaining vertices are accounted for
-		if (localVertexCount > 0) 
+		// if (localVertexCount > 0) 
+		// Also no vertices are a valid chunk output
 		{
-			tracker.Update(localVertexCount);
+#if DEBUG_PRINT
+			DBG_OUT << "SequentialVertexSamplingStrategy::Sample: Time for a final tracker update with " << localVertexCount << " collected vertices.\n";
+#endif
+			tracker.Update(localVertexCount, true);
 		}
 	}
 
@@ -183,5 +223,19 @@ namespace IMB
 	void SoftmaxFeatureDetectingVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
+	}
+
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 10;
+
+	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
+		: m_UpdateThreshold(
+			static_cast<size_t>(std::round(static_cast<double>(totalExpectedVertices) / 
+				static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER))))
+	{
+#if DEBUG_PRINT
+		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: completionFrequency = " << completionFrequency << " jobs per file load.\n";
+		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: totalExpectedVertices = " << totalExpectedVertices << "\n";
+		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_UpdateThreshold = " << m_UpdateThreshold << " vertices.\n";
+#endif
 	}
 } // namespace IMB
