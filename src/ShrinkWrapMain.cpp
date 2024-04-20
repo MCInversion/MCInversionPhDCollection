@@ -2699,7 +2699,7 @@ int main()
 				IMB::VertexSelectionType::Sequential,
 				exportPtsToPLY);
 			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 1;
+			constexpr unsigned int nThreads = 10;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests

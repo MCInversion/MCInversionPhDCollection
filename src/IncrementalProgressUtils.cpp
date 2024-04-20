@@ -18,7 +18,8 @@ namespace IMB
 #if DEBUG_PRINT
 		DBG_OUT << "IncrementalMeshBuilderDispatcher::ProcessChunk: [" << FormatAddresses(start, end) << "] ...\n";
 #endif
-		m_VertexSamplingStrategy->Sample(start, end, m_ThreadResult, seed, m_ProgressTracker);
+		auto& localResults = m_ThreadResults[std::this_thread::get_id()];
+		m_VertexSamplingStrategy->Sample(start, end, localResults, seed, m_ProgressTracker);
 	}
 
 	void IncrementalMeshBuilderDispatcher::ProcessMeshUpdate(const std::vector<pmp::Point>& data) const
@@ -29,13 +30,13 @@ namespace IMB
 
 	void IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate()
 	{
+		auto& localResults = m_ThreadResults[std::this_thread::get_id()];
 		std::vector<pmp::Point> dataCopy;
 		{
 			std::lock_guard lock(m_ThreadResultMutex);
-			if (m_ThreadResult.empty()) return; // Ensure there's data to process
+			if (localResults.empty()) return; // Ensure there's data to process
 
-			dataCopy = std::move(m_ThreadResult);
-			m_ThreadResult.clear();
+			dataCopy.swap(localResults);  // Efficiently moves data
 		}
 		if (m_UpdateCounter.load() > m_UpdateFrequency)
 		{
@@ -52,7 +53,7 @@ namespace IMB
 			return;
 		}
 #if DEBUG_PRINT
-		DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: with "<< m_ThreadResult.size() << " points ...\n";
+		DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: with "<< localResults.size() << " points ...\n";
 #endif
 
 		m_UpdateQueue.Enqueue([this, dataCopy = std::move(dataCopy)]() mutable {

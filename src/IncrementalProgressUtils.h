@@ -2,6 +2,7 @@
 
 #include "VertexSamplingStrategies.h"
 
+#include <unordered_map>
 #include <atomic>
 #include <functional>
 #include <mutex>
@@ -121,7 +122,7 @@ namespace IMB
         MeshUpdateCallback m_MeshUpdateCallback;
         MeshUpdateQueue m_UpdateQueue;
         std::thread m_UpdateThread;
-        std::vector<pmp::Point> m_ThreadResult;
+        std::unordered_map<std::thread::id, std::vector<pmp::Point>> m_ThreadResults;
         std::mutex m_ThreadResultMutex;
 
         const unsigned int& m_UpdateFrequency;
