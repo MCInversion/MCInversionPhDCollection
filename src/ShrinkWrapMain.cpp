@@ -82,8 +82,8 @@ constexpr bool performConvexHullTests = false;
 constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
-constexpr bool performBPATest = true;
-constexpr bool performIncrementalMeshBuilderTests = false;
+constexpr bool performBPATest = false;
+constexpr bool performIncrementalMeshBuilderTests = true;
 
 int main()
 {

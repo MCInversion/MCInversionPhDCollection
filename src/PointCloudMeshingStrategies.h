@@ -10,10 +10,11 @@ namespace IMB
 	/// \brief enumerator for mesh reconstruction function type.
 	enum class [[nodiscard]] ReconstructionFunctionType
 	{
-		BallPivoting = 0, //>! reconstructs a mesh using the ball-pivoting algorithm.
-		Poisson = 1, //>! reconstructs a mesh using the Poisson surface reconstruction algorithm (requires normals).
-		MarchingCubes = 2, //>! reconstructs a mesh using the marching cubes algorithm.
-		LagrangianShrinkWrapping = 3, //>! reconstructs a mesh using the Lagrangian shrink-wrapping algorithm.
+		None = 0, //>! poly indices won't be created. Instead the point cloud will just be left alone.
+		BallPivoting = 1, //>! reconstructs a mesh using the ball-pivoting algorithm.
+		Poisson = 2, //>! reconstructs a mesh using the Poisson surface reconstruction algorithm (requires normals).
+		MarchingCubes = 3, //>! reconstructs a mesh using the marching cubes algorithm.
+		LagrangianShrinkWrapping = 4, //>! reconstructs a mesh using the Lagrangian shrink-wrapping algorithm.
 	};
 
 	class PointCloudMeshingStrategy
@@ -35,6 +36,17 @@ namespace IMB
 		/// \param[out] resultPolyIds     The output mesh indexing. Each element is a list of point indices that form a polygon.
 		/// =====================================================================================================
 		virtual void ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds) = 0;
+	};
+
+	class EmptyMeshingStrategy : public PointCloudMeshingStrategy
+	{
+	private:
+		/// =====================================================================================================
+		/// \brief Empty implementation for a PointCloudMeshingStrategy
+		/// \param[in,out] ioPoints       The input/output points. DISCLAIMER: This strategy does not modify the input point list.
+		/// \param[out] resultPolyIds     The output mesh indexing. DISCLAIMER: Won't be used!
+		/// =====================================================================================================
+		void ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds) override;
 	};
 
 	class BallPivotingMeshingStrategy : public PointCloudMeshingStrategy
@@ -85,6 +97,8 @@ namespace IMB
 
 	inline [[nodiscard]] std::unique_ptr<PointCloudMeshingStrategy> GetReconstructionStrategy(const ReconstructionFunctionType& reconstructType)
 	{
+		if (reconstructType == ReconstructionFunctionType::None)
+			return std::make_unique<EmptyMeshingStrategy>();
 		if (reconstructType == ReconstructionFunctionType::BallPivoting)
 			return std::make_unique<BallPivotingMeshingStrategy>();
 		if (reconstructType == ReconstructionFunctionType::Poisson)
