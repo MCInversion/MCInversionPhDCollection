@@ -2,6 +2,8 @@
 
 #include "utils/IncrementalUtils.h"
 
+#include <ranges>
+
 namespace IMB
 {
 	IncrementalMeshBuilderDispatcher::~IncrementalMeshBuilderDispatcher()
@@ -30,35 +32,37 @@ namespace IMB
 
 	void IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate()
 	{
-		auto& localResults = m_ThreadResults[std::this_thread::get_id()];
-		std::vector<pmp::Point> dataCopy;
+		// Gather point data from all worker threads.
+		std::vector<pmp::Point> aggregatedData;
 		{
 			std::lock_guard lock(m_ThreadResultMutex);
-			if (localResults.empty()) return; // Ensure there's data to process
-
-			dataCopy.swap(localResults);  // Efficiently moves data
+			for (auto& results : m_ThreadResults | std::views::values) 
+			{
+				aggregatedData.insert(aggregatedData.end(), results.begin(), results.end());
+				results.clear();  // Clear the thread-specific results after aggregating
+			}
 		}
-		if (m_UpdateCounter.load() > m_UpdateFrequency)
-		{
+		// ............................................
+
+		if (aggregatedData.empty()) 
+			return;  // Nothing to update
+
+		//if (m_UpdateCounter.load() > m_UpdateFrequency)
+		//{
 #if DEBUG_PRINT
-			DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: Reached " << m_UpdateCounter.load() << " updates with " << dataCopy.size() << " remaining points! Terminating.\n";
+		//	DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: Reached " << m_UpdateCounter.load() << " updates with " << aggregatedData.size() << " remaining points! Terminating.\n";
 #endif
-			if (dataCopy.empty())
-				return; // nothing to update
-			m_UpdateQueue.Enqueue([this, dataCopy = std::move(dataCopy)]() mutable {
-				this->ProcessMeshUpdate(dataCopy);
-				//m_UpdateCounter.fetch_sub(1);
-			});
-			//m_UpdateCounter.fetch_add(1);
-			return;
-		}
+		//	m_UpdateQueue.Enqueue([this, dataCopy = std::move(aggregatedData)]() mutable {
+		//		this->ProcessMeshUpdate(dataCopy);
+		//	});
+		//	return;
+		//}
 #if DEBUG_PRINT
-		DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: with "<< localResults.size() << " points ...\n";
+		DBG_OUT << "IncrementalMeshBuilderDispatcher::EnqueueMeshUpdate: with "<< aggregatedData.size() << " points ...\n";
 #endif
 
-		m_UpdateQueue.Enqueue([this, dataCopy = std::move(dataCopy)]() mutable {
+		m_UpdateQueue.Enqueue([this, dataCopy = std::move(aggregatedData)]() mutable {
 			this->ProcessMeshUpdate(dataCopy);
-			//m_UpdateCounter.fetch_sub(1);
 		});
 		m_UpdateCounter.fetch_add(1);
 

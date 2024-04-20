@@ -64,27 +64,29 @@ namespace
 #endif
 	}
 
+	constexpr size_t APPROX_BYTES_PER_VERTEX = 24;
+
 	void SampleVerticesFromIndices(const char* start, const char* end, const std::vector<size_t>& indices, const size_t& updateThreshold, std::vector<pmp::Point>& result, IMB::IncrementalProgressTracker& tracker)
 	{
 #if DEBUG_PRINT
 		DBG_OUT << "SampleVerticesFromIndices: ... \n";
 #endif
 		size_t localVertexCount = 0;
-		const char* cursor = start + indices[0];
-		for (size_t i = 0; i < indices.size(); i++)
+
+		for (const auto index : indices)
 		{
-			// skip if indices not in range
-			if (indices[i] < 0 || indices[i] >= static_cast<size_t>(end - start))
-				continue;
+			// Calculate an approximate position to jump to
+			const char* cursor = start + index * APPROX_BYTES_PER_VERTEX;
 
-			// If the current line is incomplete, skip to the next line
-			if (*cursor == '\n')
-			{
-				cursor = start + indices[(i + 1) % indices.size()];
-				continue;
-			}
+			// Adjust cursor to the start of the next line if not already at a newline
+			while (cursor < end && *cursor != '\n') cursor++;
+			if (cursor < end) cursor++;  // Move past the newline to the start of the next line
 
-			// If it's a vertex, parse the three floats
+			// Ensure the cursor is within valid range after adjustment
+			if (cursor >= end) continue;
+
+
+			// Check if the line starts with "v " indicating a vertex
 			if (strncmp(cursor, "v ", 2) == 0)
 			{
 				cursor += 2; // skip "v "
@@ -113,20 +115,16 @@ namespace
 					localVertexCount = 0; // Reset local count after update
 				}
 			}
-			else
-			{
-				// Skip to the next line if the current line isn't recognized
-				while (*cursor != '\n' && cursor < end)
-					cursor++;
-			}
+			
+			// Otherwise, skip to the next line
+			while (*cursor != '\n' && cursor < end) cursor++;
 		}
 
 #if DEBUG_PRINT
 		DBG_OUT << "SampleVerticesFromIndices: ... done.\n";
 #endif
 		// Ensure any remaining vertices are accounted for
-		// if (localVertexCount > 0)
-		// Also no vertices are a valid chunk output
+		if (localVertexCount > 0)
 		{
 #if DEBUG_PRINT
 			DBG_OUT << "SampleVerticesFromIndices: Time for a final tracker update with " << localVertexCount << " collected vertices.\n";
@@ -197,7 +195,6 @@ namespace IMB
 
 		// Ensure any remaining vertices are accounted for
 		if (localVertexCount > 0) 
-		// Also no vertices are a valid chunk output
 		{
 #if DEBUG_PRINT
 			DBG_OUT << "SequentialVertexSamplingStrategy::Sample: Time for a final tracker update with " << localVertexCount << " collected vertices.\n";
