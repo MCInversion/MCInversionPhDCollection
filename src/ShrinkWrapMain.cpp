@@ -2655,10 +2655,12 @@ int main()
 
 	if (performIncrementalMeshBuilderTests)
 	{
+		// *.ply format:
 		const std::vector<std::string> meshForPtCloudNames{
+			"Apollon_ArtecEva",
 			//"armadillo",
-			"bunny",
-			"CaesarBust",
+			//"bunny",
+			//"CaesarBust",
 			//"maxPlanck",
 			//"nefertiti"
 		};
@@ -2689,7 +2691,7 @@ int main()
 			};
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 			meshBuilder.Init(
-				dataDirPath + meshName + ".obj", 
+				dataDirPath + meshName + ".ply", 
 				nUpdates,
 				//IMB::ReconstructionFunctionType::BallPivoting, 
 				IMB::ReconstructionFunctionType::None,
@@ -2697,7 +2699,7 @@ int main()
 				//IMB::VertexSelectionType::Sequential,
 				exportPtsToPLY);
 			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 3;
+			constexpr unsigned int nThreads = 5;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests

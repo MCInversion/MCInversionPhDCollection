@@ -21,3 +21,5 @@ inline [[nodiscard]] std::string FormatAddresses(const char* start, const char* 
         << ", 0x" << std::hex << std::setw(16) << std::setfill('0') << reinterpret_cast<uintptr_t>(end);
     return ss.str();
 }
+
+constexpr unsigned int DEFAULT_MAX_VERTEX_CAPACITY = 1'000'000;

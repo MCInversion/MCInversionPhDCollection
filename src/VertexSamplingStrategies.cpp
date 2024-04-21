@@ -1,220 +1,97 @@
 #include "VertexSamplingStrategies.h"
 
+#include <numeric>
+#include <random>
+//#include <unordered_set>
+
 #include "IncrementalProgressUtils.h"
+#include "IncrementalMeshFileHandler.h"
 
 #include "utils/IncrementalUtils.h"
 
-#include <random>
 
 namespace
 {
-	void SampleIndicesUniformly(const char* start, const char* end, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
+	/// \brief A verification utility for the uniqueness of randomly generated indices.
+	//[[nodiscard]] size_t CountNonUniqueIndices(const std::vector<size_t>& indices)
+	//{
+	//	const std::unordered_set uniqueCheck(indices.begin(), indices.end());
+	//	return indices.size() - uniqueCheck.size();
+	//}
+	// USE CASE:
+	//#if DEBUG_PRINT
+	//	if (const auto nonUnique = CountNonUniqueIndices(resultIndices); nonUnique == 0)
+	//		DBG_OUT << "RandomSampleIndices: Finished generating " << expectedCount << " unique indices.\n";
+	//	else
+	//		DBG_OUT << "RandomSampleIndices: [WARNING]: Generated " << nonUnique << "/" << expectedCount << " non-unique indices!\n";
+	//#endif
+
+	/// \brief Generates expectedCount indices from 0 to expectedCount - 1 into resultIndices sequentially.
+	void SampleIndicesSequentially(const size_t& expectedCount, std::vector<size_t>& resultIndices)
 	{
-#if DEBUG_PRINT
-		DBG_OUT << "SampleIndicesUniformly: ... \n";
-#endif
 		resultIndices.clear();
-		std::mt19937 gen;
-		if (seed.has_value())
-		{
-			gen.seed(seed.value());
-		}
-		else
-		{
-			std::random_device rd;
-			gen = std::mt19937(rd());
-		}
-		const size_t nLines = std::count(start, end, '\n');
-		std::uniform_int_distribution<> distrib(0, nLines - 1);
-		resultIndices.reserve(nLines);
-		for (size_t i = 0; i < nLines; i++)
-		{
-			resultIndices.push_back(distrib(gen));
-		}
-#if DEBUG_PRINT
-		DBG_OUT << "SampleIndicesUniformly: from " << nLines << " lines ... done.\n";
-#endif
+		resultIndices.resize(expectedCount);
+		std::iota(resultIndices.begin(), resultIndices.end(), 0);
 	}
 
-	void SampleIndicesNormalRandomly(const char* start, const char* end, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
+	/// \brief Generates expectedCount random indices from 0 to expectedCount - 1 into resultIndices from the unifom distribution type.
+	void RandomSampleIndices(const size_t& expectedCount, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
 	{
+		if (expectedCount == 0)
+		{
+			std::cerr << "RandomSampleIndices: expectedCount is 0!\n";
+			return;
+		}
+
 #if DEBUG_PRINT
-		DBG_OUT << "SampleIndicesNormalRandomly: ... \n";
+		DBG_OUT << "RandomSampleIndices: Starting...\n";
 #endif
+
 		resultIndices.clear();
-		std::mt19937 gen;
-		if (seed.has_value())
+		resultIndices.reserve(expectedCount);
+		std::mt19937 gen(seed ? *seed : std::random_device{}());
+		std::uniform_int_distribution<size_t> distrib(0, expectedCount - 1);
+
+		std::vector usedIndices(expectedCount, false); 
+
+		while (resultIndices.size() < expectedCount)
 		{
-			gen.seed(seed.value());
-		}
-		else
-		{
-			std::random_device rd;
-			gen = std::mt19937(rd());
-		}
-		const size_t nLines = std::count(start, end, '\n');
-		std::normal_distribution<> distrib(nLines / 2, nLines / 6);
-		resultIndices.reserve(nLines);
-		for (size_t i = 0; i < nLines; i++)
-		{
-			resultIndices.push_back(distrib(gen));
-		}
-#if DEBUG_PRINT
-		DBG_OUT << "SampleIndicesNormalRandomly: from " << nLines << " lines ... done.\n";
-#endif
-	}
-
-	constexpr size_t APPROX_BYTES_PER_VERTEX = 24;
-
-	void SampleVerticesFromIndices(const char* start, const char* end, const std::vector<size_t>& indices, const size_t& updateThreshold, std::vector<pmp::Point>& result, IMB::IncrementalProgressTracker& tracker)
-	{
-#if DEBUG_PRINT
-		DBG_OUT << "SampleVerticesFromIndices: ... \n";
-#endif
-		size_t localVertexCount = 0;
-
-		for (const auto index : indices)
-		{
-			// Calculate an approximate position to jump to
-			const char* cursor = start + index * APPROX_BYTES_PER_VERTEX;
-
-			// Adjust cursor to the start of the next line if not already at a newline
-			while (cursor < end && *cursor != '\n') cursor++;
-			if (cursor < end) cursor++;  // Move past the newline to the start of the next line
-
-			// Ensure the cursor is within valid range after adjustment
-			if (cursor >= end) continue;
-
-
-			// Check if the line starts with "v " indicating a vertex
-			if (strncmp(cursor, "v ", 2) == 0)
+			size_t newIndex = distrib(gen);
+			if (!usedIndices[newIndex]) // Check if the index has not been used yet
 			{
-				cursor += 2; // skip "v "
-
-				pmp::vec3 vec;
-				char* tempCursor;
-				vec[0] = std::strtof(cursor, &tempCursor);
-				cursor = tempCursor;
-
-				vec[1] = std::strtof(cursor, &tempCursor);
-				cursor = tempCursor;
-
-				vec[2] = std::strtof(cursor, &tempCursor);
-				cursor = tempCursor;
-
-				result.push_back(vec);
-				localVertexCount++;
-
-				// Check if it's time to update the tracker
-				if (localVertexCount >= updateThreshold) 
-				{
-#if DEBUG_PRINT
-					DBG_OUT << "SampleVerticesFromIndices: Time to update the tracker with " << localVertexCount << " collected vertices.\n";
-#endif
-					tracker.Update(localVertexCount);
-					localVertexCount = 0; // Reset local count after update
-				}
+				usedIndices[newIndex] = true; // Mark the index as used
+				resultIndices.push_back(newIndex);
 			}
-			
-			// Otherwise, skip to the next line
-			while (*cursor != '\n' && cursor < end) cursor++;
 		}
 
 #if DEBUG_PRINT
-		DBG_OUT << "SampleVerticesFromIndices: ... done.\n";
+		DBG_OUT << "RandomSampleIndices: Finished generating " << expectedCount << " unique indices.\n";
 #endif
-		// Ensure any remaining vertices are accounted for
-		if (localVertexCount > 0)
-		{
-#if DEBUG_PRINT
-			DBG_OUT << "SampleVerticesFromIndices: Time for a final tracker update with " << localVertexCount << " collected vertices.\n";
-#endif
-			tracker.Update(localVertexCount, true);
-		}
-	}
+	}	
 }
 
 namespace IMB
 {
 	void SequentialVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
-#if DEBUG_PRINT
-		DBG_OUT << "SequentialVertexSamplingStrategy::Sample: ... \n";
-#endif
-		size_t localVertexCount = 0;
-		const char* cursor = start;
-
-		while (cursor < end)
-		{
-			// If the current line is incomplete, skip to the next line
-			if (*cursor == '\n')
-			{
-				cursor++;
-				continue;
-			}
-
-			// If it's a vertex, parse the three floats
-			if (strncmp(cursor, "v ", 2) == 0)
-			{
-				cursor += 2; // skip "v "
-
-				pmp::vec3 vec;
-				char* tempCursor;
-				vec[0] = std::strtof(cursor, &tempCursor);
-				cursor = tempCursor;
-
-				vec[1] = std::strtof(cursor, &tempCursor);
-				cursor = tempCursor;
-
-				vec[2] = std::strtof(cursor, &tempCursor);
-				cursor = tempCursor;
-
-				result.push_back(vec);
-				localVertexCount++;
-
-				// Check if it's time to update the tracker
-				if (localVertexCount >= m_UpdateThreshold)
-				{
-#if DEBUG_PRINT
-					DBG_OUT << "SequentialVertexSamplingStrategy::Sample: Time to update the tracker with " << localVertexCount << " collected vertices.\n";
-#endif
-					tracker.Update(localVertexCount);
-					localVertexCount = 0; // Reset local count after update
-				}
-			}
-			else
-			{
-				// Skip to the next line if the current line isn't recognized
-				while (*cursor != '\n' && cursor < end)
-					cursor++;
-			}
-		}
-#if DEBUG_PRINT
-		DBG_OUT << "SequentialVertexSamplingStrategy::Sample: ... done.\n";
-#endif
-
-		// Ensure any remaining vertices are accounted for
-		if (localVertexCount > 0) 
-		{
-#if DEBUG_PRINT
-			DBG_OUT << "SequentialVertexSamplingStrategy::Sample: Time for a final tracker update with " << localVertexCount << " collected vertices.\n";
-#endif
-			tracker.Update(localVertexCount, true);
-		}
+		std::vector<size_t> indices;
+		SampleIndicesSequentially(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices);
+		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void UniformRandomVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		SampleIndicesUniformly(start, end, indices, seed);
-		SampleVerticesFromIndices(start, end, indices, m_UpdateThreshold, result, tracker);
+		RandomSampleIndices(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices, seed);
+		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void NormalRandomVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		SampleIndicesNormalRandomly(start, end, indices, seed);
-		SampleVerticesFromIndices(start, end, indices, m_UpdateThreshold, result, tracker);
+		// TODO: verify utility before implementing
+		RandomSampleIndices(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices, seed);
+		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void SoftmaxFeatureDetectingVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
@@ -222,17 +99,30 @@ namespace IMB
 		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
 	}
 
-	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 1;
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 2;
 
-	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& totalExpectedVertices)
-		: m_UpdateThreshold(
-			static_cast<size_t>(std::round(static_cast<double>(totalExpectedVertices) / 
-				static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER))))
+	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{
+		m_FileHandler = handler;
+		if (!m_FileHandler)
+		{
+			throw std::invalid_argument("VertexSamplingStrategy::VertexSamplingStrategy: m_FileHandler could not be created!\n");
+		}
+		const auto totalExpectedVertices = m_FileHandler->GetGlobalVertexCountEstimate();
+		m_UpdateThreshold = static_cast<size_t>(std::round(static_cast<double>(totalExpectedVertices) /
+			static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER)));
 #if DEBUG_PRINT
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: completionFrequency = " << completionFrequency << " jobs per file load.\n";
-		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: totalExpectedVertices = " << totalExpectedVertices << "\n";
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_UpdateThreshold = " << m_UpdateThreshold << " vertices.\n";
 #endif
+	}
+
+	size_t VertexSamplingStrategy::GetVertexCountEstimate() const
+	{
+		if (!m_FileHandler)
+		{
+			return 0;
+		}
+		return m_FileHandler->GetGlobalVertexCountEstimate();
 	}
 } // namespace IMB

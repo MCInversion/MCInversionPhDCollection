@@ -90,14 +90,21 @@ namespace IMB
 	class IncrementalMeshBuilderDispatcher
 	{
 	public:
-        IncrementalMeshBuilderDispatcher(const size_t& totalExpectedVertices, 
-            const unsigned int& frequency, const VertexSelectionType& selectionType)
-            : m_UpdateFrequency(frequency),
-			  m_ProgressTracker(totalExpectedVertices, frequency, [this] { EnqueueMeshUpdate(); })
+        IncrementalMeshBuilderDispatcher(const unsigned int& frequency, const VertexSelectionType& selectionType, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
+            : m_UpdateFrequency(frequency)
         {
-            m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, totalExpectedVertices);
-            m_UpdateThread = std::thread([this] { ProcessQueue(); });
+            try
+            {
+				m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, handler);	            
+	            m_ProgressTracker = std::make_unique<IncrementalProgressTracker>(m_VertexSamplingStrategy->GetVertexCountEstimate(), frequency, [this] { EnqueueMeshUpdate(); });
+	            m_UpdateThread = std::thread([this] { ProcessQueue(); });
+            }
+            catch (const std::exception& e) {
+                std::cerr << "IncrementalMeshBuilderDispatcher: Encountered an internal error: \n" << e.what() << '\n';
+            }
         }
+
+        [[nodiscard]] bool IsValid() const;
 
         ~IncrementalMeshBuilderDispatcher();
 
@@ -128,7 +135,7 @@ namespace IMB
         const unsigned int& m_UpdateFrequency;
         std::atomic<unsigned int> m_UpdateCounter{ 0 };
 
-        IncrementalProgressTracker m_ProgressTracker;
+        std::unique_ptr<IncrementalProgressTracker> m_ProgressTracker{ nullptr };
         std::unique_ptr<VertexSamplingStrategy> m_VertexSamplingStrategy{ nullptr };
 	};
 	

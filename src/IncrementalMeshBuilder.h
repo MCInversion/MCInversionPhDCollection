@@ -10,6 +10,9 @@
 
 namespace IMB
 {
+    // forward declarations
+    class IncrementalMeshFileHandler;
+
     /// \brief A functor for rendering a mesh.
     using MeshRenderFunction = std::function<void(const Geometry::BaseMeshGeometryData&)>;
 
@@ -72,7 +75,8 @@ namespace IMB
         std::unique_ptr<PointCloudMeshingStrategy> m_MeshingStrategy{ nullptr }; //>! a strategy to convert point cloud to mesh.
 
         std::unique_ptr<Utils::IFileMappingWrapper> m_FileMapping{ nullptr }; //>! file mapping wrapper.
-        std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
+        std::shared_ptr<IncrementalMeshFileHandler> m_FileHandler{ nullptr }; //>! a distinct strategy for parsing the vertices from a file.
+    	std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
         MeshRenderFunction m_RenderCallback{}; //>! mesh render callback.
     };
 } // namespace IMB

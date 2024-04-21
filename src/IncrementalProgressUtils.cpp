@@ -6,6 +6,11 @@
 
 namespace IMB
 {
+	bool IncrementalMeshBuilderDispatcher::IsValid() const
+	{
+		return (m_ProgressTracker && m_VertexSamplingStrategy);
+	}
+
 	IncrementalMeshBuilderDispatcher::~IncrementalMeshBuilderDispatcher()
 	{
 		m_UpdateQueue.ShutDown();
@@ -21,7 +26,7 @@ namespace IMB
 		DBG_OUT << "IncrementalMeshBuilderDispatcher::ProcessChunk: [" << FormatAddresses(start, end) << "] ...\n";
 #endif
 		auto& localResults = m_ThreadResults[std::this_thread::get_id()];
-		m_VertexSamplingStrategy->Sample(start, end, localResults, seed, m_ProgressTracker);
+		m_VertexSamplingStrategy->Sample(start, end, localResults, seed, *m_ProgressTracker);
 	}
 
 	void IncrementalMeshBuilderDispatcher::ProcessMeshUpdate(const std::vector<pmp::Point>& data) const
@@ -96,8 +101,6 @@ namespace IMB
 #endif
 		m_DispatcherCallback();
 	}
-
-	constexpr unsigned int DEFAULT_MAX_VERTEX_CAPACITY = 1'000'000;
 
 	bool IncrementalProgressTracker::ShouldTriggerUpdate(const size_t& newCount) const
 	{

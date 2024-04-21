@@ -26,6 +26,11 @@ namespace Utils
 
         ~FileMappingWrapper() override;
 
+        [[nodiscard]] bool IsValid() const override
+        {
+            return m_FileHandle != INVALID_HANDLE_VALUE && m_FileMapping && m_FileMemory;
+        }
+
         [[nodiscard]] char* GetFileMemory() const override;
 
         [[nodiscard]] size_t GetFileSize() const override;

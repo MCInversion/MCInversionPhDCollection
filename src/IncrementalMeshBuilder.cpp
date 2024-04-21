@@ -5,7 +5,10 @@
 #include "utils/FileMappingWrapper.h"
 #include "utils/IncrementalUtils.h"
 
+#include "IncrementalMeshFileHandler.h"
+
 #include <thread>
+
 
 [[nodiscard]] bool InitParamsAreCorrect(const std::string& fileName, const unsigned int& completionFrequency)
 {
@@ -23,9 +26,6 @@
 
 	return true;
 }
-
-/// \brief Well, this is merely an approximation. Ascii OBJ files may consist of larger vertex lines.
-constexpr size_t APPROX_BYTES_PER_VERTEX = 24;
 
 namespace IMB
 {
@@ -54,11 +54,25 @@ namespace IMB
 		m_RenderCallback = renderCallback;
 		m_MeshingStrategy = GetReconstructionStrategy(reconstructType);
 		m_FileMapping = std::make_unique<Utils::FileMappingWrapper>(fileName);
-
-		// Estimate number of vertices based on [Botsch et al., 2010] ratio N_F = 2 * N_V.
-		const auto nExpectedVertices = m_FileMapping->GetLineCount() / 3;
-
-		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(nExpectedVertices, completionFrequency, vertSelType);
+		if (!m_FileMapping->IsValid())
+		{
+			std::cerr << "IncrementalMeshBuilder::Init: Error during initialization of FileMappingWrapper!\n";
+			return;
+		}
+		const char* fileStart = m_FileMapping->GetFileMemory();
+		const char* fileEnd = fileStart + m_FileMapping->GetFileSize();
+		m_FileHandler = CreateMeshFileHandler(FileHandlerParams{ fileName, fileStart, fileEnd });
+		if (!m_FileHandler)
+		{
+			std::cerr << "IncrementalMeshBuilder::Init: Error during initialization of IncrementalMeshFileHandler!\n";
+			return;
+		}
+		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(completionFrequency, vertSelType, m_FileHandler);
+		if (!m_Dispatcher->IsValid())
+		{
+			std::cerr << "IncrementalMeshBuilder::Init: Error during initialization of IncrementalMeshBuilderDispatcher!\n";
+			return;
+		}
 		m_IsInitialized = true;
 	}
 
@@ -102,30 +116,25 @@ namespace IMB
 			// initiate worker threads
 			const size_t nAvailableWorkerThreads = std::thread::hardware_concurrency() - 2;
 			const size_t threadCount = nThreads == 0 ? 1 : (nThreads >= nAvailableWorkerThreads ? nAvailableWorkerThreads : nThreads);
-			const size_t chunkSize = m_FileMapping->GetFileSize() / threadCount;
 #if DEBUG_PRINT
 			DBG_OUT << "IncrementalMeshBuilder::DispatchAndSyncWorkers: nAvailableWorkerThreads = " << nAvailableWorkerThreads << "\n";
 			DBG_OUT << "IncrementalMeshBuilder::DispatchAndSyncWorkers: threadCount = " << threadCount << "\n";
 			DBG_OUT << "IncrementalMeshBuilder::DispatchAndSyncWorkers: m_FileMapping->GetFileSize() = " << m_FileMapping->GetFileSize() << " bytes\n";
-			DBG_OUT << "IncrementalMeshBuilder::DispatchAndSyncWorkers: chunkSize = " << chunkSize << " bytes\n";
 #endif
 			std::vector<std::thread> threads(threadCount);
 
-			char* fileStart = m_FileMapping->GetFileMemory();
-			char* fileEnd = fileStart + m_FileMapping->GetFileSize();
+#if DEBUG_PRINT
+			const char* fileStart = m_FileHandler->GetMemoryStart();
+			const char* fileEnd = m_FileHandler->GetMemoryEnd();
+			const size_t dataSize = fileEnd - fileStart;
+			const size_t chunkSize = dataSize / threadCount;
+			DBG_OUT << "IncrementalMeshBuilder::DispatchAndSyncWorkers: (vertex)dataSize = " << dataSize << " bytes\n";
+			DBG_OUT << "IncrementalMeshBuilder::DispatchAndSyncWorkers: chunkSize = " << chunkSize << " bytes\n";
+#endif
+
 			for (size_t i = 0; i < threadCount; ++i)
 			{
-				char* chunkStart = fileStart + (i * chunkSize);
-				char* chunkEnd = (i == threadCount - 1) ? fileEnd : chunkStart + chunkSize;
-
-				// Adjust chunk_end to point to the end of a line
-				while (*chunkEnd != '\n' && chunkEnd < fileEnd) {
-					chunkEnd++;
-				}
-				if (chunkEnd != fileEnd) {
-					chunkEnd++;  // move past the newline character
-				}
-
+				const auto [chunkStart, chunkEnd] = m_FileHandler->GetChunkBounds(i, threadCount);
 				// Start a thread to process this chunk
 				threads[i] = std::thread(invokeDispatcherChunkProcess, chunkStart, chunkEnd);
 			}
