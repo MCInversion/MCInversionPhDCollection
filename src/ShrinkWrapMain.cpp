@@ -2657,12 +2657,10 @@ int main()
 	{
 		const std::vector<std::string> meshForPtCloudNames{
 			//"armadillo",
-			//"blub",
 			"bunny",
+			"CaesarBust",
 			//"maxPlanck",
-			//"nefertiti",
-			//"ogre",
-			//"spot"
+			//"nefertiti"
 		};
 
 		for (const auto& meshName : meshForPtCloudNames)
