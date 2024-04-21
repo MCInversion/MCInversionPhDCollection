@@ -26,7 +26,7 @@ namespace IMB
 	void BallPivotingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
 		std::cout << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
-		const auto meshDataOpt = Geometry::ComputeBallPivotingMeshFromPoints(ioPoints, 1.0f);
+		const auto meshDataOpt = Geometry::ComputeBallPivotingMeshFromPoints(ioPoints, 8.0f);
 		if (!meshDataOpt.has_value())
 		{
 			std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: Internal algorithm error!\n";

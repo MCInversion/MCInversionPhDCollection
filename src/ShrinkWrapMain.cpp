@@ -83,7 +83,8 @@ constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
-constexpr bool performIncrementalMeshBuilderTests = true;
+constexpr bool performIncrementalMeshBuilderTests = false;
+constexpr bool perform2GBApollonMeshBuilderTest = true;
 
 int main()
 {
@@ -2667,10 +2668,10 @@ int main()
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
-			constexpr size_t nUpdates = 5;
+			constexpr size_t nUpdates = 10;
 			unsigned int lodIndex = 0;
 			//const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-			//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_Bunny/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
+			//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
 			//	if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
 			//	{
 			//		std::cout << "Failed to export mesh data." << "\n";
@@ -2698,11 +2699,57 @@ int main()
 				IMB::VertexSelectionType::UniformRandom,
 				//IMB::VertexSelectionType::Sequential,
 				exportPtsToPLY,
-				20000
+				//exportToOBJ,
+				40000
 			);
 			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 5;
+			constexpr unsigned int nThreads = 1;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests
+
+	if (perform2GBApollonMeshBuilderTest)
+	{
+		// WARNING: This thing is huge
+		const std::string inputFileName = "C:/Users/Martin/source/testMeshes/Apollon/Apollon_50MPx_el1-2-3-4-5-6-7_parcial_FS_158201601_111M_scaled.ply";
+		const std::string meshName = "Apollon_111M";
+
+		constexpr size_t nUpdates = 10;
+		unsigned int lodIndex = 0;
+		//const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+		//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
+		//	if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
+		//	{
+		//		std::cout << "Failed to export mesh data." << "\n";
+		//		return;
+		//	}
+		//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+		//	++lodIndex;
+		//};
+		const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+			const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
+			if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
+			{
+				std::cout << "Failed to export mesh data." << "\n";
+				return;
+			}
+			std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+			++lodIndex;
+		};
+		auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
+		meshBuilder.Init(
+			inputFileName,
+			nUpdates,
+			//IMB::ReconstructionFunctionType::BallPivoting, 
+			IMB::ReconstructionFunctionType::None,
+			IMB::VertexSelectionType::UniformRandom,
+			//IMB::VertexSelectionType::Sequential,
+			exportPtsToPLY,
+			//exportToOBJ,
+			40000
+		);
+		constexpr unsigned int seed = 4999;
+		constexpr unsigned int nThreads = 1;
+		meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
+	}
 }

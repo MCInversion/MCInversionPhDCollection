@@ -99,7 +99,7 @@ namespace IMB
 		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
 	}
 
-	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 3;
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 1;
 
 	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{
