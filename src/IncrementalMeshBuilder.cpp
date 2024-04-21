@@ -36,7 +36,8 @@ namespace IMB
 		const std::string& fileName, const unsigned int& completionFrequency, 
 		const ReconstructionFunctionType& reconstructType, 
 		const VertexSelectionType& vertSelType,
-		const MeshRenderFunction& renderCallback)
+		const MeshRenderFunction& renderCallback,
+		const size_t& maxVertexCount)
 	{
 		if (!InitParamsAreCorrect(fileName, completionFrequency))
 		{
@@ -67,7 +68,7 @@ namespace IMB
 			std::cerr << "IncrementalMeshBuilder::Init: Error during initialization of IncrementalMeshFileHandler!\n";
 			return;
 		}
-		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(completionFrequency, vertSelType, m_FileHandler);
+		m_Dispatcher = std::make_unique<IncrementalMeshBuilderDispatcher>(completionFrequency, maxVertexCount, vertSelType, m_FileHandler);
 		if (!m_Dispatcher->IsValid())
 		{
 			std::cerr << "IncrementalMeshBuilder::Init: Error during initialization of IncrementalMeshBuilderDispatcher!\n";

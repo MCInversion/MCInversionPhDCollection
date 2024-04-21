@@ -30,29 +30,40 @@ namespace IMB
     class IncrementalProgressTracker
 	{
     public:
-        IncrementalProgressTracker(const size_t& nTotal, const unsigned int& frequency, const std::function<void()>& callback)
-            : m_nTotalExpectedVertices(nTotal), m_CompletionFrequency(frequency)
+        IncrementalProgressTracker(
+            const size_t& nTotal, const unsigned int& frequency, 
+            const size_t& maxVertexCount, 
+            const std::function<void()>& addJobCallback, const std::function<void()>& terminationCallback)
+            : m_nTotalExpectedVertices(std::min(nTotal, maxVertexCount)), m_CompletionFrequency(frequency)
         {
-            SetDispatcherCallback(callback);
+            SetDispatcherAddJobCallback(addJobCallback);
+            SetDispatcherTerminationCallback(terminationCallback);
         }
 
         void Update(const size_t& nLocalVerts, const bool& forceUpdate = false);
 
-        [[nodiscard]] bool ShouldTriggerUpdate(const size_t& newCount) const;
-
-        void SetDispatcherCallback(const std::function<void()>& callback)
+        void SetDispatcherAddJobCallback(const std::function<void()>& callback)
         {
-            m_DispatcherCallback = callback;
+            m_DispatcherAddJobCallback = callback;
+        }
+
+
+        void SetDispatcherTerminationCallback(const std::function<void()>& callback)
+        {
+            m_DispatcherTerminationCallback = callback;
         }
 
     private:
+        [[nodiscard]] bool ShouldTriggerUpdate(const size_t& newCount) const;
 
-        std::function<void()> m_DispatcherCallback;
+        std::function<void()> m_DispatcherAddJobCallback;
+        std::function<void()> m_DispatcherTerminationCallback;
 
-        size_t m_nTotalExpectedVertices; //>! the total amount of expected mesh vertices.
         std::atomic<size_t> m_ProcessedVertices{ 0 }; //>! a counter for the total amount of processed vertices in all threads.
-        unsigned int m_CompletionFrequency; //>! the frequency under which updates are triggered.
         std::mutex m_Mutex; //>! mutex for ensuring thread safety of this object.
+
+        const size_t m_nTotalExpectedVertices; //>! the total amount of expected mesh vertices.
+        const unsigned int m_CompletionFrequency; //>! the frequency under which updates are triggered.
     };
 
     /// =======================================================================================
@@ -74,6 +85,8 @@ namespace IMB
         {
             return m_Tasks.size();
         }
+
+        //void ForcedTerminate();
     private:
         std::queue<std::function<void()>> m_Tasks;
         mutable std::mutex m_QueueMutex;
@@ -90,13 +103,18 @@ namespace IMB
 	class IncrementalMeshBuilderDispatcher
 	{
 	public:
-        IncrementalMeshBuilderDispatcher(const unsigned int& frequency, const VertexSelectionType& selectionType, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
+        IncrementalMeshBuilderDispatcher(const unsigned int& frequency, 
+            const size_t& maxVertexCount, const VertexSelectionType& selectionType, 
+            const std::shared_ptr<IncrementalMeshFileHandler>& handler)
             : m_UpdateFrequency(frequency)
         {
             try
             {
-				m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, handler);	            
-	            m_ProgressTracker = std::make_unique<IncrementalProgressTracker>(m_VertexSamplingStrategy->GetVertexCountEstimate(), frequency, [this] { EnqueueMeshUpdate(); });
+				m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, maxVertexCount, handler);
+	            m_ProgressTracker = std::make_unique<IncrementalProgressTracker>(
+                    m_VertexSamplingStrategy->GetVertexCountEstimate(), frequency, maxVertexCount,
+                    [this] { EnqueueMeshUpdate(); },
+                    [this] { ShutDownQueue(); });
 	            m_UpdateThread = std::thread([this] { ProcessQueue(); });
             }
             catch (const std::exception& e) {
@@ -126,6 +144,8 @@ namespace IMB
             m_UpdateQueue.ProcessTasks();
         }
 
+        void ShutDownQueue();
+
         MeshUpdateCallback m_MeshUpdateCallback;
         MeshUpdateQueue m_UpdateQueue;
         std::thread m_UpdateThread;
@@ -137,6 +157,8 @@ namespace IMB
 
         std::unique_ptr<IncrementalProgressTracker> m_ProgressTracker{ nullptr };
         std::unique_ptr<VertexSamplingStrategy> m_VertexSamplingStrategy{ nullptr };
+
+        bool m_UpdateThreadTerminated{ false };
 	};
 	
 } // namespace IMB

@@ -99,16 +99,16 @@ namespace IMB
 		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
 	}
 
-	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 2;
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 3;
 
-	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
+	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{
 		m_FileHandler = handler;
 		if (!m_FileHandler)
 		{
 			throw std::invalid_argument("VertexSamplingStrategy::VertexSamplingStrategy: m_FileHandler could not be created!\n");
 		}
-		const auto totalExpectedVertices = m_FileHandler->GetGlobalVertexCountEstimate();
+		const auto totalExpectedVertices = std::min(m_FileHandler->GetGlobalVertexCountEstimate(), maxVertexCount);
 		m_UpdateThreshold = static_cast<size_t>(std::round(static_cast<double>(totalExpectedVertices) /
 			static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER)));
 #if DEBUG_PRINT

@@ -1,12 +1,11 @@
 #pragma once
 
-#include "pmp/SurfaceMesh.h"
-
 #include "utils/IFileMappingWrapper.h"
 #include "geometry/GeometryConversionUtils.h"
 
 #include "IncrementalProgressUtils.h"
 #include "PointCloudMeshingStrategies.h"
+#include "utils/IncrementalUtils.h"
 
 namespace IMB
 {
@@ -39,11 +38,14 @@ namespace IMB
         /// \param reconstructType         the type of mesh reconstruction function.
         /// \param vertSelType             the type of vertex selection function.
         /// \param renderCallback          gets called when the updated mesh is ready.
+        /// \param maxVertexCount          the cap for the vertex count of the resulting mesh.
         /// ==================================================================
         void Init(const std::string& fileName, const unsigned int& completionFrequency, 
             const ReconstructionFunctionType& reconstructType = ReconstructionFunctionType::BallPivoting, 
             const VertexSelectionType& vertSelType = VertexSelectionType::UniformRandom,
-            const MeshRenderFunction& renderCallback = [](const Geometry::BaseMeshGeometryData&) {});
+            const MeshRenderFunction& renderCallback = [](const Geometry::BaseMeshGeometryData&) {},
+            const size_t& maxVertexCount = DEFAULT_MAX_VERTEX_CAPACITY
+        );
 
         /// ==================================================================
         /// \brief Samples vertices from the mesh using m_Dispatcher->m_VertexSamplingStrategy.

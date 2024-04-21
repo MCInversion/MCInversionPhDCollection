@@ -14,7 +14,7 @@ namespace IMB
 	IncrementalMeshBuilderDispatcher::~IncrementalMeshBuilderDispatcher()
 	{
 		m_UpdateQueue.ShutDown();
-		if (m_UpdateThread.joinable())
+		if (m_UpdateThread.joinable() && !m_UpdateThreadTerminated)
 		{
 			m_UpdateThread.join();
 		}
@@ -76,18 +76,31 @@ namespace IMB
 #endif
 	}
 
+	void IncrementalMeshBuilderDispatcher::ShutDownQueue()
+	{
+		{ // ensure that the lock is held only for the duration of the operations that need synchronization
+			std::lock_guard lock(m_ThreadResultMutex);
+			m_UpdateQueue.ShutDown();
+			if (m_UpdateThread.joinable() && !m_UpdateThreadTerminated)
+			{
+				m_UpdateThread.join();
+				m_UpdateThreadTerminated = true;
+			}
+		}
+	}
+
 	void IncrementalProgressTracker::Update(const size_t& nLocalVerts, const bool& forceUpdate)
 	{
 		// increment a shared value for the amount of processed vertices
 		const auto newCount = m_ProcessedVertices.fetch_add(nLocalVerts, std::memory_order_relaxed);
 
-		if (forceUpdate)
+		if (forceUpdate && newCount < m_nTotalExpectedVertices)
 		{
 #if DEBUG_PRINT
 			DBG_OUT << "IncrementalProgressTracker::Update: Forced update with newCount  = " << newCount << "\n";
 			DBG_OUT << "IncrementalProgressTracker::Update: invoking m_DispatcherCallback ... \n";
 #endif
-			m_DispatcherCallback();
+			m_DispatcherAddJobCallback();
 			return;
 		}
 
@@ -99,13 +112,19 @@ namespace IMB
 #if DEBUG_PRINT
 		DBG_OUT << "IncrementalProgressTracker::Update: invoking m_DispatcherCallback.\n";
 #endif
-		m_DispatcherCallback();
+		m_DispatcherAddJobCallback();
 	}
 
 	bool IncrementalProgressTracker::ShouldTriggerUpdate(const size_t& newCount) const
 	{
-		if (m_ProcessedVertices + newCount >= DEFAULT_MAX_VERTEX_CAPACITY)
-			return true; // max capacity is reached.
+		if (newCount >= m_nTotalExpectedVertices)
+		{
+#if DEBUG_PRINT
+			DBG_OUT << "IncrementalProgressTracker::ShouldTriggerUpdate: MAX CAPACITY REACHED!!!\n";
+#endif
+			m_DispatcherTerminationCallback();
+			return false;
+		}
 
 		// Calculate the threshold for updates based on the total expected vertices and completion frequency
 		const double progressTrackerUpdateThreshold = static_cast<double>(m_nTotalExpectedVertices) / m_CompletionFrequency;
@@ -151,4 +170,14 @@ namespace IMB
 		}
 		m_Condition.notify_all();
 	}
+
+	//void MeshUpdateQueue::ForcedTerminate()
+	//{
+	//	{// ensure that the lock is held only for the duration of the operations that need synchronization
+	//		std::lock_guard lock(m_QueueMutex);
+	//		while (!m_Tasks.empty())
+	//			m_Tasks.pop();
+	//	}
+	//	m_Condition.notify_all();
+	//}
 }

@@ -23,7 +23,7 @@ namespace IMB
 	class VertexSamplingStrategy
 	{
 	public:
-		explicit VertexSamplingStrategy(const unsigned int& completionFrequency, const std::shared_ptr<IncrementalMeshFileHandler>& handler);
+		explicit VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler);
 
 		virtual ~VertexSamplingStrategy() = default;
 
@@ -75,15 +75,15 @@ namespace IMB
 			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
 	};
 
-	inline [[nodiscard]] std::unique_ptr<VertexSamplingStrategy> GetVertexSelectionStrategy(const VertexSelectionType& vertSelType, const unsigned int& completionFrequency, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
+	inline [[nodiscard]] std::unique_ptr<VertexSamplingStrategy> GetVertexSelectionStrategy(const VertexSelectionType& vertSelType, const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{
 		if (vertSelType == VertexSelectionType::Sequential)
-			return std::make_unique<SequentialVertexSamplingStrategy>(completionFrequency, handler);
+			return std::make_unique<SequentialVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 		if (vertSelType == VertexSelectionType::UniformRandom)
-			return std::make_unique<UniformRandomVertexSamplingStrategy>(completionFrequency, handler);
+			return std::make_unique<UniformRandomVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 		if (vertSelType == VertexSelectionType::NormalRandom)
-			return std::make_unique<NormalRandomVertexSamplingStrategy>(completionFrequency, handler);
-		return std::make_unique<SoftmaxFeatureDetectingVertexSamplingStrategy>(completionFrequency, handler);
+			return std::make_unique<NormalRandomVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
+		return std::make_unique<SoftmaxFeatureDetectingVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 	}
 
 	inline [[nodiscard]] std::string GetVertexSelectionStrategyName(const VertexSelectionType& vertSelType)

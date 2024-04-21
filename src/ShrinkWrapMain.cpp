@@ -2697,7 +2697,9 @@ int main()
 				IMB::ReconstructionFunctionType::None,
 				IMB::VertexSelectionType::UniformRandom,
 				//IMB::VertexSelectionType::Sequential,
-				exportPtsToPLY);
+				exportPtsToPLY,
+				20000
+			);
 			constexpr unsigned int seed = 4999;
 			constexpr unsigned int nThreads = 5;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
