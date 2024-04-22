@@ -5,6 +5,12 @@
 #include "utils/StringUtils.h"
 #include "IncrementalProgressUtils.h"
 
+#define CHECK_LARGE_COORDS false
+
+#if CHECK_LARGE_COORDS
+constexpr float MAX_ABS_COORD = 1e+5;
+#endif
+
 namespace
 {
 	// Function to check if the system is little-endian
@@ -141,19 +147,24 @@ namespace IMB
 	{
 #if DEBUG_PRINT
 		DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Starting sample process...\n";
-		//DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: System endianness: " << (IsSystemLittleEndian() ? "little endian" : "big endian") << "\n";
 #endif
 		size_t localVertexCount = 0;
-		constexpr size_t vertexSize = sizeof(float) * 3; // Assuming each vertex is represented by three floats
 		result.reserve(m_GlobalVertexCountEstimate);
 
 		for (const auto index : indices)
 		{
-			const char* vertexData = start + index * vertexSize;
-			if (vertexData + vertexSize > end) continue; // Ensure the vertex data is within bounds
+			const char* vertexData = start + index * m_VertexItemSize;
+			if (vertexData + m_VertexItemSize > end) continue; // Ensure the vertex data is within bounds
 
 			// Interpret the bytes as floats directly
 			const auto* coords = reinterpret_cast<const float*>(vertexData);
+
+#if CHECK_LARGE_COORDS
+			//if (std::isnan(coords[0]) || std::isnan(coords[1]) || std::isnan(coords[2]))
+			//	continue;
+			if (std::abs(coords[0]) > MAX_ABS_COORD || std::abs(coords[1]) > MAX_ABS_COORD || std::abs(coords[2]) > MAX_ABS_COORD)
+				continue;
+#endif
 
 			pmp::Point vec(coords[0], coords[1], coords[2]);
 			result.push_back(vec);
@@ -185,37 +196,9 @@ namespace IMB
 
 	void IncrementalBinaryPLYFileHandler::EstimateGlobalVertexCount(const char* start, const char* end)
 	{
-		const char* cursor = start;
-		std::string line;
-		m_GlobalVertexCountEstimate = 0;  // Default if no vertex count is found
-
-		while (cursor < end) {
-			line.clear();
-			// Read until newline or end of the header section
-			while (cursor < end && *cursor != '\n') {
-				line.append(1, *cursor++);
-			}
-			cursor++;  // Move past the newline character
-
-			// Check if we've reached the end of the header
-			if (line == "end_header") {
-				break;
-			}
-
-			// Check for the vertex element line
-			if (line.find("element vertex ") != std::string::npos) {
-				std::istringstream iss(line);
-				std::string element, vertex;
-				size_t count;
-				iss >> element >> vertex >> count;
-				if (vertex == "vertex") {
-					m_GlobalVertexCountEstimate = count;
-					break;  // Exit once the vertex count is found
-				}
-			}
-		}
-
-		if (m_GlobalVertexCountEstimate == 0) {
+		ParseHeader(start);
+		if (m_GlobalVertexCountEstimate == 0) 
+		{
 			std::cerr << "No vertex count found in the PLY header." << std::endl;
 		}
 	}
@@ -223,8 +206,8 @@ namespace IMB
 	std::pair<const char*, const char*> IncrementalBinaryPLYFileHandler::GetChunkBounds(size_t chunkIndex, size_t totalChunks) const
 	{
 		const size_t totalSize = m_VertexDataEnd - m_VertexDataStart;
-		size_t chunkSize = (totalSize / totalChunks);
-		chunkSize -= chunkSize % (sizeof(float) * 3); // Ensure chunkSize is multiple of vertex size
+		size_t chunkSize = totalSize / totalChunks;
+		chunkSize -= chunkSize % m_VertexItemSize; // Adjust chunk size based on the actual vertex size
 
 		const char* start = m_VertexDataStart + chunkIndex * chunkSize;
 		const char* end = (chunkIndex + 1 == totalChunks) ? m_VertexDataEnd : start + chunkSize;
@@ -237,10 +220,13 @@ namespace IMB
 		// Find "end_header" and move to the start of the vertex data
 		const std::string headerEndTag = "end_header";
 		const char* cursor = fileStart;
-		while (cursor + headerEndTag.length() < fileEnd) {
-			if (strncmp(cursor, headerEndTag.c_str(), headerEndTag.length()) == 0) {
+		while (cursor + headerEndTag.length() < fileEnd) 
+		{
+			if (strncmp(cursor, headerEndTag.c_str(), headerEndTag.length()) == 0) 
+			{
 				cursor += headerEndTag.length();
-				while (cursor < fileEnd && (*cursor == '\n' || *cursor == '\r')) {
+				while (cursor < fileEnd && (*cursor == '\n' || *cursor == '\r'))
+				{
 					cursor++; // Skip the newline character(s)
 				}
 				break;
@@ -249,8 +235,7 @@ namespace IMB
 		}
 
 		m_VertexDataStart = cursor;
-		constexpr size_t vertexSize = sizeof(float) * 3; // Adjust based on actual per-vertex data size and types
-		m_VertexDataEnd = m_VertexDataStart + (m_GlobalVertexCountEstimate * vertexSize);
+		m_VertexDataEnd = m_VertexDataStart + (m_GlobalVertexCountEstimate * m_VertexItemSize);
 	}
 
 	size_t IncrementalBinaryPLYFileHandler::GetLocalVertexCountEstimate(const char* start, const char* end) const
@@ -259,6 +244,55 @@ namespace IMB
 		constexpr size_t vertexSize = sizeof(float) * 3; // Assuming each vertex consists of three floats
 		const size_t localVertexCount = dataSize / vertexSize; // Calculate how many complete vertices are within this block
 		return localVertexCount;
+	}
+
+	void IncrementalBinaryPLYFileHandler::ParseHeader(const char* fileStart)
+	{
+		const char* cursor = fileStart;
+		std::string line;
+		size_t vertexPropertiesSize = 0;
+		bool inVertexElement = false;
+
+		while (std::strncmp(cursor, "end_header", 10) != 0)
+		{
+			const char* nextLine = cursor;
+			while (*nextLine != '\n' && *nextLine != '\r' && *nextLine != '\0') nextLine++; // Find the end of the line
+			line.assign(cursor, nextLine);
+			cursor = nextLine;
+
+			if (*cursor == '\r') cursor++; // Skip carriage return
+			if (*cursor == '\n') cursor++; // Skip newline
+
+			// Process the line
+			if (line.find("element vertex") == 0)
+			{
+				// This line indicates the start of vertex descriptions
+				const size_t pos = line.find(" ");
+				const size_t lastPos = line.find_last_of(" ");
+				m_GlobalVertexCountEstimate = std::stoul(line.substr(lastPos + 1));
+				inVertexElement = true;
+			}
+			else if (inVertexElement && line.find("property") == 0)
+			{
+				// Count size of properties in the vertex element
+				if (line.find("float") != std::string::npos)
+				{
+					vertexPropertiesSize += sizeof(float);
+				}
+				else if (line.find("uchar") != std::string::npos)
+				{
+					vertexPropertiesSize += sizeof(unsigned char);
+				}
+				// Add other types as necessary, e.g., double, int
+			}
+			else if (line.find("element") == 0)
+			{
+				// We've moved on to another element, e.g., faces
+				inVertexElement = false;
+			}
+		}
+
+		m_VertexItemSize = vertexPropertiesSize; // Set the size per vertex item based on properties found
 	}
 
 	//

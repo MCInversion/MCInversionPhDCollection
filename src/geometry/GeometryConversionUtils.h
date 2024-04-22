@@ -41,6 +41,14 @@ namespace Geometry
 	[[nodiscard]] bool ExportBaseMeshGeometryDataToOBJ(const BaseMeshGeometryData& geomData, const std::string& absFileName);
 
 	/**
+	 * \brief For testing out the BaseMeshGeometryData by exporting it to VTK polydata file.
+	 * \param geomData       input geom data.
+	 * \param absFileName    absolute file path for the created file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportBaseMeshGeometryDataToVTK(const BaseMeshGeometryData& geomData, const std::string& absFileName);
+
+	/**
 	 * \brief For importing very large OBJ mesh files with option for parallel.
 	 * \param absFileName                absolute file path for the opened file.
 	 * \param importInParallel           if true, a parallel version of the importer will be used.
@@ -123,5 +131,14 @@ namespace Geometry
 		const pmp::Scalar& ballRadius, 
 		const pmp::Scalar& clusteringPercentageOfBallRadius = 20, 
 		const pmp::Scalar& angleThreshold = 90.0);
+
+	/// \brief Computes the minimum distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistance(const std::vector<pmp::Point>& points);
+
+	/// \brief Computes the maximum distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeMaxInterVertexDistance(const std::vector<pmp::Point>& points);
+
+	/// \brief Computes the average distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeMeanInterVertexDistance(const std::vector<pmp::Point>& points);
 
 } // namespace Geometry

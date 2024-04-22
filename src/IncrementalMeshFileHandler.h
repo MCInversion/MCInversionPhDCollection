@@ -80,8 +80,11 @@ namespace IMB
 		void InitializeMemoryBounds(const char* fileStart, const char* fileEnd) override;
 
 		[[nodiscard]] size_t GetLocalVertexCountEstimate(const char* start, const char* end) const override;
-	//private:
-		// TODO: support for coord types other than "float" from the PLY header
+	private:
+
+		void ParseHeader(const char* fileStart);
+		
+		size_t m_VertexItemSize{ 3 }; //>! vertex data could contain additional information besides coordinates, like color.
 	};
 
 	/**

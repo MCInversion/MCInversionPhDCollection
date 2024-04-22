@@ -84,7 +84,8 @@ constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
 constexpr bool performIncrementalMeshBuilderTests = false;
-constexpr bool perform2GBApollonMeshBuilderTest = true;
+constexpr bool perform2GBApollonMeshBuilderTest = false;
+constexpr bool performApollonNanoflannTest = true;
 
 int main()
 {
@@ -2726,9 +2727,19 @@ int main()
 		//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 		//	++lodIndex;
 		//};
-		const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-			const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
-			if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
+		//const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+		//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
+		//	if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
+		//	{
+		//		std::cout << "Failed to export mesh data." << "\n";
+		//		return;
+		//	}
+		//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+		//	++lodIndex;
+		//};
+		const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+			const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
+			if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 			{
 				std::cout << "Failed to export mesh data." << "\n";
 				return;
@@ -2740,16 +2751,45 @@ int main()
 		meshBuilder.Init(
 			inputFileName,
 			nUpdates,
-			//IMB::ReconstructionFunctionType::BallPivoting, 
-			IMB::ReconstructionFunctionType::None,
+			IMB::ReconstructionFunctionType::BallPivoting, 
+			//IMB::ReconstructionFunctionType::None,
 			IMB::VertexSelectionType::UniformRandom,
 			//IMB::VertexSelectionType::Sequential,
-			exportPtsToPLY,
+			//exportPtsToPLY,
 			//exportToOBJ,
+			exportToVTK,
 			40000
 		);
 		constexpr unsigned int seed = 4999;
-		constexpr unsigned int nThreads = 1;
+		constexpr unsigned int nThreads = 10;
 		meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
-	}
+
+	} // perform2GBApollonMeshBuilderTest
+
+	if (performApollonNanoflannTest)
+	{
+		const std::vector<std::string> importedPtCloudNames{
+			"bunnyPts_3"
+		};
+
+		for (const auto& ptCloudName : importedPtCloudNames)
+		{
+			std::cout << "----------------------------------------------------------------------\n";
+			std::cout << "Procedure: " << ptCloudName << " Nanoflann inter-vertex evaluation ...\n";
+			std::cout << "----------------------------------------------------------------------\n";
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+			const auto& ptCloud = ptCloudOpt.value();
+			const auto minDist = Geometry::ComputeMinInterVertexDistance(ptCloud);
+			std::cout << "minDist = " << minDist << "\n";
+			const auto maxDist = Geometry::ComputeMaxInterVertexDistance(ptCloud);
+			std::cout << "maxDist = " << maxDist << "\n";
+			const auto meanDist = Geometry::ComputeMeanInterVertexDistance(ptCloud);
+			std::cout << "meanDist = " << meanDist << "\n";
+		}
+	} // endif performApollonNanoflannTest
 }
