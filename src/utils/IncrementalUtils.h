@@ -3,7 +3,7 @@
 // ======================================================================
 // WARNING: Remove if you want IncrementalMeshBuilder to perform.
 // ======================================================================
-#define DEBUG_PRINT false
+#define DEBUG_PRINT true
 
 #if DEBUG_PRINT
 #include "TimingUtils.h"

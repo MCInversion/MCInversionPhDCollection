@@ -141,4 +141,13 @@ namespace Geometry
 	/// \brief Computes the average distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMeanInterVertexDistance(const std::vector<pmp::Point>& points);
 
+	/// \brief Computes the minimum distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points);
+
+	/// \brief Computes the maximum distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeMaxInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points);
+
+	/// \brief Computes the average distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeMeanInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points);
+
 } // namespace Geometry

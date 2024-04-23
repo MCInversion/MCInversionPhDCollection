@@ -116,7 +116,17 @@ endif()
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 
-set(CMAKE_CXX_STANDARD 20)
+# Check the generator and adjust the C++ standard if necessary
+if(CMAKE_GENERATOR MATCHES "Visual Studio 17 2022")
+    set(CMAKE_CXX_STANDARD 23)  # Use C++23 for Visual Studio 2022
+    message(STATUS "Setting C++ Standard to 23 for Visual Studio 2022")
+elseif(CMAKE_GENERATOR MATCHES "Visual Studio 16 2019")
+    set(CMAKE_CXX_STANDARD ${CXX_STANDARD_DEFAULT})  # Use default setting for Visual Studio 2019
+    message(STATUS "Setting C++ Standard to 20 for Visual Studio 2019")
+else()
+    set(CMAKE_CXX_STANDARD ${CXX_STANDARD_DEFAULT})  # Use default for other generators
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

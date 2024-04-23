@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <chrono>
+#include <iomanip>
+#include <ctime>
 
 /**
  * \brief A simple macro for beginning of a timing session.

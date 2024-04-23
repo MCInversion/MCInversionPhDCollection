@@ -2769,7 +2769,8 @@ int main()
 	if (performApollonNanoflannTest)
 	{
 		const std::vector<std::string> importedPtCloudNames{
-			"bunnyPts_3"
+			//"bunnyPts_3"
+			"bunnyPts_Minimal"
 		};
 
 		for (const auto& ptCloudName : importedPtCloudNames)
@@ -2784,12 +2785,24 @@ int main()
 				break;
 			}
 			const auto& ptCloud = ptCloudOpt.value();
+
 			const auto minDist = Geometry::ComputeMinInterVertexDistance(ptCloud);
 			std::cout << "minDist = " << minDist << "\n";
+			const auto minDistBrute = Geometry::ComputeMinInterVertexDistanceBruteForce(ptCloud);
+			std::cout << "minDistBrute = " << minDistBrute << "\n";
+			std::cout << "..................................................................\n";
+
 			const auto maxDist = Geometry::ComputeMaxInterVertexDistance(ptCloud);
 			std::cout << "maxDist = " << maxDist << "\n";
+			const auto maxDistBrute = Geometry::ComputeMaxInterVertexDistanceBruteForce(ptCloud);
+			std::cout << "maxDistBrute = " << maxDistBrute << "\n";
+			std::cout << "..................................................................\n";
+
 			const auto meanDist = Geometry::ComputeMeanInterVertexDistance(ptCloud);
 			std::cout << "meanDist = " << meanDist << "\n";
+			const auto meanDistBrute = Geometry::ComputeMeanInterVertexDistanceBruteForce(ptCloud);
+			std::cout << "meanDistBrute = " << meanDistBrute << "\n";
+			std::cout << "..................................................................\n";
 		}
 	} // endif performApollonNanoflannTest
 }

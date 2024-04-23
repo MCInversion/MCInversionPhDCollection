@@ -1163,17 +1163,20 @@ namespace Geometry
 		std::vector<Point> pts;
 
 		// Must return the number of data points
-		[[nodiscard]] size_t kdtree_get_point_count() const { return pts.size(); }
+		inline size_t kdtree_get_point_count() const { return pts.size(); }
 
 		// Returns the dim'th component of the idx'th point in the class:
 		// Since this is inlined and the "dim" argument is typically an immediate
 		// value, the
 		//  "if/else's" are actually solved at compile time.
-		[[nodiscard]] T kdtree_get_pt(const size_t idx, const size_t dim) const
+		inline T kdtree_get_pt(const size_t idx, const size_t dim) const
 		{
-			if (dim == 0) return pts[idx].x;
-			if (dim == 1) return pts[idx].y;
-			return pts[idx].z;
+			if (dim == 0)
+				return pts[idx].x;
+			else if (dim == 1)
+				return pts[idx].y;
+			else
+				return pts[idx].z;
 		}
 
 		// Optional bounding-box computation: return false to default to a standard
@@ -1182,12 +1185,13 @@ namespace Geometry
 		//   in "bb" so it can be avoided to redo it again. Look at bb.size() to
 		//   find out the expected dimensionality (e.g. 2 or 3 for point clouds)
 		template <class BBOX>
-		[[nodiscard]] bool kdtree_get_bbox(BBOX& /* bb */) const
+		bool kdtree_get_bbox(BBOX& /* bb */) const
 		{
 			return false;
 		}
 	};
 
+	// And this is the "dataset to kd-tree" adaptor class:
 	template <typename Derived>
 	struct PointCloudAdaptor
 	{
@@ -1199,10 +1203,10 @@ namespace Geometry
 		PointCloudAdaptor(const Derived& obj_) : obj(obj_) {}
 
 		/// CRTP helper method
-		const Derived& derived() const { return obj; }
+		inline const Derived& derived() const { return obj; }
 
 		// Must return the number of data points
-		[[nodiscard]] size_t kdtree_get_point_count() const
+		inline size_t kdtree_get_point_count() const
 		{
 			return derived().pts.size();
 		}
@@ -1211,11 +1215,14 @@ namespace Geometry
 		// Since this is inlined and the "dim" argument is typically an immediate
 		// value, the
 		//  "if/else's" are actually solved at compile time.
-		[[nodiscard]] coord_t kdtree_get_pt(const size_t idx, const size_t dim) const
+		inline coord_t kdtree_get_pt(const size_t idx, const size_t dim) const
 		{
-			if (dim == 0) return derived().pts[idx].x;
-			if (dim == 1) return derived().pts[idx].y;
-			return derived().pts[idx].z;
+			if (dim == 0)
+				return derived().pts[idx].x;
+			else if (dim == 1)
+				return derived().pts[idx].y;
+			else
+				return derived().pts[idx].z;
 		}
 
 		// Optional bounding-box computation: return false to default to a standard
@@ -1224,7 +1231,7 @@ namespace Geometry
 		//   in "bb" so it can be avoided to redo it again. Look at bb.size() to
 		//   find out the expected dimensionality (e.g. 2 or 3 for point clouds)
 		template <class BBOX>
-		[[nodiscard]] bool kdtree_get_bbox(BBOX& /*bb*/) const
+		bool kdtree_get_bbox(BBOX& /*bb*/) const
 		{
 			return false;
 		}
@@ -1239,53 +1246,49 @@ namespace Geometry
 			return -1.0f;
 		}
 
-		PointCloud<pmp::Scalar> ptCloud;
-		ptCloud.pts.reserve(points.size());
-		for (const auto& pt : points)
-			ptCloud.pts.push_back({ pt[0], pt[1], pt[2] });
-		PointCloudAdaptor adaptor(ptCloud);
+		PointCloud<pmp::Scalar> cloud;
+		cloud.pts.reserve(points.size());
+		for (const auto& p : points)
+			cloud.pts.push_back({ p[0], p[1], p[2] });
 
-		using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<
-			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloud<pmp::Scalar>>,
-			PointCloud<pmp::Scalar>, 3 /* dim */
-		>;
-		my_kd_tree_t index(3 /*dim*/, ptCloud, { 10 /* max leaf */ });
+		using PC2KD = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
+		const PC2KD pc2kd(cloud);  // The adaptor
 
 		pmp::Scalar minDistance = std::numeric_limits<pmp::Scalar>::max();
 
-		nanoflann::SearchParameters params;
-		params.sorted = true;
+		// construct a kd-tree index:
+		using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<
+			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PC2KD>, PC2KD, 3 /* dim */>;
+		my_kd_tree_t index(3 /*dim*/, cloud, { 10 /* max leaf */ });
+		auto searchParams = nanoflann::SearchParameters{ 0.0001, false };
 
-		if (adaptor.kdtree_get_point_count() == 0)
+		auto do_knn_search = [&searchParams, &index](const pmp::Point& p) {
+			// do a knn search
+			pmp::Scalar                          query_pt[3] = { p[0], p[1], p[2] };
+			size_t                               num_results = 5;
+			std::vector<uint32_t>                ret_index(num_results);
+			std::vector<pmp::Scalar>             out_dist_sqr(num_results);
+			num_results = index.knnSearch(
+				&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
+			// In case of less points in the tree than requested:
+			ret_index.resize(num_results);
+			out_dist_sqr.resize(num_results);
+			
+			for (const auto& dist : out_dist_sqr)
+				if (dist > FLT_EPSILON) return dist;
+			return out_dist_sqr[0];
+		};
+
+		for (const auto& point : points)
 		{
-			std::cerr << "Geometry::ComputeMinInterVertexDistance: adaptor.cloud.kdtree_get_point_count() == 0!\n";
-			return -1.0f;
-		}
-
-		for (size_t i = 0; i < adaptor.kdtree_get_point_count(); ++i)
-		{
-			const pmp::Scalar queryPt[3] = {
-				adaptor.kdtree_get_pt(i, 0),
-				adaptor.kdtree_get_pt(i, 1),
-				adaptor.kdtree_get_pt(i, 2)
-			};
-
-			size_t retIndex;
-			pmp::Scalar outDistSqr;
-			nanoflann::KNNResultSet<pmp::Scalar> resultSet(1);
-			resultSet.init(&retIndex, &outDistSqr);
-			index.findNeighbors(resultSet, &queryPt[0], params);
-
-			if (outDistSqr < minDistance && outDistSqr > 0) 
-			{
-				minDistance = outDistSqr;
-			}
+			const auto currDistSq = do_knn_search(point);
+			if (currDistSq < minDistance) minDistance = currDistSq;
 		}
 
 		return std::sqrt(minDistance);
 	}
 
-	pmp::Scalar ComputeMaxInterVertexDistance(const std::vector<pmp::Point>& points)
+	pmp::Scalar ComputeMaxInterVertexDistance(const std::vector<pmp::Point>& points) 
 	{
 		if (points.empty())
 		{
@@ -1293,47 +1296,42 @@ namespace Geometry
 			return -1.0f;
 		}
 
-		PointCloud<pmp::Scalar> ptCloud;
-		ptCloud.pts.reserve(points.size());
-		for (const auto& pt : points)
-			ptCloud.pts.push_back({ pt[0], pt[1], pt[2] });
-		PointCloudAdaptor adaptor(ptCloud);
+		PointCloud<pmp::Scalar> cloud;
+		cloud.pts.reserve(points.size());
+		for (const auto& p : points)
+			cloud.pts.push_back({ p[0], p[1], p[2] });
 
+		using PC2KD = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
+		const PC2KD pc2kd(cloud);  // The adaptor
+
+		pmp::Scalar maxDistance = -std::numeric_limits<pmp::Scalar>::max();
+
+		// construct a kd-tree index:
 		using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<
-			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloud<pmp::Scalar>>,
-			PointCloud<pmp::Scalar>, 3 /* dim */
-		>;
-		my_kd_tree_t index(3 /*dim*/, ptCloud, { 10 /* max leaf */ });
+			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PC2KD>, PC2KD, 3 /* dim */>;
+		my_kd_tree_t index(3 /*dim*/, pc2kd, { 10 /* max leaf */ });
 
-		pmp::Scalar maxDistance = 0;
+		auto do_knn_search = [](const my_kd_tree_t& index, const pmp::Point& p) {
+			// do a knn search
+			const size_t                         num_results = 10;
+			size_t                               ret_index;
+			pmp::Scalar                          out_dist_sqr;
+			nanoflann::KNNResultSet<pmp::Scalar> resultSet(num_results);
+			pmp::Scalar                          query_pt[3] = { p[0], p[1], p[2] };
 
-		nanoflann::SearchParameters params;
-		params.sorted = true;
+			resultSet.init(&ret_index, &out_dist_sqr);
+			index.findNeighbors(resultSet, &query_pt[0]);
 
-		if (adaptor.kdtree_get_point_count() == 0)
+			std::cout << "knnSearch(nn=" << num_results << "): \n";
+			std::cout << "ret_index=" << ret_index
+				<< " out_dist_sqr=" << out_dist_sqr << std::endl;
+			return out_dist_sqr;
+		};
+
+		for (const auto& point : points)
 		{
-			std::cerr << "Geometry::ComputeMaxInterVertexDistance: adaptor.cloud.kdtree_get_point_count() == 0!\n";
-			return -1.0f;
-		}
-
-		for (size_t i = 0; i < adaptor.kdtree_get_point_count(); ++i)
-		{
-			const pmp::Scalar queryPt[3] = {
-				adaptor.kdtree_get_pt(i, 0),
-				adaptor.kdtree_get_pt(i, 1),
-				adaptor.kdtree_get_pt(i, 2)
-			};
-
-			size_t retIndex;
-			pmp::Scalar outDistSqr;
-			nanoflann::KNNResultSet<pmp::Scalar> resultSet(1);
-			resultSet.init(&retIndex, &outDistSqr);
-			index.findNeighbors(resultSet, &queryPt[0], params);
-
-			if (outDistSqr > maxDistance && outDistSqr > 0)
-			{
-				maxDistance = outDistSqr;
-			}
+			const auto currDistSq = do_knn_search(index, point);
+			if (currDistSq > maxDistance) maxDistance = currDistSq;
 		}
 
 		return std::sqrt(maxDistance);
@@ -1341,58 +1339,127 @@ namespace Geometry
 
 	pmp::Scalar ComputeMeanInterVertexDistance(const std::vector<pmp::Point>& points)
 	{
-		if (points.empty())
+		if (points.empty()) 
 		{
 			std::cerr << "Geometry::ComputeMeanInterVertexDistance: points.empty()!\n";
 			return -1.0f;
 		}
 
-		PointCloud<pmp::Scalar> ptCloud;
-		ptCloud.pts.reserve(points.size());
-		for (const auto& pt : points)
-			ptCloud.pts.push_back({ pt[0], pt[1], pt[2] });
-		PointCloudAdaptor adaptor(ptCloud);
+		PointCloud<pmp::Scalar> cloud;
+		cloud.pts.reserve(points.size());
+		for (const auto& p : points)
+			cloud.pts.push_back({ p[0], p[1], p[2] });
 
+		using PC2KD = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
+		const PC2KD pc2kd(cloud);  // The adaptor
+
+		pmp::Scalar totalDistance = 0.0f;
+
+		// construct a kd-tree index:
 		using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<
-			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloud<pmp::Scalar>>,
-			PointCloud<pmp::Scalar>, 3 /* dim */
-		>;
-		my_kd_tree_t index(3 /*dim*/, ptCloud, { 10 /* max leaf */ });
+			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PC2KD>, PC2KD, 3 /* dim */>;
+		my_kd_tree_t index(3 /*dim*/, pc2kd, { 10 /* max leaf */ });
 
-		pmp::Scalar totalDistance = 0;
-		size_t count = 0;
+		auto do_knn_search = [](const my_kd_tree_t& index, const pmp::Point& p) {
+			// do a knn search
+			const size_t                         num_results = 10;
+			size_t                               ret_index;
+			pmp::Scalar                          out_dist_sqr;
+			nanoflann::KNNResultSet<pmp::Scalar> resultSet(num_results);
+			pmp::Scalar                          query_pt[3] = { p[0], p[1], p[2] };
 
-		nanoflann::SearchParameters params;
-		params.sorted = true;
+			resultSet.init(&ret_index, &out_dist_sqr);
+			index.findNeighbors(resultSet, &query_pt[0]);
 
-		if (adaptor.kdtree_get_point_count() == 0)
+			std::cout << "knnSearch(nn=" << num_results << "): \n";
+			std::cout << "ret_index=" << ret_index
+				<< " out_dist_sqr=" << out_dist_sqr << std::endl;
+			return out_dist_sqr;
+		};
+
+		for (const auto& point : points)
 		{
-			std::cerr << "Geometry::ComputeMeanInterVertexDistance: adaptor.cloud.kdtree_get_point_count() == 0!\n";
+			const auto currDistSq = do_knn_search(index, point);
+			if (currDistSq > 0.0) totalDistance = +currDistSq;
+		}
+
+		return totalDistance / static_cast<pmp::Scalar>(points.size());
+	}
+
+
+	//
+	// ===========================================================================================
+	//
+
+	pmp::Scalar ComputeMinInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points)
+	{
+		std::cout << "Geometry::ComputeMinInterVertexDistanceBruteForce [WARNING]: This function is brute-force. Not recommended for large data!\n";
+		if (points.size() < 2)
+		{
+			std::cerr << "Geometry::ComputeMinInterVertexDistanceBruteForce: points.size() < 2! No meaningful distance can be computed!\n";
 			return -1.0f;
 		}
 
-		for (size_t i = 0; i < adaptor.kdtree_get_point_count(); ++i)
+		pmp::Scalar minDistance = std::numeric_limits<pmp::Scalar>::max();
+		for (size_t i = 0; i < points.size(); ++i)
 		{
-			const pmp::Scalar queryPt[3] = {
-				adaptor.kdtree_get_pt(i, 0),
-				adaptor.kdtree_get_pt(i, 1),
-				adaptor.kdtree_get_pt(i, 2)
-			};
-
-			size_t retIndex;
-			pmp::Scalar outDistSqr;
-			nanoflann::KNNResultSet<pmp::Scalar> resultSet(1);
-			resultSet.init(&retIndex, &outDistSqr);
-			index.findNeighbors(resultSet, &queryPt[0], params);
-
-			if (outDistSqr > 0) // Exclude self-matching
+			for (size_t j = i + 1; j < points.size(); ++j) 
 			{
-				totalDistance += std::sqrt(outDistSqr);
-				count++;
+				pmp::Scalar dist = norm(points[i] - points[j]);
+				if (dist < minDistance) 
+				{
+					minDistance = dist;
+				}
 			}
 		}
+		return minDistance;
+	}
 
-		return totalDistance / static_cast<pmp::Scalar>(count > 0 ? count : points.size());
+	pmp::Scalar ComputeMaxInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points)
+	{
+		std::cout << "Geometry::ComputeMaxInterVertexDistanceBruteForce [WARNING]: This function is brute-force. Not recommended for large data!\n";
+		if (points.size() < 2)
+		{
+			std::cerr << "Geometry::ComputeMaxInterVertexDistanceBruteForce: points.size() < 2! No meaningful distance can be computed!\n";
+			return -1.0f;
+		}
+
+		pmp::Scalar maxDistance = 0;
+		for (size_t i = 0; i < points.size(); ++i) 
+		{
+			for (size_t j = i + 1; j < points.size(); ++j)
+			{
+				pmp::Scalar dist = norm(points[i] - points[j]);
+				if (dist > maxDistance)
+				{
+					maxDistance = dist;
+				}
+			}
+		}
+		return maxDistance;
+	}
+
+	pmp::Scalar ComputeMeanInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points)
+	{
+		std::cout << "Geometry::ComputeMeanInterVertexDistanceBruteForce [WARNING]: This function is brute-force. Not recommended for large data!\n";
+		if (points.size() < 2)
+		{
+			std::cerr << "Geometry::ComputeMeanInterVertexDistanceBruteForce: points.size() < 2! No meaningful distance can be computed!\n";
+			return -1.0f;
+		}
+
+		pmp::Scalar totalDistance = 0;
+		size_t count = 0;
+		for (size_t i = 0; i < points.size(); ++i) 
+		{
+			for (size_t j = i + 1; j < points.size(); ++j) 
+			{
+				pmp::Scalar dist = norm(points[i] - points[j]);
+				totalDistance += dist;
+				++count;
+			}
+		}
+		return count > 0 ? totalDistance / count : 0;
 	}
 
 } // namespace Geometry

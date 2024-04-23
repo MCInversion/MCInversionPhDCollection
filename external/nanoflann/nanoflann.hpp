@@ -232,6 +232,19 @@ class KNNResultSet
     }
 
     DistanceType worstDist() const { return dists[capacity - 1]; }
+
+    DistanceType bestNonZeroDist() const
+    {
+        for (size_t i = 0; i < capacity; ++i)
+        {
+            if (dists[i] < FLT_EPSILON)
+                continue;
+
+            return dists[i];
+        }
+
+        return FLT_MAX; // No non-zero distance found
+    }
 };
 
 /** operator "<" for std::sort() */
