@@ -99,7 +99,9 @@ namespace IMB
 		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
 	}
 
-	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 1;
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 40;
+
+	constexpr double MIN_VERTEX_FRACTION = 0.005;
 
 	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{
@@ -108,8 +110,9 @@ namespace IMB
 		{
 			throw std::invalid_argument("VertexSamplingStrategy::VertexSamplingStrategy: m_FileHandler could not be created!\n");
 		}
-		const auto totalExpectedVertices = std::min(m_FileHandler->GetGlobalVertexCountEstimate(), maxVertexCount);
-		m_UpdateThreshold = static_cast<size_t>(std::round(static_cast<double>(totalExpectedVertices) /
+		m_VertexCap = std::min(m_FileHandler->GetGlobalVertexCountEstimate(), maxVertexCount);
+		m_MinVertexCount = static_cast<size_t>(m_VertexCap * MIN_VERTEX_FRACTION);
+		m_UpdateThreshold = static_cast<size_t>(std::round(static_cast<double>(m_VertexCap) /
 			static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER)));
 #if DEBUG_PRINT
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: completionFrequency = " << completionFrequency << " jobs per file load.\n";

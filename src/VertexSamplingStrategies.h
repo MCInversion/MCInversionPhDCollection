@@ -32,8 +32,20 @@ namespace IMB
 
 		[[nodiscard]] size_t GetVertexCountEstimate() const;
 
+		[[nodiscard]] size_t GetVertexCap() const
+		{
+			return m_VertexCap;
+		}
+
+		[[nodiscard]] size_t GetMinVertexCount() const
+		{
+			return m_MinVertexCount;
+		}
+
 	protected:
 		size_t m_UpdateThreshold;
+		size_t m_VertexCap;
+		size_t m_MinVertexCount;
 
 		std::shared_ptr<IncrementalMeshFileHandler> m_FileHandler{ nullptr };
 	};

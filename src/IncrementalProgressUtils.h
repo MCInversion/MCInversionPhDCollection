@@ -33,10 +33,13 @@ namespace IMB
     public:
         IncrementalProgressTracker(
             const size_t& nTotal, const unsigned int& frequency, 
-            const size_t& maxVertexCount, 
+            const size_t& maxVertexCount, const size_t& minVertexCount,
             const std::function<void()>& addJobCallback, const std::function<void()>& terminationCallback)
-            : m_nTotalExpectedVertices(std::min(nTotal, maxVertexCount)), m_CompletionFrequency(frequency)
+            : m_MinVertexCount(minVertexCount),
+    	      m_nTotalExpectedVertices(std::min(nTotal, maxVertexCount)),
+    	      m_CompletionFrequency(frequency)
         {
+            m_GrowthRate = (log(m_nTotalExpectedVertices) - log(minVertexCount)) / static_cast<double>(m_nTotalExpectedVertices);
             SetDispatcherAddJobCallback(addJobCallback);
             SetDispatcherTerminationCallback(terminationCallback);
         }
@@ -63,6 +66,9 @@ namespace IMB
         std::atomic<size_t> m_ProcessedVertices{ 0 }; //>! a counter for the total amount of processed vertices in all threads.
         std::mutex m_Mutex; //>! mutex for ensuring thread safety of this object.
 
+        std::atomic<unsigned int> m_UpdateCount{ 0 };
+        double m_GrowthRate{ 1.0 }; //>! a helper parameter for non-linear update rate
+        const size_t m_MinVertexCount; //>! the minimum amount of vertices to be rendered
         const size_t m_nTotalExpectedVertices; //>! the total amount of expected mesh vertices.
         const unsigned int m_CompletionFrequency; //>! the frequency under which updates are triggered.
     };
@@ -113,7 +119,8 @@ namespace IMB
             {
 				m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, maxVertexCount, handler);
 	            m_ProgressTracker = std::make_unique<IncrementalProgressTracker>(
-                    m_VertexSamplingStrategy->GetVertexCountEstimate(), frequency, maxVertexCount,
+                    m_VertexSamplingStrategy->GetVertexCountEstimate(), frequency, 
+                    m_VertexSamplingStrategy->GetVertexCap(), m_VertexSamplingStrategy->GetMinVertexCount(),
                     [this] { EnqueueMeshUpdate(); },
                     [this] { ShutDownQueue(); });
 	            m_UpdateThread = std::thread([this] { ProcessQueue(); });

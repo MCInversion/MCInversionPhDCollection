@@ -112,6 +112,7 @@ namespace IMB
 #if DEBUG_PRINT
 		DBG_OUT << "IncrementalProgressTracker::Update: invoking m_DispatcherCallback.\n";
 #endif
+		m_UpdateCount.fetch_add(1);
 		m_DispatcherAddJobCallback();
 	}
 
@@ -127,8 +128,9 @@ namespace IMB
 		}
 
 		// Calculate the threshold for updates based on the total expected vertices and completion frequency
-		const double progressTrackerUpdateThreshold = static_cast<double>(m_nTotalExpectedVertices) / m_CompletionFrequency;
-		return static_cast<double>(newCount) >= progressTrackerUpdateThreshold;
+		const double nextProgressUpdate = static_cast<double>(m_UpdateCount.load() + 1) / static_cast<double>(m_CompletionFrequency) * static_cast<double>(m_nTotalExpectedVertices - m_MinVertexCount) + m_MinVertexCount;
+		const auto progressTrackerCurrentUpdateThreshold = static_cast<unsigned int>(static_cast<double>(m_MinVertexCount) * exp(m_GrowthRate * nextProgressUpdate));
+		return static_cast<double>(newCount) >= progressTrackerCurrentUpdateThreshold;
 	}
 
 	void MeshUpdateQueue::Enqueue(const std::function<void()>& task)

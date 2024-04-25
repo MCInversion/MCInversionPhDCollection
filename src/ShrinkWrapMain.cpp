@@ -84,8 +84,8 @@ constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
 constexpr bool performIncrementalMeshBuilderTests = false;
-constexpr bool perform2GBApollonMeshBuilderTest = false;
-constexpr bool performApollonNanoflannTest = true;
+constexpr bool perform2GBApollonMeshBuilderTest = true;
+constexpr bool performNanoflannDistanceTests = false;
 
 int main()
 {
@@ -2737,7 +2737,9 @@ int main()
 		//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 		//	++lodIndex;
 		//};
-		const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+		std::vector apollonTimeTicks = { std::chrono::high_resolution_clock::now() };
+		const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &apollonTimeTicks](const Geometry::BaseMeshGeometryData& meshData) {
+			apollonTimeTicks.push_back(std::chrono::high_resolution_clock::now());
 			const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
 			if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 			{
@@ -2745,6 +2747,9 @@ int main()
 				return;
 			}
 			std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+			if (lodIndex > 7)
+				if (!ExportTimeVectorInSeconds(apollonTimeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/Apollon111M_Timings.txt"))
+					throw std::logic_error("File not exported!");
 			++lodIndex;
 		};
 		auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
@@ -2761,12 +2766,12 @@ int main()
 			40000
 		);
 		constexpr unsigned int seed = 4999;
-		constexpr unsigned int nThreads = 10;
+		constexpr unsigned int nThreads = 14;
 		meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 
 	} // perform2GBApollonMeshBuilderTest
 
-	if (performApollonNanoflannTest)
+	if (performNanoflannDistanceTests)
 	{
 		const std::vector<std::string> importedPtCloudNames{
 			//"bunnyPts_3"
@@ -2792,13 +2797,11 @@ int main()
 			std::cout << "minDistBrute = " << minDistBrute << "\n";
 			std::cout << "..................................................................\n";
 
-			const auto maxDist = Geometry::ComputeMaxInterVertexDistance(ptCloud);
-			std::cout << "maxDist = " << maxDist << "\n";
 			const auto maxDistBrute = Geometry::ComputeMaxInterVertexDistanceBruteForce(ptCloud);
 			std::cout << "maxDistBrute = " << maxDistBrute << "\n";
 			std::cout << "..................................................................\n";
 
-			const auto meanDist = Geometry::ComputeMeanInterVertexDistance(ptCloud);
+			const auto meanDist = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ptCloud);
 			std::cout << "meanDist = " << meanDist << "\n";
 			const auto meanDistBrute = Geometry::ComputeMeanInterVertexDistanceBruteForce(ptCloud);
 			std::cout << "meanDistBrute = " << meanDistBrute << "\n";

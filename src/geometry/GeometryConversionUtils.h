@@ -1,9 +1,8 @@
 #pragma once
 
-#include <optional>
-
 #include "pmp/SurfaceMesh.h"
 #include "MarchingCubes.h"
+#include <optional>
 
 namespace Geometry
 {
@@ -135,11 +134,8 @@ namespace Geometry
 	/// \brief Computes the minimum distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistance(const std::vector<pmp::Point>& points);
 
-	/// \brief Computes the maximum distance between points in the input point cloud.
-	[[nodiscard]] pmp::Scalar ComputeMaxInterVertexDistance(const std::vector<pmp::Point>& points);
-
 	/// \brief Computes the average distance between points in the input point cloud.
-	[[nodiscard]] pmp::Scalar ComputeMeanInterVertexDistance(const std::vector<pmp::Point>& points);
+	[[nodiscard]] pmp::Scalar ComputeNearestNeighborMeanInterVertexDistance(const std::vector<pmp::Point>& points, const size_t& nNeighbors = 6);
 
 	/// \brief Computes the minimum distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points);

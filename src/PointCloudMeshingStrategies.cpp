@@ -23,17 +23,18 @@ namespace IMB
 		std::cerr << "EmptyMeshingStrategy::ProcessImpl: attempting to NOT triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 	}
 
-	constexpr float MAGIC_RADIUS_MULTIPLIER = 1.5f;
+	constexpr float MAGIC_RADIUS_MULTIPLIER = 1.9f;
 
 	void BallPivotingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
 		std::cout << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 
 		// Compute an appropriate radius based on point distribution
-		const auto meanDistance = Geometry::ComputeMeanInterVertexDistance(ioPoints);
+		const auto meanDistance = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ioPoints, 6);
 		const auto ballRadius = meanDistance * MAGIC_RADIUS_MULTIPLIER;
+		constexpr auto clusteringPercentage = (1.0f / MAGIC_RADIUS_MULTIPLIER) * 100.0f;
 
-		const auto meshDataOpt = Geometry::ComputeBallPivotingMeshFromPoints(ioPoints, ballRadius);
+		const auto meshDataOpt = Geometry::ComputeBallPivotingMeshFromPoints(ioPoints, ballRadius, clusteringPercentage);
 		if (!meshDataOpt.has_value())
 		{
 			std::cerr << "BallPivotingMeshingStrategy::ProcessImpl: Internal algorithm error!\n";

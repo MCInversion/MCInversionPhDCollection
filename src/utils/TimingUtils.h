@@ -4,6 +4,8 @@
 #include <chrono>
 #include <iomanip>
 #include <ctime>
+#include <fstream>
+#include <sstream>
 
 /**
  * \brief A simple macro for beginning of a timing session.
@@ -71,4 +73,38 @@ inline [[nodiscard]] std::string GetCurrentTimestamp()
     ss << std::put_time(local_time, "%H:%M:%S") // Focus only on hours, minutes, and seconds
         << '.' << std::setw(3) << std::setfill('0') << now_ms.count(); // Append milliseconds
     return ss.str();
+}
+
+inline [[nodiscard]] bool ExportTimeVectorInSeconds(const std::vector<std::chrono::steady_clock::time_point>& timeVec, const std::string& fileName)
+{
+    // Check if the vector is empty to avoid any undefined behavior
+    if (timeVec.empty()) {
+        std::cerr << "The provided vector is empty." << std::endl;
+        return false;
+    }
+
+    // Open a file stream to write
+    std::ofstream outFile(fileName);
+    if (!outFile.is_open()) {
+        std::cerr << "Failed to open file: " << fileName << std::endl;
+        return false;
+    }
+
+    // Use the first time_point as the reference time
+    const auto referenceTime = timeVec.front();
+
+    // Set precision for floating point output
+    outFile << std::fixed << std::setprecision(6); // Adjust precision as needed
+
+    // Iterate over the time vector
+    for (const auto& timePoint : timeVec) {
+        // Calculate the duration in seconds from the reference time
+        const auto duration = std::chrono::duration<double>(timePoint - referenceTime).count();
+        // Write the duration to file
+        outFile << duration << std::endl;
+    }
+
+    // Close the file
+    outFile.close();
+    return true;
 }
