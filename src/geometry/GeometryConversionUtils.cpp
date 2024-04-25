@@ -393,6 +393,37 @@ namespace Geometry
 		return result;
 	}
 
+	BaseMeshGeometryData ConvertPMPSurfaceMeshToBaseMeshGeometryData(const pmp::SurfaceMesh& pmpMesh)
+	{
+		BaseMeshGeometryData geomData;
+
+		// Extract vertices
+		auto points = pmpMesh.get_vertex_property<pmp::Point>("v:point");
+		for (const auto v : pmpMesh.vertices())
+			geomData.Vertices.emplace_back(points[v][0], points[v][1], points[v][2]);
+
+		// Extract vertex normals if available
+		if (pmpMesh.has_vertex_property("v:normal")) 
+		{
+			auto normals = pmpMesh.get_vertex_property<pmp::Normal>("v:normal");
+			for (const auto v : pmpMesh.vertices())
+				geomData.VertexNormals.emplace_back(normals[v][0], normals[v][1], normals[v][2]);
+		}
+
+		// Extract face indices
+		for (const auto f : pmpMesh.faces())
+		{
+			std::vector<unsigned int> faceIndices;
+			for (auto v : pmpMesh.vertices(f))
+			{
+				faceIndices.push_back(v.idx());
+			}
+			geomData.PolyIndices.push_back(faceIndices);
+		}
+
+		return geomData;
+	}
+
 	pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MarchingCubes::MC_Mesh& mcMesh)
 	{
 		pmp::SurfaceMesh result;

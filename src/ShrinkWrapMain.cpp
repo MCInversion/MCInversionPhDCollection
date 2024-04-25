@@ -83,8 +83,8 @@ constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
-constexpr bool performIncrementalMeshBuilderTests = false;
-constexpr bool perform2GBApollonMeshBuilderTest = true;
+constexpr bool performIncrementalMeshBuilderTests = true;
+constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
 
 int main()
@@ -2681,9 +2681,19 @@ int main()
 			//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 			//	++lodIndex;
 			//};
-			const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
-				if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
+			//const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+			//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
+			//	if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
+			//	{
+			//		std::cout << "Failed to export mesh data." << "\n";
+			//		return;
+			//	}
+			//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+			//	++lodIndex;
+			//};
+			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
+				if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 				{
 					std::cout << "Failed to export mesh data." << "\n";
 					return;
@@ -2695,12 +2705,14 @@ int main()
 			meshBuilder.Init(
 				dataDirPath + meshName + ".ply", 
 				nUpdates,
+				IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
 				//IMB::ReconstructionFunctionType::BallPivoting, 
-				IMB::ReconstructionFunctionType::None,
+				//IMB::ReconstructionFunctionType::None,
 				IMB::VertexSelectionType::UniformRandom,
 				//IMB::VertexSelectionType::Sequential,
-				exportPtsToPLY,
+				//exportPtsToPLY,
 				//exportToOBJ,
+				exportToVTK,
 				40000
 			);
 			constexpr unsigned int seed = 4999;
@@ -2756,6 +2768,7 @@ int main()
 		meshBuilder.Init(
 			inputFileName,
 			nUpdates,
+			//IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
 			IMB::ReconstructionFunctionType::BallPivoting, 
 			//IMB::ReconstructionFunctionType::None,
 			IMB::VertexSelectionType::UniformRandom,

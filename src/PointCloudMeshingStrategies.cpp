@@ -2,7 +2,10 @@
 
 #include <iostream>
 
+#include "EvolverUtilsCommon.h"
+#include "SurfaceEvolver.h"
 #include "geometry/GeometryConversionUtils.h"
+#include "sdf/SDF.h"
 
 namespace IMB
 {
@@ -58,7 +61,75 @@ namespace IMB
 
 	void LagrangianShrinkWrappingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: Not implemented!\n";
 		std::cerr << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
+
+		constexpr size_t NTimeSteps = 40;
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double tau = 0.08;
+		constexpr double defaultOffsetFactor = 1.0;
+
+		const pmp::BoundingBox ptCloudBBox(ioPoints);
+		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr float volExpansionFactor = 0.5f;
+		const SDF::PointCloudDistanceFieldSettings dfSettings{
+			cellSize,
+				volExpansionFactor,
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				SDF::BlurPostprocessingType::None
+		};
+		auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ioPoints, dfSettings);
+
+		MeshTopologySettings topoParams;
+		topoParams.FixSelfIntersections = true;
+		topoParams.MinEdgeMultiplier = 0.14f;
+		topoParams.UseBackProjection = false;
+		topoParams.PrincipalCurvatureFactor = 3.2f;
+		topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+		topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+
+		AdvectionDiffusionParameters adParams{
+			1.0, 1.0,
+			2.0, 1.0
+		};
+		const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+		SurfaceEvolutionSettings seSettings{
+			"IncrementalLSWMesh",
+			NTimeSteps,
+			tau,
+			fieldIsoLevel,
+			2, // IcoSphereSubdivisionLevel
+			adParams,
+			topoParams,
+			minSize, maxSize,
+			ptCloudBBox.center(),
+			false, false,
+			"",
+			MeshLaplacian::Voronoi,
+			{"equilateralJacobianCondition"},
+			0.05f,
+			true,
+			false
+		};
+		//ReportInput(seSettings, std::cout);
+		SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+
+		const auto& resultMesh = evolver.GetResultSurface();
+		const auto resultBaseMesh = Geometry::ConvertPMPSurfaceMeshToBaseMeshGeometryData(resultMesh);
+		ioPoints = resultBaseMesh.Vertices;
+		resultPolyIds = resultBaseMesh.PolyIndices;
 	}
 } // namespace IMB

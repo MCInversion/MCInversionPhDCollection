@@ -62,6 +62,11 @@ public:
 	 */
 	void Evolve();
 
+
+	[[nodiscard]] const pmp::SurfaceMesh& GetResultSurface() const
+	{
+		return *m_EvolvingSurface;
+	}
 private:
 	/**
 	 * \brief Preprocess for evolution, i.e.: generate m_EvolvingSurface, and transform both m_Field and m_EvolvingSurface for stabilization.

@@ -25,6 +25,13 @@ namespace Geometry
 	[[nodiscard]] pmp::SurfaceMesh ConvertBufferGeomToPMPSurfaceMesh(const BaseMeshGeometryData& geomData);
 
 	/**
+	 * \brief Converts given pmp::SurfaceMesh to BaseMeshGeometryData.
+	 * \param pmpMesh     input pmp::SurfaceMesh
+	 * \return BaseMeshGeometryData result.
+	 */
+	[[nodiscard]] BaseMeshGeometryData ConvertPMPSurfaceMeshToBaseMeshGeometryData(const pmp::SurfaceMesh& pmpMesh);
+
+	/**
 	 * \brief Converts given MC_Mesh to pmp::SurfaceMesh.
 	 * \param mcMesh       Marching cubes mesh to be converted.
 	 * \return pmp::SurfaceMesh result.

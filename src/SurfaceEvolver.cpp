@@ -18,7 +18,7 @@
 constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
 
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
-#define REPORT_EVOL_STEPS true // Note: may affect performance
+#define REPORT_EVOL_STEPS false // Note: may affect performance
 
 /// \brief if true, upon computing trilinear system solution, new vertices are verified for belonging in the field bounds.
 #define VERIFY_SOLUTION_WITHIN_BOUNDS false // Note: useful for detecting numerical explosions of the solution.
