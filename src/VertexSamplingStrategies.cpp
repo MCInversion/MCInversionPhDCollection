@@ -86,17 +86,20 @@ namespace IMB
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
-	void NormalRandomVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
+	void SoftmaxUniformVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		// TODO: verify utility before implementing
+		// TODO: implement index sampling
 		RandomSampleIndices(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices, seed);
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void SoftmaxFeatureDetectingVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
-		throw std::runtime_error("SampleVerticesWithSoftmaxFeatureDectection Not implemented\n");
+		std::vector<size_t> indices;
+		// TODO: implement index sampling
+		RandomSampleIndices(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices, seed);
+		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 40;

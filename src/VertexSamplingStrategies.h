@@ -16,7 +16,7 @@ namespace IMB
 	{
 		Sequential = 0, //>! selects vertices sequentially.
 		UniformRandom = 1, //>! selects vertices uniformly at random.
-		NormalRandom = 2, //>! selects vertices with a normal distribution.
+		SoftMaxUniform = 2, //>! selects vertices using a softmax function with uniform distribution across the surface.
 		SoftMaxFeatureDetecting = 3, //>! selects vertices using a softmax function with feature detection.
 	};
 
@@ -68,8 +68,7 @@ namespace IMB
 			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
 	};
 
-	// TODO: verify usefulness
-	class NormalRandomVertexSamplingStrategy : public VertexSamplingStrategy
+	class SoftmaxUniformVertexSamplingStrategy : public VertexSamplingStrategy
 	{
 	public:
 		using VertexSamplingStrategy::VertexSamplingStrategy;
@@ -93,8 +92,8 @@ namespace IMB
 			return std::make_unique<SequentialVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 		if (vertSelType == VertexSelectionType::UniformRandom)
 			return std::make_unique<UniformRandomVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
-		if (vertSelType == VertexSelectionType::NormalRandom)
-			return std::make_unique<NormalRandomVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
+		if (vertSelType == VertexSelectionType::SoftMaxUniform)
+			return std::make_unique<SoftmaxUniformVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 		return std::make_unique<SoftmaxFeatureDetectingVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 	}
 
@@ -104,8 +103,8 @@ namespace IMB
 			return "VertexSelectionType::Sequential";
 		if (vertSelType == VertexSelectionType::UniformRandom)
 			return "VertexSelectionType::UniformRandom";
-		if (vertSelType == VertexSelectionType::NormalRandom)
-			return "VertexSelectionType::NormalRandom";
+		if (vertSelType == VertexSelectionType::SoftMaxUniform)
+			return "VertexSelectionType::SoftMaxUniform";
 		return "VertexSelectionType::SoftMaxFeatureDetecting";
 	}
 
