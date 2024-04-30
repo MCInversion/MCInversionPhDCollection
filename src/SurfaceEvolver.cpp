@@ -243,6 +243,9 @@ void SurfaceEvolver::Evolve()
 	// ----------- System fill function --------------------------------
 	const auto fillMatrixAndRHSTriplesFromMesh = [&]()
 	{
+		std::vector<Eigen::Triplet<double>> tripletList;
+		tripletList.reserve(static_cast<size_t>(NVertices) * 6);  // Assuming an average of 6 entries per vertex
+
 		for (const auto v : m_EvolvingSurface->vertices())
 		{
 			const auto vPosToUpdate = m_EvolvingSurface->position(v);
@@ -253,7 +256,7 @@ void SurfaceEvolver::Evolve()
 				// freeze boundary/feature vertices
 				const Eigen::Vector3d vertexRhs = vPosToUpdate;
 				sysRhs.row(v.idx()) = vertexRhs;
-				sysMat.coeffRef(v.idx(), v.idx()) = 1.0;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
 				continue;
 			}
 
@@ -265,7 +268,7 @@ void SurfaceEvolver::Evolve()
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(m_EvolSettings.TangentialVelocityWeight) * epsilonCtrlWeight;
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -274,13 +277,16 @@ void SurfaceEvolver::Evolve()
 			}
 
 			const auto laplaceWeightInfo = m_ImplicitLaplacianFunction(*m_EvolvingSurface, v); // Laplacian weights
-			sysMat.coeffRef(v.idx(), v.idx()) = 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum);
+			tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum)));
 
 			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
 			{
-				sysMat.coeffRef(v.idx(), w.idx()) = -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight);
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), w.idx(), -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight)));
 			}
 		}
+
+		// After the loop
+		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
 	};
 	// -----------------------------------------------------------------
 
