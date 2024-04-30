@@ -48,26 +48,26 @@ namespace
 #endif
 
 		resultIndices.clear();
-		resultIndices.reserve(expectedCount);
+		resultIndices.resize(expectedCount);
+
+		// Create a generator with the given seed or a random device
 		std::mt19937 gen(seed ? *seed : std::random_device{}());
-		std::uniform_int_distribution<size_t> distrib(0, expectedCount - 1);
 
-		std::vector usedIndices(expectedCount, false); 
+		// Fill resultIndices with 0, 1, ..., expectedCount - 1
+		std::iota(resultIndices.begin(), resultIndices.end(), 0);
 
-		while (resultIndices.size() < expectedCount)
+		// Perform Fisher-Yates shuffle on resultIndices
+		for (size_t i = expectedCount - 1; i > 0; --i)
 		{
-			size_t newIndex = distrib(gen);
-			if (!usedIndices[newIndex]) // Check if the index has not been used yet
-			{
-				usedIndices[newIndex] = true; // Mark the index as used
-				resultIndices.push_back(newIndex);
-			}
+			std::uniform_int_distribution<size_t> distrib(0, i);
+			size_t j = distrib(gen);
+			std::swap(resultIndices[i], resultIndices[j]);
 		}
 
 #if DEBUG_PRINT
 		DBG_OUT << "RandomSampleIndices: Finished generating " << expectedCount << " unique indices.\n";
 #endif
-	}	
+	}
 }
 
 namespace IMB
