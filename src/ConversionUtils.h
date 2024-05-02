@@ -2,6 +2,7 @@
 
 #include <Eigen/Sparse>
 
+#include "geometry/GeometryConversionUtils.h"
 #include "geometry/Grid.h"
 
 #include "pmp/SurfaceMesh.h"
@@ -34,3 +35,6 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 
 /// \brief VTI image data import.
 [[nodiscard]] Geometry::ScalarGrid ImportVTI(const std::string& fileName);
+
+/// \brief VTK polydata data import.
+[[nodiscard]] Geometry::BaseMeshGeometryData ImportVTK(const std::string& fileName);

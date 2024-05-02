@@ -17,53 +17,50 @@ namespace Geometry
 	constexpr unsigned int MAX_DEPTH = 20;
 
 	/**
-	 * \brief Converts polygons from pmp::SurfaceMesh to triangles.
-	 * \param mesh     Input surface mesh.
-	 * \return a triangulated pmp::SurfaceMesh.
+	 * \brief Converts polygons from a mesh given by its adapter to triangles.
+	 * \param meshAdapter     Input mesh adapter.
 	 */
-	pmp::SurfaceMesh GetTriangulatedSurfaceMesh(const pmp::SurfaceMesh& mesh)
+	void TriangulateMesh(MeshAdapter& meshAdapter)
 	{
-		pmp::SurfaceMesh result(mesh);
-		/*pmp::Triangulation tri(result);
-		tri.triangulate();*/
-		// TODO: Use Poly2Tri
-
-		for (const auto f : result.faces())
+		if (!meshAdapter.IsTriangle())
 		{
-			if (result.valence(f) == 3)
-				continue;
-
-			const auto vBegin = *result.vertices(f).begin();
-			result.split(f, vBegin);
+			if (const auto pmpAdapter = dynamic_cast<PMPSurfaceMeshAdapter*>(&meshAdapter)) {
+				pmp::SurfaceMesh& mesh = pmpAdapter->GetMesh();
+				/*pmp::Triangulation tri(result);
+				tri.triangulate();*/
+				// TODO: Use Poly2Tri
+				for (const auto f : mesh.faces()) {
+					if (mesh.valence(f) == 3) continue;
+					const auto vBegin = *mesh.vertices(f).begin();
+					mesh.split(f, vBegin);
+				}
+			}
+			// TODO: If BaseMeshAdapter needs triangulation, implement that logic here
+			// Example:
+			// else if (auto baseAdapter = dynamic_cast<BaseMeshAdapter*>(&adapter)) {
+			//     TriangulateBaseMesh(baseAdapter->GetBaseMesh());
+			// }
+			throw std::runtime_error("Geometry::TriangulateMesh: meshAdapter not supported!\n");
 		}
-
-		return result;
 	}
 
-	CollisionKdTree::CollisionKdTree(const pmp::SurfaceMesh& mesh, const SplitFunction& spltFunc)
+	CollisionKdTree::CollisionKdTree(const MeshAdapter& meshAdapter, const SplitFunction& spltFunc)
 	{
-		auto bbox = mesh.bounds();
+		auto bbox = meshAdapter.GetBounds();
 		bbox.expand(BOX_INFLATION, BOX_INFLATION, BOX_INFLATION);
-		const auto triMesh = mesh.is_triangle_mesh() ? mesh : GetTriangulatedSurfaceMesh(mesh);
+		const auto triMesh = meshAdapter.Clone();
+		TriangulateMesh(*triMesh);
 
 		// extract vertex positions
-		const auto vpointPropData = mesh.get_vertex_property<pmp::Point>("v:point").data();
-		const size_t nVerts = mesh.n_vertices();
-		m_VertexPositions.reserve(nVerts);
-		for (size_t i = 0; i < nVerts; i++)
-			m_VertexPositions.emplace_back(vpointPropData[i]);
+		m_VertexPositions = triMesh->GetVertices();
 
 		// extract triangle ids
-		const size_t nTriangles = mesh.n_faces();
+		const auto triIds = triMesh->GetPolyIndices();
+		const size_t nTriangles = triIds.size();
 		m_Triangles.reserve(nTriangles);
-		for (size_t i = 0; i < nTriangles; i++)
+		for (const auto& tri : triIds)
 		{
-			const pmp::Face f(i);
-			std::vector<unsigned int> vIds;
-			vIds.reserve(3);
-			for (const auto v : mesh.vertices(f))
-				vIds.emplace_back(v.idx());
-			m_Triangles.emplace_back(Triangle{ vIds[0], vIds[1], vIds[2] });
+			m_Triangles.emplace_back(Triangle{ tri[0], tri[1], tri[2] });
 		}
 
 		m_FindSplitAndClassify = spltFunc;

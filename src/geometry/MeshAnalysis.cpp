@@ -558,7 +558,8 @@ namespace Geometry
 			SDF::BlurPostprocessingType::None,
 			SDF::PreprocessingType::Octree
 		};
-		const auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(meshAdapter, meshDfSettings);
 
 		double maxDistMeshToPointCloud = std::numeric_limits<double>::lowest();
 		double maxDistPointCloudToMesh = std::numeric_limits<double>::lowest();
@@ -603,7 +604,8 @@ namespace Geometry
 			SDF::BlurPostprocessingType::None,
 			SDF::PreprocessingType::Octree
 		};
-		const auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(meshAdapter, meshDfSettings);
 
 		double maxDistMeshToPointCloud = std::numeric_limits<double>::lowest();
 		double maxDistPointCloudToMesh = std::numeric_limits<double>::lowest();
@@ -648,7 +650,8 @@ namespace Geometry
 			SDF::BlurPostprocessingType::None,
 			SDF::PreprocessingType::Octree
 		};
-		const auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(meshAdapter, meshDfSettings);
 
 		double maxDistMeshToRefMesh = std::numeric_limits<double>::lowest();
 		double maxDistRefMeshToMesh = std::numeric_limits<double>::lowest();
@@ -666,6 +669,51 @@ namespace Geometry
 		{
 			const auto vPos = refMesh.position(v);
 			const double pDistanceToMesh = TrilinearInterpolateScalarValue(vPos, meshDf);
+			maxDistRefMeshToMesh = std::max(maxDistRefMeshToMesh, pDistanceToMesh);
+		}
+
+		// Compute Hausdorff Distance as the maximum of these two distances
+		return std::max(maxDistMeshToRefMesh, maxDistRefMeshToMesh);
+	}
+
+	std::optional<double> ComputeMeshToMeshHausdorffDistance(const BaseMeshGeometryData& mesh, const BaseMeshGeometryData& refMesh, const ScalarGrid& refMeshDf, const unsigned int& nVoxelsPerMinDimension)
+	{
+		if (refMesh.Vertices.empty() || mesh.Vertices.empty())
+		{
+			return {};
+		}
+
+		// Compute distance field for the mesh
+		const BaseMeshAdapter meshAdapter(std::make_shared<BaseMeshGeometryData>(mesh));
+		const auto meshBBox = meshAdapter.GetBounds();
+		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const SDF::DistanceFieldSettings meshDfSettings{
+			meshCellSize,
+			1.0f, // volExpansionFactor
+			DEFAULT_SCALAR_GRID_INIT_VAL,
+			SDF::KDTreeSplitType::Center,
+			SDF::SignComputation::None, // Unsigned distance field
+			SDF::BlurPostprocessingType::None,
+			SDF::PreprocessingType::Octree
+		};
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(meshAdapter, meshDfSettings);
+
+		double maxDistMeshToRefMesh = std::numeric_limits<double>::lowest();
+		double maxDistRefMeshToMesh = std::numeric_limits<double>::lowest();
+
+		// Mesh to Ref Mesh: Compute max distance using the distance field
+		for (const auto& v : mesh.Vertices)
+		{
+			const double vDistanceToRefMesh = TrilinearInterpolateScalarValue(v, refMeshDf);
+			maxDistMeshToRefMesh = std::max(maxDistMeshToRefMesh, vDistanceToRefMesh);
+		}
+
+		// Ref Mesh to Mesh: Compute max distance using the distance field
+		for (const auto& v : refMesh.Vertices)
+		{
+			const double pDistanceToMesh = TrilinearInterpolateScalarValue(v, meshDf);
 			maxDistRefMeshToMesh = std::max(maxDistRefMeshToMesh, pDistanceToMesh);
 		}
 
@@ -912,7 +960,8 @@ namespace Geometry
 			fIsSelfIntersecting = mesh.add_face_property<bool>("f:isSelfIntersecting", false);
 		}
 
-		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(meshAdapter, CenterSplitFunction);
 		size_t nSelfIntFaceCountResult = 0;
 		for (const auto f : mesh.faces())
 		{
@@ -971,7 +1020,8 @@ namespace Geometry
 			throw std::invalid_argument("PMPSurfaceMeshHasSelfIntersections: non-triangle SurfaceMesh not supported for this function!\n");
 		}
 
-		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(meshAdapter, CenterSplitFunction);
 
 		for (const auto f : mesh.faces()) 
 		{
@@ -1050,7 +1100,8 @@ namespace Geometry
 		}
 
 		std::unordered_multimap<unsigned int, unsigned int> faceToIntersectingFaces;
-		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(mesh, CenterSplitFunction);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(meshAdapter, CenterSplitFunction);
 
 		for (const auto f : mesh.faces()) 
 		{

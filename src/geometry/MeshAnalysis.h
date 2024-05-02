@@ -102,6 +102,18 @@ namespace Geometry
 		const ScalarGrid& refMeshDf, // Use the existing ScalarGrid
 		const unsigned int& nVoxelsPerMinDimension);
 
+	/// \brief Computes Hausdorff distance between a mesh and a reference mesh.
+	/// \param[in] mesh                      input mesh.
+	/// \param[in] refMesh                   input reference mesh.
+	/// \param[in] refMeshDf                 input reference mesh's pre-computed distance field.
+	/// \param[in] nVoxelsPerMinDimension    the key parameter to compute distance voxel field resolution: sampling per minimum bbox dimension.
+	/// \return optional evaluated Hausdorff distance dH(X, Y) = max(sup d(x, Y), sup d(X, y)).
+	[[nodiscard]] std::optional<double> ComputeMeshToMeshHausdorffDistance(
+		const BaseMeshGeometryData& mesh,
+		const BaseMeshGeometryData& refMesh,
+		const ScalarGrid& refMeshDf, // Use the existing ScalarGrid
+		const unsigned int& nVoxelsPerMinDimension);
+
 	/// \brief Computes saliency as vertex property according to [Lee, et al., 2005]
 	///	\param[in] mesh               input mesh.
 	///	\param[in] forcedVariance     if positive, this value will be used as basis for the sigmas in saliency evaluation.

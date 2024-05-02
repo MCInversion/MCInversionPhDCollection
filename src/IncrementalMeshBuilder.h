@@ -80,5 +80,7 @@ namespace IMB
         std::shared_ptr<IncrementalMeshFileHandler> m_FileHandler{ nullptr }; //>! a distinct strategy for parsing the vertices from a file.
     	std::unique_ptr<IncrementalMeshBuilderDispatcher> m_Dispatcher{nullptr}; //>! mesh builder dispatcher.
         MeshRenderFunction m_RenderCallback{}; //>! mesh render callback.
+
+        //std::function<void()> m_TerminationCallback{}; //>! a callback invoked after termination.
     };
 } // namespace IMB

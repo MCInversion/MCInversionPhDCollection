@@ -171,17 +171,21 @@ namespace SDF
 
 	/**
 	 * \brief Fill all mesh holes.
-	 * \param mesh        mesh to have its holes filled.
+	 * \param meshAdapter       adapter for the mesh to have its holes filled.
 	 */
-	void FillMeshHoles(pmp::SurfaceMesh& mesh)
+	void FillMeshHoles(Geometry::MeshAdapter& meshAdapter)
 	{
-		pmp::HoleFilling hf(mesh);
-		for (const auto& h : mesh.halfedges())
+		if (const auto pmpAdapter = dynamic_cast<Geometry::PMPSurfaceMeshAdapter*>(&meshAdapter))
 		{
-			if (!mesh.is_boundary(h) || !mesh.is_manifold(mesh.to_vertex(h)))
-				continue;
-			hf.fill_hole(h);
+			pmp::HoleFilling hf(pmpAdapter->GetMesh());
+			for (const auto& h : pmpAdapter->GetMesh().halfedges())
+			{
+				if (!pmpAdapter->GetMesh().is_boundary(h) || !pmpAdapter->GetMesh().is_manifold(pmpAdapter->GetMesh().to_vertex(h)))
+					continue;
+				hf.fill_hole(h);
+			}
 		}
+		//throw std::runtime_error("SDF::FillMeshHoles: meshAdapter not supported!\n");
 	}
 
 #define REPORT_SDF_STEPS false // Note: may affect performance
@@ -280,25 +284,25 @@ namespace SDF
 	// ===============================================================================================
 	//
 
-	Geometry::ScalarGrid DistanceFieldGenerator::Generate(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings)
+	Geometry::ScalarGrid DistanceFieldGenerator::Generate(const Geometry::MeshAdapter& inputMesh, const DistanceFieldSettings& settings)
 	{
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
 		assert(settings.TruncationFactor > 0);
 
-		m_Mesh = inputMesh;
+		m_Mesh = inputMesh.Clone();
 		if (settings.SignMethod != SignComputation::None)
 		{
 #if REPORT_SDF_STEPS
 			std::cout << "FillMeshHoles ... ";
 #endif
-			FillMeshHoles(m_Mesh); // make mesh watertight
+			FillMeshHoles(*m_Mesh); // make mesh watertight
 #if REPORT_SDF_STEPS
 			std::cout << "done\n";
 #endif
 		}
 
-		auto sdfBBox = m_Mesh.bounds();
+		auto sdfBBox = m_Mesh->GetBounds();
 		const auto size = sdfBBox.max() - sdfBBox.min();
 		const float minSize = std::min({ size[0], size[1], size[2] });
 
@@ -315,7 +319,7 @@ namespace SDF
 		std::cout << "truncationValue: " << truncationValue << "\n";
 		std::cout << "CollisionKdTree ... ";
 #endif
-		m_KdTree = std::make_unique<Geometry::CollisionKdTree>(m_Mesh, GetSplitFunction(settings.KDTreeSplit));
+		m_KdTree = std::make_unique<Geometry::CollisionKdTree>(*m_Mesh, GetSplitFunction(settings.KDTreeSplit));
 #if REPORT_SDF_STEPS
 		std::cout << "done\n";
 #endif
@@ -509,7 +513,7 @@ namespace SDF
 	{
 		const auto origFrozenFlags = grid.FrozenValues();
 		//Geometry::NegateGrid(grid);
-		const auto origMeshBox = m_Mesh.bounds();
+		const auto origMeshBox = m_Mesh->GetBounds();
 		Geometry::NegateGridSubVolume(grid, origMeshBox);
 		const auto& gridBox = grid.Box();
 

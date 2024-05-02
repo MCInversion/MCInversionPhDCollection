@@ -168,7 +168,8 @@ namespace Geometry
 	void MeshSelfIntersectionBucketCollector::ExtractFaceIntersectionMap()
 	{
 		m_FaceIntersections.clear();
-		m_ptrKdTree = std::make_unique<CollisionKdTree>(m_Mesh, CenterSplitFunction);
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(m_Mesh));
+		m_ptrKdTree = std::make_unique<CollisionKdTree>(meshAdapter, CenterSplitFunction);
 
 		for (const auto f : m_Mesh.faces())
 		{

@@ -87,7 +87,8 @@ constexpr bool performIncrementalMeshBuilderTests = false;
 constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
-constexpr bool performIncrementalMeshBuilderHausdorffEval = true;
+constexpr bool performIncrementalMeshBuilderHausdorffEval = false;
+constexpr bool performApollonArtecEvaLSWHausdorffEval = true;
 
 int main()
 {
@@ -128,7 +129,8 @@ int main()
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
 			const auto startSDF = std::chrono::high_resolution_clock::now();
-			const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+			const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+			const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
 			const auto endSDF = std::chrono::high_resolution_clock::now();
 
 			SDF::ReportOutput(sdf, std::cout);
@@ -268,7 +270,8 @@ int main()
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
 			const auto startSDF = std::chrono::high_resolution_clock::now();
-			const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+			const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+			const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
 			const auto endSDF = std::chrono::high_resolution_clock::now();
 
 			SDF::ReportOutput(sdf, std::cout);
@@ -340,7 +343,8 @@ int main()
 		SDF::ReportInput(mesh, sdfSettings, std::cout);
 
 		const auto startSDF = std::chrono::high_resolution_clock::now();
-		const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+		const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
 		const auto endSDF = std::chrono::high_resolution_clock::now();
 
 		SDF::ReportOutput(sdf, std::cout);
@@ -450,7 +454,8 @@ int main()
 			SDF::ReportInput(mesh, sdfSettings, std::cout);
 
 			const auto startSDF = std::chrono::high_resolution_clock::now();
-			const auto sdf = SDF::DistanceFieldGenerator::Generate(mesh, sdfSettings);
+			const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+			const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
 			const auto endSDF = std::chrono::high_resolution_clock::now();
 
 			SDF::ReportOutput(sdf, std::cout);
@@ -2099,9 +2104,6 @@ int main()
 			//std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 			//ExportToVTI(dataOutPath + name + "SDF", sdf);
 
-			// DistanceFieldGenerator::Generate only supports pmp::Surface mesh which cannot have non-manifoldness
-			// TODO: be able to process BaseMeshGeometryData with DistanceFieldGenerator::Generate
-
 			std::cout << "Opening " << name << "_voxFieldSDF90_FSM_90.vti ...";
 			constexpr float volExpansionFactor = 1.0f;
 			const auto sdf = ImportVTI(dataOutPath + name + "_voxFieldSDF90_FSM_90.vti");
@@ -2661,12 +2663,12 @@ int main()
 	{
 		// *.ply format:
 		const std::vector<std::string> meshForPtCloudNames{
-			"Apollon_ArtecEva",
+			//"Apollon_ArtecEva",
 			//"armadillo",
 			//"bunny",
 			//"CaesarBust",
 			//"maxPlanck",
-			//"nefertiti"
+			"nefertiti"
 		};
 
 		for (const auto& meshName : meshForPtCloudNames)
@@ -2693,7 +2695,9 @@ int main()
 			//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 			//	++lodIndex;
 			//};
-			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+			std::vector timeTicks = { std::chrono::high_resolution_clock::now() };
+			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &timeTicks](const Geometry::BaseMeshGeometryData& meshData) {
+				timeTicks.push_back(std::chrono::high_resolution_clock::now());
 				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
 				if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 				{
@@ -2701,14 +2705,17 @@ int main()
 					return;
 				}
 				std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+				if (lodIndex > 9)
+					if (!ExportTimeVectorInSeconds(timeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_Timings.txt"))
+						throw std::logic_error("File not exported!");
 				++lodIndex;
 			};
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 			meshBuilder.Init(
 				dataDirPath + meshName + ".ply", 
 				nUpdates,
-				IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
-				//IMB::ReconstructionFunctionType::BallPivoting, 
+				//IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
+				IMB::ReconstructionFunctionType::BallPivoting, 
 				//IMB::ReconstructionFunctionType::None,
 				IMB::VertexSelectionType::UniformRandom,
 				//IMB::VertexSelectionType::Sequential,
@@ -2718,7 +2725,7 @@ int main()
 				40000
 			);
 			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 1;
+			constexpr unsigned int nThreads = 14;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests
@@ -2864,52 +2871,133 @@ int main()
 
 	if (performIncrementalMeshBuilderHausdorffEval)
 	{
-		// *.ply format:
-		const std::vector<std::string> meshForPtCloudNames{
-			"Apollon_ArtecEva",
-			//"armadillo",
-			//"bunny",
+		const std::vector<std::string> imbMeshNames{
+			"armadillo",
+			"bunny",
 			//"CaesarBust",
 			//"maxPlanck",
-			//"nefertiti"
+			"nefertiti",
+			//"Apollon_ArtecEva"
 		};
 
-		for (const auto& meshName : meshForPtCloudNames)
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+
+		for (const auto& meshName : imbMeshNames)
 		{
-			constexpr size_t nUpdates = 10;
-			unsigned int lodIndex = 0;
-			std::vector<Geometry::BaseMeshGeometryData> lodMeshes{};
-			lodMeshes.reserve(nUpdates);
-			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &lodMeshes](const Geometry::BaseMeshGeometryData& meshData) {
-				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
-				if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
-				{
-					std::cout << "Failed to export mesh data." << "\n";
-					return;
-				}
-				std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
-				lodMeshes.push_back(meshData);
-				++lodIndex;
+			// Load the original mesh
+			pmp::SurfaceMesh origMesh;
+			origMesh.read(dataDirPath + meshName + ".ply");
+
+			// Create a mesh adapter for the original mesh
+			Geometry::BaseMeshGeometryData meshData = Geometry::ConvertPMPSurfaceMeshToBaseMeshGeometryData(origMesh);
+			Geometry::BaseMeshAdapter meshAdapter(std::make_shared<Geometry::BaseMeshGeometryData>(meshData));
+
+			// Compute the distance field for the original mesh
+			auto meshBBox = meshAdapter.GetBounds();
+			auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+			float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+
+			SDF::DistanceFieldSettings meshDfSettings{
+				meshCellSize,
+				1.0f,  // volExpansionFactor
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation::None,  // Unsigned distance field
+				SDF::BlurPostprocessingType::None,
+				SDF::PreprocessingType::Octree
 			};
-			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
-			meshBuilder.Init(
-				dataDirPath + meshName + ".ply",
-				nUpdates,
-				IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
-				//IMB::ReconstructionFunctionType::BallPivoting, 
-				//IMB::ReconstructionFunctionType::None,
-				IMB::VertexSelectionType::UniformRandom,
-				//IMB::VertexSelectionType::Sequential,
-				//exportPtsToPLY,
-				//exportToOBJ,
-				exportToVTK,
-				40000
-			);
-			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 4;
-			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 
+			auto meshDf = SDF::DistanceFieldGenerator::Generate(meshAdapter, meshDfSettings);
 
+			// Process each LOD for this mesh
+			int lodIndex = 0;
+			while (true) {
+				std::string filePath = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
+				if (!std::filesystem::exists(filePath)) {
+					std::cout << "No more LOD files found for " << meshName << " at LOD " << lodIndex << std::endl;
+					break;
+				}
+
+				// Import LOD mesh
+				try {
+					auto lodMeshData = ImportVTK(filePath);
+					Geometry::BaseMeshAdapter lodMeshAdapter(std::make_shared<Geometry::BaseMeshGeometryData>(lodMeshData));
+
+					// Compute the Hausdorff distance between the original mesh and the LOD mesh
+					auto hausdorffDistance = Geometry::ComputeMeshToMeshHausdorffDistance(lodMeshAdapter.GetBaseMesh(), meshAdapter.GetBaseMesh(), meshDf, nVoxelsPerMinDimension);
+					std::cout << "Hausdorff Distance for " << meshName << " LOD " << lodIndex << ": " << (hausdorffDistance ? std::to_string(*hausdorffDistance) : "Failed") << std::endl;
+				}
+				catch (const std::exception& e) {
+					std::cerr << "Error processing " << filePath << ": " << e.what() << '\n';
+				}
+
+				++lodIndex;  // Next LOD
+			}
 		}
 	} // endif performIncrementalMeshBuilderHausdorffEval
+
+	if (performApollonArtecEvaLSWHausdorffEval)
+	{
+		const std::vector<std::string> imbMeshNames{
+			"Apollon_ArtecEva"
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+
+		for (const auto& meshName : imbMeshNames)
+		{
+			// Load the original mesh
+			pmp::SurfaceMesh origMesh;
+			origMesh.read(dataDirPath + meshName + ".ply");
+
+			// Create a mesh adapter for the original mesh
+			Geometry::BaseMeshGeometryData meshData = Geometry::ConvertPMPSurfaceMeshToBaseMeshGeometryData(origMesh);
+			Geometry::BaseMeshAdapter meshAdapter(std::make_shared<Geometry::BaseMeshGeometryData>(meshData));
+
+			// Compute the distance field for the original mesh
+			auto meshBBox = meshAdapter.GetBounds();
+			auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+			float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+			float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+
+			SDF::DistanceFieldSettings meshDfSettings{
+				meshCellSize,
+				1.0f,  // volExpansionFactor
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation::None,  // Unsigned distance field
+				SDF::BlurPostprocessingType::None,
+				SDF::PreprocessingType::Octree
+			};
+
+			auto meshDf = SDF::DistanceFieldGenerator::Generate(meshAdapter, meshDfSettings);
+
+			// Process each LOD for this mesh
+			int lodIndex = 0;
+			while (true) {
+				std::string filePath = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
+				if (!std::filesystem::exists(filePath)) {
+					std::cout << "No more LOD files found for " << meshName << " at LOD " << lodIndex << std::endl;
+					break;
+				}
+
+				// Import LOD mesh
+				try {
+					auto lodMeshData = ImportVTK(filePath);
+					Geometry::BaseMeshAdapter lodMeshAdapter(std::make_shared<Geometry::BaseMeshGeometryData>(lodMeshData));
+
+					// Compute the Hausdorff distance between the original mesh and the LOD mesh
+					auto hausdorffDistance = Geometry::ComputeMeshToMeshHausdorffDistance(lodMeshAdapter.GetBaseMesh(), meshAdapter.GetBaseMesh(), meshDf, nVoxelsPerMinDimension);
+					std::cout << "Hausdorff Distance for " << meshName << " LOD " << lodIndex << ": " << (hausdorffDistance ? std::to_string(*hausdorffDistance) : "Failed") << std::endl;
+				}
+				catch (const std::exception& e) {
+					std::cerr << "Error processing " << filePath << ": " << e.what() << '\n';
+				}
+
+				++lodIndex;  // Next LOD
+			}
+		}
+		
+	} // endif performApollonArtecEvaLSWHausdorffEval
 }

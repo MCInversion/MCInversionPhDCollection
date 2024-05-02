@@ -65,14 +65,14 @@ namespace SDF
 
 		/**
 		 * \brief Compute the signed distance field of given input mesh.
-		 * \param inputMesh               evaluated mesh.
+		 * \param inputMesh               an adapter for the evaluated mesh.
 		 * \param settings                settings for the distance field.
 		 * \return the computed distance field's ScalarGrid.
 		 */
-		static [[nodiscard]] Geometry::ScalarGrid Generate(const pmp::SurfaceMesh& inputMesh, const DistanceFieldSettings& settings);
+		static [[nodiscard]] Geometry::ScalarGrid Generate(const Geometry::MeshAdapter& inputMesh, const DistanceFieldSettings& settings);
 		
 	private:
-		inline static pmp::SurfaceMesh m_Mesh; //>! mesh to be (pre)processed.
+		inline static std::unique_ptr<Geometry::MeshAdapter> m_Mesh{ nullptr }; //>! mesh to be (pre)processed.
 		inline static std::unique_ptr<Geometry::CollisionKdTree> m_KdTree{ nullptr }; //>! mesh kd tree.
 
 		/**

@@ -460,3 +460,65 @@ Geometry::ScalarGrid ImportVTI(const std::string& fileName)
 
 	return result;
 }
+
+Geometry::BaseMeshGeometryData ImportVTK(const std::string& fileName)
+{
+	std::ifstream fileIStream(fileName);
+	if (!fileIStream.is_open())
+	{
+		std::cerr << "ImportVTK: file" + fileName + " could not be opened!\n";
+		throw std::invalid_argument("ImportVTK: file" + fileName + " could not be opened!\n");
+	}
+
+	const auto extensionOrig = fileName.substr(fileName.find(".") + 1);
+	std::string extLower = "";
+	std::ranges::transform(extensionOrig, std::back_inserter(extLower), std::tolower);
+	if (extLower != "vtk")
+	{
+		std::cerr << "ImportVTK: file" << fileName << " could not be opened!\n";
+		throw std::invalid_argument("ImportVTI: file" + fileName + " could not be opened!\n");
+	}
+
+	Geometry::BaseMeshGeometryData meshData;
+	std::string line;
+
+	// Parse line by line
+	while (std::getline(fileIStream, line)) {
+		std::istringstream iss(line);
+		std::string token;
+		iss >> token;
+
+		// Skip comments and empty lines
+		if (token.empty() || token[0] == '#')
+			continue;
+
+		// Read vertex positions
+		if (token == "POINTS") {
+			int nPoints;
+			iss >> nPoints;
+			meshData.Vertices.reserve(nPoints);
+			for (int i = 0; i < nPoints; ++i) {
+				pmp::vec3 point;
+				fileIStream >> point[0] >> point[1] >> point[2];
+				meshData.Vertices.push_back(point);
+			}
+		}
+
+		// Read polygons
+		else if (token == "POLYGONS") {
+			int nPolygons, totalIndices;
+			iss >> nPolygons >> totalIndices;
+			for (int i = 0; i < nPolygons; ++i) {
+				int nVerts;
+				fileIStream >> nVerts;
+				std::vector<unsigned int> indices(nVerts);
+				for (int j = 0; j < nVerts; ++j) {
+					fileIStream >> indices[j];
+				}
+				meshData.PolyIndices.push_back(indices);
+			}
+		}
+	}
+
+	return meshData;
+}

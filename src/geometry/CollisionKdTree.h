@@ -1,6 +1,7 @@
 #pragma once
 
-#include "pmp/SurfaceMesh.h"
+#include "MeshAdapter.h"
+
 #include <vector>
 
 namespace Geometry
@@ -48,12 +49,12 @@ namespace Geometry
 
 	// ======================================================================
 
-	//! \brief A k-d tree for collision detection with pmp::SurfaceMesh triangles
+	//! \brief A k-d tree for collision detection with triangles
 	class CollisionKdTree
 	{
 	public:
         //! Construct with mesh.
-        CollisionKdTree(const pmp::SurfaceMesh& mesh, const SplitFunction& spltFunc);
+        CollisionKdTree(const MeshAdapter& meshAdapter, const SplitFunction& spltFunc);
 
 		// getters
 		[[nodiscard]] const std::vector<pmp::vec3>& VertexPositions() const
