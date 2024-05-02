@@ -83,9 +83,11 @@ constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
-constexpr bool performIncrementalMeshBuilderTests = true;
+constexpr bool performIncrementalMeshBuilderTests = false;
 constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
+constexpr bool performApollonLSWSaliencyEval = false;
+constexpr bool performIncrementalMeshBuilderHausdorffEval = true;
 
 int main()
 {
@@ -2821,4 +2823,93 @@ int main()
 			std::cout << "..................................................................\n";
 		}
 	} // endif performApollonNanoflannTest
+
+	if (performApollonLSWSaliencyEval)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"Apollon_ArtecEva_IMB"
+		};
+
+		constexpr size_t nLOD = 8;
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			for (size_t i = 0; i <= nLOD; ++i)
+			{
+				const auto meshNameFull = "/IncrementalMeshBuilder_Apollon_ArtecEva/" + meshName + "_LOD" + std::to_string(i);
+				std::cout << "SaliencyEval: " << meshNameFull << "...\n";
+				pmp::SurfaceMesh mesh;
+				mesh.read(dataOutPath + meshNameFull + ".vtk");
+
+				if (!Geometry::EvaluatePMPSurfaceMeshSaliency(mesh))
+				{
+					std::cout << "Error!\n";
+					continue;
+				}
+
+				mesh.write(dataOutPath + meshNameFull + "_Saliency.vtk");
+			}
+		}
+		
+		const auto origMeshName = "Apollon_ArtecEva";
+		std::cout << "SaliencyEval: " << origMeshName << ".ply ...\n";
+		pmp::SurfaceMesh mesh;
+		mesh.read(dataDirPath + origMeshName + ".ply");
+
+		if (Geometry::EvaluatePMPSurfaceMeshSaliency(mesh, 10.5149))
+		{
+			mesh.write(dataOutPath + origMeshName + "_Saliency.vtk");
+		}
+	}
+
+	if (performIncrementalMeshBuilderHausdorffEval)
+	{
+		// *.ply format:
+		const std::vector<std::string> meshForPtCloudNames{
+			"Apollon_ArtecEva",
+			//"armadillo",
+			//"bunny",
+			//"CaesarBust",
+			//"maxPlanck",
+			//"nefertiti"
+		};
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			constexpr size_t nUpdates = 10;
+			unsigned int lodIndex = 0;
+			std::vector<Geometry::BaseMeshGeometryData> lodMeshes{};
+			lodMeshes.reserve(nUpdates);
+			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &lodMeshes](const Geometry::BaseMeshGeometryData& meshData) {
+				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
+				if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
+				{
+					std::cout << "Failed to export mesh data." << "\n";
+					return;
+				}
+				std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+				lodMeshes.push_back(meshData);
+				++lodIndex;
+			};
+			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
+			meshBuilder.Init(
+				dataDirPath + meshName + ".ply",
+				nUpdates,
+				IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
+				//IMB::ReconstructionFunctionType::BallPivoting, 
+				//IMB::ReconstructionFunctionType::None,
+				IMB::VertexSelectionType::UniformRandom,
+				//IMB::VertexSelectionType::Sequential,
+				//exportPtsToPLY,
+				//exportToOBJ,
+				exportToVTK,
+				40000
+			);
+			constexpr unsigned int seed = 4999;
+			constexpr unsigned int nThreads = 4;
+			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
+
+
+		}
+	} // endif performIncrementalMeshBuilderHausdorffEval
 }

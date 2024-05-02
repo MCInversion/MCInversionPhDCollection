@@ -406,7 +406,7 @@ namespace Geometry
 		}
 	}
 
-	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor)
+	void ComputeVertexCurvaturesAndRelatedProperties(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor)
 	{
 		pmp::Curvature curvAlg{ mesh };
 		curvAlg.analyze_tensor(1);
@@ -625,6 +625,171 @@ namespace Geometry
 
 		// Compute Hausdorff Distance as the maximum of these two distances
 		return std::max(maxDistMeshToPointCloud, maxDistPointCloudToMesh);
+	}
+
+	std::optional<double> ComputeMeshToMeshHausdorffDistance(const pmp::SurfaceMesh& mesh, const pmp::SurfaceMesh& refMesh, const ScalarGrid& refMeshDf, const unsigned int& nVoxelsPerMinDimension)
+	{
+		if (refMesh.is_empty() || mesh.is_empty())
+		{
+			return {};
+		}
+
+		// Compute distance field for the mesh
+		const auto meshBBox = mesh.bounds();
+		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const SDF::DistanceFieldSettings meshDfSettings{
+			meshCellSize,
+			1.0f, // volExpansionFactor
+			DEFAULT_SCALAR_GRID_INIT_VAL,
+			SDF::KDTreeSplitType::Center,
+			SDF::SignComputation::None, // Unsigned distance field
+			SDF::BlurPostprocessingType::None,
+			SDF::PreprocessingType::Octree
+		};
+		const auto meshDf = SDF::DistanceFieldGenerator::Generate(mesh, meshDfSettings);
+
+		double maxDistMeshToRefMesh = std::numeric_limits<double>::lowest();
+		double maxDistRefMeshToMesh = std::numeric_limits<double>::lowest();
+
+		// Mesh to Ref Mesh: Compute max distance using the distance field
+		for (const auto v : mesh.vertices())
+		{
+			const auto vPos = mesh.position(v);
+			const double vDistanceToRefMesh = TrilinearInterpolateScalarValue(vPos, refMeshDf);
+			maxDistMeshToRefMesh = std::max(maxDistMeshToRefMesh, vDistanceToRefMesh);
+		}
+
+		// Ref Mesh to Mesh: Compute max distance using the distance field
+		for (const auto v : refMesh.vertices())
+		{
+			const auto vPos = refMesh.position(v);
+			const double pDistanceToMesh = TrilinearInterpolateScalarValue(vPos, meshDf);
+			maxDistRefMeshToMesh = std::max(maxDistRefMeshToMesh, pDistanceToMesh);
+		}
+
+		// Compute Hausdorff Distance as the maximum of these two distances
+		return std::max(maxDistMeshToRefMesh, maxDistRefMeshToMesh);
+	}
+
+	//
+	// ==========================================================================
+	// ...................... Saliency utils ...................................
+	//
+
+	static void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh)
+	{
+		pmp::Curvature curvAlg{ mesh };
+		curvAlg.analyze_tensor(1); // Use tensor-based analysis to get mean curvature
+
+		auto vMinCurvature = mesh.vertex_property<pmp::Scalar>("v:minCurvature");
+		auto vMaxCurvature = mesh.vertex_property<pmp::Scalar>("v:maxCurvature");
+		auto vMeanCurvature = mesh.vertex_property<pmp::Scalar>("v:meanCurvature");
+
+		for (const auto v : mesh.vertices())
+		{
+			vMinCurvature[v] = curvAlg.min_curvature(v);
+			vMaxCurvature[v] = curvAlg.max_curvature(v);
+			vMeanCurvature[v] = (vMinCurvature[v] + vMaxCurvature[v]) * 0.5f;
+		}
+	}
+
+	static [[nodiscard]] double GaussianWeight(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const double& sigma)
+	{
+		if (!mesh.has_vertex_property("v:meanCurvature"))
+		{
+			throw std::invalid_argument("Geometry::GaussianWeight: input mesh has no vertex property called \"v:meanCurvature\"\n");
+		}
+
+		auto vCurvature = mesh.get_vertex_property<pmp::Scalar>("v:meanCurvature");
+		auto positions = mesh.get_vertex_property<pmp::Point>("v:point");
+		double weightSum = 0.0;
+		double curvatureSum = 0.0;
+		const pmp::Point p = positions[v];
+
+		for (const auto u : mesh.vertices(v))
+		{
+			pmp::Point q = positions[u];
+			const pmp::Scalar distance = pmp::norm(p - q);
+			const pmp::Scalar weight = exp(-pow(distance, 2) / (2 * pow(sigma, 2)));
+			curvatureSum += vCurvature[u] * weight;
+			weightSum += weight;
+		}
+
+		return curvatureSum / weightSum;
+	}
+
+	static void ComputeSaliency(pmp::SurfaceMesh& mesh, const std::vector<double>& sigmas)
+	{
+		auto saliency = mesh.vertex_property<pmp::Scalar>("v:saliency", 0.0f);
+
+		for (auto v : mesh.vertices()) 
+		{
+			pmp::Scalar saliencyValue = 0.0f;
+			for (double sigma : sigmas) 
+			{
+				const double fine = GaussianWeight(mesh, v, sigma);
+				const double coarse = GaussianWeight(mesh, v, 2 * sigma);
+				saliencyValue += std::abs(fine - coarse);
+			}
+			saliency[v] = saliencyValue;
+		}
+	}
+
+	static void NormalizeSaliency(pmp::SurfaceMesh& mesh)
+	{
+		if (!mesh.has_vertex_property("v:saliency"))
+		{
+			throw std::invalid_argument("Geometry::NormalizeSaliency: input mesh has no vertex property called \"v:saliency\"\n");
+		}
+
+		auto saliency = mesh.get_vertex_property<pmp::Scalar>("v:saliency");
+		double maxSaliency = *std::ranges::max_element(saliency.vector());
+
+		for (auto v : mesh.vertices())
+		{
+			saliency[v] = pow(saliency[v] / maxSaliency, 2); // Square the ratio to enhance high values
+		}
+	}
+
+	bool EvaluatePMPSurfaceMeshSaliency(pmp::SurfaceMesh& mesh, const double& forcedVariance, const bool& normalizeValues)
+	{
+		if (mesh.is_empty())
+		{
+			std::cerr << "Geometry::EvaluatePMPSurfaceMeshSaliency: invalid input mesh!\n";
+			return false;
+		}
+
+		ComputeVertexCurvatures(mesh);
+
+		// Dynamic evaluation of sigma based on mesh properties
+
+		double averageEdgeLength;
+		if (forcedVariance > 0.0)
+		{
+			averageEdgeLength = forcedVariance;
+		}
+		else
+		{
+			averageEdgeLength = 0.0;
+			for (const auto e : mesh.edges()) 
+			{
+				averageEdgeLength += static_cast<double>(mesh.edge_length(e));
+			}
+			averageEdgeLength /= static_cast<double>(mesh.n_edges());
+		}
+		const std::vector sigmas = {
+			averageEdgeLength * 0.5, averageEdgeLength, averageEdgeLength * 1.5,
+			averageEdgeLength * 2, averageEdgeLength * 2.5
+		};
+
+		ComputeSaliency(mesh, sigmas);
+		if (normalizeValues)
+		{
+			NormalizeSaliency(mesh);
+		}
+		return true;
 	}
 
 	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os)

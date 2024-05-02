@@ -48,8 +48,8 @@ namespace Geometry
 	/// \brief Computes dihedral angle for mesh vertices, averaged from mesh edges.
 	void ComputeEdgeDihedralAngles(pmp::SurfaceMesh& mesh);
 
-	/// \brief Computes vertex principal curvatures and mean curvature.
-	void ComputeVertexCurvatures(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor = 2.0f);
+	/// \brief Computes vertex principal curvatures and mean curvature + properties related to feature detection.
+	void ComputeVertexCurvaturesAndRelatedProperties(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor = 2.0f);
 
 	/// \brief Computes z-level elevation values for each vertex.
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);
@@ -89,6 +89,24 @@ namespace Geometry
 		const std::vector<pmp::Point>& ptCloud,
 		const ScalarGrid& ptCloudDf, // Use the existing ScalarGrid
 		const unsigned int& nVoxelsPerMinDimension);
+
+	/// \brief Computes Hausdorff distance between a mesh and a reference mesh.
+	/// \param[in] mesh                      input mesh.
+	/// \param[in] refMesh                   input reference mesh.
+	/// \param[in] refMeshDf                 input reference mesh's pre-computed distance field.
+	/// \param[in] nVoxelsPerMinDimension    the key parameter to compute distance voxel field resolution: sampling per minimum bbox dimension.
+	/// \return optional evaluated Hausdorff distance dH(X, Y) = max(sup d(x, Y), sup d(X, y)).
+	[[nodiscard]] std::optional<double> ComputeMeshToMeshHausdorffDistance(
+		const pmp::SurfaceMesh& mesh,
+		const pmp::SurfaceMesh& refMesh,
+		const ScalarGrid& refMeshDf, // Use the existing ScalarGrid
+		const unsigned int& nVoxelsPerMinDimension);
+
+	/// \brief Computes saliency as vertex property according to [Lee, et al., 2005]
+	///	\param[in] mesh               input mesh.
+	///	\param[in] forcedVariance     if positive, this value will be used as basis for the sigmas in saliency evaluation.
+	///	\param[in] normalizeValues    if true values will be normalized.
+	[[nodiscard]] bool EvaluatePMPSurfaceMeshSaliency(pmp::SurfaceMesh& mesh, const double& forcedVariance = -1.0, const bool& normalizeValues = false);
 
 	/// \brief Prints the evaluated histogram data.
 	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os);

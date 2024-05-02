@@ -300,7 +300,7 @@ void IsoSurfaceEvolver::Evolve()
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 	}
 	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
+	Geometry::ComputeVertexCurvaturesAndRelatedProperties(*m_EvolvingSurface);
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
@@ -425,7 +425,7 @@ void IsoSurfaceEvolver::Evolve()
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
 		}
 		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface);
+		Geometry::ComputeVertexCurvaturesAndRelatedProperties(*m_EvolvingSurface);
 		ComputeTriangleMetrics();
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)

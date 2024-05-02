@@ -65,7 +65,7 @@ namespace IMB
 
 		constexpr size_t NTimeSteps = 40;
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
-		constexpr double tau = 0.08;
+		constexpr double tau = 0.1;
 		constexpr double defaultOffsetFactor = 1.0;
 
 		const pmp::BoundingBox ptCloudBBox(ioPoints);

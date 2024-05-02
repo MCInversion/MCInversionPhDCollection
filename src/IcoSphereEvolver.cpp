@@ -363,7 +363,7 @@ void IcoSphereEvolver::Evolve()
 		vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 	}
 	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-	Geometry::ComputeVertexCurvatures(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
+	Geometry::ComputeVertexCurvaturesAndRelatedProperties(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
 		ExportSurface(0);
@@ -504,7 +504,7 @@ void IcoSphereEvolver::Evolve()
 			vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
 		}
 		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
-		Geometry::ComputeVertexCurvatures(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
+		Geometry::ComputeVertexCurvaturesAndRelatedProperties(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
 		ComputeTriangleMetrics();
 
 		if (m_EvolSettings.ExportSurfacePerTimeStep)
