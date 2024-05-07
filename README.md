@@ -105,7 +105,3 @@ Here's the list of tests carried out in Main.cpp:
 - Apollon LSW Saliency Eval
 - Incremental Mesh Builder Hausdorff Eval
 - Apollon Artec Eva LSW Hausdorff Eval
-
-## License
-
-PMP is provided under a simple and flexible MIT-style [license](https://github.com/pmp-library/pmp-library/blob/master/LICENSE.txt) allowing for both open-source and commercial usage.
