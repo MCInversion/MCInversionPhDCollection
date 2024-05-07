@@ -4,7 +4,7 @@
 
 Welcome to **MCInversionPhDCollection**! This application is a platform for my PhD research on meshes and other 3D data representations.
 
-See more in Section ["**Functionality**"](https://github.com/MCInversion/MCInversionPhDCollection/tree/main?tab=readme-ov-file#functionality) or at: https://mshgrid.com/2023/02/28/my-research/
+See more in Section ["**Functionality**"](https://github.com/MCInversion/MCInversionPhDCollection/blob/main/README.md#functionality) or at: https://mshgrid.com/2023/02/28/my-research/
 
 This work supports a range of applications from engineering, where models are used for Finite Element Method (FEM) simulations, to purely visual applications in virtual environments. By leveraging advancements in data storage and processing, our methods push the boundaries of what's possible in digital representations of physical objects.
 
