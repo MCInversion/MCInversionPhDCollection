@@ -1,12 +1,9 @@
 cmake_policy(SET CMP0048 NEW)
-project(ImplicitSurfaceWrap
+project(MCInversionPhDCollection
   VERSION 1.0)
 cmake_minimum_required(VERSION 3.16.3)
 cmake_policy(SET CMP0072 NEW)
 
-option(PMP_BUILD_EXAMPLES "Build the PMP examples" OFF)
-option(PMP_BUILD_TESTS "Build the PMP test programs" OFF)
-option(PMP_BUILD_DOCS "Build the PMP documentation" OFF)
 option(PMP_BUILD_VIS "Build the PMP visualization tools" ON)
 option(PMP_INSTALL "Install the PMP library and headers" ON)
 
@@ -197,34 +194,17 @@ endif()
 option(WITH_CLANG_TIDY "Run clang-tidy checks" OFF)
 include(clang-tidy)
 
+# ====================================================
 # which directories to process
-if(EMSCRIPTEN)
-  add_subdirectory(src/pmp)
-  if(PMP_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-  endif()
-else()
-  add_subdirectory(src/pmp)
-  if(PMP_BUILD_DOCS)
-    add_subdirectory(docs)
-  endif()
-  if(PMP_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-  endif()
-  if(PMP_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-  endif()
-endif()
-# =======================================================
-# ----------- Shrink wrap executable --------------------
+# ....................................................
+add_subdirectory(src/pmp)
 add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
 add_subdirectory(src/utils)
-file(GLOB ShrinkWrap_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
-add_executable(ShrinkWrap ${ShrinkWrap_Src})
-target_link_libraries(ShrinkWrap
+file(GLOB MCInversionPhDCollection_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
+add_executable(MCInversionPhDCollection ${MCInversionPhDCollection_Src})
+target_link_libraries(MCInversionPhDCollection
     pmp
     SDF
     Geometry
@@ -246,54 +226,12 @@ PROPERTIES FOLDER "PMP_Lib")
 # so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
 #
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(ShrinkWrap PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
-# Set ShrinkWrap the startup project
+target_compile_definitions(MCInversionPhDCollection PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
+# Set MCInversionPhDCollection the startup project
 if (MSVC)
-	set_property(DIRECTORY ${ROOT_DIR} PROPERTY VS_STARTUP_PROJECT ShrinkWrap)
+	set_property(DIRECTORY ${ROOT_DIR} PROPERTY VS_STARTUP_PROJECT MCInversionPhDCollection)
 endif()
 # =======================================================
-
-if(NOT EMSCRIPTEN AND PMP_INSTALL)
-
-  # Generate package configuration files
-  include(CMakePackageConfigHelpers)
-
-  set(PMP_CONFIG_PATH "lib${LIB_SUFFIX}/cmake/pmp")
-
-  configure_package_config_file(
-    cmake/pmpConfig.cmake.in pmpConfig.cmake
-    INSTALL_DESTINATION "${PMP_CONFIG_PATH}"
-    NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-
-  install(
-    EXPORT pmpTargets
-    FILE pmpTargets.cmake
-    EXPORT_LINK_INTERFACE_LIBRARIES
-    DESTINATION "${PMP_CONFIG_PATH}")
-
-  export(TARGETS pmp FILE pmpTargets.cmake)
-
-  write_basic_package_version_file(
-    pmpConfigVersion.cmake
-    VERSION ${PMP_VERSION}
-    COMPATIBILITY SameMajorVersion)
-
-  install(FILES "${PROJECT_BINARY_DIR}/pmpConfig.cmake"
-                "${PROJECT_BINARY_DIR}/pmpConfigVersion.cmake"
-          DESTINATION "${PMP_CONFIG_PATH}")
-
-endif()
-
-# add uninstall target if none is defined
-if(NOT TARGET uninstall AND PMP_INSTALL)
-
-  configure_file("${CMAKE_MODULE_PATH}/cmake_uninstall.cmake.in"
-                 cmake_uninstall.cmake IMMEDIATE @ONLY)
-
-  add_custom_target(uninstall "${CMAKE_COMMAND}" -P
-                              "${PROJECT_BINARY_DIR}/cmake_uninstall.cmake")
-
-endif()
 
 # add clang-format target if program is found
 include(clang-format)
