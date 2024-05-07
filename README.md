@@ -32,9 +32,10 @@ Additional dependencies include:
 - Glfw
 - GoogleTest
 - Imgui
-- Nanoflann
+- [Nanoflann](https://github.com/jlblancoc/nanoflann)
 - Rply
 - [VCGLib](https://github.com/cnr-isti-vclab/vcglib)
+- [Quickhull](https://github.com/akuukka/quickhull)
 
 ## Get Started
 
@@ -47,12 +48,8 @@ git clone --recursive https://github.com/MCInversion/MCInversionPhDCollection.gi
 Configure and build:
 
 ```sh
-cd ImplicitSurfaceWrap && mkdir build && cd build && cmake .. && make
+cd MCInversionPhDCollection && mkdir build && cd build && cmake .. && make
 ```
-
-# Features
-
-- 
 
 ## License
 
