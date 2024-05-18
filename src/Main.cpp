@@ -88,7 +88,8 @@ constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
 constexpr bool performIncrementalMeshBuilderHausdorffEval = false;
-constexpr bool performApollonArtecEvaLSWHausdorffEval = true;
+constexpr bool performApollonArtecEvaLSWHausdorffEval = false;
+constexpr bool performTerrainPtGenerationTest = true;
 
 int main()
 {
@@ -3000,4 +3001,9 @@ int main()
 		}
 		
 	} // endif performApollonArtecEvaLSWHausdorffEval
+
+	if (performTerrainPtGenerationTest)
+	{
+		
+	} // endif performTerrainPtGenerationTest
 }
