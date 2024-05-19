@@ -31,6 +31,8 @@
 #include <chrono>
 #include <map>
 
+#include "geometry/TerrainBuilder.h"
+
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
 const auto fsDataDirPath = fsRootPath / "data\\";
@@ -3004,6 +3006,64 @@ int main()
 
 	if (performTerrainPtGenerationTest)
 	{
-		
+		// Define boundaries for each example
+		std::vector<std::vector<pmp::Point>> boundaries = {
+			// Example 1: Square with side 100 units
+			{
+				pmp::Point(0, 0, 0),
+				pmp::Point(100, 0, 0),
+				pmp::Point(100, 100, 0),
+				pmp::Point(0, 100, 0)
+			},
+			// Example 2: Triangle of roughly the same size as the 100-unit side square
+			{
+				pmp::Point(0, 0, 0),
+				pmp::Point(100, 0, 0),
+				pmp::Point(50, 86.6f, 0) // Height of an equilateral triangle with side length 100 units
+			},
+			// Example 3: More complicated concave polygon with edge length at least 100 units
+			{
+				pmp::Point(0, 0, 0),
+				pmp::Point(100, 0, 0),
+				pmp::Point(100, 50, 0),
+				pmp::Point(50, 50, 0),
+				pmp::Point(50, 100, 0),
+				pmp::Point(0, 100, 0)
+			}
+		};
+
+		// Iterate through each boundary and generate terrain
+		int exampleIndex = 1;
+		for (const auto& boundary : boundaries)
+		{
+			// Set up terrain settings
+			Geometry::TerrainSettings settings;
+			settings.BoundaryLoopPolyline = boundary;
+			settings.MinElevation = 0.0f;
+			settings.MaxElevation = 60.0f;
+			settings.SamplingRadius = 1.0f;
+			settings.SamplingAttempts = 30;
+			settings.NoiseScale = 50.0f;  // Increased to match the terrain scale
+			settings.Octaves = 3;         // Reduced for less noise
+			settings.Persistence = 0.3f;  // Reduced for smoother transitions
+			settings.Lacunarity = 1.5f;   // Reduced to space out features
+
+			// Create terrain builder
+			Geometry::TerrainBuilder terrainBuilder(settings);
+			terrainBuilder.GeneratePoints();
+			Geometry::BaseMeshGeometryData terrainMeshData = terrainBuilder.GetResult();
+
+			// Export to PLY file
+			std::string outputFileName = dataOutPath + "terrain_example_" + std::to_string(exampleIndex) + ".ply";
+			if (!Geometry::ExportPointsToPLY(terrainMeshData, outputFileName))
+			{
+				std::cout << "Failed to export mesh data for example " << exampleIndex << ".\n";
+				return -1;
+			}
+
+			std::cout << "Terrain example " << exampleIndex << " exported to " << outputFileName << "\n";
+			exampleIndex++;
+		}
+
 	} // endif performTerrainPtGenerationTest
 }

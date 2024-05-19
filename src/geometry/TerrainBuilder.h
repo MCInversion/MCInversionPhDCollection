@@ -2,6 +2,8 @@
 
 #include "GeometryConversionUtils.h"
 
+#include <random>
+
 namespace Geometry
 {
 	/**
@@ -23,6 +25,8 @@ namespace Geometry
 		size_t Octaves{ 4 }; //>! Number of noise layers
 		pmp::Scalar Persistence{ 0.5f }; //>! Amplitude decrease
 		pmp::Scalar Lacunarity{ 2.0f }; //>! Frequency increase
+
+		unsigned int Seed{ std::random_device{}() }; // Default seed is random
 	};
 
 	/// \brief Function to verify the validity of TerrainSettings
@@ -121,6 +125,12 @@ namespace Geometry
 			triangulate(m_Result);
 		}
 
+		/// \brief Result getter.
+		[[nodiscard]] BaseMeshGeometryData GetResult() const
+		{
+			return m_Result;
+		}
+
 	private:
 
 		/// \brief Generates the proper amount of terrain points, and computes their x,y coordinates within the boundary loop.
@@ -128,6 +138,10 @@ namespace Geometry
 
 		/// \brief Computes the z-coordinate of each generated point using Perlin noise within range [m_Settings.MinElevation, m_Settings.MaxElevation].
 		void GeneratePerlinZElevation();
+
+		//
+		// =======================================================================
+		//
 
 		TerrainSettings m_Settings; //>! settings for this builder.
 

@@ -1,37 +1,37 @@
 #include "TerrainBuilder.h"
 
-#include "Utils/STBPerlin.h"
+#define STB_PERLIN_IMPLEMENTATION
+#include "utils/STBPerlin.h"
 
-#include <random>
 #include <vector>
-#include <functional>
 #include <cmath>
-#include <iostream>
 
 namespace
 {
 	/// \brief Utility function to generate a random float between min and max
-	float RandomFloat(float min, float max)
+	float RandomFloat(const float& min, const float& max)
 	{
 		static std::random_device rd;
 		static std::mt19937 gen(rd());
-		std::uniform_real_distribution<> dis(min, max);
+		const std::uniform_real_distribution<> dis(min, max);
 		return dis(gen);
 	}
 
 	/// \brief Utility function to compute Perlin noise value
-	float PerlinNoise(float x, float y, float scale, int octaves, float persistence, float lacunarity)
+	float PerlinNoise(
+		const float& x, const float& y, const float& scale, 
+		const size_t& octaves, const float& persistence, const float& lacunarity)
 	{
 		float amplitude = 1.0f;
 		float frequency = 1.0f;
 		float noiseHeight = 0.0f;
 
-		for (int i = 0; i < octaves; ++i)
+		for (size_t i = 0; i < octaves; ++i)
 		{
-			float sampleX = x * frequency / scale;
-			float sampleY = y * frequency / scale;
+			const float sampleX = x * frequency / scale;
+			const float sampleY = y * frequency / scale;
 
-			float perlinValue = static_cast<float>(stb_perlin_noise3(sampleX, sampleY, 0.0f, 0, 0, 0));
+			const float perlinValue = stb_perlin_noise3(sampleX, sampleY, 0.0f, 0, 0, 0);
 			noiseHeight += perlinValue * amplitude;
 
 			amplitude *= persistence;
@@ -64,81 +64,95 @@ namespace Geometry
 
 	void TerrainBuilder::PoissonSamplePointsInXYPlane()
 	{
-		std::vector<pmp::Point> samples;
-		std::vector<pmp::Point> activeList;
-		float radius = m_Settings.SamplingRadius;
-		float radiusSquared = radius * radius;
-		float cellSize = radius / std::sqrt(2.0f);
-		int gridWidth = static_cast<int>((1.0f / cellSize)) + 1;
-		int gridHeight = static_cast<int>((1.0f / cellSize)) + 1;
+        std::vector<pmp::Point> samples;
+        std::vector<pmp::Point> activeList;
+        const float radius = m_Settings.SamplingRadius;
+        const float radiusSquared = radius * radius;
+        const float cellSize = radius / std::sqrt(2.0f);
 
-		std::vector grid(gridWidth, std::vector(gridHeight, pmp::Point(-1, -1, 0)));
+        // Calculate the bounding box of the boundary polygon
+        pmp::BoundingBox bbox(m_Settings.BoundaryLoopPolyline);
+        const pmp::Point minPoint = bbox.min();
+        const pmp::Point maxPoint = bbox.max();
+        const float minX = minPoint[0];
+        const float maxX = maxPoint[0];
+        const float minY = minPoint[1];
+        const float maxY = maxPoint[1];
 
-		auto AddPoint = [&](const pmp::Point& point)
-		{
-			samples.push_back(point);
-			activeList.push_back(point);
-			int gridX = static_cast<int>(point[0] / cellSize);
-			int gridY = static_cast<int>(point[1] / cellSize);
-			grid[gridX][gridY] = point;
-		};
+        const int gridWidth = static_cast<int>((maxX - minX) / cellSize) + 1;
+        const int gridHeight = static_cast<int>((maxY - minY) / cellSize) + 1;
 
-		// Start with a random point
-		pmp::Point initialPoint = pmp::Point(RandomFloat(0.0f, 1.0f), RandomFloat(0.0f, 1.0f), 0.0f);
-		while (!IsPointInPolygon(initialPoint, m_Settings.BoundaryLoopPolyline))
-		{
-			initialPoint = pmp::Point(RandomFloat(0.0f, 1.0f), RandomFloat(0.0f, 1.0f), 0.0f);
-		}
-		AddPoint(initialPoint);
+        std::vector grid(gridWidth, std::vector(gridHeight, pmp::Point(-1, -1, 0)));
+        std::vector occupied(gridWidth, std::vector(gridHeight, false));
 
-		while (!activeList.empty())
-		{
-			size_t randomIndex = static_cast<size_t>(RandomFloat(0.0f, static_cast<float>(activeList.size())));
-			pmp::Point point = activeList[randomIndex];
-			bool found = false;
+        auto AddPoint = [&](const pmp::Point& point)
+        {
+            samples.push_back(point);
+            activeList.push_back(point);
+            const int gridX = static_cast<int>((point[0] - minX) / cellSize);
+            const int gridY = static_cast<int>((point[1] - minY) / cellSize);
+            if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight)
+            {
+                grid[gridX][gridY] = point;
+                occupied[gridX][gridY] = true;
+            }
+        };
 
-			for (size_t k = 0; k < m_Settings.SamplingAttempts; ++k)
-			{
-				float angle = RandomFloat(0.0f, 2.0f * 3.14159265359f);
-				float distance = RandomFloat(radius, 2.0f * radius);
-				pmp::Point newPoint = pmp::Point(point[0] + distance * std::cos(angle), point[1] + distance * std::sin(angle), 0.0f);
+        // Start with a random point
+        auto initialPoint = pmp::Point(RandomFloat(minX, maxX), RandomFloat(minY, maxY), 0.0f);
+        while (!IsPointInPolygon(initialPoint, m_Settings.BoundaryLoopPolyline))
+        {
+            initialPoint = pmp::Point(RandomFloat(minX, maxX), RandomFloat(minY, maxY), 0.0f);
+        }
+        AddPoint(initialPoint);
 
-				if (!IsPointInPolygon(newPoint, m_Settings.BoundaryLoopPolyline))
-				{
-					continue;
-				}
+        while (!activeList.empty())
+        {
+            const auto randomIndex = static_cast<size_t>(RandomFloat(0.0f, static_cast<float>(activeList.size())));
+            pmp::Point point = activeList[randomIndex];
+            bool found = false;
 
-				int gridX = static_cast<int>(newPoint[0] / cellSize);
-				int gridY = static_cast<int>(newPoint[1] / cellSize);
+            for (size_t k = 0; k < m_Settings.SamplingAttempts; ++k)
+            {
+                const float angle = RandomFloat(0.0f, 2.0f * 3.14159265359f);
+                const float distance = RandomFloat(radius, 2.0f * radius);
+                auto newPoint = pmp::Point(point[0] + distance * std::cos(angle), point[1] + distance * std::sin(angle), 0.0f);
 
-				bool valid = true;
-				for (int i = std::max(0, gridX - 2); i <= std::min(gridWidth - 1, gridX + 2) && valid; ++i)
-				{
-					for (int j = std::max(0, gridY - 2); j <= std::min(gridHeight - 1, gridY + 2) && valid; ++j)
-					{
-						pmp::Point neighbor = grid[i][j];
-						if (neighbor[0] != -1 && sqrnorm(newPoint - neighbor) < radiusSquared)
-						{
-							valid = false;
-						}
-					}
-				}
+                if (!IsPointInPolygon(newPoint, m_Settings.BoundaryLoopPolyline))
+                {
+                    continue;
+                }
 
-				if (valid)
-				{
-					AddPoint(newPoint);
-					found = true;
-					break;
-				}
-			}
+                const int gridX = static_cast<int>((newPoint[0] - minX) / cellSize);
+                const int gridY = static_cast<int>((newPoint[1] - minY) / cellSize);
 
-			if (!found)
-			{
-				activeList.erase(activeList.begin() + randomIndex);
-			}
-		}
+                bool valid = true;
+                for (int i = std::max(0, gridX - 2); i <= std::min(gridWidth - 1, gridX + 2) && valid; ++i)
+                {
+                    for (int j = std::max(0, gridY - 2); j <= std::min(gridHeight - 1, gridY + 2) && valid; ++j)
+                    {
+                        if (occupied[i][j] && sqrnorm(newPoint - grid[i][j]) < radiusSquared)
+                        {
+                            valid = false;
+                        }
+                    }
+                }
 
-		m_Result.Vertices = std::move(samples);
+                if (valid)
+                {
+                    AddPoint(newPoint);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                activeList.erase(activeList.begin() + randomIndex);
+            }
+        }
+
+        m_Result.Vertices = std::move(samples);
 	}
 
 	void TerrainBuilder::GeneratePerlinZElevation()
