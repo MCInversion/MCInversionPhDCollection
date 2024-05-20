@@ -153,4 +153,10 @@ namespace Geometry
 	/// \brief Computes the average distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMeanInterVertexDistanceBruteForce(const std::vector<pmp::Point>& points);
 
+	/// \brief Computes the index of the closest point
+	[[nodiscard]] int GetClosestPointIndex(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint);
+
+	/// \brief Computes the index of the closest point in the x,y plane.
+	[[nodiscard]] int GetClosestPointIndex2D(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint);
+
 } // namespace Geometry

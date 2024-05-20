@@ -1425,4 +1425,76 @@ namespace Geometry
 		return count > 0 ? (totalDistance / count) : 0;
 	}
 
+	int GetClosestPointIndex2D(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint)
+	{
+		if (points.empty())
+		{
+			std::cerr << "ComputeClosestPointIndex2D: points.empty()!\n";
+			return -1;
+		}
+
+		// Convert points to a compatible dataset
+		PointCloud<pmp::Scalar> nfPoints;
+		nfPoints.pts.reserve(points.size());
+		for (const auto& p : points)
+			nfPoints.pts.push_back({ p[0], p[1], 0.0f });  // Ignore the z-coordinate
+		using PointCloudAdapter = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
+
+		// Construct a KD-tree index
+		using PointCloudKDTreeIndexAdapter = nanoflann::KDTreeSingleIndexAdaptor<
+			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloudAdapter>, PointCloudAdapter, 2 /* dim */>;
+		PointCloudKDTreeIndexAdapter indexAdapter(2 /*dim*/, nfPoints, { 10 /* max leaf */ });
+
+		// Do a knn search for the closest point to the sampledPoint
+		const pmp::Scalar query_pt[2] = { sampledPoint[0], sampledPoint[1] };
+		size_t num_results = 1;
+		std::vector<uint32_t> ret_index(num_results);
+		std::vector<pmp::Scalar> out_dist_sqr(num_results);
+		num_results = indexAdapter.knnSearch(
+			&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
+		ret_index.resize(num_results);
+		out_dist_sqr.resize(num_results);
+
+		// Return the index of the closest point
+		if (num_results > 0)
+			return ret_index[0];
+		return -1;  // Indicate failure
+	}
+
+	int GetClosestPointIndex(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint)
+	{
+		if (points.empty())
+		{
+			std::cerr << "ComputeClosestPointIndex: points.empty()!\n";
+			return -1;
+		}
+
+		// Convert points to a compatible dataset
+		PointCloud<pmp::Scalar> nfPoints;
+		nfPoints.pts.reserve(points.size());
+		for (const auto& p : points)
+			nfPoints.pts.push_back({ p[0], p[1], p[2] });
+		using PointCloudAdapter = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
+
+		// Construct a KD-tree index
+		using PointCloudKDTreeIndexAdapter = nanoflann::KDTreeSingleIndexAdaptor<
+			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloudAdapter>, PointCloudAdapter, 3 /* dim */>;
+		const PointCloudKDTreeIndexAdapter indexAdapter(3 /*dim*/, nfPoints, { 10 /* max leaf */ });
+
+		// Do a knn search for the closest point to the sampledPoint
+		const pmp::Scalar query_pt[3] = { sampledPoint[0], sampledPoint[1], sampledPoint[2] };
+		size_t num_results = 1;
+		std::vector<uint32_t> ret_index(num_results);
+		std::vector<pmp::Scalar> out_dist_sqr(num_results);
+		num_results = indexAdapter.knnSearch(
+			&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
+		ret_index.resize(num_results);
+		out_dist_sqr.resize(num_results);
+
+		// Return the index of the closest point
+		if (num_results > 0)
+			return ret_index[0];
+		return -1;  // Indicate failure
+	}
+
 } // namespace Geometry

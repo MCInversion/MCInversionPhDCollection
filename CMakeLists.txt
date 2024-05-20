@@ -198,6 +198,7 @@ include(clang-tidy)
 # which directories to process
 # ....................................................
 add_subdirectory(src/fade2d)
+add_subdirectory(src/poly2tri)
 add_subdirectory(src/pmp)
 add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
