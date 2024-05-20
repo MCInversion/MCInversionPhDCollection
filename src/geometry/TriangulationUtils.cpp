@@ -1,6 +1,7 @@
 #include "TriangulationUtils.h"
 
 #include "Fade_2D.h"
+#include "poly2tri/Poly2Tri_CDT.h"
 
 namespace
 {
@@ -114,4 +115,105 @@ namespace Geometry
             }
         }
 	}
+
+    constexpr unsigned int TRIANG_MAX_TRIES = 42;
+
+    void TriangulateWithPoly2Tri(BaseMeshGeometryData& data, const std::vector<pmp::Point>& constraintPolyline)
+    {
+        if (data.Vertices.empty())
+        {
+            std::cerr << "Geometry::TriangulateWithPoly2Tri: nothing to triangulate!\n";
+            return;
+        }
+
+        // Project the 3D points onto a 2D plane (assuming projection along Z-axis)
+        std::vector<Poly2Tri::Point*> projections;
+        projections.reserve(data.Vertices.size());
+        for (const auto& vertex : data.Vertices)
+        {
+            projections.push_back(new Poly2Tri::Point(vertex[0], vertex[1]));
+        }
+
+        Poly2Tri::CDT* constrainedDelaunay = nullptr;
+
+        // Seed the random number generator
+        std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+        // Attempt triangulation with jitter to avoid collinear points and duplicates
+        for (unsigned int triesUtilized = 0; triesUtilized < TRIANG_MAX_TRIES; triesUtilized++)
+        {
+            std::vector<Poly2Tri::Point*> points;
+            points.reserve(projections.size());
+            for (unsigned int i = 0; i < projections.size(); i++)
+            {
+                auto pt = new Poly2Tri::Point(
+                    projections[i]->x + (triesUtilized * (static_cast<double>(std::rand()) / RAND_MAX * 0.001 - 0.0005)),
+                    projections[i]->y + (triesUtilized * (static_cast<double>(std::rand()) / RAND_MAX * 0.001 - 0.0005))
+                );
+                pt->_vIdx = i;
+                points.emplace_back(pt);
+            }
+
+            try
+            {
+                std::vector<Poly2Tri::Point*> contour;
+                contour.reserve(constraintPolyline.size());
+                for (const auto& point : constraintPolyline)
+                {
+                    contour.push_back(new Poly2Tri::Point(point[0], point[1], points.size() + contour.size() - 1));
+                }
+                constrainedDelaunay = new Poly2Tri::CDT(contour);
+
+                // Add points as Steiner points (interior points)
+                for (const auto& pt : points)
+                {
+                    constrainedDelaunay->AddPoint(pt);
+                }
+
+                if (constrainedDelaunay == nullptr)
+                {
+                    throw(std::runtime_error("TriangulateWithPoly2Tri: Failed triangulation! constrainedDelaunay == nullptr\n"));
+                }
+                constrainedDelaunay->Triangulate();
+                for (const auto* pt : contour)
+                {
+                    delete pt;
+                }
+                break; // Assuming it all goes well
+            }
+            catch (const std::runtime_error& err)
+            {
+                std::cerr << err.what() << "\nTriangulateWithPoly2Tri: Triangulation was not able to finish with "
+                    << TRIANG_MAX_TRIES << " tries!\n";
+            }
+        }
+
+        if (constrainedDelaunay == nullptr)
+        {
+            throw(std::runtime_error("TriangulateWithPoly2Tri: Failed triangulation! constrainedDelaunay == nullptr\n"));
+        }
+
+        const auto triangles = constrainedDelaunay->GetTriangles();
+
+        // Clear any existing PolyIndices
+        data.PolyIndices.clear();
+        data.PolyIndices.reserve(triangles.size());
+
+        // Convert Poly2Tri triangles to PolyIndices
+        for (const auto& tri : triangles)
+        {
+            data.PolyIndices.push_back({
+                tri->GetPoint(0)->_vIdx,
+                tri->GetPoint(1)->_vIdx,
+                tri->GetPoint(2)->_vIdx
+                });
+        }
+
+        // Cleanup
+        for (const auto* pt : projections)
+        {
+            delete pt;
+        }
+        delete constrainedDelaunay;
+    }
 } // namespace Geometry
