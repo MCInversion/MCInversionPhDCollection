@@ -37,7 +37,7 @@ namespace Geometry
 
         // Add constraint polyline as segments
         std::vector<GEOM_FADE2D::Segment2> constraintSegments;
-        for (size_t i = 0; i < constraintPolyline.size(); ++i)
+        for (size_t i = 0; i < constraintPolyline.size() - 1; ++i)
         {
             const size_t next_i = (i + 1) % constraintPolyline.size(); // Ensure the last point connects back to the first point if closed
             constraintSegments.emplace_back(
@@ -46,7 +46,7 @@ namespace Geometry
             );
         }
 
-        dt.createConstraint(constraintSegments, GEOM_FADE2D::CIS_CONSTRAINED_DELAUNAY);
+        //dt.createConstraint(constraintSegments, GEOM_FADE2D::CIS_CONSTRAINED_DELAUNAY);
 
         // Perform the triangulation
         dt.applyConstraintsAndZones();
