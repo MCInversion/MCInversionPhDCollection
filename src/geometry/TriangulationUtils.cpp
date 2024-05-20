@@ -14,6 +14,38 @@ namespace
         normal /= pmp::norm(normal);
         return normal;
     }
+
+    [[nodiscard]] std::vector<pmp::Point> GetSubdividedOffsetPolyline(const std::vector<pmp::Point>& polyline, float maxSegmentLength, float offsetDistance)
+    {
+        std::vector<pmp::Point> subdivided;
+
+        auto offsetPoint = [offsetDistance](const pmp::Point& p1, const pmp::Point& p2) -> pmp::Point {
+            pmp::Point direction = p2 - p1;
+            pmp::Point perpendicular(-direction[1], direction[0], 0.0f); // Perpendicular to the segment in the xy plane
+            perpendicular /= std::sqrt(perpendicular[0] * perpendicular[0] + perpendicular[1] * perpendicular[1]); // Normalize
+            return p1 + offsetDistance * perpendicular;
+        };
+
+        for (size_t i = 0; i < polyline.size(); ++i)
+        {
+            pmp::Point p1 = polyline[i];
+            pmp::Point p2 = polyline[(i + 1) % polyline.size()]; // Wrap around to the start for closed loop
+            subdivided.push_back(offsetPoint(p1, p2)); // Offset the first point of the segment
+            float segmentLength = norm(p2 - p1);
+            if (segmentLength > maxSegmentLength)
+            {
+                int numSubdivisions = static_cast<int>(std::ceil(segmentLength / maxSegmentLength));
+                for (int j = 1; j < numSubdivisions; ++j)
+                {
+                    float t = static_cast<float>(j) / numSubdivisions;
+                    pmp::Point interpolated = (1.0f - t) * p1 + t * p2;
+                    subdivided.push_back(offsetPoint(interpolated, p2)); // Offset the interpolated points
+                }
+            }
+            subdivided.push_back(offsetPoint(p2, p1)); // Offset the last point of the segment
+        }
+        return subdivided;
+    }
 }
 
 namespace Geometry
@@ -36,14 +68,18 @@ namespace Geometry
             pointPtrs.push_back(dt.insert(GEOM_FADE2D::Point2(vertex[0], vertex[1])));
         }
 
+        // Extract the dense offset contour
+        const auto meanDistance = Geometry::ComputeNearestNeighborMeanInterVertexDistance(data.Vertices, 6);
+        const auto denseOffsetContour = GetSubdividedOffsetPolyline(constraintPolyline, meanDistance, meanDistance);
+
         // Add constraint polyline as segments
         std::vector<GEOM_FADE2D::Segment2> constraintSegments;
-        for (size_t i = 0; i < constraintPolyline.size(); ++i)
+        for (size_t i = 0; i < denseOffsetContour.size(); ++i)
         {
-            const size_t next_i = (i + 1) % constraintPolyline.size(); // Ensure the last point connects back to the first point if closed
+            const size_t next_i = (i + 1) % denseOffsetContour.size(); // Ensure the last point connects back to the first point if closed
             constraintSegments.emplace_back(
-                GEOM_FADE2D::Point2(constraintPolyline[i][0], constraintPolyline[i][1]),
-                GEOM_FADE2D::Point2(constraintPolyline[next_i][0], constraintPolyline[next_i][1])
+                GEOM_FADE2D::Point2(denseOffsetContour[i][0], denseOffsetContour[i][1]),
+                GEOM_FADE2D::Point2(denseOffsetContour[next_i][0], denseOffsetContour[next_i][1])
             );
         }
 
@@ -126,6 +162,10 @@ namespace Geometry
             return;
         }
 
+        // Extract the dense offset contour
+        const auto meanDistance = Geometry::ComputeNearestNeighborMeanInterVertexDistance(data.Vertices, 6);
+        const auto denseOffsetContour = GetSubdividedOffsetPolyline(constraintPolyline, meanDistance, meanDistance);
+
         // Project the 3D points onto a 2D plane (assuming projection along Z-axis)
         std::vector<Poly2Tri::Point*> projections;
         projections.reserve(data.Vertices.size());
@@ -157,9 +197,10 @@ namespace Geometry
             try
             {
                 std::vector<Poly2Tri::Point*> contour;
-                contour.reserve(constraintPolyline.size());
-                for (const auto& point : constraintPolyline)
+                contour.reserve(denseOffsetContour.size());
+                for (const auto& point : denseOffsetContour)
                 {
+                    //points.push_back(new Poly2Tri::Point(point[0], point[1]));
                     contour.push_back(new Poly2Tri::Point(point[0], point[1], points.size() + contour.size() - 1));
                 }
                 constrainedDelaunay = new Poly2Tri::CDT(contour);
