@@ -1465,19 +1465,43 @@ class KDTreeSingleIndexAdaptor
         if (this->size(*this) == 0) return false;
         if (!Base::root_node_)
             throw std::runtime_error(
-                "[nanoflann] findNeighbors() called before building the "
-                "index.");
+                "[nanoflann] findNeighbors() called before building the index.");
         float epsError = 1 + searchParams.eps;
 
         // fixed or variable-sized container (depending on DIM)
         distance_vector_t dists;
         // Fill it with zeros.
         auto zero = static_cast<decltype(result.worstDist())>(0);
+        std::cout << "Assigning zeros to dists." << std::endl;
         assign(dists, (DIM > 0 ? DIM : Base::dim_), zero);
+        std::cout << "dists assigned with size: " << dists.size() << std::endl;
+
         DistanceType dist = this->computeInitialDistances(*this, vec, dists);
-        searchLevel(result, vec, Base::root_node_, dist, dists, epsError);
+        std::cout << "Initial distances computed." << std::endl;
+
+        bool searchResult = searchLevel(result, vec, Base::root_node_, dist, dists, epsError);
+        std::cout << "Search level completed. Result: " << searchResult << std::endl;
+
         return result.full();
     }
+    //{
+    //    assert(vec);
+    //    if (this->size(*this) == 0) return false;
+    //    if (!Base::root_node_)
+    //        throw std::runtime_error(
+    //            "[nanoflann] findNeighbors() called before building the "
+    //            "index.");
+    //    float epsError = 1 + searchParams.eps;
+
+    //    // fixed or variable-sized container (depending on DIM)
+    //    distance_vector_t dists;
+    //    // Fill it with zeros.
+    //    auto zero = static_cast<decltype(result.worstDist())>(0);
+    //    assign(dists, (DIM > 0 ? DIM : Base::dim_), zero);
+    //    DistanceType dist = this->computeInitialDistances(*this, vec, dists);
+    //    searchLevel(result, vec, Base::root_node_, dist, dists, epsError);
+    //    return result.full();
+    //}
 
     /**
      * Find the "num_closest" nearest neighbors to the \a query_point[0:dim-1].
@@ -1494,13 +1518,25 @@ class KDTreeSingleIndexAdaptor
      *       will be valid. Return is less than `num_closest` only if the
      *       number of elements in the tree is less than `num_closest`.
      */
+    //Size knnSearch(
+    //    const ElementType* query_point, const Size num_closest,
+    //    IndexType* out_indices, DistanceType* out_distances) const
+    //{
+    //    nanoflann::KNNResultSet<DistanceType, IndexType> resultSet(num_closest);
+    //    resultSet.init(out_indices, out_distances);
+    //    findNeighbors(resultSet, query_point);
+    //    return resultSet.size();
+    //}
     Size knnSearch(
         const ElementType* query_point, const Size num_closest,
         IndexType* out_indices, DistanceType* out_distances) const
     {
+        std::cout << "knnSearch: Starting search with " << num_closest << " neighbors." << std::endl;
         nanoflann::KNNResultSet<DistanceType, IndexType> resultSet(num_closest);
         resultSet.init(out_indices, out_distances);
+        std::cout << "knnSearch: Initialized resultSet." << std::endl;
         findNeighbors(resultSet, query_point);
+        std::cout << "knnSearch: Completed search. Found " << resultSet.size() << " results." << std::endl;
         return resultSet.size();
     }
 
@@ -1610,6 +1646,12 @@ class KDTreeSingleIndexAdaptor
         DistanceType mindist, distance_vector_t& dists,
         const float epsError) const
     {
+        // Early exit if node is null
+        if (node == nullptr) {
+            std::cerr << "searchLevel: node is nullptr!\n";
+            return false;
+        }
+
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == nullptr) && (node->child2 == nullptr))
         {
@@ -1617,9 +1659,15 @@ class KDTreeSingleIndexAdaptor
             for (Offset i = node->node_type.lr.left;
                  i < node->node_type.lr.right; ++i)
             {
-                const IndexType accessor = Base::vAcc_[i];  // reorder... : i;
+                const IndexType index = Base::vAcc_[i];  // reorder... : i;
+
+                // Ensure index is within bounds
+                if (index >= Base::size(*this)) {
+                    std::cerr << "searchLevel: index out of bounds! index: " << index << " size: " << Base::size(*this) << std::endl;
+                    continue;
+                }
                 DistanceType    dist     = distance_.evalMetric(
-                    vec, accessor, (DIM > 0 ? DIM : Base::dim_));
+                    vec, index, (DIM > 0 ? DIM : Base::dim_));
                 if (dist < worst_dist)
                 {
                     if (!result_set.addPoint(dist, Base::vAcc_[i]))
@@ -2017,6 +2065,12 @@ class KDTreeSingleIndexDynamicAdaptor_
         DistanceType mindist, distance_vector_t& dists,
         const float epsError) const
     {
+        // Early exit if node is null
+        if (node == nullptr) {
+            std::cerr << "searchLevel: node is nullptr!\n";
+            return;
+        }
+
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == nullptr) && (node->child2 == nullptr))
         {
@@ -2025,6 +2079,12 @@ class KDTreeSingleIndexDynamicAdaptor_
                  i < node->node_type.lr.right; ++i)
             {
                 const IndexType index = Base::vAcc_[i];  // reorder... : i;
+                // Ensure index is within bounds
+                if (index >= treeIndex_.size()) {
+                    std::cerr << "searchLevel: index out of bounds! index: " << index << " size: " << treeIndex_.size() << "\n";
+                    continue;
+                }
+
                 if (treeIndex_[index] == -1) continue;
                 DistanceType dist = distance_.evalMetric(
                     vec, index, (DIM > 0 ? DIM : Base::dim_));

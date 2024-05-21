@@ -73,10 +73,13 @@ namespace
 
         for (size_t i = 0; i < polyline.size(); ++i)
         {
+            std::cout << "Subdividing segment " << i + 1 << " of " << polyline.size() << "\n";
             pmp::Point p1 = polyline[i];
             pmp::Point p2 = polyline[(i + 1) % polyline.size()]; // Wrap around to the start for closed loop
             subdivideSegment(p1, p2);
         }
+
+        std::cout << "Subdivided polyline has " << subdivided.size() << " points\n";
 
         // Find unique indices of the closest points
         std::vector<int> indices;
@@ -84,6 +87,7 @@ namespace
         for (const auto& point : subdivided)
         {
             int closestIndex = Geometry::GetClosestPointIndex2D(pointSet, point);
+            std::cout << "Closest index: " << closestIndex << "\n";
             if (closestIndex != -1 && !uniqueIndices.contains(closestIndex))
             {
                 indices.push_back(closestIndex);
@@ -105,23 +109,32 @@ namespace Geometry
             return;
         }
 
+        std::cout << "Geometry::TriangulateWithFade2D: begin\n";
+
+        // Extract the contour
+        const auto meanDistance = ComputeNearestNeighborMeanInterVertexDistance(data.Vertices, 6);
+        std::cout << "Geometry::TriangulateWithFade2D: meanDistance = " << meanDistance << "\n";
+        const auto contourIds = GetSubdividedOffsetPolylineIndices2D(constraintPolyline, data.Vertices, 0.7 * meanDistance);
+        std::cout << "Geometry::TriangulateWithFade2D: " << contourIds.size() << " contourIds extracted\n";
+
         // Create a Fade_2D triangulation object
         GEOM_FADE2D::Fade_2D dt;
 
         // Add points to the triangulation and map them to their indices
-        std::vector<GEOM_FADE2D::Point2*> pointPtrs;
+        std::vector<GEOM_FADE2D::Point2> fadePts;
         for (const auto& vertex : data.Vertices)
         {
-            pointPtrs.push_back(dt.insert(GEOM_FADE2D::Point2(vertex[0], vertex[1])));
+            fadePts.push_back(GEOM_FADE2D::Point2(vertex[0], vertex[1]));
         }
+        // Triangulation takes place
+        std::vector<GEOM_FADE2D::Point2*> fadePtPtrs;
+        dt.insert(fadePts, fadePtPtrs);
 
-        // Extract the contour
-        const auto meanDistance = ComputeNearestNeighborMeanInterVertexDistance(data.Vertices, 6);
-        const auto contourIds = GetSubdividedOffsetPolylineIndices2D(constraintPolyline, data.Vertices, 0.7 * meanDistance);
+        std::cout << "Geometry::TriangulateWithFade2D: Fade2D triangulation complete, applying constraint zone.\n";
 
         // Add constraint polyline as segments
         std::vector<GEOM_FADE2D::Segment2> constraintSegments;
-        for (size_t i = 0; i < contourIds.size() - 1; ++i)
+        for (size_t i = 0; i < contourIds.size(); ++i)
         {
             const size_t next_i = (i + 1) % contourIds.size(); // Ensure the last point connects back to the first point if closed
             constraintSegments.emplace_back(
@@ -129,35 +142,45 @@ namespace Geometry
                 GEOM_FADE2D::Point2(data.Vertices[contourIds[next_i]][0], data.Vertices[contourIds[next_i]][1])
             );
         }
+        GEOM_FADE2D::ConstraintGraph2* pTriangleBordersGraph = dt.createConstraint(constraintSegments, GEOM_FADE2D::CIS_CONSTRAINED_DELAUNAY, true);
 
-        dt.createConstraint(constraintSegments, GEOM_FADE2D::CIS_CONSTRAINED_DELAUNAY);
-
-        // Perform the triangulation
-        dt.applyConstraintsAndZones();
-
-        // Retrieve the triangles and add them to your result
+        // Extract all dt triangles
         std::vector<GEOM_FADE2D::Triangle2*> triangles;
         dt.getTrianglePointers(triangles);
+
+        // Create an inside seed point and grow a zone from there
+        GEOM_FADE2D::Point2& p0(*triangles[0]->getCorner(0));
+        GEOM_FADE2D::Point2& p1(*triangles[0]->getCorner(1));
+        GEOM_FADE2D::Point2& p2(*triangles[0]->getCorner(2));
+        GEOM_FADE2D::Point2 seedPoint((p0.x() + p1.x() + p2.x()) / 3.0, (p0.y() + p1.y() + p2.y()) / 3.0);
+        GEOM_FADE2D::Zone2* pTriangleZone = dt.createZone(pTriangleBordersGraph, GEOM_FADE2D::ZL_GROW, seedPoint, true);
+
+        // Retrieve the triangles and add them to your result
+        std::vector<GEOM_FADE2D::Triangle2*> zoneTriangles;
+        pTriangleZone->getTriangles(zoneTriangles);
+
+        std::cout << "Geometry::TriangulateWithFade2D: Constraint zone extracted.\n";
 
         // Clear any existing PolyIndices
         data.PolyIndices.clear();
 
-        // Map from Point2* to index in data.Vertices
-        std::map<GEOM_FADE2D::Point2*, unsigned int> pointToIndexMap;
-        for (unsigned int i = 0; i < pointPtrs.size(); ++i)
+        // Extract the indices of the vertices of the triangles
+        std::unordered_map<const GEOM_FADE2D::Point2*, unsigned int> vertexIndices;
+        for (unsigned int count = 0; const auto* p : fadePtPtrs)
         {
-            pointToIndexMap[pointPtrs[i]] = i;
+            vertexIndices[p] = count++;
         }
-
         // Convert Fade2D triangles to PolyIndices
-        for (const auto& triangle : triangles)
+        for (const auto* tri : zoneTriangles)
         {
-            unsigned int idx0 = pointToIndexMap[triangle->getCorner(0)];
-            unsigned int idx1 = pointToIndexMap[triangle->getCorner(1)];
-            unsigned int idx2 = pointToIndexMap[triangle->getCorner(2)];
+            data.PolyIndices.push_back({
+				vertexIndices[tri->getCorner(0)],
+				vertexIndices[tri->getCorner(1)],
+				vertexIndices[tri->getCorner(2)]
+			});
+		}
 
-            data.PolyIndices.push_back({ idx0, idx1, idx2 });
-        }
+        std::cout << "Geometry::TriangulateWithFade2D: Vertex indices extracted.\n";
     }
 
 	constexpr float MAGIC_RADIUS_MULTIPLIER = 2.5f;

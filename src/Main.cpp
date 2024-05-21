@@ -3119,9 +3119,9 @@ int main()
 			Geometry::TerrainBuilder terrainBuilder(settings);
 			terrainBuilder.GeneratePoints();
 
-			//terrainBuilder.Triangulate([&boundary](Geometry::BaseMeshGeometryData& data) { Geometry::TriangulateWithFade2D(data, boundary); });
+			terrainBuilder.Triangulate([&boundary](Geometry::BaseMeshGeometryData& data) { Geometry::TriangulateWithFade2D(data, boundary); });
 			//terrainBuilder.Triangulate([&boundary](Geometry::BaseMeshGeometryData& data) { Geometry::TriangulateWithVCGBPA(data); });
-			terrainBuilder.Triangulate([&boundary](Geometry::BaseMeshGeometryData& data) { Geometry::TriangulateWithPoly2Tri(data, boundary); });
+			//terrainBuilder.Triangulate([&boundary](Geometry::BaseMeshGeometryData& data) { Geometry::TriangulateWithPoly2Tri(data, boundary); });
 
 			Geometry::BaseMeshGeometryData terrainMeshData = terrainBuilder.GetResult();
 

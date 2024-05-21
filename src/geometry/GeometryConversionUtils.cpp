@@ -7,6 +7,7 @@
 #include <random>
 #include <thread>
 #include <unordered_set>
+#include <cassert>
 
 #include <vcg/complex/complex.h>
 #include <vcg/complex/algorithms/update/bounding.h>
@@ -1437,28 +1438,44 @@ namespace Geometry
 		PointCloud<pmp::Scalar> nfPoints;
 		nfPoints.pts.reserve(points.size());
 		for (const auto& p : points)
-			nfPoints.pts.push_back({ p[0], p[1], 0.0f });  // Ignore the z-coordinate
+			nfPoints.pts.push_back({ p[0], p[1], 0.0f });  // Nullify the z-coordinate
+
 		using PointCloudAdapter = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
 
-		// Construct a KD-tree index
+		std::cout << "Points converted for KD-Tree." << std::endl;
+		std::cout << "Initializing KD-Tree with " << nfPoints.pts.size() << " points." << std::endl;
+
+		// Construct a 2D KD-tree index
 		using PointCloudKDTreeIndexAdapter = nanoflann::KDTreeSingleIndexAdaptor<
 			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloudAdapter>, PointCloudAdapter, 2 /* dim */>;
 		PointCloudKDTreeIndexAdapter indexAdapter(2 /*dim*/, nfPoints, { 10 /* max leaf */ });
+		std::cout << "KD-Tree initialized." << std::endl;
 
-		// Do a knn search for the closest point to the sampledPoint
+		// Do a knn search for the closest point to the sampledPoint in 2D
 		const pmp::Scalar query_pt[2] = { sampledPoint[0], sampledPoint[1] };
-		size_t num_results = 1;
+		const size_t num_results = 1;
 		std::vector<uint32_t> ret_index(num_results);
 		std::vector<pmp::Scalar> out_dist_sqr(num_results);
-		num_results = indexAdapter.knnSearch(
-			&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
-		ret_index.resize(num_results);
-		out_dist_sqr.resize(num_results);
 
-		// Return the index of the closest point
-		if (num_results > 0)
+		// Ensure query point is valid
+		assert(query_pt != nullptr);
+
+		std::cout << "Performing knnSearch..." << std::endl;
+		try {
+			size_t results_found = indexAdapter.knnSearch(&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
+			std::cout << "knnSearch found " << results_found << " results." << std::endl;
+
+			if (results_found == 0) {
+				std::cerr << "knnSearch found no results." << std::endl;
+				return -1;
+			}
+
 			return ret_index[0];
-		return -1;  // Indicate failure
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Exception during knnSearch: " << e.what() << std::endl;
+			return -1;
+		}
 	}
 
 	int GetClosestPointIndex(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint)

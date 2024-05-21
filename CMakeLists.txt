@@ -128,8 +128,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# set default compiler flags for both gcc and clang
+# Set default compiler flags for both gcc and clang
 set(COMMON_CXX_FLAGS "-pedantic -Wall -Wextra -Wshadow -Werror")
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Od /Zi") # Disable optimization and add debug information in Release mode
 
 if((UNIX OR APPLE) AND CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS

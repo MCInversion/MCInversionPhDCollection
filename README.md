@@ -21,6 +21,8 @@ Additional dependencies include:
 - Rply
 - [VCGLib](https://github.com/cnr-isti-vclab/vcglib)
 - [Quickhull](https://github.com/akuukka/quickhull)
+- [Fade2D](https://github.com/Lee0326/Fade2D)
+- [Poly2Tri](https://github.com/greenm01/poly2tri)
 
 ## Get Started
 
