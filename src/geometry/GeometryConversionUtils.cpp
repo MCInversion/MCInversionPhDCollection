@@ -105,7 +105,7 @@ namespace
 		while (cursor < end)
 		{
 			// If the current line is incomplete, skip to the next line
-			if (*cursor == '\n')
+			if (*cursor == '\n' || *cursor == '\r')
 			{
 				cursor++;
 				continue;
@@ -861,14 +861,14 @@ namespace Geometry
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
 		if (extension != "ply")
 		{
-			std::cerr << absFileName << " has invalid extension!" << std::endl;
+			std::cerr << "ExportSampledVerticesToPLY: " << absFileName << " has invalid extension!" << std::endl;
 			return false;
 		}
 
 		std::ofstream file(absFileName);
 		if (!file.is_open())
 		{
-			std::cerr << "Failed to open file for writing: " << absFileName << std::endl;
+			std::cerr << "ExportSampledVerticesToPLY: Failed to open file for writing: " << absFileName << std::endl;
 			return false;
 		}
 
@@ -895,7 +895,7 @@ namespace Geometry
 		std::ofstream outFile(absFileName);
 		if (!outFile.is_open()) 
 		{
-			std::cerr << "Unable to open file: " << absFileName << std::endl;
+			std::cerr << "ExportSampledVerticesToPLY: Unable to open file: " << absFileName << std::endl;
 			return false;
 		}
 
@@ -913,6 +913,185 @@ namespace Geometry
 		{
 			const auto& vertex = meshData.Vertices[idx];
 			outFile << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+		}
+
+		outFile.close();
+		return true;
+	}
+
+	bool ExportSampledVerticesWithNormalsToVTK(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed)
+	{
+		if (meshData.VertexNormals.empty())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToVTK: Vertex normals are not available!" << std::endl;
+			return false;
+		}
+
+		if (meshData.Vertices.empty())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToVTK: Vertices are not available!" << std::endl;
+			return false;
+		}
+
+		if (meshData.Vertices.size() != meshData.VertexNormals.size())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToVTK: Vertices and VertexNormals are of different size!" << std::endl;
+			return false;
+		}
+
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "vtk")
+		{
+			std::cerr << absFileName << "ExportSampledVerticesWithNormalsToVTK: Invalid file extension!" << std::endl;
+			return false;
+		}
+
+		std::ofstream file(absFileName);
+		if (!file.is_open())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToVTK: Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		const size_t nVertices = meshData.Vertices.size();
+
+		// Generate nVerts random indices
+		std::vector<size_t> indices;
+		std::mt19937 gen;
+		if (seed.has_value())
+		{
+			gen.seed(seed.value());
+		}
+		else
+		{
+			std::random_device rd;
+			gen = std::mt19937(rd());
+		}
+		std::uniform_int_distribution<> distrib(0, nVertices - 1);
+
+		for (size_t i = 0; i < nVerts; ++i)
+		{
+			indices.push_back(distrib(gen));
+		}
+
+		// Write to a .vtk file
+		std::ofstream outFile(absFileName);
+		if (!outFile.is_open())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToVTK: Unable to open file: " << absFileName << std::endl;
+			return false;
+		}
+
+		// VTK header
+		outFile << "# vtk DataFile Version 3.0\n";
+		outFile << "Sampled vertex normals\n";
+		outFile << "ASCII\n";
+		outFile << "DATASET UNSTRUCTURED_GRID\n";
+		outFile << "POINTS " << nVerts << " float\n";
+
+		// Write sampled vertices
+		for (auto idx : indices)
+		{
+			const auto& vertex = meshData.Vertices[idx];
+			outFile << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+		}
+
+		outFile << "\nPOINT_DATA " << nVerts << "\n";
+		outFile << "VECTORS normals float\n";
+
+		// Write sampled vertex normals
+		for (auto idx : indices)
+		{
+			const auto& normal = meshData.VertexNormals[idx];
+			outFile << normal[0] << " " << normal[1] << " " << normal[2] << "\n";
+		}
+
+		outFile.close();
+		return true;
+	}
+
+	bool ExportSampledVerticesWithNormalsToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed)
+	{
+		if (meshData.VertexNormals.empty())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToPLY: Vertex normals are not available!" << std::endl;
+			return false;
+		}
+
+		if (meshData.Vertices.empty())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToPLY: Vertices are not available!" << std::endl;
+			return false;
+		}
+
+		if (meshData.Vertices.size() != meshData.VertexNormals.size())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToPLY: Vertices and VertexNormals are of different size!" << std::endl;
+			return false;
+		}
+
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "ply")
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToPLY: Invalid file extension!" << std::endl;
+			return false;
+		}
+
+		std::ofstream file(absFileName);
+		if (!file.is_open())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToPLY: Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		const size_t nVertices = meshData.Vertices.size();
+
+		// Generate nVerts random indices
+		std::vector<size_t> indices;
+		std::mt19937 gen;
+		if (seed.has_value())
+		{
+			gen.seed(seed.value());
+		}
+		else
+		{
+			std::random_device rd;
+			gen = std::mt19937(rd());
+		}
+		std::uniform_int_distribution<> distrib(0, nVertices - 1);
+
+		for (size_t i = 0; i < nVerts; ++i)
+		{
+			indices.push_back(distrib(gen));
+		}
+
+		// Write to a .ply file
+		std::ofstream outFile(absFileName);
+		if (!outFile.is_open())
+		{
+			std::cerr << "ExportSampledVerticesWithNormalsToPLY: Unable to open file: " << absFileName << std::endl;
+			return false;
+		}
+
+		// PLY header
+		outFile << "ply\n";
+		outFile << "format ascii 1.0\n";
+		outFile << "element vertex " << nVerts << "\n";
+		outFile << "property float x\n";
+		outFile << "property float y\n";
+		outFile << "property float z\n";
+		outFile << "property float nx\n";
+		outFile << "property float ny\n";
+		outFile << "property float nz\n";
+		outFile << "end_header\n";
+
+		// Write sampled vertices and normals
+		for (auto idx : indices)
+		{
+			const auto& vertex = meshData.Vertices[idx];
+			const auto& normal = meshData.VertexNormals[idx];
+			outFile << vertex[0] << " " << vertex[1] << " " << vertex[2] << " ";
+			outFile << normal[0] << " " << normal[1] << " " << normal[2] << "\n";
 		}
 
 		outFile.close();

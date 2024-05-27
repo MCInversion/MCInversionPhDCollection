@@ -92,8 +92,9 @@ constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
 constexpr bool performIncrementalMeshBuilderHausdorffEval = false;
 constexpr bool performApollonArtecEvaLSWHausdorffEval = false;
+constexpr bool performVertexNormalSampling = true;
 constexpr bool performTerrainPtGenerationTest = false;
-constexpr bool perfromTerrainTriangulationTest = true;
+constexpr bool perfromTerrainTriangulationTest = false;
 
 int main()
 {
@@ -3005,6 +3006,55 @@ int main()
 		}
 		
 	} // endif performApollonArtecEvaLSWHausdorffEval
+
+	if (performVertexNormalSampling)
+	{
+		const std::vector<std::string> importedMeshNames{
+			"bunny_normals",
+			//"CaesarBust"
+		};
+
+		constexpr size_t samplingLevel = 2;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+		constexpr unsigned int seed = 4999;
+
+		for (const auto& meshName : importedMeshNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			// Export sampled vertices with normals to VTK
+			//std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".vtk";
+			//if (!ExportSampledVerticesWithNormalsToVTK(baseData, nVerts, filename, seed))
+			//{
+			//	std::cerr << "ExportSampledVerticesWithNormalsToVTK failed!\n";
+			//	break;
+			//}
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesWithNormalsToPLY(baseData, nVerts, filename, seed))
+			{
+				std::cerr << "ExportSampledVerticesWithNormalsToPLY failed!\n";
+				break;
+			}
+		}
+
+		
+	} // endif performVertexNormalSampling
 
 	if (performTerrainPtGenerationTest)
 	{

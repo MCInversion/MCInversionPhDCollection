@@ -88,6 +88,24 @@ namespace Geometry
 	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
 
 	/**
+	 * \brief Randomly sample vertices with normals and export them as *.vtk vector data.
+	 * \param meshData       input geom data.
+	 * \param nVerts         the number of vertex normals to be sampled from meshData.
+	 * \param absFileName    absolute file path for the opened file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportSampledVerticesWithNormalsToVTK(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
+
+	/**
+	 * \brief Randomly sample vertices with normals and export them as *.ply oriented point cloud data.
+	 * \param meshData       input geom data.
+	 * \param nVerts         the number of vertex normals to be sampled from meshData.
+	 * \param absFileName    absolute file path for the opened file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportSampledVerticesWithNormalsToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
+
+	/**
 	 * \brief Export mesh data vertices as *.ply point cloud.
 	 * \param meshData       input geom data.
 	 * \param absFileName    absolute file path for the opened file.
