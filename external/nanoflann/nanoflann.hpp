@@ -1472,15 +1472,15 @@ class KDTreeSingleIndexAdaptor
         distance_vector_t dists;
         // Fill it with zeros.
         auto zero = static_cast<decltype(result.worstDist())>(0);
-        std::cout << "Assigning zeros to dists." << std::endl;
+        //std::cout << "Assigning zeros to dists." << std::endl;
         assign(dists, (DIM > 0 ? DIM : Base::dim_), zero);
-        std::cout << "dists assigned with size: " << dists.size() << std::endl;
+        //std::cout << "dists assigned with size: " << dists.size() << std::endl;
 
         DistanceType dist = this->computeInitialDistances(*this, vec, dists);
-        std::cout << "Initial distances computed." << std::endl;
+        //std::cout << "Initial distances computed." << std::endl;
 
         bool searchResult = searchLevel(result, vec, Base::root_node_, dist, dists, epsError);
-        std::cout << "Search level completed. Result: " << searchResult << std::endl;
+        //std::cout << "Search level completed. Result: " << searchResult << std::endl;
 
         return result.full();
     }
@@ -1531,12 +1531,12 @@ class KDTreeSingleIndexAdaptor
         const ElementType* query_point, const Size num_closest,
         IndexType* out_indices, DistanceType* out_distances) const
     {
-        std::cout << "knnSearch: Starting search with " << num_closest << " neighbors." << std::endl;
+        //std::cout << "knnSearch: Starting search with " << num_closest << " neighbors." << std::endl;
         nanoflann::KNNResultSet<DistanceType, IndexType> resultSet(num_closest);
         resultSet.init(out_indices, out_distances);
-        std::cout << "knnSearch: Initialized resultSet." << std::endl;
+        //std::cout << "knnSearch: Initialized resultSet." << std::endl;
         findNeighbors(resultSet, query_point);
-        std::cout << "knnSearch: Completed search. Found " << resultSet.size() << " results." << std::endl;
+        //std::cout << "knnSearch: Completed search. Found " << resultSet.size() << " results." << std::endl;
         return resultSet.size();
     }
 

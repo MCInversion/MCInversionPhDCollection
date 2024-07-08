@@ -87,12 +87,12 @@ constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
 constexpr bool performIncrementalMeshBuilderTests = false;
-constexpr bool perform2GBApollonMeshBuilderTest = false;
+constexpr bool perform2GBApollonMeshBuilderTest = true;
 constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
 constexpr bool performIncrementalMeshBuilderHausdorffEval = false;
 constexpr bool performApollonArtecEvaLSWHausdorffEval = false;
-constexpr bool performVertexNormalSampling = true;
+constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
 
@@ -2764,9 +2764,9 @@ int main()
 		//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 		//	++lodIndex;
 		//};
-		std::vector apollonTimeTicks = { std::chrono::high_resolution_clock::now() };
+		std::vector<std::pair<std::chrono::high_resolution_clock::time_point, size_t>> apollonTimeTicks = { {std::chrono::high_resolution_clock::now(), 0} };
 		const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &apollonTimeTicks](const Geometry::BaseMeshGeometryData& meshData) {
-			apollonTimeTicks.push_back(std::chrono::high_resolution_clock::now());
+			apollonTimeTicks.push_back({ std::chrono::high_resolution_clock::now(), meshData.Vertices.size() });
 			const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
 			if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 			{
@@ -2774,8 +2774,8 @@ int main()
 				return;
 			}
 			std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
-			if (lodIndex > 7)
-				if (!ExportTimeVectorInSeconds(apollonTimeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/Apollon111M_Timings.txt"))
+			if (lodIndex > 5)
+				if (!ExportTimeVectorWithPointCountsInSeconds(apollonTimeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/Apollon111M_Timings.txt"))
 					throw std::logic_error("File not exported!");
 			++lodIndex;
 		};
@@ -2783,8 +2783,8 @@ int main()
 		meshBuilder.Init(
 			inputFileName,
 			nUpdates,
-			//IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
-			IMB::ReconstructionFunctionType::BallPivoting, 
+			IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
+			//IMB::ReconstructionFunctionType::BallPivoting, 
 			//IMB::ReconstructionFunctionType::None,
 			IMB::VertexSelectionType::UniformRandom,
 			//IMB::VertexSelectionType::Sequential,
@@ -2794,7 +2794,7 @@ int main()
 			40000
 		);
 		constexpr unsigned int seed = 4999;
-		constexpr unsigned int nThreads = 14;
+		constexpr unsigned int nThreads = 4;
 		meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 
 	} // perform2GBApollonMeshBuilderTest

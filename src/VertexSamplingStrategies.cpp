@@ -102,7 +102,7 @@ namespace IMB
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
-	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 40;
+	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 2;
 
 	constexpr double MIN_VERTEX_FRACTION = 0.005;
 

@@ -108,3 +108,37 @@ inline [[nodiscard]] bool ExportTimeVectorInSeconds(const std::vector<std::chron
     outFile.close();
     return true;
 }
+
+inline [[nodiscard]] bool ExportTimeVectorWithPointCountsInSeconds(const std::vector<std::pair<std::chrono::high_resolution_clock::time_point, size_t>>& timeWithPtCountsVec, const std::string& fileName)
+{
+    // Check if the vector is empty to avoid any undefined behavior
+    if (timeWithPtCountsVec.empty()) {
+        std::cerr << "The provided vector is empty." << std::endl;
+        return false;
+    }
+
+    // Open a file stream to write
+    std::ofstream outFile(fileName);
+    if (!outFile.is_open()) {
+        std::cerr << "Failed to open file: " << fileName << std::endl;
+        return false;
+    }
+
+    // Use the first time_point as the reference time
+    const auto referenceTime = timeWithPtCountsVec.front().first;
+
+    // Set precision for floating point output
+    outFile << std::fixed << std::setprecision(6); // Adjust precision as needed
+
+    // Iterate over the time vector
+    for (const auto& [timePoint, nPts] : timeWithPtCountsVec) {
+        // Calculate the duration in seconds from the reference time
+        const auto duration = std::chrono::duration<double>(timePoint - referenceTime).count();
+        // Write the duration to file
+        outFile << duration << "," << nPts << std::endl;
+    }
+
+    // Close the file
+    outFile.close();
+    return true;
+}
