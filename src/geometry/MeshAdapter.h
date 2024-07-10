@@ -26,8 +26,15 @@ namespace Geometry
 			return std::make_unique<BaseMeshAdapter>(*this);
 		}
 
-		BaseMeshGeometryData& GetBaseMesh() { return *m_BaseMesh; }
-		[[nodiscard]] const BaseMeshGeometryData& GetBaseMesh() const { return *m_BaseMesh; }
+		BaseMeshGeometryData& GetBaseMesh()
+	    {
+		    return *m_BaseMesh;
+	    }
+
+		[[nodiscard]] const BaseMeshGeometryData& GetBaseMesh() const
+	    {
+		    return *m_BaseMesh;
+	    }
 
 		[[nodiscard]] std::vector<pmp::vec3> GetVertices() override
 		{
@@ -66,10 +73,10 @@ namespace Geometry
 		[[nodiscard]] std::vector<pmp::vec3> GetVertices() override
 		{
 			std::vector<pmp::vec3> vertices;
-			vertices.reserve(m_SurfaceMesh->n_vertices());  // Pre-allocate memory for efficiency
+			vertices.reserve(m_SurfaceMesh->n_vertices());
 			for (const auto v : m_SurfaceMesh->vertices())
-			{      // Use the range-based for provided by pmp::SurfaceMesh
-				vertices.push_back(m_SurfaceMesh->position(v));  // Access the position of each vertex
+			{
+				vertices.push_back(m_SurfaceMesh->position(v));
 			}
 			return vertices;
 		}
@@ -78,11 +85,11 @@ namespace Geometry
 		{
 			std::vector<std::vector<unsigned int>> polyIndices;
 			for (const auto f : m_SurfaceMesh->faces())
-			{  // Iterate over all faces
+			{
 				std::vector<unsigned int> faceIndices;
 				for (const auto v : m_SurfaceMesh->vertices(f))
-				{  // Iterate over vertices of each face
-					faceIndices.push_back(v.idx());  // Store the index of each vertex in the face
+				{
+					faceIndices.push_back(v.idx());
 				}
 				polyIndices.push_back(faceIndices);
 			}
@@ -94,8 +101,15 @@ namespace Geometry
 			return m_SurfaceMesh->is_triangle_mesh();
 		}
 
-		pmp::SurfaceMesh& GetMesh() { return *m_SurfaceMesh; }
-		[[nodiscard]] const pmp::SurfaceMesh& GetMesh() const { return *m_SurfaceMesh; }
+		pmp::SurfaceMesh& GetMesh()
+		{
+			return *m_SurfaceMesh;
+		}
+
+		[[nodiscard]] const pmp::SurfaceMesh& GetMesh() const
+		{
+			return *m_SurfaceMesh;
+		}
 
 		[[nodiscard]] pmp::BoundingBox GetBounds() const override
 		{

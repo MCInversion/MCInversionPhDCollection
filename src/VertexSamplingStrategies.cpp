@@ -34,7 +34,7 @@ namespace
 		std::iota(resultIndices.begin(), resultIndices.end(), 0);
 	}
 
-	/// \brief Generates expectedCount random indices from 0 to expectedCount - 1 into resultIndices from the unifom distribution type.
+	/// \brief Generates expectedCount random indices from 0 to expectedCount - 1 into resultIndices from the uniform distribution type.
 	void RandomSampleIndices(const size_t& expectedCount, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
 	{
 		if (expectedCount == 0)

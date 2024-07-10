@@ -77,7 +77,7 @@ constexpr bool performHausdorffDistanceMeasurementsPerTimeStep = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
-constexpr bool performMeshSelfIntersectionTests = false;
+constexpr bool performMeshSelfIntersectionTests = true;
 constexpr bool performHurtadoMeshesIsosurfaceEvolverTests = false;
 constexpr bool performHurtadoTrexIcosphereLSW = false;
 constexpr bool performImportVTIDebugTests = false;
@@ -87,7 +87,7 @@ constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
 constexpr bool performIncrementalMeshBuilderTests = false;
-constexpr bool perform2GBApollonMeshBuilderTest = true;
+constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
 constexpr bool performIncrementalMeshBuilderHausdorffEval = false;
@@ -2014,8 +2014,8 @@ int main()
 		const std::vector<std::string> importedMeshNames{
 			//"3holes",
 			"SelfIntersection2TorusTest_1",
-				"SelfIntersection2TorusTest_2",
-				"SelfIntersection2TorusTest_3"
+			//"SelfIntersection2TorusTest_2",
+			//"SelfIntersection2TorusTest_3"
 		};
 
 		for (const auto& meshName : importedMeshNames)
@@ -2030,8 +2030,8 @@ int main()
 			std::cout << (hasSelfIntersections ? "Self-intersections detected!\n" : "No self-intersections were detected.\n");
 			const auto nSelfIntFaces = Geometry::CountPMPSurfaceMeshSelfIntersectingFaces(mesh, true);
 			std::cout << "Detected " << nSelfIntFaces << " faces intersecting another face.\n";
-			//const auto fIntMMap = Geometry::ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
-			//Utils::PrintFaceIntersectionsMultimap(fIntMMap);
+			const auto fIntMMap = Geometry::ExtractPMPSurfaceMeshFaceIntersectionMultimap(mesh);
+			Utils::PrintFaceIntersectionsMultimap(fIntMMap);
 			const auto cutPolylines = Geometry::ComputeSurfaceMeshSelfIntersectionPolylines(mesh);
 			if (!cutPolylines.empty())
 			{
