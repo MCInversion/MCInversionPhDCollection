@@ -2,6 +2,8 @@
 
 #include "VertexSamplingStrategies.h"
 
+#include "Utils/IncrementalUtils.h"
+
 #include <unordered_map>
 #include <atomic>
 #include <functional>
@@ -40,6 +42,10 @@ namespace IMB
     	      m_CompletionFrequency(frequency)
         {
             m_GrowthRate = (log(m_nTotalExpectedVertices) - log(minVertexCount)) / static_cast<double>(m_nTotalExpectedVertices);
+#if DEBUG_PRINT
+            DBG_OUT << "IncrementalProgressTracker::IncrementalProgressTracker: m_GrowthRate  = " << m_GrowthRate << "\n";
+            DBG_OUT << "IncrementalProgressTracker::IncrementalProgressTracker: m_nTotalExpectedVertices  = " << m_nTotalExpectedVertices << "\n";
+#endif
             SetDispatcherAddJobCallback(addJobCallback);
             SetDispatcherTerminationCallback(terminationCallback);
         }

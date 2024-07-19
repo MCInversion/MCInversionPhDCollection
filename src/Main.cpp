@@ -77,7 +77,7 @@ constexpr bool performHausdorffDistanceMeasurementsPerTimeStep = false;
 constexpr bool performDirectHigherGenusPtCloudSampling = false;
 constexpr bool performHigherGenusPtCloudLSW = false;
 constexpr bool performTriTriIntersectionTests = false;
-constexpr bool performMeshSelfIntersectionTests = true;
+constexpr bool performMeshSelfIntersectionTests = false;
 constexpr bool performHurtadoMeshesIsosurfaceEvolverTests = false;
 constexpr bool performHurtadoTrexIcosphereLSW = false;
 constexpr bool performImportVTIDebugTests = false;
@@ -86,7 +86,7 @@ constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
-constexpr bool performIncrementalMeshBuilderTests = false;
+constexpr bool performIncrementalMeshBuilderTests = true;
 constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
@@ -2701,19 +2701,19 @@ int main()
 			//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 			//	++lodIndex;
 			//};
-			std::vector timeTicks = { std::chrono::high_resolution_clock::now() };
-			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &timeTicks](const Geometry::BaseMeshGeometryData& meshData) {
-				timeTicks.push_back(std::chrono::high_resolution_clock::now());
+			//std::vector timeTicks = { std::chrono::high_resolution_clock::now() };
+			const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName/*, &timeTicks*/](const Geometry::BaseMeshGeometryData& meshData) {
+				//timeTicks.push_back(std::chrono::high_resolution_clock::now());
 				const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
 				if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 				{
 					std::cout << "Failed to export mesh data." << "\n";
 					return;
 				}
-				std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
-				if (lodIndex > 9)
-					if (!ExportTimeVectorInSeconds(timeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_Timings.txt"))
-						throw std::logic_error("File not exported!");
+				std::cout << "Mesh data with " << meshData.Vertices.size() << " vertices exported successfully to " << outputFileName << "\n";
+				//if (lodIndex > 9)
+				//	if (!ExportTimeVectorInSeconds(timeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_Timings.txt"))
+				//		throw std::logic_error("File not exported!");
 				++lodIndex;
 			};
 			auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
@@ -2731,7 +2731,7 @@ int main()
 				40000
 			);
 			constexpr unsigned int seed = 4999;
-			constexpr unsigned int nThreads = 14;
+			constexpr unsigned int nThreads = 1;
 			meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 		}
 	} // endif performIncrementalMeshBuilderTests

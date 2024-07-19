@@ -119,6 +119,7 @@ namespace IMB
 			static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER)));
 #if DEBUG_PRINT
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: completionFrequency = " << completionFrequency << " jobs per file load.\n";
+		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_MinVertexCount = " << m_MinVertexCount << " vertices.\n";
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_UpdateThreshold = " << m_UpdateThreshold << " vertices.\n";
 #endif
 	}
