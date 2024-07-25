@@ -86,7 +86,7 @@ constexpr bool performConvexHullRemeshingTests = false;
 constexpr bool performConvexHullEvolverTests = false;
 constexpr bool performIcoSphereEvolverTests = false;
 constexpr bool performBPATest = false;
-constexpr bool performIncrementalMeshBuilderTests = true;
+constexpr bool performIncrementalMeshBuilderTests = false;
 constexpr bool perform2GBApollonMeshBuilderTest = false;
 constexpr bool performNanoflannDistanceTests = false;
 constexpr bool performApollonLSWSaliencyEval = false;
@@ -95,6 +95,8 @@ constexpr bool performApollonArtecEvaLSWHausdorffEval = false;
 constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
+constexpr bool performPairedCurveEvolverTests = true;
+// constexpr bool performPairedSurfaceEvolverTests = true;
 
 int main()
 {
@@ -3188,4 +3190,90 @@ int main()
 		}
 
 	} // endif perfromTerrainTriangulationTest
+
+	if (performPairedCurveEvolverTests)
+	{
+		// extract 2D point clouds
+		const std::vector<std::string> meshForPtCloudNames{
+			"armadillo",
+			"blub",
+			"bunny",
+			"maxPlanck",
+			"nefertiti",
+			"ogre",
+			"spot"
+		};
+
+		const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+			{"armadillo", {}},
+			{"blub", {}},
+			{"bunny", {} },
+			{"maxPlanck", {} },
+			{"nefertiti", {} },
+			{"ogre", {} },
+			{"spot", {} }
+		};
+
+		const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+			{"armadillo", {}},
+			{"blub", {}},
+			{"bunny", {} },
+			{"maxPlanck", {} },
+			{"nefertiti", {} },
+			{"ogre", {} },
+			{"spot", {} }
+		};
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud 2D: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			const auto pts3D = SamplePointsFromMeshData(baseData, nVerts, seed);
+			if (!pts3D.empty())
+			{
+				std::cerr << "SamplePointsFromMeshData sampled no points for mesh " << meshName << "!\n";
+				continue;
+			}
+
+			const pmp::BoundingBox ptCloudBBox(pts3D);
+			const auto center = ptCloudBBox.center();
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			//const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float distTolerance = 0.01f * minSize;
+
+			const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
+			const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{-1.0f, 0.0f, 0.0f});
+			const auto pts2D = Geometry::GetSliceOfThePointCloud(pts3D, planeRefPt, planeNormal, distTolerance);
+			if (!pts2D.empty())
+			{
+				std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
+				continue;
+			}
+
+
+		}
+
+	} // endif performPairedCurveEvolverTests
 }

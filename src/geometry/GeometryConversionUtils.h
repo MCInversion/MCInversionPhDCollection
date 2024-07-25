@@ -79,10 +79,20 @@ namespace Geometry
 	[[nodiscard]] std::optional<std::vector<pmp::vec3>> ImportPLYPointCloudDataMainThread(const std::string& absFileName);
 
 	/**
+	 * \brief Randomly sample vertices from given mesh data.
+	 * \param meshData       input geom data.
+	 * \param nVerts         the number of vertices to be sampled from meshData.
+	 * \param seed           seed value for random index generation.
+	 * \return The resulting point cloud
+	 */
+	[[nodiscard]] std::vector<pmp::Point> SamplePointsFromMeshData(const BaseMeshGeometryData& meshData, size_t nVerts, const std::optional<unsigned int>& seed = std::nullopt);
+
+	/**
 	 * \brief Randomly sample vertices and export them as *.ply point cloud.
 	 * \param meshData       input geom data.
 	 * \param nVerts         the number of vertices to be sampled from meshData.
 	 * \param absFileName    absolute file path for the opened file.
+	 * \param seed           seed value for random index generation.
 	 * \return if true, the export was successful.
 	 */
 	[[nodiscard]] bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
@@ -92,6 +102,7 @@ namespace Geometry
 	 * \param meshData       input geom data.
 	 * \param nVerts         the number of vertex normals to be sampled from meshData.
 	 * \param absFileName    absolute file path for the opened file.
+	 * \param seed           seed value for random index generation.
 	 * \return if true, the export was successful.
 	 */
 	[[nodiscard]] bool ExportSampledVerticesWithNormalsToVTK(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
@@ -101,6 +112,7 @@ namespace Geometry
 	 * \param meshData       input geom data.
 	 * \param nVerts         the number of vertex normals to be sampled from meshData.
 	 * \param absFileName    absolute file path for the opened file.
+	 * \param seed           seed value for random index generation.
 	 * \return if true, the export was successful.
 	 */
 	[[nodiscard]] bool ExportSampledVerticesWithNormalsToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed = std::nullopt);
@@ -176,5 +188,15 @@ namespace Geometry
 
 	/// \brief Computes the index of the closest point in the x,y plane.
 	[[nodiscard]] int GetClosestPointIndex2D(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint);
+
+	/**
+	 * \brief Obtains a 2D slice of a given 3D point cloud from given slicing plane and distance tolerance.
+	 * \param points              Processed point cloud.
+	 * \param planePt             Reference point of the slicing plane.
+	 * \param planeNormal         Unit normal vector of the slicing plane.
+	 * \param distTolerance       Distance tolerance for slicing (points which will be closer to the slicing plane than this distance are projected and pushed to the resulting 2D slice).
+	 * \return The sliced point cloud.
+	 */
+	[[nodiscard]] std::vector<pmp::vec2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance);
 
 } // namespace Geometry

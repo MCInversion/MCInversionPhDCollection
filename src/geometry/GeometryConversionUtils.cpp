@@ -14,6 +14,7 @@
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
 
 #include <nanoflann.hpp>
+#include <numeric>
 
 #include "pmp/algorithms/Normals.h"
 #include "quickhull/QuickHull.hpp"
@@ -856,6 +857,37 @@ namespace Geometry
 		return vertices;
 	}
 
+	std::vector<pmp::Point> SamplePointsFromMeshData(const BaseMeshGeometryData& meshData, size_t nVerts, const std::optional<unsigned int>& seed)
+	{
+		// Generate nVerts random indices
+		std::vector<size_t> indices;
+
+		// Create a generator with the given seed or a random device
+		std::mt19937 gen(seed ? *seed : std::random_device{}());
+
+		// Fill resultIndices with 0, 1, ..., expectedCount - 1
+		std::iota(indices.begin(), indices.end(), 0);
+
+		// Perform Fisher-Yates shuffle on resultIndices
+		for (size_t i = nVerts - 1; i > 0; --i)
+		{
+			std::uniform_int_distribution<size_t> distrib(0, i);
+			size_t j = distrib(gen);
+			std::swap(indices[i], indices[j]);
+		}
+
+		std::vector<pmp::Point> resultPts;
+		resultPts.reserve(indices.size());
+
+		// Write sampled vertices
+		for (const auto idx : indices)
+		{
+			resultPts.push_back(meshData.Vertices[idx]);
+		}
+
+		return resultPts;
+	}
+
 	bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed)
 	{
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
@@ -1691,6 +1723,51 @@ namespace Geometry
 		if (num_results > 0)
 			return ret_index[0];
 		return -1;  // Indicate failure
+	}
+
+	//
+	// =======================================================================================================================
+	//
+
+	std::vector<pmp::vec2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance)
+	{
+		std::vector<pmp::vec2> slicedPoints;
+
+		// Find two orthogonal vectors in the plane
+		pmp::vec3 axis1;
+		if (std::abs(planeNormal[0]) > std::abs(planeNormal[1]))
+		{
+			axis1 = normalize(pmp::vec3(-planeNormal[2], 0, planeNormal[0]));
+		}
+		else
+		{
+			axis1 = normalize(pmp::vec3(0, planeNormal[2], -planeNormal[1]));
+		}
+		const pmp::vec3 axis2 = normalize(cross(planeNormal, axis1));
+
+		for (const auto& point : points)
+		{
+			// Calculate the vector from the plane point to the current point
+			pmp::vec3 vec = point - planePt;
+
+			// Calculate the signed distance from the point to the plane
+			const pmp::Scalar signedDistanceToPlane = dot(vec, planeNormal);
+
+			// Check if the point is within the distance tolerance
+			if (std::abs(signedDistanceToPlane) <= distTolerance)
+			{
+				// Project the point onto the plane
+				pmp::vec3 projectedPoint = point - signedDistanceToPlane * planeNormal;
+
+				// Convert the projected point to 2D by using the plane axes
+				pmp::vec2 point2D(dot(projectedPoint - planePt, axis1), dot(projectedPoint - planePt, axis2));
+
+				// Add the 2D point to the result
+				slicedPoints.push_back(point2D);
+			}
+		}
+
+		return slicedPoints;
 	}
 
 } // namespace Geometry
