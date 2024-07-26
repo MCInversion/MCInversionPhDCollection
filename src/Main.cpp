@@ -3196,44 +3196,35 @@ int main()
 		// extract 2D point clouds
 		const std::vector<std::string> meshForPtCloudNames{
 			"armadillo",
-			"blub",
 			"bunny",
 			"maxPlanck",
-			"nefertiti",
-			"ogre",
-			"spot"
+			"nefertiti"
 		};
 
 		const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-			{"armadillo", {}},
-			{"blub", {}},
-			{"bunny", {} },
-			{"maxPlanck", {} },
-			{"nefertiti", {} },
-			{"ogre", {} },
-			{"spot", {} }
+			{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
+			{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
+			{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
+			{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
 		};
 
 		const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-			{"armadillo", {}},
-			{"blub", {}},
-			{"bunny", {} },
-			{"maxPlanck", {} },
-			{"nefertiti", {} },
-			{"ogre", {} },
-			{"spot", {} }
+			{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
+			{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
+			{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
+			{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
 		};
-
-		constexpr size_t samplingLevel = 3;
-		constexpr size_t nSamplings = 10;
-		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
-
-		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
+			constexpr size_t samplingLevel = 3;
+			constexpr size_t nSamplings = 10;
+			constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+			constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
 			std::cout << "==================================================================\n";
-			std::cout << "Mesh To Pt Cloud 2D: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "Mesh To Pt Cloud 2D: " << meshName << ".obj -> " << meshName << "_Pts_2D.ply\n";
 			std::cout << "------------------------------------------------------------------\n";
 			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
 			if (!baseDataOpt.has_value())
@@ -3241,7 +3232,8 @@ int main()
 				std::cerr << "baseDataOpt == nullopt!\n";
 				break;
 			}
-			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			std::cout << meshName << ".obj" << " imported as BaseMeshGeometryData.\n";
+
 			const auto& baseData = baseDataOpt.value();
 			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
 			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
@@ -3250,7 +3242,7 @@ int main()
 			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
 
 			const auto pts3D = SamplePointsFromMeshData(baseData, nVerts, seed);
-			if (!pts3D.empty())
+			if (pts3D.empty())
 			{
 				std::cerr << "SamplePointsFromMeshData sampled no points for mesh " << meshName << "!\n";
 				continue;
@@ -3266,13 +3258,17 @@ int main()
 			const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
 			const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{-1.0f, 0.0f, 0.0f});
 			const auto pts2D = Geometry::GetSliceOfThePointCloud(pts3D, planeRefPt, planeNormal, distTolerance);
-			if (!pts2D.empty())
+			if (pts2D.empty())
 			{
 				std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
 				continue;
 			}
 
-
+			if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+			{
+				std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+				continue;
+			}
 		}
 
 	} // endif performPairedCurveEvolverTests

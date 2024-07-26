@@ -859,30 +859,33 @@ namespace Geometry
 
 	std::vector<pmp::Point> SamplePointsFromMeshData(const BaseMeshGeometryData& meshData, size_t nVerts, const std::optional<unsigned int>& seed)
 	{
-		// Generate nVerts random indices
-		std::vector<size_t> indices;
+		const unsigned int nVertsTotal = meshData.Vertices.size();
+
+		// Determine the actual number of vertices to sample
+		const size_t numVertsToSample = std::min(nVerts, static_cast<size_t>(nVertsTotal));
+
+		// Generate a list of all vertex indices
+		std::vector<size_t> indices(nVertsTotal);
+		std::iota(indices.begin(), indices.end(), 0);
 
 		// Create a generator with the given seed or a random device
 		std::mt19937 gen(seed ? *seed : std::random_device{}());
 
-		// Fill resultIndices with 0, 1, ..., expectedCount - 1
-		std::iota(indices.begin(), indices.end(), 0);
-
-		// Perform Fisher-Yates shuffle on resultIndices
-		for (size_t i = nVerts - 1; i > 0; --i)
+		// Perform a partial Fisher-Yates shuffle to get numVertsToSample indices
+		for (size_t i = 0; i < numVertsToSample; ++i)
 		{
-			std::uniform_int_distribution<size_t> distrib(0, i);
+			std::uniform_int_distribution<size_t> distrib(i, nVertsTotal - 1);
 			size_t j = distrib(gen);
 			std::swap(indices[i], indices[j]);
 		}
 
+		// Extract the sampled points based on the first numVertsToSample indices
 		std::vector<pmp::Point> resultPts;
-		resultPts.reserve(indices.size());
+		resultPts.reserve(numVertsToSample);
 
-		// Write sampled vertices
-		for (const auto idx : indices)
+		for (size_t i = 0; i < numVertsToSample; ++i)
 		{
-			resultPts.push_back(meshData.Vertices[idx]);
+			resultPts.push_back(meshData.Vertices[indices[i]]);
 		}
 
 		return resultPts;
@@ -1731,6 +1734,12 @@ namespace Geometry
 
 	std::vector<pmp::vec2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance)
 	{
+		if (std::fabs(sqrnorm(planeNormal) - 1.0f) > FLT_EPSILON)
+		{
+			std::cerr << "GetSliceOfThePointCloud: planeNormal needs to be normalized!\n";
+			return {};
+		}
+
 		std::vector<pmp::vec2> slicedPoints;
 
 		// Find two orthogonal vectors in the plane

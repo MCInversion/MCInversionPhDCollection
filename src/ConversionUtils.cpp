@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "geometry/GridUtil.h"
+#include "utils/StringUtils.h"
 
 void ExportToVTI(const std::string& filename, const Geometry::ScalarGrid& scalarGrid)
 {
@@ -521,4 +522,74 @@ Geometry::BaseMeshGeometryData ImportVTK(const std::string& fileName)
 	}
 
 	return meshData;
+}
+
+//bool Export2DPointCloudToVTK(const std::vector<pmp::vec2>& points, const std::string& fileName)
+//{
+//	const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(fileName);
+//	if (extension != "vtk")
+//	{
+//		std::cerr << "Export2DPointCloudToVTK: Invalid file extension!" << std::endl;
+//		return false;
+//	}
+//
+//	std::ofstream file(fileName);
+//	if (!file.is_open())
+//	{
+//		std::cerr << "Export2DPointCloudToVTK: Failed to open file for writing: " << fileName << std::endl;
+//		return false;
+//	}
+//
+//	file << "# vtk DataFile Version 3.0\n";
+//	file << "2D Point Cloud\n";
+//	file << "ASCII\n";
+//	file << "DATASET POLYDATA\n";
+//	file << "POINTS " << points.size() << " float\n";
+//
+//	for (const auto& point : points)
+//	{
+//		file << point[0] << " " << point[1] << " " << point[2] << "\n";
+//	}
+//
+//	file << "VERTICES " << points.size() << " " << points.size() * 2 << "\n";
+//	for (size_t i = 0; i < points.size(); ++i)
+//	{
+//		file << "1 " << i << "\n";
+//	}
+//
+//	file.close();
+//	return true;
+//}
+
+bool Export2DPointCloudToPLY(const std::vector<pmp::vec2>& points, const std::string& fileName)
+{
+	const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(fileName);
+	if (extension != "ply")
+	{
+		std::cerr << "Export2DPointCloudToPLY: Invalid file extension!" << std::endl;
+		return false;
+	}
+
+	std::ofstream file(fileName);
+	if (!file.is_open())
+	{
+		std::cerr << "Export2DPointCloudToPLY: Failed to open file for writing: " << fileName << std::endl;
+		return false;
+	}
+
+	file << "ply\n";
+	file << "format ascii 1.0\n";
+	file << "element vertex " << points.size() << "\n";
+	file << "property float x\n";
+	file << "property float y\n";
+	file << "property float z\n";
+	file << "end_header\n";
+
+	for (const auto& point : points)
+	{
+		file << point[0] << " " << point[1] << " 0\n"; // Z-coordinate set to 0
+	}
+
+	file.close();
+	return true;
 }

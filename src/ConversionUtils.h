@@ -38,3 +38,9 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 
 /// \brief VTK polydata data import.
 [[nodiscard]] Geometry::BaseMeshGeometryData ImportVTK(const std::string& fileName);
+
+/// \brief 2D point cloud to VTK polydata data export.
+//[[nodiscard]] bool Export2DPointCloudToVTK(const std::vector<pmp::vec2>& points, const std::string& fileName);
+
+/// \brief 2D point cloud to PLY data export.
+[[nodiscard]] bool Export2DPointCloudToPLY(const std::vector<pmp::vec2>& points, const std::string& fileName);
