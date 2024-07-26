@@ -1,0 +1,505 @@
+#pragma once
+
+#include <vector>
+
+#include "pmp/Types.h"
+#include "pmp/HandleAndPropertyTypes.h"
+#include "pmp/BoundingBox.h"
+
+namespace pmp
+{
+    //! A data structure for discretized manifold curves
+    class ManifoldCurve2D
+	{
+    public:
+        //! \name Iterator Types
+		//!@{
+
+		//! An iterator class to iterate linearly over all vertices
+        class VertexIterator
+        {
+        public:
+            using difference_type = std::ptrdiff_t;
+            using value_type = Vertex;
+            using reference = Vertex&;
+            using pointer = Vertex*;
+            using iterator_category = std::bidirectional_iterator_tag;
+
+            //! Default constructor
+            VertexIterator(Vertex v = Vertex(), const ManifoldCurve2D* c = nullptr)
+                : handle_(v), curve_(c)
+            {
+                if (curve_ && curve_->has_garbage())
+                    while (curve_->is_valid(handle_) && curve_->is_deleted(handle_))
+                        ++handle_.idx_;
+            }
+
+            //! get the vertex the iterator refers to
+            Vertex operator*() const { return handle_; }
+
+            //! are two iterators equal?
+            bool operator==(const VertexIterator& rhs) const
+            {
+                return (handle_ == rhs.handle_);
+            }
+
+            //! are two iterators different?
+            bool operator!=(const VertexIterator& rhs) const
+            {
+                return !operator==(rhs);
+            }
+
+            //! pre-increment iterator
+            VertexIterator& operator++()
+            {
+                ++handle_.idx_;
+                assert(curve_);
+                while (curve_->has_garbage() && curve_->is_valid(handle_) &&
+                    curve_->is_deleted(handle_))
+                    ++handle_.idx_;
+                return *this;
+            }
+
+            //! post-increment iterator
+            VertexIterator operator++(int)
+            {
+                auto tmp = *this;
+                ++(*this);
+                return tmp;
+            }
+
+            //! pre-decrement iterator
+            VertexIterator& operator--()
+            {
+                --handle_.idx_;
+                assert(curve_);
+                while (curve_->has_garbage() && curve_->is_valid(handle_) &&
+                    curve_->is_deleted(handle_))
+                    --handle_.idx_;
+                return *this;
+            }
+
+            //! post-decrement iterator
+            VertexIterator operator--(int)
+            {
+                auto tmp = *this;
+                --(*this);
+                return tmp;
+            }
+
+        private:
+            Vertex handle_;
+            const ManifoldCurve2D* curve_;
+        };
+
+        //! this class iterates linearly over all edges
+        //! \sa edges_begin(), edges_end()
+        //! \sa VertexIterator, HalfedgeIterator, FaceIterator
+        class EdgeIterator
+        {
+        public:
+            using difference_type = std::ptrdiff_t;
+            using value_type = Edge;
+            using reference = Edge&;
+            using pointer = Edge*;
+            using iterator_category = std::bidirectional_iterator_tag;
+
+            //! Default constructor
+            EdgeIterator(Edge e = Edge(), const ManifoldCurve2D* c = nullptr)
+                : handle_(e), curve_(c)
+            {
+                if (curve_ && curve_->has_garbage())
+                    while (curve_->is_valid(handle_) && curve_->is_deleted(handle_))
+                        ++handle_.idx_;
+            }
+
+            //! get the edge the iterator refers to
+            Edge operator*() const { return handle_; }
+
+            //! are two iterators equal?
+            bool operator==(const EdgeIterator& rhs) const
+            {
+                return (handle_ == rhs.handle_);
+            }
+
+            //! are two iterators different?
+            bool operator!=(const EdgeIterator& rhs) const
+            {
+                return !operator==(rhs);
+            }
+
+            //! pre-increment iterator
+            EdgeIterator& operator++()
+            {
+                ++handle_.idx_;
+                assert(curve_);
+                while (curve_->has_garbage() && curve_->is_valid(handle_) &&
+                    curve_->is_deleted(handle_))
+                    ++handle_.idx_;
+                return *this;
+            }
+
+            //! post-increment iterator
+            EdgeIterator operator++(int)
+            {
+                auto tmp = *this;
+                ++(*this);
+                return tmp;
+            }
+
+            //! pre-decrement iterator
+            EdgeIterator& operator--()
+            {
+                --handle_.idx_;
+                assert(curve_);
+                while (curve_->has_garbage() && curve_->is_valid(handle_) &&
+                    curve_->is_deleted(handle_))
+                    --handle_.idx_;
+                return *this;
+            }
+
+            //! post-decrement iterator
+            EdgeIterator operator--(int)
+            {
+                auto tmp = *this;
+                --(*this);
+                return tmp;
+            }
+
+        private:
+            Edge handle_;
+            const ManifoldCurve2D* curve_;
+        };
+
+        //! helper class for iterating through all vertices using range-based
+		//! for-loops.
+        class VertexContainer
+        {
+        public:
+            VertexContainer(VertexIterator begin, VertexIterator end)
+                : begin_(begin), end_(end)
+            {
+            }
+            [[nodiscard]] VertexIterator begin() const { return begin_; }
+            [[nodiscard]] VertexIterator end() const { return end_; }
+
+        private:
+            VertexIterator begin_;
+            VertexIterator end_;
+        };
+
+        //! helper class for iterating through all edges using range-based
+        //! for-loops. \sa edges()
+        class EdgeContainer
+        {
+        public:
+            EdgeContainer(EdgeIterator begin, EdgeIterator end)
+                : begin_(begin), end_(end)
+            {
+            }
+            [[nodiscard]] EdgeIterator begin() const { return begin_; }
+            [[nodiscard]] EdgeIterator end() const { return end_; }
+
+        private:
+            EdgeIterator begin_;
+            EdgeIterator end_;
+        };
+
+        //!@}
+		//! \name Memory Management
+		//!@{
+
+    	//! \return number of (deleted and valid) vertices in the curve
+    	[[nodiscard]] size_t vertices_size() const { return vprops_.size(); }
+
+        //! \return number of (deleted and valid) edges in the curve
+        [[nodiscard]] size_t edges_size() const { return eprops_.size(); }
+
+        //! \return number of vertices in the curve
+        [[nodiscard]] size_t n_vertices() const { return vertices_size() - deleted_vertices_; }
+
+        //! \return number of edges in the curve
+        [[nodiscard]] size_t n_edges() const { return edges_size() - deleted_edges_; }
+
+        //! \return true if the curve is empty, i.e., has no vertices
+        [[nodiscard]] bool is_empty() const { return n_vertices() == 0; }
+
+        //! clear curve: remove all vertices, edges, faces
+        virtual void clear();
+
+        //! remove unused memory from vectors
+        void free_memory();
+
+        //! reserve memory (mainly used in file readers)
+        void reserve(size_t nvertices, size_t nedges);
+
+        //! remove deleted elements
+        void garbage_collection();
+
+        //! \return whether vertex \p v is deleted
+        //! \sa garbage_collection()
+        [[nodiscard]] bool is_deleted(Vertex v) const { return vdeleted_[v]; }
+
+        //! \return whether edge \p e is deleted
+        //! \sa garbage_collection()
+        [[nodiscard]] bool is_deleted(Edge e) const { return edeleted_[e]; }
+
+        //! \return whether vertex \p v is valid.
+        [[nodiscard]] bool is_valid(Vertex v) const { return v.idx() < vertices_size(); }
+
+        //! \return whether edge \p e is valid.
+        [[nodiscard]] bool is_valid(Edge e) const { return e.idx() < edges_size(); }
+
+        // are there any deleted entities?
+        [[nodiscard]] bool has_garbage() const { return has_garbage_; }
+
+        //
+        // ============== Constructors and Destructor =======================
+        //
+        ManifoldCurve2D();
+
+        virtual ~ManifoldCurve2D() = default;
+
+        //! copy constructor: copies \p rhs to \p *this. performs a deep copy of all
+		//! properties.
+        ManifoldCurve2D(const ManifoldCurve2D& rhs) { operator=(rhs); }
+
+        // ================ Operators =======================================
+
+        //! assign \p rhs to \p *this. performs a deep copy of all properties.
+        ManifoldCurve2D& operator=(const ManifoldCurve2D& rhs);
+
+        //! transform all points of this surface curve with a given 4x4 matrix.
+        ManifoldCurve2D& operator*=(const mat3& mat);
+
+        // ================== Properties ====================================
+
+        //! add a vertex property of type \p T with name \p name and default
+		//! value \p t. fails if a property named \p name exists already,
+		//! since the name has to be unique. in this case it returns an
+		//! invalid property
+        template <class T>
+        VertexProperty<T> add_vertex_property(const std::string& name, const T t = T())
+        {
+            return VertexProperty<T>(vprops_.add<T>(name, t));
+        }
+
+        //! get the vertex property named \p name of type \p T. returns an
+        //! invalid VertexProperty if the property does not exist or if the
+        //! type does not match.
+        template <class T>
+        VertexProperty<T> get_vertex_property(const std::string& name) const
+        {
+            return VertexProperty<T>(vprops_.get<T>(name));
+        }
+
+        //! if a vertex property of type \p T with name \p name exists, it is
+		//! returned. otherwise this property is added (with default value \c
+		//! t)
+        template <class T>
+        VertexProperty<T> vertex_property(const std::string& name, const T t = T())
+        {
+            return VertexProperty<T>(vprops_.get_or_add<T>(name, t));
+        }
+
+        //! remove the vertex property \p p
+        template <class T>
+        void remove_vertex_property(VertexProperty<T>& p)
+        {
+            vprops_.remove(p);
+        }
+
+        //! does the curve have a vertex property with name \p name?
+        [[nodiscard]] bool has_vertex_property(const std::string& name) const
+        {
+            return vprops_.exists(name);
+        }
+
+        //! add a edge property of type \p T with name \p name and default
+	    //! value \p t.  fails if a property named \p name exists already,
+	    //! since the name has to be unique.  in this case it returns an
+	    //! invalid property.
+        template <class T>
+        EdgeProperty<T> add_edge_property(const std::string& name, const T t = T())
+        {
+            return EdgeProperty<T>(eprops_.add<T>(name, t));
+        }
+
+        //! get the edge property named \p name of type \p T. returns an
+		//! invalid VertexProperty if the property does not exist or if the
+		//! type does not match.
+        template <class T>
+        EdgeProperty<T> get_edge_property(const std::string& name) const
+        {
+            return EdgeProperty<T>(eprops_.get<T>(name));
+        }
+
+        //! if an edge property of type \p T with name \p name exists, it is
+		//! returned.  otherwise this property is added (with default value \c
+		//! t)
+        template <class T>
+        EdgeProperty<T> edge_property(const std::string& name, const T t = T())
+        {
+            return EdgeProperty<T>(eprops_.get_or_add<T>(name, t));
+        }
+
+        //! remove the edge property \p p
+        template <class T>
+        void remove_edge_property(EdgeProperty<T>& p)
+        {
+            eprops_.remove(p);
+        }
+
+        //! does the curve have an edge property with name \p name?
+        [[nodiscard]] bool has_edge_property(const std::string& name) const
+        {
+            return eprops_.exists(name);
+        }
+
+        //!@}
+		//! \name Iterators and circulators
+		//!@{
+
+		//! \return start iterator for vertices
+        [[nodiscard]] VertexIterator vertices_begin() const
+        {
+            return { Vertex(0), this };
+        }
+
+        //! \return end iterator for vertices
+        [[nodiscard]] VertexIterator vertices_end() const
+        {
+            return { Vertex(static_cast<IndexType>(vertices_size())),this };
+        }
+
+        //! \return vertex container for C++11 range-based for-loops
+        [[nodiscard]] VertexContainer vertices() const
+        {
+            return { vertices_begin(), vertices_end() };
+        }
+
+        //! \return start iterator for edges
+        [[nodiscard]] EdgeIterator edges_begin() const
+        {
+	        return { Edge(0), this };
+        }
+
+        //! \return end iterator for edges
+        [[nodiscard]] EdgeIterator edges_end() const
+        {
+            return { Edge(static_cast<IndexType>(edges_size())), this };
+        }
+
+        //! \return edge container for C++11 range-based for-loops
+        [[nodiscard]] EdgeContainer edges() const
+        {
+            return { edges_begin(), edges_end() };
+        }
+
+        // ============ Neighborhood operations =========
+
+        //! \return the edge that contains vertex \p v as a starting vertex
+        [[nodiscard]] Edge edge_from(Vertex v) const
+    	{
+            return vconn_[v].from_;
+        }
+
+        //! \return the vertex that edge \p e starts at
+        [[nodiscard]] Vertex from_vertex(Edge e) const
+        {
+            return econn_[e].start_;
+        }
+
+        //! \return the vertex that edge \p e ends at
+        [[nodiscard]] Vertex to_vertex(Edge e) const
+        {
+            return econn_[e].end_;
+        }
+
+        //! \return the edge that contains vertex \p v as the end vertex
+        [[nodiscard]] Edge edge_to(Vertex v) const
+        {
+            return vconn_[v].to_;
+        }
+
+        //! \return edges adjacent to vertex \p v.
+        [[nodiscard]] std::pair<Edge, Edge> edges(Vertex v) const
+        {
+            return { vconn_[v].to_, vconn_[v].from_ };
+        }
+
+        //! \return vertices connected to vertex \p v via edges.
+        [[nodiscard]] std::pair<Vertex, Vertex> vertices(Vertex v) const
+        {
+            const auto toEdge = edge_to(v);
+            const auto fromEdge = edge_from(v);
+            return { from_vertex(toEdge), to_vertex(fromEdge) };
+        }
+
+        //! \return start and end vertices on edge \p e.
+        [[nodiscard]] std::pair<Vertex, Vertex> vertices(Edge e) const
+        {
+            return { econn_[e].start_, econn_[e].end_ };
+        }
+
+        //
+        // ========= Vertices and Edges Management (Tessellation changing operations)
+        //
+
+        Vertex add_vertex(const Point2& p);
+        Vertex add_vertex_to_edge(Edge e, const Point2& p);
+        Edge add_edge(Vertex v0, Vertex v1);
+        void delete_vertex(Vertex v);
+        void delete_edge(Edge e);
+        void collapse_edge(Vertex v0, Vertex v1);
+        void split_edge(Vertex v0, Vertex v1);
+        void remove_vertex(Vertex v);
+
+        // Properties
+
+    	//! position of a vertex
+        Point2& position(Vertex v) { return vpoint_[v]; }
+
+        //! \return whether v is a boundary vertex
+        [[nodiscard]] bool is_boundary(Vertex v) const { return !vconn_; }
+
+    private:
+
+        struct VertexConnectivity
+        {
+            Edge to_; // incoming edge to the given vertex
+            Edge from_; // outgoing edge from the given vertex
+        };
+
+        struct EdgeConnectivity
+        {
+            Vertex start_; // base (first) vertex of the given edge
+            Vertex end_; // target (second) vertex of the given edge
+        };
+
+        // property containers for each entity type and object
+        PropertyContainer vprops_;
+        PropertyContainer eprops_;
+
+		// point coordinates
+        VertexProperty<Point2> vpoint_;
+
+        // connectivity information
+        VertexProperty<VertexConnectivity> vconn_;
+        EdgeProperty<EdgeConnectivity> econn_;
+
+        // markers for deleted entities
+        VertexProperty<bool> vdeleted_;
+        EdgeProperty<bool> edeleted_;
+
+        // numbers of deleted entities
+        IndexType deleted_vertices_{ 0 };
+        IndexType deleted_edges_{ 0 };
+
+        // indicate garbage present
+        bool has_garbage_{ false };
+
+        std::string name_;
+    };
+
+} // namespace pmp

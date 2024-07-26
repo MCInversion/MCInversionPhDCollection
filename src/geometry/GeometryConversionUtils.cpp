@@ -1732,7 +1732,7 @@ namespace Geometry
 	// =======================================================================================================================
 	//
 
-	std::vector<pmp::vec2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance)
+	std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance)
 	{
 		if (std::fabs(sqrnorm(planeNormal) - 1.0f) > FLT_EPSILON)
 		{
@@ -1740,7 +1740,7 @@ namespace Geometry
 			return {};
 		}
 
-		std::vector<pmp::vec2> slicedPoints;
+		std::vector<pmp::Point2> slicedPoints;
 
 		// Find two orthogonal vectors in the plane
 		pmp::vec3 axis1;
@@ -1766,10 +1766,10 @@ namespace Geometry
 			if (std::abs(signedDistanceToPlane) <= distTolerance)
 			{
 				// Project the point onto the plane
-				pmp::vec3 projectedPoint = point - signedDistanceToPlane * planeNormal;
+				pmp::Point projectedPoint = point - signedDistanceToPlane * planeNormal;
 
 				// Convert the projected point to 2D by using the plane axes
-				pmp::vec2 point2D(dot(projectedPoint - planePt, axis1), dot(projectedPoint - planePt, axis2));
+				pmp::Point2 point2D(dot(projectedPoint - planePt, axis1), dot(projectedPoint - planePt, axis2));
 
 				// Add the 2D point to the result
 				slicedPoints.push_back(point2D);

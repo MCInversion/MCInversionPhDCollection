@@ -888,6 +888,17 @@ Vector<Scalar, 3> affine_transform(const Mat4<Scalar>& m,
     return Vector<Scalar, 3>(x, y, z);
 }
 
+//! affine transformation of 2D vector v by a 3x3 matrix m:
+//! add 1 as 3rd component of v, multiply m*v, do NOT divide by 3rd component
+template <typename Scalar>
+Vector<Scalar, 2> affine_transform(const Mat3<Scalar>& m,
+    const Vector<Scalar, 2>& v)
+{
+    const Scalar x = m(0, 0) * v[0] + m(0, 1) * v[1] + m(0, 2);
+    const Scalar y = m(1, 0) * v[0] + m(1, 1) * v[1] + m(1, 2);
+    return Vector<Scalar, 2>(x, y);
+}
+
 //! linear transformation of 3D vector v by a 4x4 matrix m:
 //! transform vector by upper-left 3x3 submatrix of m
 template <typename Scalar>

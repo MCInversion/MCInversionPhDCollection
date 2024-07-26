@@ -37,9 +37,11 @@ using Scalar = float;
 
 //! Point type
 using Point = Vector<Scalar, 3>;
+using Point2 = Vector<Scalar, 2>;
 
 //! Normal type
 using Normal = Vector<Scalar, 3>;
+using Normal2 = Vector<Scalar, 2>;
 
 //! Color type
 //! \details RGB values in the range of [0,1]
