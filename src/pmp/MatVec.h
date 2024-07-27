@@ -720,6 +720,17 @@ Mat4<Scalar> translation_matrix(const Vector<Scalar, 3>& t)
     return m;
 }
 
+//! OpenGL matrix for translation by vector t
+template <typename Scalar>
+Mat3<Scalar> translation_matrix(const Vector<Scalar, 2>& t)
+{
+    Mat3<Scalar> m(Scalar(0));
+    m(0, 0) = m(1, 1) = m(2, 2) = 1.0f;
+    m(0, 2) = t[0];
+    m(1, 2) = t[1];
+    return m;
+}
+
 //! OpenGL matrix for scaling x/y/z by s
 template <typename Scalar>
 Mat4<Scalar> scaling_matrix(const Scalar s)
@@ -740,6 +751,29 @@ Mat4<Scalar> scaling_matrix(const Vector<Scalar, 3>& s)
     m(1, 1) = s[1];
     m(2, 2) = s[2];
     m(3, 3) = 1.0f;
+
+    return m;
+}
+
+//! OpenGL matrix for scaling x/y by s
+template <typename Scalar>
+Mat3<Scalar> scaling_matrix_2d(const Scalar s)
+{
+    Mat3<Scalar> m(Scalar(0));
+    m(0, 0) = m(1, 1) = s;
+    m(2, 2) = 1.0f;
+
+    return m;
+}
+
+//! OpenGL matrix for scaling x/y by the components of s
+template <typename Scalar>
+Mat3<Scalar> scaling_matrix_2d(const Vector<Scalar, 2>& s)
+{
+    Mat3<Scalar> m(Scalar(0));
+    m(0, 0) = s[0];
+    m(1, 1) = s[1];
+    m(2, 2) = 1.0f;
 
     return m;
 }

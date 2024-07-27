@@ -228,27 +228,13 @@ namespace pmp
         virtual void clear();
 
         //! remove unused memory from vectors
-        void free_memory();
+        void free_memory() const;
 
         //! reserve memory (mainly used in file readers)
-        void reserve(size_t nvertices, size_t nedges);
+        void reserve(size_t nVertices, size_t nEdges) const;
 
         //! remove deleted elements
         void garbage_collection();
-
-        //! \return whether vertex \p v is deleted
-        //! \sa garbage_collection()
-        [[nodiscard]] bool is_deleted(Vertex v) const { return vdeleted_[v]; }
-
-        //! \return whether edge \p e is deleted
-        //! \sa garbage_collection()
-        [[nodiscard]] bool is_deleted(Edge e) const { return edeleted_[e]; }
-
-        //! \return whether vertex \p v is valid.
-        [[nodiscard]] bool is_valid(Vertex v) const { return v.idx() < vertices_size(); }
-
-        //! \return whether edge \p e is valid.
-        [[nodiscard]] bool is_valid(Edge e) const { return e.idx() < edges_size(); }
 
         // are there any deleted entities?
         [[nodiscard]] bool has_garbage() const { return has_garbage_; }
@@ -271,6 +257,9 @@ namespace pmp
 
         //! transform all points of this surface curve with a given 4x4 matrix.
         ManifoldCurve2D& operator*=(const mat3& mat);
+
+        //! assign \p rhs to \p *this. does not copy custom properties.
+        ManifoldCurve2D& assign(const ManifoldCurve2D& rhs);
 
         // ================== Properties ====================================
 
@@ -357,7 +346,145 @@ namespace pmp
         }
 
         //!@}
-		//! \name Iterators and circulators
+        //! \name Low-level connectivity
+        //!@{
+
+        //! set the outgoing edge of vertex \p v to \p e
+        void set_edge_from(Vertex v, Edge e) { vconn_[v].from_ = e; }
+        //! set the incoming edge of vertex \p v to \p e
+        void set_edge_to(Vertex v, Edge e) { vconn_[v].to_ = e; }
+
+        //! \return whether \p v is a boundary vertex
+        [[nodiscard]] bool is_boundary(Vertex v) const
+        {
+            return !vconn_[v].from_.is_valid() || !vconn_[v].to_.is_valid();
+        }
+
+        //! \return whether \p v is isolated, i.e., not incident to any edge
+        [[nodiscard]] bool is_isolated(Vertex v) const
+        {
+	        return !vconn_[v].from_.is_valid() && !vconn_[v].to_.is_valid();
+        }
+
+        //! sets the start vertex the edge \p e to \p v
+        void set_start_vertex(Edge e, Vertex v) { econn_[e].start_ = v; }
+        //! sets the end vertex the edge \p e to \p v
+        void set_end_vertex(Edge e, Vertex v) { econn_[e].end_ = v; }
+
+        //!@}
+
+		//! \name Allocate new elements
+		//!@{
+
+		//! \brief Allocate a new vertex, resize vertex properties accordingly.
+		//! \throw AllocationException in case of failure to allocate a new vertex.
+        Vertex new_vertex()
+        {
+            if (vertices_size() == PMP_MAX_INDEX - 1)
+            {
+                auto what =
+                    "ManifoldCurve2D: cannot allocate vertex, max. index reached";
+                throw AllocationException(what);
+            }
+            vprops_.push_back();
+            return Vertex(static_cast<IndexType>(vertices_size()) - 1);
+        }
+
+        //! \brief Allocate a new edge, resize edge property accordingly.
+        //! \throw AllocationException in case of failure to allocate a new edge.
+        Edge new_edge()
+        {
+            if (edges_size() == PMP_MAX_INDEX - 1)
+            {
+                auto what = "ManifoldCurve2D: cannot allocate edge, max. index reached";
+                throw AllocationException(what);
+            }
+            eprops_.push_back();
+            return Edge(static_cast<IndexType>(edges_size()) - 1);
+        }
+
+        //! \brief Allocate a new edge, resize edge property accordingly.
+		//! \throw AllocationException in case of failure to allocate a new edge.
+		//! \param start starting Vertex of the new edge
+		//! \param end end Vertex of the new edge
+        Edge new_edge(Vertex start, Vertex end)
+        {
+            assert(start != end);
+
+            if (edges_size() == PMP_MAX_INDEX - 1)
+            {
+                auto what = "ManifoldCurve2D: cannot allocate edge, max. index reached!\n";
+                throw AllocationException(what);
+            }
+
+            if (!is_boundary(start) || !is_boundary(end))
+            {
+                auto what = "ManifoldCurve2D: cannot add an edge to a non-boundary vertex. This creates a non-manifold vertex!\n";
+                throw TopologyException(what);
+            }
+
+            eprops_.push_back();
+            const Edge newEdge = Edge(static_cast<IndexType>(edges_size()) - 1);
+            set_start_vertex(newEdge, start);
+            set_end_vertex(newEdge, end);
+            set_edge_from(start, newEdge);
+            set_edge_to(end, newEdge);
+            return newEdge;
+        }
+
+        //! \return whether vertex \p v is deleted
+		//! \sa garbage_collection()
+        [[nodiscard]] bool is_deleted(Vertex v) const { return vdeleted_[v]; }
+
+        //! \return whether edge \p e is deleted
+        //! \sa garbage_collection()
+        [[nodiscard]] bool is_deleted(Edge e) const { return edeleted_[e]; }
+
+        //! \return whether vertex \p v is valid.
+        [[nodiscard]] bool is_valid(Vertex v) const { return v.idx() < vertices_size(); }
+
+        //! \return whether edge \p e is valid.
+        [[nodiscard]] bool is_valid(Edge e) const { return e.idx() < edges_size(); }
+
+        //! deletes the vertex \p v from the curve
+        void delete_vertex(Vertex v);
+
+        //! deletes the edge \p e from the curve
+        void delete_edge(Edge e);
+
+        //! deletes the edge \p e from the curve
+        void remove_edge(Edge e);
+
+        //! deletes the vertex \p v from the curve
+        void remove_vertex(Vertex v);
+
+        //! adds a new vertex with position \p p, but does no connectivity adjustments.
+        Vertex add_vertex(const Point2& p);
+
+        //
+        // ========= Vertices and Edges Management (Tessellation changing operations)
+        //
+
+        //! Collapses edge \p e to a single vertex (start if \p keepStartVertex == true).
+        void collapse_edge(Edge e, bool keepStartVertex = true);
+
+        //! Collapses edge spanning \p v0 and \p v1 to a single vertex (start if \p keepStartVertex == true).
+        void collapse_edge(Vertex v0, Vertex v1, bool keepStartVertex = true);
+
+        //! Splits (subdivides) edge \p e with a new vertex lin. interpolated between its endpoints with \p param.
+        Vertex split_edge(Edge e, float param = 0.5f);
+
+        //! Splits (subdivides) edge with a new vertex lin. interpolated between its endpoints \p v0 and \p v1 with \p param.
+        Vertex split_edge(Vertex v0, Vertex v1, float param = 0.5f);
+
+        //! Splits (subdivides) edge \p e with a new vertex given by position \p pNew.
+        Vertex split_edge_with_vertex(Edge e, const Point2& pNew);
+
+        //! Splits (subdivides) edge between vertices \p v0 and \p v1 with a new vertex given by position \p pNew.
+        Vertex split_edge_with_vertex(Vertex v0, Vertex v1, const Point2& pNew);
+
+        //!@}
+		//! \name Iterators
 		//!@{
 
 		//! \return start iterator for vertices
@@ -442,26 +569,39 @@ namespace pmp
             return { econn_[e].start_, econn_[e].end_ };
         }
 
-        //
-        // ========= Vertices and Edges Management (Tessellation changing operations)
-        //
+        //!@}
+        //! \name Geometry-related Functions
+        //!@{
 
-        Vertex add_vertex(const Point2& p);
-        Vertex add_vertex_to_edge(Edge e, const Point2& p);
-        Edge add_edge(Vertex v0, Vertex v1);
-        void delete_vertex(Vertex v);
-        void delete_edge(Edge e);
-        void collapse_edge(Vertex v0, Vertex v1);
-        void split_edge(Vertex v0, Vertex v1);
-        void remove_vertex(Vertex v);
-
-        // Properties
+        //! position of a vertex (read only)
+        [[nodiscard]] const Point2& position(Vertex v) const { return vpoint_[v]; }
 
     	//! position of a vertex
         Point2& position(Vertex v) { return vpoint_[v]; }
 
-        //! \return whether v is a boundary vertex
-        [[nodiscard]] bool is_boundary(Vertex v) const { return !vconn_; }
+        //! \return vector of point positions
+        std::vector<Point2>& positions() { return vpoint_.vector(); }
+
+        //! compute the bounding box of the object
+        [[nodiscard]] BoundingBox2 bounds() const
+        {
+            BoundingBox2 bb;
+            for (auto v : vertices())
+                bb += position(v);
+            return bb;
+        }
+
+        //! compute the length of edge \p e.
+        [[nodiscard]] Scalar edge_length(Edge e) const
+        {
+            return norm(vpoint_[from_vertex(e)] - vpoint_[to_vertex(e)]);
+        }
+
+        //! compute the squared of edge \p e.
+        [[nodiscard]] Scalar edge_length_sq(Edge e) const
+        {
+            return dot(vpoint_[from_vertex(e)] - vpoint_[to_vertex(e)], vpoint_[from_vertex(e)] - vpoint_[to_vertex(e)]);
+        }
 
     private:
 

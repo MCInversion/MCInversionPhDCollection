@@ -1,7 +1,7 @@
 // Copyright 2011-2020 the Polygon Mesh Processing Library developers.
 // Distributed under a MIT-style license, see LICENSE.txt for details.
 
-#include "pmp/algorithms/Geodesics.h"
+#include "pmp/algorithms/SurfaceGeodesic.h"
 
 namespace
 {
@@ -13,7 +13,7 @@ namespace
 
 namespace pmp {
 
-Geodesics::Geodesics(SurfaceMesh& mesh, bool use_virtual_edges)
+SurfaceGeodesic::SurfaceGeodesic(SurfaceMesh& mesh, bool use_virtual_edges)
     : mesh_(mesh), use_virtual_edges_(use_virtual_edges)
 {
     distance_ = mesh_.add_vertex_property<Scalar>("geodesic:distance");
@@ -23,13 +23,13 @@ Geodesics::Geodesics(SurfaceMesh& mesh, bool use_virtual_edges)
         find_virtual_edges();
 }
 
-Geodesics::~Geodesics()
+SurfaceGeodesic::~SurfaceGeodesic()
 {
     mesh_.remove_vertex_property(distance_);
     mesh_.remove_vertex_property(processed_);
 }
 
-void Geodesics::find_virtual_edges()
+void SurfaceGeodesic::find_virtual_edges()
 {
     Halfedge hh, hhh;
     Vertex vh0, vh1, vhn, start_vh0, start_vh1;
@@ -137,9 +137,9 @@ void Geodesics::find_virtual_edges()
     }
 }
 
-unsigned int Geodesics::compute(const std::vector<Vertex>& seed, Scalar maxdist,
-                                unsigned int maxnum,
-                                std::vector<Vertex>* neighbors)
+unsigned int SurfaceGeodesic::compute(const std::vector<Vertex>& seed,
+                                      Scalar maxdist, unsigned int maxnum,
+                                      std::vector<Vertex>* neighbors)
 {
     unsigned int num(0);
 
@@ -173,8 +173,8 @@ unsigned int Geodesics::compute(const std::vector<Vertex>& seed, Scalar maxdist,
     return num;
 }
 
-unsigned int Geodesics::init_front(const std::vector<Vertex>& seed,
-                                   std::vector<Vertex>* neighbors)
+unsigned int SurfaceGeodesic::init_front(const std::vector<Vertex>& seed,
+                                         std::vector<Vertex>* neighbors)
 {
     unsigned int num(0);
 
@@ -236,8 +236,9 @@ unsigned int Geodesics::init_front(const std::vector<Vertex>& seed,
     return num;
 }
 
-unsigned int Geodesics::propagate_front(Scalar maxdist, unsigned int maxnum,
-                                        std::vector<Vertex>* neighbors)
+unsigned int SurfaceGeodesic::propagate_front(Scalar maxdist,
+                                              unsigned int maxnum,
+                                              std::vector<Vertex>* neighbors)
 {
     unsigned int num(0);
 
@@ -273,7 +274,7 @@ unsigned int Geodesics::propagate_front(Scalar maxdist, unsigned int maxnum,
     return num;
 }
 
-void Geodesics::heap_vertex(Vertex v)
+void SurfaceGeodesic::heap_vertex(Vertex v)
 {
     assert(!processed_[v]);
 
@@ -361,8 +362,8 @@ void Geodesics::heap_vertex(Vertex v)
     }
 }
 
-Scalar Geodesics::distance(Vertex v0, Vertex v1, Vertex v2, Scalar r0,
-                           Scalar r1)
+Scalar SurfaceGeodesic::distance(Vertex v0, Vertex v1, Vertex v2, Scalar r0,
+                                 Scalar r1)
 {
     Point A, B, C;
     double TA, TB;
@@ -420,7 +421,7 @@ Scalar Geodesics::distance(Vertex v0, Vertex v1, Vertex v2, Scalar r0,
     return dykstra;
 }
 
-void Geodesics::distance_to_texture_coordinates()
+void SurfaceGeodesic::distance_to_texture_coordinates()
 {
     // find maximum distance
     Scalar maxdist(0);

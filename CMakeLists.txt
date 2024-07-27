@@ -6,6 +6,7 @@ cmake_policy(SET CMP0072 NEW)
 
 option(PMP_BUILD_VIS "Build the PMP visualization tools" ON)
 option(PMP_INSTALL "Install the PMP library and headers" ON)
+option(BUILD_UNIT_TESTS "Build the unit testing projects" ON)
 
 # set output paths
 set(PROJECT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -205,6 +206,11 @@ add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
 add_subdirectory(src/utils)
+
+if (BUILD_UNIT_TESTS)
+    add_subdirectory(src/pmp_tests)
+endif()
+
 file(GLOB MCInversionPhDCollection_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
 add_executable(MCInversionPhDCollection ${MCInversionPhDCollection_Src})
 target_link_libraries(MCInversionPhDCollection
