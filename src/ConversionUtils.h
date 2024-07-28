@@ -4,6 +4,7 @@
 
 #include "geometry/GeometryConversionUtils.h"
 #include "geometry/Grid.h"
+#include "pmp/ManifoldCurve2D.h"
 
 #include "pmp/SurfaceMesh.h"
 
@@ -44,3 +45,6 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 
 /// \brief 2D point cloud to PLY data export.
 [[nodiscard]] bool Export2DPointCloudToPLY(const std::vector<pmp::vec2>& points, const std::string& fileName);
+
+/// \brief Export 2D manifold curve to PLY data.
+[[nodiscard]] bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName);

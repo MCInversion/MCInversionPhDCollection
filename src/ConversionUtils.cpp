@@ -593,3 +593,50 @@ bool Export2DPointCloudToPLY(const std::vector<pmp::vec2>& points, const std::st
 	file.close();
 	return true;
 }
+
+bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName)
+{
+	const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(fileName);
+	if (extension != "ply")
+	{
+		std::cerr << "ExportManifoldCurve2DToPLY: Invalid file extension!" << std::endl;
+		return false;
+	}
+
+	std::ofstream file(fileName);
+	if (!file.is_open())
+	{
+		std::cerr << "ExportManifoldCurve2DToPLY: Failed to open file for writing: " << fileName << std::endl;
+		return false;
+	}
+
+	// Write the PLY header
+	file << "ply\n";
+	file << "format ascii 1.0\n";
+	file << "element vertex " << curve.n_vertices() << "\n";
+	file << "property float x\n";
+	file << "property float y\n";
+	file << "property float z\n";
+	file << "element edge " << curve.n_edges() << "\n";
+	file << "property int vertex1\n";
+	file << "property int vertex2\n";
+	file << "end_header\n";
+
+	// Write the vertex data
+	for (auto v : curve.vertices())
+	{
+		const auto& point = curve.position(v);
+		file << point[0] << " " << point[1] << " 0.0\n";
+	}
+
+	// Write the edge data
+	for (auto e : curve.edges())
+	{
+		auto start = curve.from_vertex(e);
+		auto end = curve.to_vertex(e);
+		file << start.idx() << " " << end.idx() << "\n";
+	}
+
+	file.close();
+	return true;
+}

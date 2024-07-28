@@ -223,16 +223,24 @@ namespace pmp
         return v;
     }
 
+    Edge ManifoldCurve2D::add_edge(Vertex v0, Vertex v1)
+    {
+        return new_edge(v0, v1);
+    }
+
     void ManifoldCurve2D::delete_vertex(Vertex v)
     {
         if (is_deleted(v))
             return;
 
-        const Edge eTo = vconn_[v].to_;
-        const Edge eFrom = vconn_[v].from_;
+        if (!is_isolated(v))
+        {
+	        const Edge eTo = vconn_[v].to_;
+        	const Edge eFrom = vconn_[v].from_;
 
-        econn_[eTo].end_.reset();
-        econn_[eFrom].start_.reset();
+        	econn_[eTo].end_.reset();
+        	econn_[eFrom].start_.reset();
+        }
 
         vdeleted_[v] = true;
         deleted_vertices_++;

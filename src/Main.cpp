@@ -33,6 +33,8 @@
 #include <chrono>
 #include <map>
 
+#include "pmp/algorithms/CurveFactory.h"
+
 
 // set up root directory
 const std::filesystem::path fsRootPath = DROOT_DIR;
@@ -95,7 +97,8 @@ constexpr bool performApollonArtecEvaLSWHausdorffEval = false;
 constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
-constexpr bool performPairedCurveEvolverTests = true;
+constexpr bool performManifoldCurve2DTests = true;
+constexpr bool performPairedCurveEvolverTests = false;
 // constexpr bool performPairedSurfaceEvolverTests = true;
 
 int main()
@@ -3190,6 +3193,23 @@ int main()
 		}
 
 	} // endif perfromTerrainTriangulationTest
+
+	if (performManifoldCurve2DTests)
+	{
+		const auto closedArc = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 32);
+
+		if (!ExportManifoldCurve2DToPLY(closedArc, dataOutPath + "closedArc.ply"))
+		{
+			std::cerr << "ExportManifoldCurve2DToPLY: internal error!\n";
+		}
+
+		const auto openArc = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 16, 0, M_PI);
+
+		if (!ExportManifoldCurve2DToPLY(openArc, dataOutPath + "openArc.ply"))
+		{
+			std::cerr << "ExportManifoldCurve2DToPLY: internal error!\n";
+		}
+	}
 
 	if (performPairedCurveEvolverTests)
 	{

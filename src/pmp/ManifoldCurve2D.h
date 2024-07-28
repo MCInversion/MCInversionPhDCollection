@@ -87,6 +87,41 @@ namespace pmp
                 return tmp;
             }
 
+            //! add offset to iterator
+            VertexIterator operator+(int i) const
+            {
+                VertexIterator it = *this;
+                if (i > 0)
+                {
+                    while (i > 0)
+                    {
+                        ++it.handle_.idx_;
+                        while (it.curve_->has_garbage() && it.curve_->is_valid(it.handle_) &&
+                            it.curve_->is_deleted(it.handle_))
+                            ++it.handle_.idx_;
+                        --i;
+                    }
+                }
+                else
+                {
+                    while (i < 0)
+                    {
+                        --it.handle_.idx_;
+                        while (it.curve_->has_garbage() && it.curve_->is_valid(it.handle_) &&
+                            it.curve_->is_deleted(it.handle_))
+                            --it.handle_.idx_;
+                        ++i;
+                    }
+                }
+                return it;
+            }
+
+            //! subtract offset from iterator
+            VertexIterator operator-(int i) const
+            {
+                return operator+(-i);
+            }
+
         private:
             Vertex handle_;
             const ManifoldCurve2D* curve_;
@@ -460,6 +495,9 @@ namespace pmp
 
         //! adds a new vertex with position \p p, but does no connectivity adjustments.
         Vertex add_vertex(const Point2& p);
+
+        //! adds a new edge between vertices \p v0 and \p v1.
+        Edge add_edge(Vertex v0, Vertex v1);
 
         //
         // ========= Vertices and Edges Management (Tessellation changing operations)
