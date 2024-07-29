@@ -1,45 +1,33 @@
+cmake_minimum_required(VERSION 3.14)
+project(pmp_tests)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 set(GOOGLE_TEST_ROOT
     external/googletest/googletest
     CACHE STRING "Google Test root")
 
-include_directories(${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}
-                    ${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}/include)
+include_directories("${PROJECT_SOURCE_DIR}/../../${GOOGLE_TEST_ROOT}"
+                    "${PROJECT_SOURCE_DIR}/../../${GOOGLE_TEST_ROOT}/include")
 
 set(GOOGLE_TEST_SOURCES
-    ${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}/src/gtest-all.cc
-    ${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}/src/gtest_main.cc)
+    "${PROJECT_SOURCE_DIR}/../../${GOOGLE_TEST_ROOT}/src/gtest-all.cc"
+    "${PROJECT_SOURCE_DIR}/../../${GOOGLE_TEST_ROOT}/src/gtest_main.cc")
 
 add_library(googletest ${GOOGLE_TEST_SOURCES})
+file(GLOB UnitTests_Src "*.h" "*.cpp")
 
-# set output path so that coverage testing works
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
+# Now simply link against gtest or gtest_main as needed. Eg
+add_executable(${PROJECT_NAME} ${UnitTests_Src})
+add_dependencies(${PROJECT_NAME} googletest)
 
-# copy test data
-file(COPY ${PROJECT_SOURCE_DIR}/external/pmp-data
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC
+	"${CMAKE_SOURCE_DIR}/src/")
 
-# source files
-file(GLOB SOURCES ./*.cpp)
+target_link_libraries(${PROJECT_NAME}
+	googletest		 # gtest lib
+	pmp              # tested lib
+)
 
-# build test runner
-add_executable(gtest_runner ${SOURCES})
-
-if(UNIX OR APPLE)
-  target_link_libraries(gtest_runner pmp googletest pthread)
-elseif(WIN32)
-  target_link_libraries(gtest_runner pmp googletest)
-endif()
-
-add_dependencies(gtest_runner googletest)
-
-# add runner as test
-add_test(gtest_runner ${CMAKE_CURRENT_BINARY_DIR}/gtest_runner)
-
-# copy dlls on windows
-if(WIN32)
-  add_custom_command(
-    TARGET gtest_runner
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pmp>
-            $<TARGET_FILE_DIR:gtest_runner>)
-endif()
+add_test(NAME pmp_TestSuite COMMAND ${PROJECT_NAME})

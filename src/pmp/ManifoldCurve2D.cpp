@@ -45,10 +45,8 @@ namespace pmp
         auto nE = edges_size();
 
         // setup handle mapping
-        VertexProperty<Vertex> vmap =
-            add_vertex_property<Vertex>("v:garbage-collection");
-        EdgeProperty<Edge> emap =
-            add_edge_property<Edge>("e:garbage-collection");
+        auto vmap = add_vertex_property<Vertex>("v:garbage-collection");
+        auto emap = add_edge_property<Edge>("e:garbage-collection");
         for (size_t i = 0; i < nV; ++i)
             vmap[Vertex(i)] = Vertex(i);
         for (size_t i = 0; i < nE; ++i)
@@ -106,10 +104,18 @@ namespace pmp
         for (size_t i = 0; i < nV; ++i)
         {
             auto v = Vertex(i);
-            if (!is_isolated(v))
+            if (is_isolated(v))
+                continue;
+
+            auto eTo = edge_to(v);
+            auto eFrom = edge_from(v);
+            if (eTo.is_valid())
             {
-	            set_edge_to(v, emap[edge_to(v)]);
-                set_edge_from(v, emap[edge_from(v)]);
+	            set_edge_to(v, emap[eTo]);
+            }
+            if (eFrom.is_valid())
+            {
+	            set_edge_from(v, emap[eFrom]);
             }
         }
 
@@ -156,6 +162,7 @@ namespace pmp
             // property handles contain pointers, have to be reassigned
             vpoint_ = vertex_property<Point2>("v:point");
             vconn_ = vertex_property<VertexConnectivity>("v:connectivity");
+            econn_ = edge_property<EdgeConnectivity>("e:connectivity");
 
             vdeleted_ = vertex_property<bool>("v:deleted");
             edeleted_ = edge_property<bool>("e:deleted");
@@ -237,6 +244,23 @@ namespace pmp
         {
 	        const Edge eTo = vconn_[v].to_;
         	const Edge eFrom = vconn_[v].from_;
+
+            if (eTo.is_valid())
+            {
+	            if (const Vertex vNext = econn_[eTo].end_; 
+	                vNext.is_valid())
+	            {
+	                vconn_[vNext].to_ = eTo;
+	            }	            
+            }
+            if (eFrom.is_valid())
+            {
+	            if(const Vertex vPrev = econn_[eFrom].start_;
+	               vPrev.is_valid())
+	            {
+	                vconn_[vPrev].from_ = eFrom;
+	            }	            
+            }
 
         	econn_[eTo].end_.reset();
         	econn_[eFrom].start_.reset();

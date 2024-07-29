@@ -440,6 +440,7 @@ namespace pmp
 
         //! \brief Allocate a new edge, resize edge property accordingly.
 		//! \throw AllocationException in case of failure to allocate a new edge.
+		//! \throw TopologyException if some of the two endpoints are already connected to two edges.
 		//! \param start starting Vertex of the new edge
 		//! \param end end Vertex of the new edge
         Edge new_edge(Vertex start, Vertex end)
@@ -497,6 +498,7 @@ namespace pmp
         Vertex add_vertex(const Point2& p);
 
         //! adds a new edge between vertices \p v0 and \p v1.
+        //! \throw TopologyException if some of the two endpoints are already connected to two edges.
         Edge add_edge(Vertex v0, Vertex v1);
 
         //
@@ -566,36 +568,49 @@ namespace pmp
         //! \return the edge that contains vertex \p v as a starting vertex
         [[nodiscard]] Edge edge_from(Vertex v) const
     	{
+            if (!v.is_valid())
+                return {};
             return vconn_[v].from_;
+        }
+
+        //! \return the edge that contains vertex \p v as the end vertex
+        [[nodiscard]] Edge edge_to(Vertex v) const
+        {
+            if (!v.is_valid())
+                return {};
+            return vconn_[v].to_;
         }
 
         //! \return the vertex that edge \p e starts at
         [[nodiscard]] Vertex from_vertex(Edge e) const
         {
+            if (!e.is_valid())
+                return {};
             return econn_[e].start_;
         }
 
         //! \return the vertex that edge \p e ends at
         [[nodiscard]] Vertex to_vertex(Edge e) const
         {
+            if (!e.is_valid())
+                return {};
             return econn_[e].end_;
         }
 
-        //! \return the edge that contains vertex \p v as the end vertex
-        [[nodiscard]] Edge edge_to(Vertex v) const
-        {
-            return vconn_[v].to_;
-        }
 
         //! \return edges adjacent to vertex \p v.
         [[nodiscard]] std::pair<Edge, Edge> edges(Vertex v) const
         {
+            if (!v.is_valid())
+                return {};
             return { vconn_[v].to_, vconn_[v].from_ };
         }
 
         //! \return vertices connected to vertex \p v via edges.
         [[nodiscard]] std::pair<Vertex, Vertex> vertices(Vertex v) const
         {
+            if (!v.is_valid())
+                return {};
             const auto toEdge = edge_to(v);
             const auto fromEdge = edge_from(v);
             return { from_vertex(toEdge), to_vertex(fromEdge) };
@@ -604,6 +619,8 @@ namespace pmp
         //! \return start and end vertices on edge \p e.
         [[nodiscard]] std::pair<Vertex, Vertex> vertices(Edge e) const
         {
+            if (!e.is_valid())
+                return {};
             return { econn_[e].start_, econn_[e].end_ };
         }
 

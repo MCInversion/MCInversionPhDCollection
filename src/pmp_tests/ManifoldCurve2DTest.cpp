@@ -59,8 +59,6 @@ TEST(EmptyManifoldCurve2D_Tests, AddGetVertexProperty)
     auto retrieved_prop = curve.get_vertex_property<int>("v:prop");
     EXPECT_EQ(retrieved_prop[v], 42);
 }
-
-
 TEST(EmptyManifoldCurve2D_Tests, AddGetEdgeProperty)
 {
     ManifoldCurve2D curve;
@@ -129,7 +127,7 @@ TEST(EmptyManifoldCurve2D_Tests, ConnectivityManagement)
 
     EXPECT_EQ(curve.edge_from(v0), e);
     EXPECT_EQ(curve.edge_to(v1), e);
-    EXPECT_FALSE(curve.is_boundary(v0));
+    EXPECT_TRUE(curve.is_boundary(v0));
     EXPECT_FALSE(curve.is_isolated(v0));
 }
 
@@ -140,7 +138,7 @@ protected:
 
     void SetUp() override
     {
-        curve = CurveFactory::circle(pmp::Point2(0, 0), 1.0, 32);
+        curve = CurveFactory::circle(Point2(0, 0), 1.0, 32);
     }
 };
 
@@ -161,6 +159,102 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, EdgeIterator_NonEmpty)
 
     EXPECT_EQ(count, 32); // 32 segments, no duplicate edge
 }
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, VerifyConnectivity)
+{
+    // Get the original vertex and its adjacent edges
+    const Vertex originalVertex = *curve.vertices_begin();
+    const Edge originalEdgeFrom = curve.edge_from(originalVertex);
+    const Edge originalEdgeTo = curve.edge_to(originalVertex);
+
+    // Iterate through the circle and verify connectivity
+    Vertex currentVertex = originalVertex;
+    Edge currentEdge = originalEdgeFrom;
+    size_t count = 0;
+
+    do
+    {
+        // Verify the start and end vertices of the current edge
+        EXPECT_EQ(curve.from_vertex(currentEdge), currentVertex);
+        Vertex nextVertex = curve.to_vertex(currentEdge);
+        EXPECT_NE(currentVertex, nextVertex);
+
+        // Move to the next vertex and edge
+        currentVertex = nextVertex;
+        currentEdge = curve.edge_from(currentVertex);
+        count++;
+    } while (count < curve.n_vertices());
+
+    // Ensure we completed the full circle
+    EXPECT_EQ(currentVertex, originalVertex);
+    EXPECT_EQ(curve.edge_from(currentVertex), originalEdgeFrom);
+    EXPECT_EQ(curve.edge_to(currentVertex), originalEdgeTo);
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, RemoveEdgeAndVerifyBoundary)
+{
+    // Get an edge to delete
+    const Edge edgeToDelete = *curve.edges_begin();
+
+    // Get the start and end vertices of the edge
+    const Vertex startVertex = curve.from_vertex(edgeToDelete);
+    const Vertex endVertex = curve.to_vertex(edgeToDelete);
+
+    // Delete the edge
+    curve.delete_edge(edgeToDelete);
+    curve.garbage_collection();
+
+    // Verify that both vertices are now boundary vertices
+    EXPECT_TRUE(curve.is_boundary(startVertex));
+    EXPECT_TRUE(curve.is_boundary(endVertex));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, RemoveConsecutiveEdgesAndVerifyIsolation)
+{
+    // Get the first edge to delete
+    const Edge firstEdgeToDelete = *curve.edges_begin();
+    // Get the second edge to delete by traversing the connectivity
+    const Edge secondEdgeToDelete = curve.edge_from(curve.to_vertex(firstEdgeToDelete));
+
+    // Get the vertices of the edges
+    const Vertex firstStartVertex = curve.from_vertex(firstEdgeToDelete);
+    const Vertex middleVertex = curve.to_vertex(firstEdgeToDelete);
+    const Vertex secondEndVertex = curve.to_vertex(secondEdgeToDelete);
+
+    // Delete the first edge
+    curve.delete_edge(firstEdgeToDelete);
+    // Delete the second edge
+    curve.delete_edge(secondEdgeToDelete);
+    curve.garbage_collection();
+
+    // Verify that the middle vertex is now isolated
+    EXPECT_TRUE(curve.is_isolated(middleVertex));
+
+    // Verify that the start and end vertices are still boundary vertices
+    EXPECT_TRUE(curve.is_boundary(firstStartVertex));
+    EXPECT_TRUE(curve.is_boundary(secondEndVertex));
+}
+
+// Memory Management
+TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollection)
+{
+    const auto v0 = *curve.vertices_begin();
+    const auto v0Prev = curve.from_vertex(curve.edge_to(v0));
+    const auto v0Next = curve.to_vertex(curve.edge_from(v0));
+    const auto v1 = *(curve.vertices_begin() + 8);
+    const auto v2 = *(curve.vertices_begin() + 9);
+
+    curve.delete_vertex(v0);
+    curve.delete_edge(curve.edge_from(v1));
+
+    curve.garbage_collection();
+    EXPECT_EQ(curve.n_vertices(), 31);
+    EXPECT_EQ(curve.n_edges(), 31);
+    EXPECT_EQ(curve.edge_from(v0Prev), curve.edge_to(v0Next));
+    EXPECT_TRUE(curve.is_boundary(v1));
+    EXPECT_TRUE(curve.is_boundary(v2));
+}
+
 
 class ManifoldCurve2DTest_OpenArc : public ::testing::Test
 {
@@ -205,26 +299,6 @@ TEST_F(ManifoldCurve2DTest_OpenArc, Transformation)
     auto pos2 = curve.position(v2);
     EXPECT_NEAR(pos2[0], 0.0f, COORD_TOLERANCE);
     EXPECT_NEAR(pos2[1], 2.0f, COORD_TOLERANCE);
-}
-
-// Memory Management
-TEST_F(ManifoldCurve2DTest_OpenArc, GarbageCollection)
-{
-    const auto v0 = *curve.vertices_begin();
-    const auto v0Prev = curve.from_vertex(curve.edge_to(v0));
-    const auto v0Next = curve.to_vertex(curve.edge_from(v0));
-    const auto v1 = *(curve.vertices_begin() + 8);
-    const auto v2 = *(curve.vertices_begin() + 9);
-
-    curve.delete_vertex(v0);
-    curve.delete_edge(curve.edge_from(v1));
-
-    curve.garbage_collection();
-    EXPECT_EQ(curve.n_vertices(), 15);
-    EXPECT_EQ(curve.n_edges(), 14);
-    EXPECT_EQ(curve.edge_from(v0Prev), curve.edge_to(v0Next));
-    EXPECT_TRUE(curve.is_boundary(v1));
-    EXPECT_TRUE(curve.is_boundary(v2));
 }
 
 // Tessellation Operations
