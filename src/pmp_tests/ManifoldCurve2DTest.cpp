@@ -160,35 +160,86 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, EdgeIterator_NonEmpty)
     EXPECT_EQ(count, 32); // 32 segments, no duplicate edge
 }
 
-TEST_F(ManifoldCurve2DTest_ClosedArc, VerifyConnectivity)
+static [[nodiscard]] bool IsContinuousBetweenVertices(const ManifoldCurve2D& curve, Vertex v0, Vertex v1)
 {
-    // Get the original vertex and its adjacent edges
-    const Vertex originalVertex = *curve.vertices_begin();
-    const Edge originalEdgeFrom = curve.edge_from(originalVertex);
-    const Edge originalEdgeTo = curve.edge_to(originalVertex);
+    if (!curve.is_valid(v0) || !curve.is_valid(v1))
+        return false;
+
+    const Edge eFrom = curve.edge_from(v0);
+    if (!curve.is_valid(eFrom))
+        return false;
 
     // Iterate through the circle and verify connectivity
-    Vertex currentVertex = originalVertex;
-    Edge currentEdge = originalEdgeFrom;
+    Vertex currentVertex = v0;
+    Edge currentEdge = eFrom;
     size_t count = 0;
 
     do
     {
         // Verify the start and end vertices of the current edge
-        EXPECT_EQ(curve.from_vertex(currentEdge), currentVertex);
+        if (curve.from_vertex(currentEdge) != currentVertex)
+            return false;
+
         Vertex nextVertex = curve.to_vertex(currentEdge);
-        EXPECT_NE(currentVertex, nextVertex);
+        if (currentVertex == nextVertex)
+            return false;
 
         // Move to the next vertex and edge
         currentVertex = nextVertex;
+
+        // Check if the current vertex is a boundary vertex
+        if (curve.is_boundary(currentVertex) && currentVertex != v1)
+            return false;
+
         currentEdge = curve.edge_from(currentVertex);
         count++;
-    } while (count < curve.n_vertices());
 
-    // Ensure we completed the full circle
-    EXPECT_EQ(currentVertex, originalVertex);
-    EXPECT_EQ(curve.edge_from(currentVertex), originalEdgeFrom);
-    EXPECT_EQ(curve.edge_to(currentVertex), originalEdgeTo);
+        // Check if we have looped back to the starting vertex
+        if (currentVertex == v0 && v0 != v1)
+            return false;
+
+    } while (count < curve.n_vertices() && currentVertex != v1);
+
+    return currentVertex == v1;
+}
+
+static [[nodiscard]] bool IsBackwardsContinuousBetweenVertices(const ManifoldCurve2D& curve, Vertex v0, Vertex v1)
+{
+    const Edge eTo = curve.edge_to(v0);
+
+    // Iterate through the circle in reverse and verify connectivity
+    Vertex currentVertex = v0;
+    Edge currentEdge = eTo;
+    size_t count = 0;
+
+    do
+    {
+        // Verify the start and end vertices of the current edge
+        EXPECT_EQ(curve.to_vertex(currentEdge), currentVertex);
+        Vertex prevVertex = curve.from_vertex(currentEdge);
+        EXPECT_NE(currentVertex, prevVertex);
+
+        // Move to the previous vertex and edge
+        currentVertex = prevVertex;
+        currentEdge = curve.edge_to(currentVertex);
+        count++;
+    } while (count < curve.n_vertices() && currentVertex != v1);
+
+    if (v0 == v1)
+        return currentVertex == v0;
+
+    return currentVertex == v1;
+}
+
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, VerifyConnectivity)
+{
+    // Get the original vertex and its adjacent edges
+    const Vertex originalVertex = *curve.vertices_begin();
+
+    // Verify connectivity
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, originalVertex, originalVertex));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, originalVertex, originalVertex));
 }
 
 TEST_F(ManifoldCurve2DTest_ClosedArc, RemoveEdgeAndVerifyBoundary)
@@ -236,26 +287,42 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, RemoveConsecutiveEdgesAndVerifyIsolation)
 }
 
 // Memory Management
-TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollection)
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertex)
 {
-    const auto v0 = *curve.vertices_begin();
-    const auto v0Prev = Vertex(curve.from_vertex(curve.edge_to(v0)).idx() - 1); // there will be one less vertex
-    const auto v0Next = curve.to_vertex(curve.edge_from(v0));
-    const auto v1 = *(curve.vertices_begin() + 8);
-    const auto v2 = *(curve.vertices_begin() + 9);
+    const auto v0 = Vertex{ 8 };
+    curve.delete_vertex(v0);
+
+    curve.garbage_collection();
+
+    EXPECT_EQ(curve.n_vertices(), 31);
+    EXPECT_EQ(curve.n_edges(), 31);
+    EXPECT_EQ(curve.edge_from(Vertex{ 6 }), curve.edge_to(Vertex{ 7 }));
+    EXPECT_EQ(curve.edge_to(Vertex{ 7 }), Edge{ 6 });
+    EXPECT_EQ(curve.edge_from(Vertex{ 0 }), Edge{ 0 });
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertexAndEdge)
+{
+    const auto v0 = Vertex{ 0 };
+    const auto v1 = Vertex{ 8 };
+    const auto v2 = Vertex{ 9 };
+    curve.delete_edge(curve.edge_from(v1));
 
     curve.delete_vertex(v0);
-    //curve.delete_edge(curve.edge_from(v1));
 
     curve.garbage_collection();
     EXPECT_EQ(curve.n_vertices(), 31);
-    //EXPECT_EQ(curve.n_edges(), 30);
-    EXPECT_EQ(curve.n_edges(), 31);
-    EXPECT_EQ(curve.edge_from(v0Prev), curve.edge_to(v0Next));
-    //EXPECT_TRUE(curve.is_boundary(v1));
-    //EXPECT_TRUE(curve.is_boundary(v2));
+    EXPECT_EQ(curve.n_edges(), 30);
+    EXPECT_EQ(curve.edge_from(Vertex{ 30 }), curve.edge_to(Vertex{ 0 }));
+    EXPECT_EQ(curve.edge_to(Vertex{ 30 }), Edge{ 29 });
+    EXPECT_EQ(curve.edge_from(Vertex{ 0 }), Edge{ 0 });
+    EXPECT_TRUE(curve.is_boundary(v1));
+    EXPECT_TRUE(curve.is_boundary(v2));
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 9 }, Vertex{ 8 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 8 }, Vertex{ 9 }));
 }
-
 
 class ManifoldCurve2DTest_OpenArc : public ::testing::Test
 {
