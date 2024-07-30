@@ -321,18 +321,28 @@ namespace pmp
         // ePrev    vTo    eNext
         // ---------->o----------
 		//
-    	const Vertex vFrom = econn_[e].start_;
+        const Vertex vFrom = econn_[e].start_;
         const Vertex vTo = econn_[e].end_;
 
         if (keepStartVertex)
         {
             const Edge eNext = vconn_[vTo].from_;
+            const Edge ePrev = vconn_[vFrom].to_;
+
+            // Update connectivity
             vconn_[vFrom].from_ = eNext;
             if (is_valid(eNext))
             {
-				econn_[eNext].start_ = vFrom;
+                econn_[eNext].start_ = vFrom;
             }
 
+            if (is_valid(ePrev))
+            {
+                vconn_[vFrom].to_ = ePrev;
+                econn_[ePrev].end_ = vFrom;
+            }
+
+            // Mark the edge and end vertex as deleted
             vconn_[vTo].from_.reset();
             vconn_[vTo].to_.reset();
             vdeleted_[vTo] = true;
@@ -343,12 +353,22 @@ namespace pmp
         }
 
         const Edge ePrev = vconn_[vFrom].to_;
+        const Edge eNext = vconn_[vTo].from_;
+
+        // Update connectivity
         vconn_[vTo].to_ = ePrev;
         if (is_valid(ePrev))
         {
             econn_[ePrev].end_ = vTo;
         }
 
+        if (is_valid(eNext))
+        {
+            vconn_[vTo].from_ = eNext;
+            econn_[eNext].start_ = vTo;
+        }
+
+        // Mark the edge and start vertex as deleted
         vconn_[vFrom].from_.reset();
         vconn_[vFrom].to_.reset();
         vdeleted_[vFrom] = true;
@@ -378,12 +398,22 @@ namespace pmp
         if (keepStartVertex)
         {
             const Edge eNext = vconn_[v0].from_;
-            vconn_[v1].from_ = eNext;
+            const Edge ePrev = vconn_[v1].to_;
+
+            // Update connectivity
+            vconn_[v0].from_ = eNext;
             if (is_valid(eNext))
             {
-                econn_[eNext].start_ = v1;
+                econn_[eNext].start_ = v0;
             }
 
+            if (is_valid(ePrev))
+            {
+                vconn_[v1].to_ = ePrev;
+                econn_[ePrev].end_ = v0;
+            }
+
+            // Mark the edge and end vertex as deleted
             vconn_[v0].from_.reset();
             vconn_[v0].to_.reset();
             vdeleted_[v0] = true;
@@ -394,15 +424,25 @@ namespace pmp
         }
 
         const Edge ePrev = vconn_[v1].to_;
-        vconn_[v0].to_ = ePrev;
+        const Edge eNext = vconn_[v1].from_;
+
+        // Update connectivity
+        vconn_[v1].to_ = ePrev;
         if (is_valid(ePrev))
         {
             econn_[ePrev].end_ = v1;
         }
 
-        vconn_[v1].from_.reset();
-        vconn_[v1].to_.reset();
-        vdeleted_[v1] = true;
+        if (is_valid(eNext))
+        {
+            vconn_[v1].from_ = eNext;
+            econn_[eNext].start_ = v1;
+        }
+
+        // Mark the edge and start vertex as deleted
+        vconn_[v0].from_.reset();
+        vconn_[v0].to_.reset();
+        vdeleted_[v0] = true;
         edeleted_[e] = true;
         has_garbage_ = true;
     }
@@ -426,11 +466,15 @@ namespace pmp
         const Point2 newPos = (1.0f - param) * position(v0) + param * position(v1);
         const Vertex v = add_vertex(newPos);
 
-        econn_[e].end_ = v;
-        vconn_[v1].to_.reset();
         const Edge eNew = new_edge(v, v1);
         if (!is_valid(eNew))
             return {};
+
+        // Update connectivity
+        econn_[e].end_ = v;
+        vconn_[v].to_ = e;
+        vconn_[v].from_ = eNew;
+        vconn_[v1].to_ = eNew;
 
         return v;
     }
@@ -452,11 +496,15 @@ namespace pmp
         const Point2 newPos = (1.0f - param) * position(v0) + param * position(v1);
         const Vertex v = add_vertex(newPos);
 
-        econn_[e].end_ = v;
-        vconn_[v1].to_.reset();
         const Edge eNew = new_edge(v, v1);
         if (!is_valid(eNew))
             return {};
+
+        // Update connectivity
+        econn_[e].end_ = v;
+        vconn_[v].to_ = e;
+        vconn_[v].from_ = eNew;
+        vconn_[v1].to_ = eNew;
 
         return v;
     }
@@ -476,11 +524,15 @@ namespace pmp
         const Vertex v1 = econn_[e].end_;
         const Vertex v = add_vertex(pNew);
 
-        econn_[e].end_ = v;
-        vconn_[v1].to_.reset();
         const Edge eNew = new_edge(v, v1);
         if (!is_valid(eNew))
             return {};
+
+        // Update connectivity
+        econn_[e].end_ = v;
+        vconn_[v].to_ = e;
+        vconn_[v].from_ = eNew;
+        vconn_[v1].to_ = eNew;
 
         return v;
     }
@@ -500,11 +552,15 @@ namespace pmp
         const Edge e = vconn_[v0].from_;
         const Vertex v = add_vertex(pNew);
 
-        econn_[e].end_ = v;
-        vconn_[v1].to_.reset();
         const Edge eNew = new_edge(v, v1);
         if (!is_valid(eNew))
             return {};
+
+        // Update connectivity
+        econn_[e].end_ = v;
+        vconn_[v].to_ = e;
+        vconn_[v].from_ = eNew;
+        vconn_[v1].to_ = eNew;
 
         return v;
     }
