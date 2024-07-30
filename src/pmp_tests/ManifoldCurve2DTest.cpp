@@ -215,9 +215,11 @@ static [[nodiscard]] bool IsBackwardsContinuousBetweenVertices(const ManifoldCur
     do
     {
         // Verify the start and end vertices of the current edge
-        EXPECT_EQ(curve.to_vertex(currentEdge), currentVertex);
+        if (curve.to_vertex(currentEdge) != currentVertex) 
+            return false;
         Vertex prevVertex = curve.from_vertex(currentEdge);
-        EXPECT_NE(currentVertex, prevVertex);
+        if (currentVertex == prevVertex)
+            return false;
 
         // Move to the previous vertex and edge
         currentVertex = prevVertex;
@@ -230,6 +232,7 @@ static [[nodiscard]] bool IsBackwardsContinuousBetweenVertices(const ManifoldCur
 
     return currentVertex == v1;
 }
+
 
 
 TEST_F(ManifoldCurve2DTest_ClosedArc, VerifyConnectivity)
@@ -286,15 +289,18 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, RemoveConsecutiveEdgesAndVerifyIsolation)
     EXPECT_TRUE(curve.is_boundary(secondEndVertex));
 }
 
-// Memory Management
+// Memory Management & Vertex/Edge Deletion
 
 TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertex)
 {
+    // Arrange
     const auto v0 = Vertex{ 8 };
     curve.delete_vertex(v0);
 
+    // Act
     curve.garbage_collection();
 
+    // Assert
     EXPECT_EQ(curve.n_vertices(), 31);
     EXPECT_EQ(curve.n_edges(), 31);
     EXPECT_EQ(curve.edge_from(Vertex{ 6 }), curve.edge_to(Vertex{ 7 }));
@@ -303,16 +309,44 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertex)
     EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
     EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
 }
-TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertexAndEdge)
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteEdge)
 {
-    const auto v0 = Vertex{ 0 };
+    // Arrange
     const auto v1 = Vertex{ 8 };
     const auto v2 = Vertex{ 9 };
     curve.delete_edge(curve.edge_from(v1));
 
+    // Act
+    curve.garbage_collection();
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 32);
+    EXPECT_EQ(curve.n_edges(), 31);
+    EXPECT_EQ(curve.edge_from(Vertex{ 31 }), curve.edge_to(Vertex{ 0 }));
+    EXPECT_EQ(curve.edge_to(Vertex{ 31 }), Edge{ 30 });
+    EXPECT_EQ(curve.edge_from(Vertex{ 0 }), Edge{ 0 });
+    EXPECT_TRUE(curve.is_boundary(v1));
+    EXPECT_TRUE(curve.is_boundary(v2));
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 9 }, Vertex{ 8 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 8 }, Vertex{ 9 }));
+    EXPECT_FALSE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_FALSE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertexAndEdge)
+{
+    // Arrange
+    const auto v0 = Vertex{ 0 };
+    const auto v1 = Vertex{ 8 };
+    const auto v2 = Vertex{ 9 };
+    curve.delete_edge(curve.edge_from(v1));
     curve.delete_vertex(v0);
 
+    // Act
     curve.garbage_collection();
+
+    // Assert
     EXPECT_EQ(curve.n_vertices(), 31);
     EXPECT_EQ(curve.n_edges(), 30);
     EXPECT_EQ(curve.edge_from(Vertex{ 30 }), curve.edge_to(Vertex{ 0 }));
@@ -322,6 +356,136 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteVertexAndEdge)
     EXPECT_TRUE(curve.is_boundary(v2));
     EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 9 }, Vertex{ 8 }));
     EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 8 }, Vertex{ 9 }));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, GarbageCollectionDeleteConsecutiveVertices)
+{
+    // Arrange
+    const auto v0 = Vertex{ 8 };
+    const auto v1 = Vertex{ 9 };
+    curve.delete_vertex(v0);
+    curve.delete_vertex(v1);
+
+    // Act
+    curve.garbage_collection();
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 30);
+    EXPECT_EQ(curve.n_edges(), 30);
+    EXPECT_EQ(curve.edge_from(Vertex{ 7 }), curve.edge_to(Vertex{ 10 }));
+    EXPECT_EQ(curve.edge_to(Vertex{ 10 }), Edge{ 7 });
+    EXPECT_EQ(curve.edge_from(Vertex{ 0 }), Edge{ 0 });
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, DeleteEdgeAndCheckIsolatedVertex)
+{
+    // Arrange
+    const auto e1 = Edge{ 8 };
+    const auto e2 = curve.edge_from(curve.to_vertex(e1));
+    const auto vMiddle = curve.to_vertex(e1);
+    curve.delete_edge(e1);
+    curve.delete_edge(e2);
+
+    // Act
+    curve.garbage_collection();
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 32);
+    EXPECT_EQ(curve.n_edges(), 30);
+    EXPECT_TRUE(curve.is_isolated(vMiddle));
+    EXPECT_FALSE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_FALSE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+
+// Memory Management & Additional Tessellation-Changing Operations
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, SplitEdge)
+{
+    // Arrange
+    const auto e = Edge{ 8 };
+    const auto param = 0.5f;
+
+    // Act
+    const auto newVertex = curve.split_edge(e, param);
+    // no garbage_collection needed
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 33);
+    EXPECT_EQ(curve.n_edges(), 33);
+    EXPECT_TRUE(curve.is_valid(newVertex));
+    EXPECT_EQ(curve.to_vertex(e), newVertex);
+    EXPECT_EQ(curve.from_vertex(curve.edge_from(newVertex)), newVertex);
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, CollapseEdgeKeepStart)
+{
+    // Arrange
+    const auto e = Edge{ 8 };
+    const auto v0 = curve.from_vertex(e);
+    const auto v1 = curve.to_vertex(e);
+
+    // Act
+    curve.collapse_edge(e, true);
+    curve.garbage_collection();
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 31);
+    EXPECT_EQ(curve.n_edges(), 31);
+    EXPECT_TRUE(curve.is_deleted(v1));
+    EXPECT_EQ(curve.edge_from(v0), curve.edge_to(Vertex{ 9 }));
+    EXPECT_EQ(curve.edge_to(Vertex{ 9 }), Edge{ 7 });
+    EXPECT_EQ(curve.edge_from(Vertex{ 0 }), Edge{ 0 });
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, CollapseEdgeKeepEnd)
+{
+    // Arrange
+    const auto e = Edge{ 8 };
+    const auto v0 = curve.from_vertex(e);
+    const auto v1 = curve.to_vertex(e);
+    const auto ePrev = curve.edge_to(v0);
+    const auto eNext = curve.edge_from(v1);
+
+    // Act
+    curve.collapse_edge(e, false);
+    curve.garbage_collection();
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 31);
+    EXPECT_EQ(curve.n_edges(), 31);
+    EXPECT_TRUE(curve.is_deleted(v0));
+    EXPECT_FALSE(curve.is_deleted(v1));
+    EXPECT_EQ(curve.from_vertex(ePrev), curve.to_vertex(eNext));
+    EXPECT_EQ(curve.to_vertex(eNext), v1);
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+}
+
+TEST_F(ManifoldCurve2DTest_ClosedArc, SplitEdgeWithVertex)
+{
+    // Arrange
+    const auto e = Edge{ 8 };
+    const Point2 newPos(0.5f, 0.5f);
+
+    // Act
+    const auto newVertex = curve.split_edge_with_vertex(e, newPos);
+    // No garbage_collection needed
+
+    // Assert
+    EXPECT_EQ(curve.n_vertices(), 33);
+    EXPECT_EQ(curve.n_edges(), 33);
+    EXPECT_TRUE(curve.is_valid(newVertex));
+    EXPECT_EQ(curve.position(newVertex), newPos);
+    EXPECT_EQ(curve.to_vertex(e), newVertex);
+    EXPECT_EQ(curve.from_vertex(curve.edge_from(newVertex)), newVertex);
+    EXPECT_TRUE(IsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
+    EXPECT_TRUE(IsBackwardsContinuousBetweenVertices(curve, Vertex{ 0 }, Vertex{ 0 }));
 }
 
 class ManifoldCurve2DTest_OpenArc : public ::testing::Test
