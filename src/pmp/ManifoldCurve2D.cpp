@@ -235,7 +235,7 @@ namespace pmp
         return new_edge(v0, v1);
     }
 
-    void ManifoldCurve2D::delete_vertex(Vertex v)
+    void ManifoldCurve2D::delete_vertex(Vertex v, bool reconnect)
     {
         if (is_deleted(v))
             return;
@@ -245,25 +245,32 @@ namespace pmp
 	        const Edge eTo = vconn_[v].to_;
         	const Edge eFrom = vconn_[v].from_;
 
-            if (eTo.is_valid())
+            if (!is_boundary(v) && reconnect)
             {
-	            if (const Vertex vNext = econn_[eTo].end_; 
-	                vNext.is_valid())
+                // the first edge eT before v will remain connected to vertices vPrev and vNext
+                const Vertex vNext = econn_[eFrom].end_;
+                const Vertex vPrev = econn_[eTo].start_;
+            	if (vNext.is_valid() && vPrev.is_valid())
 	            {
 	                vconn_[vNext].to_ = eTo;
-	            }	            
-            }
-            if (eFrom.is_valid())
-            {
-	            if(const Vertex vPrev = econn_[eFrom].start_;
-	               vPrev.is_valid())
-	            {
-	                vconn_[vPrev].from_ = eFrom;
-	            }	            
+                    vconn_[vPrev].from_ = eTo;
+	            }
+                if (eTo.is_valid())
+                {
+                    econn_[eTo].end_ = vNext;
+                }
             }
 
-        	econn_[eTo].end_.reset();
-        	econn_[eFrom].start_.reset();
+            if (!reconnect)
+            {
+                // eTo is also cleared if reconnection is not desired
+                edeleted_[eTo] = true;
+                deleted_edges_++;
+            }
+
+            edeleted_[eFrom] = true;
+            deleted_edges_++;
+            has_garbage_ = true;
         }
 
         vdeleted_[v] = true;
@@ -292,9 +299,9 @@ namespace pmp
         delete_edge(e);
     }
 
-    void ManifoldCurve2D::remove_vertex(Vertex v)
+    void ManifoldCurve2D::remove_vertex(Vertex v, bool reconnect)
     {
-        delete_vertex(v);
+        delete_vertex(v, reconnect);
     }
 
     void ManifoldCurve2D::collapse_edge(Edge e, bool keepStartVertex)
