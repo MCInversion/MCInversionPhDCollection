@@ -392,7 +392,8 @@ namespace pmp
         //! \return whether \p v is a boundary vertex
         [[nodiscard]] bool is_boundary(Vertex v) const
         {
-            return !vconn_[v].from_.is_valid() || !vconn_[v].to_.is_valid();
+            return (!vconn_[v].from_.is_valid() && vconn_[v].to_.is_valid()) ||
+                (!vconn_[v].to_.is_valid() && vconn_[v].from_.is_valid());
         }
 
         //! \return whether \p v is isolated, i.e., not incident to any edge
@@ -440,9 +441,9 @@ namespace pmp
 
         //! \brief Allocate a new edge, resize edge property accordingly.
 		//! \throw AllocationException in case of failure to allocate a new edge.
-		//! \throw TopologyException if some of the two endpoints are already connected to two edges.
 		//! \param start starting Vertex of the new edge
 		//! \param end end Vertex of the new edge
+        //! \warning this function does not check for non-manifoldness.
         Edge new_edge(Vertex start, Vertex end)
         {
             assert(start != end);
@@ -451,12 +452,6 @@ namespace pmp
             {
                 auto what = "ManifoldCurve2D: cannot allocate edge, max. index reached!\n";
                 throw AllocationException(what);
-            }
-
-            if (!is_boundary(start) || !is_boundary(end))
-            {
-                auto what = "ManifoldCurve2D: cannot add an edge to a non-boundary vertex. This creates a non-manifold vertex!\n";
-                throw TopologyException(what);
             }
 
             eprops_.push_back();
@@ -499,7 +494,7 @@ namespace pmp
 
         //! adds a new edge between vertices \p v0 and \p v1.
         //! \throw TopologyException if some of the two endpoints are already connected to two edges.
-        Edge add_edge(Vertex v0, Vertex v1);
+        Edge add_edge(Vertex start, Vertex end);
 
         //
         // ========= Vertices and Edges Management (Tessellation changing operations)
@@ -696,5 +691,7 @@ namespace pmp
 
         std::string name_;
     };
+
+    [[nodiscard]] bool write_to_ply(const pmp::ManifoldCurve2D& curve, const std::string& fileName);
 
 } // namespace pmp

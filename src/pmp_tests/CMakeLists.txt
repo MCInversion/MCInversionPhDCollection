@@ -31,3 +31,12 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 add_test(NAME pmp_TestSuite COMMAND ${PROJECT_NAME})
+
+# ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
+#
+# VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
+# so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
+#
+set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+message("ROOT_DIR: ${ROOT_DIR}")
+target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")

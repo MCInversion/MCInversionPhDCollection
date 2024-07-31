@@ -45,7 +45,7 @@ namespace pmp
         // Create edges between consecutive vertices
         for (size_t i = 0; i < vertices.size() - 1; ++i)
         {
-            curve.add_edge(vertices[i], vertices[i + 1]);
+            curve.new_edge(vertices[i], vertices[i + 1]);
         }
 
         return curve;

@@ -6,8 +6,6 @@
 #include "geometry/Grid.h"
 #include "pmp/ManifoldCurve2D.h"
 
-#include "pmp/SurfaceMesh.h"
-
 /**
  * \brief Exports scalar field to .vti format.
  * \param filename     in output path.

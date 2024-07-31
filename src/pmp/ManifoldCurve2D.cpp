@@ -1,5 +1,7 @@
 #include "pmp/ManifoldCurve2D.h"
 
+#include <fstream>
+
 namespace pmp
 {
     void ManifoldCurve2D::clear()
@@ -230,9 +232,27 @@ namespace pmp
         return v;
     }
 
-    Edge ManifoldCurve2D::add_edge(Vertex v0, Vertex v1)
+    Edge ManifoldCurve2D::add_edge(Vertex start, Vertex end)
     {
-        return new_edge(v0, v1);
+        if (!is_isolated(start))
+        {
+            if (!is_boundary(start))
+            {
+                auto what = "ManifoldCurve2D: cannot add an edge to a non-boundary non-isolated vertex " + std::to_string(start.idx()) + ". This creates a non-manifold vertex!\n";
+                throw TopologyException(what);
+            }
+        }
+
+        if (!is_isolated(end))
+        {
+            if (!is_boundary(end))
+            {
+                auto what = "ManifoldCurve2D: cannot add an edge to a non-boundary non-isolated vertex " + std::to_string(end.idx()) + ". This creates a non-manifold vertex!\n";
+                throw TopologyException(what);
+            }
+        }
+
+        return new_edge(start, end);
     }
 
     void ManifoldCurve2D::delete_vertex(Vertex v, bool reconnect)
@@ -321,59 +341,19 @@ namespace pmp
         // ePrev    vTo    eNext
         // ---------->o----------
 		//
+
         const Vertex vFrom = econn_[e].start_;
         const Vertex vTo = econn_[e].end_;
 
-        if (keepStartVertex)
+        if (keepStartVertex && !is_boundary(vFrom))
         {
-            const Edge eNext = vconn_[vTo].from_;
-            const Edge ePrev = vconn_[vFrom].to_;
-
-            // Update connectivity
-            vconn_[vFrom].from_ = eNext;
-            if (is_valid(eNext))
-            {
-                econn_[eNext].start_ = vFrom;
-            }
-
-            if (is_valid(ePrev))
-            {
-                vconn_[vFrom].to_ = ePrev;
-                econn_[ePrev].end_ = vFrom;
-            }
-
-            // Mark the edge and end vertex as deleted
-            vconn_[vTo].from_.reset();
-            vconn_[vTo].to_.reset();
-            vdeleted_[vTo] = true;
-            edeleted_[e] = true;
-            has_garbage_ = true;
-
+            // vTo will be deleted
+            delete_vertex(vTo, true);
             return;
         }
 
-        const Edge ePrev = vconn_[vFrom].to_;
-        const Edge eNext = vconn_[vTo].from_;
-
-        // Update connectivity
-        vconn_[vTo].to_ = ePrev;
-        if (is_valid(ePrev))
-        {
-            econn_[ePrev].end_ = vTo;
-        }
-
-        if (is_valid(eNext))
-        {
-            vconn_[vTo].from_ = eNext;
-            econn_[eNext].start_ = vTo;
-        }
-
-        // Mark the edge and start vertex as deleted
-        vconn_[vFrom].from_.reset();
-        vconn_[vFrom].to_.reset();
-        vdeleted_[vFrom] = true;
-        edeleted_[e] = true;
-        has_garbage_ = true;
+        // vFrom will be deleted
+        delete_vertex(vFrom, true);
     }
 
     void ManifoldCurve2D::collapse_edge(Vertex v0, Vertex v1, bool keepStartVertex)
@@ -393,58 +373,20 @@ namespace pmp
         // ePrev    v1     eNext
         // ---------->o----------
         //
-        const Edge e = vconn_[v0].from_;
 
-        if (keepStartVertex)
+        if ((is_deleted(v0) && keepStartVertex) ||
+            (is_deleted(v1) && !keepStartVertex))
+            return;
+
+        if (keepStartVertex && !is_boundary(v0))
         {
-            const Edge eNext = vconn_[v0].from_;
-            const Edge ePrev = vconn_[v1].to_;
-
-            // Update connectivity
-            vconn_[v0].from_ = eNext;
-            if (is_valid(eNext))
-            {
-                econn_[eNext].start_ = v0;
-            }
-
-            if (is_valid(ePrev))
-            {
-                vconn_[v1].to_ = ePrev;
-                econn_[ePrev].end_ = v0;
-            }
-
-            // Mark the edge and end vertex as deleted
-            vconn_[v0].from_.reset();
-            vconn_[v0].to_.reset();
-            vdeleted_[v0] = true;
-            edeleted_[e] = true;
-            has_garbage_ = true;
-
+            // v1 will be deleted
+            delete_vertex(v1, true);
             return;
         }
 
-        const Edge ePrev = vconn_[v1].to_;
-        const Edge eNext = vconn_[v1].from_;
-
-        // Update connectivity
-        vconn_[v1].to_ = ePrev;
-        if (is_valid(ePrev))
-        {
-            econn_[ePrev].end_ = v1;
-        }
-
-        if (is_valid(eNext))
-        {
-            vconn_[v1].from_ = eNext;
-            econn_[eNext].start_ = v1;
-        }
-
-        // Mark the edge and start vertex as deleted
-        vconn_[v0].from_.reset();
-        vconn_[v0].to_.reset();
-        vdeleted_[v0] = true;
-        edeleted_[e] = true;
-        has_garbage_ = true;
+        // v0 will be deleted
+        delete_vertex(v0, true);
     }
 
     Vertex ManifoldCurve2D::split_edge(Edge e, float param)
@@ -563,6 +505,68 @@ namespace pmp
         vconn_[v1].to_ = eNew;
 
         return v;
+    }
+
+    bool write_to_ply(const ManifoldCurve2D& curve, const std::string& fileName)
+    {
+        // Find the last dot after the last directory separator
+        const size_t lastSlash = fileName.find_last_of("/\\");
+        const size_t dot = fileName.rfind('.');
+
+        if (dot == std::string::npos || (lastSlash != std::string::npos && dot < lastSlash))
+        {
+            std::cerr << "pmp::write_to_ply [ERROR]: dot not found or in the wrong place!\n";
+            return "";
+        }
+
+        // Extract the extension
+        std::string ext = fileName.substr(dot + 1);
+        std::string lowerExt;
+        std::ranges::transform(ext, std::back_inserter(lowerExt),
+            [](unsigned char c) -> char { return std::tolower(c); });
+
+        if (lowerExt != "ply")
+        {
+            std::cerr << "pmp::write_to_ply: Invalid file extension!" << std::endl;
+            return false;
+        }
+
+        std::ofstream file(fileName);
+        if (!file.is_open())
+        {
+            std::cerr << "pmp::write_to_ply: Failed to open file for writing: " << fileName << std::endl;
+            return false;
+        }
+
+        // Write the PLY header
+        file << "ply\n";
+        file << "format ascii 1.0\n";
+        file << "element vertex " << curve.n_vertices() << "\n";
+        file << "property float x\n";
+        file << "property float y\n";
+        file << "property float z\n";
+        file << "element edge " << curve.n_edges() << "\n";
+        file << "property int vertex1\n";
+        file << "property int vertex2\n";
+        file << "end_header\n";
+
+        // Write the vertex data
+        for (auto v : curve.vertices())
+        {
+            const auto& point = curve.position(v);
+            file << point[0] << " " << point[1] << " 0.0\n";
+        }
+
+        // Write the edge data
+        for (auto e : curve.edges())
+        {
+            auto start = curve.from_vertex(e);
+            auto end = curve.to_vertex(e);
+            file << start.idx() << " " << end.idx() << "\n";
+        }
+
+        file.close();
+        return true;
     }
 
 } // namespace pmp
