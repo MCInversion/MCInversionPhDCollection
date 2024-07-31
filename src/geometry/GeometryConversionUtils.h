@@ -12,9 +12,20 @@ namespace Geometry
 	*/
 	struct BaseMeshGeometryData
 	{
-		std::vector<pmp::vec3> Vertices{};
+		std::vector<pmp::Point> Vertices{};
 		std::vector<std::vector<unsigned int>> PolyIndices{};
 		std::vector<pmp::vec3> VertexNormals{};
+	};
+
+	/**
+	 * \brief A simple data structure for curve geometry containing only vertices, index pairs and, optionally, vertex normals.
+	 * \struct BaseCurveGeometryData
+	*/
+	struct BaseCurveGeometryData
+	{
+		std::vector<pmp::Point2> Vertices{};
+		std::vector<std::pair<unsigned int, unsigned int>> EdgeIndices{};
+		std::vector<pmp::vec2> VertexNormals{};
 	};
 
 	/**

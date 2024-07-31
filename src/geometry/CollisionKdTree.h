@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MeshAdapter.h"
+#include "GeometryAdapters.h"
 
 #include <vector>
 
@@ -152,4 +152,11 @@ namespace Geometry
 		std::vector<pmp::vec3> m_VertexPositions{};
 		std::vector<Triangle> m_Triangles{};
 	};
+
+	//! \brief A 2D binary tree for collision detection with curve edges (line segments)
+	//class Collision2DTree
+	//{
+	//public:
+
+	//};
 }

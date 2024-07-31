@@ -38,5 +38,5 @@ add_test(NAME pmp_TestSuite COMMAND ${PROJECT_NAME})
 # so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
 #
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
-message("ROOT_DIR: ${ROOT_DIR}")
+#message("ROOT_DIR: ${ROOT_DIR}")
 target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
