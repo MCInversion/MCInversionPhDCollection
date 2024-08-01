@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "pmp/MatVec.h"
+#include "pmp/Types.h"
 
 // forward declarations
 namespace pmp

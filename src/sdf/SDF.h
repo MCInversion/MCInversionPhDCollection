@@ -162,4 +162,102 @@ namespace SDF
 	 */
 	void ReportOutput(const Geometry::ScalarGrid& grid, std::ostream& os);
 
+	//
+	// ================================================================================
+	//         2D Distance field generators
+	// --------------------------------------------------------------------------------
+	//
+
+	/// \brief enumerator for grid preprocessing function type for distance field.
+	enum class [[nodiscard]] PreprocessingType2D
+	{
+		Quadtree = 0,  //>! preprocess ScalarGrid2D using an QuadtreeVoxelizer.
+		NoQuadtree = 1 //>! preprocess ScalarGrid2D without using an QuadtreeVoxelizer.
+	};
+
+	/// \brief enumerator for the approach to the computation of sign of the distance field to a curve (negative inside, positive outside).
+	enum class [[nodiscard]] SignComputation2D
+	{
+		None = 0, //>! no sign for the distance field is to be computed.
+		PixelFloodFill = 1, //>! negate and apply recursive flood-fill algorithm for non-frozen voxels.
+	};
+
+	// TODO: 2D Blur enum types (if useful)
+
+	/// \brief A wrapper for input settings for computing distance field.
+	struct DistanceField2DSettings
+	{
+		float CellSize{ 1.0f }; //>! size of a single distance voxel.
+		float AreaExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of mesh's bounding box) for the resulting scalar grid volume.
+		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of mesh's bounding box gives rise to a truncation (cutoff) value for the distance field.
+		KDTreeSplitType KDTreeSplit{ KDTreeSplitType::Center }; //>! the choice of a split function for KD-tree.
+		SignComputation2D SignMethod{ SignComputation2D::None }; //>! method by which the sign of the distance field should be computed.
+		PreprocessingType2D PreprocType{ PreprocessingType2D::Quadtree }; //>! function type for the preprocessing of distance field scalar grid.
+	};
+
+	/// \brief a functor for computing the sign of the distance field.
+	using SignFunction2D = std::function<void(Geometry::ScalarGrid2D&)> const;
+
+	/// \brief a functor for preprocessing the scalar grid for distance field.
+	using PreprocessingFunction2D = std::function<void(Geometry::ScalarGrid2D&)>;
+
+	/// \brief A singleton object for computing distance fields to 2D curves.
+	class PlanarDistanceFieldGenerator
+	{
+	public:
+		/// \brief a deleted default constructor because m_KdTree is not default-constructable.
+		PlanarDistanceFieldGenerator() = delete;
+
+		/**
+		 * \brief Compute the signed distance field of given input curve.
+		 * \param inputCurve              an adapter for the evaluated curve.
+		 * \param settings                settings for the distance field.
+		 * \return the computed distance field's ScalarGrid2D.
+		 */
+		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings);
+
+	private:
+		inline static std::unique_ptr<Geometry::CurveAdapter> m_Mesh{ nullptr }; //>! curve to be (pre)processed.
+		inline static std::unique_ptr<Geometry::Collision2DTree> m_KdTree{ nullptr }; //>! curve kd tree.
+
+	};
+
+	/// \brief A wrapper for input settings for computing distance field.
+	struct PointCloudDistanceField2DSettings
+	{
+		float CellSize{ 1.0f }; //>! size of a single distance voxel.
+		float AreaExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of the point cloud's bounding box) for the resulting scalar grid volume.
+		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of point cloud's bounding box gives rise to a truncation (cutoff) value for the distance field.
+	};
+
+	/// \brief A singleton object for computing distance fields to 2D point clouds.
+	class PlanarPointCloudDistanceFieldGenerator
+	{
+	public:
+		/// \brief a deleted default constructor because m_KdTree is not default-constructable.
+		PlanarPointCloudDistanceFieldGenerator() = delete;
+
+		/**
+		 * \brief Compute the signed distance field of given input point cloud.
+		 * \param inputPoints             evaluated point cloud.
+		 * \param settings                settings for the distance field.
+		 * \return the computed distance field's ScalarGrid.
+		 */
+		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const std::vector<pmp::Point2>& inputPoints, const PointCloudDistanceField2DSettings& settings);
+
+	private:
+
+		/**
+		 * \brief A preprocessing approach for distance grid using nearest neighbor approximation
+		 * \param grid         modifiable input grid.
+		 */
+		static void PreprocessGridFromPoints(Geometry::ScalarGrid2D& grid);
+
+		//
+		// ===================================================
+		//
+
+		inline static std::vector<pmp::Point2> m_Points{}; //>! the input point cloud
+	};
+
 } // namespace SDF

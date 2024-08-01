@@ -196,6 +196,7 @@ endif()
 option(WITH_CLANG_TIDY "Run clang-tidy checks" OFF)
 include(clang-tidy)
 
+
 # ====================================================
 # which directories to process
 # ....................................................
@@ -207,13 +208,35 @@ add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
 add_subdirectory(src/utils)
 
+# ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
+#
+# VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
+# so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
+#
+set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+#message("ROOT_DIR: ${ROOT_DIR}")
+
 if (BUILD_UNIT_TESTS)
+    set(GOOGLE_TEST_ROOT
+        external/googletest/googletest
+        CACHE STRING "Google Test root")
+
+    include_directories("${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}"
+                        "${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}/include")
+
+    set(GOOGLE_TEST_SOURCES
+        "${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}/src/gtest-all.cc"
+        "${PROJECT_SOURCE_DIR}/${GOOGLE_TEST_ROOT}/src/gtest_main.cc")
+    add_library(googletest ${GOOGLE_TEST_SOURCES})
+
     add_subdirectory(src/pmp_tests)
+    add_subdirectory(src/geometry_tests)
+    add_subdirectory(src/sdf_tests)
 endif()
 
 file(GLOB MCInversionPhDCollection_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
-add_executable(MCInversionPhDCollection ${MCInversionPhDCollection_Src})
-target_link_libraries(MCInversionPhDCollection
+add_executable(${PROJECT_NAME} ${MCInversionPhDCollection_Src})
+target_link_libraries(${PROJECT_NAME}
     pmp
     SDF
     Geometry
@@ -229,16 +252,10 @@ set_target_properties(
     pmp
 PROPERTIES FOLDER "PMP_Lib")
 
-# ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
-#
-# VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
-# so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
-#
-set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(MCInversionPhDCollection PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
+target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
 # Set MCInversionPhDCollection the startup project
 if (MSVC)
-	set_property(DIRECTORY ${ROOT_DIR} PROPERTY VS_STARTUP_PROJECT MCInversionPhDCollection)
+	set_property(DIRECTORY ${ROOT_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 endif()
 # =======================================================
 

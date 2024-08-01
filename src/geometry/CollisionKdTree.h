@@ -9,7 +9,7 @@ namespace Geometry
 	// forward decl
 	struct Ray;
 	class CollisionKdTree;
-	class CollisionKdTree2D;
+	class Collision2DTree;
 
 	/**
 	 * \brief helper data item for splitting box.
@@ -161,7 +161,7 @@ namespace Geometry
 	 */
 	struct BoxSplitData2D
 	{
-		CollisionKdTree2D* kdTree{ nullptr };
+		Collision2DTree* kdTree{ nullptr };
 		const pmp::BoundingBox2* box{ nullptr };
 		unsigned int axis{ 0 };
 	};
@@ -207,10 +207,26 @@ namespace Geometry
 			return m_VertexPositions;
 		}
 
-		[[nodiscard]] const Edges& TriVertexIds() const
+		[[nodiscard]] const Edges& EdgeVertexIds() const
 		{
 			return m_Edges;
 		}
+
+		/**
+		 * \brief Fills a buffer of indices of edge 2D line segments intersecting a given 2D box.
+		 * \param box               a box whose contents are to be queried.
+		 * \param foundEdgeIds      buffer to be filled.
+		 */
+		void GetEdgesInABox(const pmp::BoundingBox2& box, std::vector<unsigned int>& foundEdgeIds) const;
+
+		/**
+		 * \brief Performs an intersection test between a given box and any 2D line segment logged as a primitive.
+		 * \param box    a box to be queried.
+		 * \return true if an intersection was detected.
+		 */
+		[[nodiscard]] bool BoxIntersectsAnEdge(const pmp::BoundingBox2& box) const;
+
+
 	private:
 
 		/// \brief a node object of this tree.
@@ -232,7 +248,7 @@ namespace Geometry
 			unsigned int axis{ 0 };
 			float splitPosition{ 0.0f };
 			pmp::BoundingBox2 box{};
-			std::vector<unsigned int> triangleIds{};
+			std::vector<unsigned int> edgeIds{};
 			Node* left_child{ nullptr };
 			Node* right_child{ nullptr };
 		};

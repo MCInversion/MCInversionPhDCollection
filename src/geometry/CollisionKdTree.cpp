@@ -797,7 +797,7 @@ namespace Geometry
 	 * \return true if the imbalance is too high.
 	 */
 	[[nodiscard]] std::vector<unsigned int> FilterEdges(
-		const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, const Triangles& edges, const std::vector<pmp::Point2>& vertexPositions)
+		const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, const Edges& edges, const std::vector<pmp::Point2>& vertexPositions)
 	{
 		const pmp::Point2 boxCenter = box.center();
 		const pmp::vec2 boxHalfSize = (box.max() - box.min()) * 0.5;
@@ -811,7 +811,7 @@ namespace Geometry
 				vertexPositions[edges[edgeId].v1Id]
 			};
 
-			if (!Geometry::LineIntersectsBox(edgeVertices, boxCenter, boxHalfSize))
+			if (!Geometry::Line2DIntersectsBox(edgeVertices, boxCenter, boxHalfSize))
 				continue;
 
 			result.emplace_back(edgeId);
@@ -835,22 +835,261 @@ namespace Geometry
 		return childBox;
 	}
 
-	float CenterSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
-	{
-		return 0.0f;
-	}
-
-	float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
-	{
-		return 0.0f;
-	}
-
 	Collision2DTree::Collision2DTree(const CurveAdapter& curveAdapter, const SplitFunction2D& spltFunc)
 	{
+		auto bbox = curveAdapter.GetBounds();
+		bbox.expand(BOX_INFLATION, BOX_INFLATION);
+		const auto curve = curveAdapter.Clone();
+
+		// extract vertex positions
+		m_VertexPositions = curve->GetVertices();
+
+		// extract edge ids
+		const auto eIds = curve->GetEdgeIndices();
+		const size_t nEdges = eIds.size();
+		m_Edges.reserve(nEdges);
+		for (const auto& e : eIds)
+		{
+			m_Edges.emplace_back(Edge{ e.first, e.second});
+		}
+
+		m_FindSplitAndClassify = spltFunc;
+
+		// generate index array to primitives
+		std::vector<unsigned int> edgeIds(m_Edges.size());
+		std::iota(edgeIds.begin(), edgeIds.end(), 0);
+
+		m_Root = new Node();
+		m_NodeCount++;
+		BuildRecurse(m_Root, bbox, edgeIds, MAX_DEPTH);
 	}
+
+	void Collision2DTree::GetEdgesInABox(const pmp::BoundingBox2& box, std::vector<unsigned int>& foundEdgeIds) const
+	{
+		assert(foundEdgeIds.empty());
+
+		foundEdgeIds.reserve(m_Edges.size());
+		std::stack<Node*> nodeStack{};
+		nodeStack.push(m_Root);
+
+		while (!nodeStack.empty())
+		{
+			const Node* currentNode = nodeStack.top();
+			nodeStack.pop();
+
+			if (currentNode->IsALeaf())
+			{
+				for (const auto& eId : currentNode->edgeIds)
+					foundEdgeIds.emplace_back(eId);
+
+				continue;
+			}
+
+			if (currentNode->left_child)
+			{
+				assert(!currentNode->left_child->box.is_empty());
+				if (box.Intersects(currentNode->left_child->box))
+				{
+					nodeStack.push(currentNode->left_child);
+				}
+			}
+
+			if (currentNode->right_child)
+			{
+				assert(!currentNode->right_child->box.is_empty());
+				if (box.Intersects(currentNode->right_child->box))
+				{
+					nodeStack.push(currentNode->right_child);
+				}
+			}
+		}
+
+		foundEdgeIds.shrink_to_fit();
+	}
+
+	bool Collision2DTree::BoxIntersectsAnEdge(const pmp::BoundingBox2& box) const
+	{
+		const auto center = box.center();
+		const pmp::vec2 halfSize{
+			0.5f * (box.max()[0] - box.min()[0]),
+			0.5f * (box.max()[1] - box.min()[1])
+		};
+		std::vector eVerts{ pmp::vec2(), pmp::vec2() };
+		std::stack<Node*> nodeStack{};
+		nodeStack.push(m_Root);
+
+		while (!nodeStack.empty())
+		{
+			const Node* currentNode = nodeStack.top();
+			nodeStack.pop();
+
+			if (currentNode->IsALeaf())
+			{
+				for (const auto& eId : currentNode->edgeIds)
+				{
+					eVerts[0] = m_VertexPositions[m_Edges[eId].v0Id];
+					eVerts[1] = m_VertexPositions[m_Edges[eId].v1Id];
+					if (Geometry::Line2DIntersectsBox(eVerts, center, halfSize))
+						return true;
+				}
+
+				continue;
+			}
+
+			if (currentNode->left_child)
+			{
+				assert(!currentNode->left_child->box.is_empty());
+				if (box.Intersects(currentNode->left_child->box))
+				{
+					nodeStack.push(currentNode->left_child);
+				}
+			}
+
+			if (currentNode->right_child)
+			{
+				assert(!currentNode->right_child->box.is_empty());
+				if (box.Intersects(currentNode->right_child->box))
+				{
+					nodeStack.push(currentNode->right_child);
+				}
+			}
+		}
+
+		return false;
+	}
+
+	// ====================================================
+
+	/**
+	 * \brief Computes the preference for split axis during 2D tree construction.
+	 * \param box    evaluated bounding box.
+	 * \return index of the preferred axis.
+	 */
+	[[nodiscard]] unsigned int GetSplitAxisPreference(const pmp::BoundingBox2& box)
+	{
+		if ((box.max()[0] - box.min()[0]) > (box.max()[1] - box.min()[1]))
+		{
+			return 0; // X-axis;
+		}
+
+		return 1; //  Y-axis;
+	}
+
+	[[nodiscard]] float EdgeMin(const Edge& e, const std::vector<pmp::vec2>& vertices, const unsigned int& axisId)
+	{
+		float min = FLT_MAX;
+
+		if (vertices[e.v0Id][axisId] < min)
+			min = vertices[e.v0Id][axisId];
+
+		if (vertices[e.v1Id][axisId] < min)
+			min = vertices[e.v1Id][axisId];
+
+		return min;
+	}
+
+	[[nodiscard]] float EdgeMax(const Edge& e, const std::vector<pmp::vec2>& vertices, const unsigned int& axisId)
+	{
+		float max = -FLT_MAX;
+
+		if (vertices[e.v0Id][axisId] > max)
+			max = vertices[e.v0Id][axisId];
+
+		if (vertices[e.v1Id][axisId] > max)
+			max = vertices[e.v1Id][axisId];
+
+		return max;
+	}
+
+	float CenterSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
+	{
+		const size_t nEdges = edgesIn.size();
+
+		const auto center = splitData.box->center();
+		const unsigned int axisId = splitData.axis;
+
+		const auto& vertices = splitData.kdTree->VertexPositions();
+		const auto& edgeVertexIds = splitData.kdTree->EdgeVertexIds();
+
+		const float splitPos = center[axisId];
+		leftEdgesOut.reserve(nEdges);
+		rightEdgesOut.reserve(nEdges);
+		for (const auto& eId : edgesIn)
+		{
+			const float min = EdgeMin(edgeVertexIds[eId], vertices, axisId);
+			const float max = EdgeMax(edgeVertexIds[eId], vertices, axisId);
+
+			if (min <= splitPos)
+				leftEdgesOut.emplace_back(eId);
+
+			if (max >= splitPos)
+				rightEdgesOut.emplace_back(eId);
+		}
+		leftEdgesOut.shrink_to_fit();
+		rightEdgesOut.shrink_to_fit();
+
+		return splitPos;
+	}
+
+	//float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
+	//{
+	//	return 0.0f;
+	//}
 
 	void Collision2DTree::BuildRecurse(Node* node, const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, unsigned int remainingDepth)
 	{
+		assert(node != nullptr);
+		assert(!box.is_empty());
+
+		node->box = box;
+
+		if (remainingDepth == 0 || edgeIds.size() <= MIN_NODE_PRIMITIVE_COUNT)
+		{
+			node->edgeIds = FilterEdges(box, edgeIds, m_Edges, m_VertexPositions);
+			return;
+		}
+
+		const auto axisPreference = GetSplitAxisPreference(box);
+
+		std::vector<unsigned int> leftEdgeIds{};
+		std::vector<unsigned int> rightEdgeIds{};
+		node->splitPosition = m_FindSplitAndClassify({ this, &box, axisPreference }, edgeIds, leftEdgeIds, rightEdgeIds);
+
+		if (ShouldStopBranching(leftEdgeIds.size(), rightEdgeIds.size(), edgeIds.size()))
+		{
+			node->edgeIds = FilterEdges(box, edgeIds, m_Edges, m_VertexPositions);
+			return;
+		}
+
+		if (!leftEdgeIds.empty())
+		{
+			const auto leftBox = GetChildBox(box, node->splitPosition, axisPreference, true);
+			node->left_child = new Node();
+			m_NodeCount++;
+			BuildRecurse(node->left_child, leftBox, leftEdgeIds, remainingDepth - 1);
+
+			if (node->left_child->edgeIds.empty() &&
+				node->left_child->left_child == nullptr && node->left_child->right_child == nullptr)
+			{
+				node->left_child = nullptr;
+				m_NodeCount--;
+			}
+		}
+
+		if (!rightEdgeIds.empty())
+		{
+			const auto rightBox = GetChildBox(box, node->splitPosition, axisPreference, false);
+			node->right_child = new Node();
+			m_NodeCount++;
+			BuildRecurse(node->right_child, rightBox, rightEdgeIds, remainingDepth - 1);
+
+			if (node->right_child->edgeIds.empty() &&
+				node->right_child->left_child == nullptr && node->right_child->right_child == nullptr)
+			{
+				node->right_child = nullptr;
+				m_NodeCount--;
+			}
+		}
 	}
 
 } // namespace SDF

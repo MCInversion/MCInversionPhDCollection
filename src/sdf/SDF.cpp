@@ -656,4 +656,18 @@ namespace SDF
 		}
 	}
 
+	Geometry::ScalarGrid2D PlanarDistanceFieldGenerator::Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings)
+	{
+		return { 0.5f, {} };
+	}
+
+	Geometry::ScalarGrid2D PlanarPointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::Point2>& inputPoints, const PointCloudDistanceField2DSettings& settings)
+	{
+		return { 0.5f, {} };
+	}
+
+	void PlanarPointCloudDistanceFieldGenerator::PreprocessGridFromPoints(Geometry::ScalarGrid2D& grid)
+	{
+	}
+
 } // namespace SDF
