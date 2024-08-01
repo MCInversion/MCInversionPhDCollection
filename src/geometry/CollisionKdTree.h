@@ -250,7 +250,7 @@ namespace Geometry
 
 		size_t m_NodeCount{ 0 };
 
-		SplitFunction m_FindSplitAndClassify{};
+		SplitFunction2D m_FindSplitAndClassify{};
 		std::vector<pmp::Point2> m_VertexPositions{};
 		Edges m_Edges{};
 
