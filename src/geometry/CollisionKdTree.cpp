@@ -845,6 +845,10 @@ namespace Geometry
 		return 0.0f;
 	}
 
+	Collision2DTree::Collision2DTree(const CurveAdapter& curveAdapter, const SplitFunction2D& spltFunc)
+	{
+	}
+
 	void Collision2DTree::BuildRecurse(Node* node, const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, unsigned int remainingDepth)
 	{
 	}
