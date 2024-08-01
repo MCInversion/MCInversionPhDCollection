@@ -335,15 +335,15 @@ namespace Geometry
 	//
 
 	/**
-	 * \brief Triangle count verification after split.
-	 * \param nLeftTris    number of triangles in the left child node candidate.
-	 * \param nRightTris   number of triangles in the right child node candidate.
-	 * \param nTris        number of triangles in the current node.
+	 * \brief primitive count verification after split.
+	 * \param nLeft    number of primitives in the left child node candidate.
+	 * \param nRight   number of primitives in the right child node candidate.
+	 * \param n        number of primitives in the current node.
 	 * \return true if the imbalance is too high.
 	 */
-	[[nodiscard]] bool ShouldStopBranching(size_t nLeftTris, size_t nRightTris, size_t nTris)
+	[[nodiscard]] bool ShouldStopBranching(size_t nLeft, size_t nRight, size_t n)
 	{
-		return static_cast<double>(nLeftTris + nRightTris) >= 1.5 * static_cast<double>(nTris);
+		return static_cast<double>(nLeft + nRight) >= 1.5 * static_cast<double>(n);
 	}
 
 	/**
@@ -394,8 +394,8 @@ namespace Geometry
 		return childBox;
 	}
 
-	//! minimum number of triangles for node
-	constexpr size_t MIN_NODE_TRIANGLE_COUNT = 2;
+	//! minimum number of primitives for node
+	constexpr size_t MIN_NODE_PRIMITIVE_COUNT = 2;
 
 	void CollisionKdTree::BuildRecurse(Node* node, const pmp::BoundingBox& box, const std::vector<unsigned int>& triangleIds, unsigned int remainingDepth)
 	{
@@ -409,7 +409,7 @@ namespace Geometry
 
 		node->box = box;
 
-		if (remainingDepth == 0 || triangleIds.size() <= MIN_NODE_TRIANGLE_COUNT)
+		if (remainingDepth == 0 || triangleIds.size() <= MIN_NODE_PRIMITIVE_COUNT)
 		{
 			node->triangleIds = FilterTriangles(box, triangleIds, m_Triangles, m_VertexPositions);
 			return;
@@ -782,6 +782,71 @@ namespace Geometry
 		}
 
 		return hitCount;
+	}
+
+	//
+	// ========================================================================================================================
+	//
+
+	/**
+	 * \brief Filters the edges intersecting a given box.
+	 * \param box                    box in question.
+	 * \param edgeIds                indices of relevant edges.
+	 * \param edges                  index pairs for edge vertices.
+	 * \param vertexPositions        actual vertex positions.
+	 * \return true if the imbalance is too high.
+	 */
+	[[nodiscard]] std::vector<unsigned int> FilterEdges(
+		const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, const Triangles& edges, const std::vector<pmp::Point2>& vertexPositions)
+	{
+		const pmp::Point2 boxCenter = box.center();
+		const pmp::vec2 boxHalfSize = (box.max() - box.min()) * 0.5;
+
+		std::vector<unsigned int> result{};
+		result.reserve(edgeIds.size());
+		for (const auto& edgeId : edgeIds)
+		{
+			const std::vector edgeVertices{
+				vertexPositions[edges[edgeId].v0Id],
+				vertexPositions[edges[edgeId].v1Id]
+			};
+
+			if (!Geometry::LineIntersectsBox(edgeVertices, boxCenter, boxHalfSize))
+				continue;
+
+			result.emplace_back(edgeId);
+		}
+
+		result.shrink_to_fit();
+		return result;
+	}
+
+	[[nodiscard]] pmp::BoundingBox2 GetChildBox(
+		const pmp::BoundingBox2& parentBox, const float& splitPos, const unsigned int& axisId, const bool& isLeft)
+	{
+		pmp::BoundingBox2 childBox(parentBox);
+		if (isLeft)
+			childBox.max()[axisId] = splitPos;
+		else
+			childBox.min()[axisId] = splitPos;
+
+		childBox.expand(BOX_INFLATION, BOX_INFLATION);
+
+		return childBox;
+	}
+
+	float CenterSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
+	{
+		return 0.0f;
+	}
+
+	float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
+	{
+		return 0.0f;
+	}
+
+	void Collision2DTree::BuildRecurse(Node* node, const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, unsigned int remainingDepth)
+	{
 	}
 
 } // namespace SDF

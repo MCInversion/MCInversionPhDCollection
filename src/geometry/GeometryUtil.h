@@ -35,6 +35,23 @@ namespace Geometry
 	[[nodiscard]] bool TriangleIntersectsBox(const std::vector<pmp::vec3>& vertices, const pmp::vec3& boxCenter, const pmp::vec3& boxHalfSize);
 
 	/**
+	 * \brief Computes the squared distance from point to a 2D line segment.
+	 * \param vertices     list of (two) vertices of a 2D line segment.
+	 * \param point        point from which the distance is to be computed.
+	 * \return squared distance from point to the 2D line segment.
+	 */
+	[[nodiscard]] double GetDistanceToLine2DSq(const std::vector<pmp::Point2>& vertices, const pmp::vec2& point);
+
+	/**
+	 * \brief An intersection test between a 2D line segment and a box.
+	 * \param vertices     list of (three) vertices of a  2D line segment.
+	 * \param boxCenter    center of the box to be queried.
+	 * \param boxHalfSize  half-size of the box to be queried.
+	 * \return true if the box intersects the 2D line segment.
+	 */
+	[[nodiscard]] bool Line2DIntersectsBox(const std::vector<pmp::Point2>& vertices, const pmp::Point2& boxCenter, const pmp::vec2& boxHalfSize);
+
+	/**
 	 * \brief An intersection test between a two triangles
 	 * \param vertices0    first triangle vertices list.
 	 * \param vertices1    second triangle vertices list.

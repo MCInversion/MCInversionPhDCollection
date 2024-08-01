@@ -242,5 +242,226 @@ namespace Geometry
 
 		std::vector<bool> m_FrozenValues{};
 	};
+
+	// ================= 2D Utils ============================
+
+	/// \brief dimensions wrapper item for any grid object.
+	struct GridDimensions2D
+	{
+		size_t Nx{ 0 };
+		size_t Ny{ 0 };
+
+		[[nodiscard]] bool Valid() const
+		{
+			return Nx > 0 && Ny > 0;
+		}
+	};
+
+	/// \brief A 2D grid object containing scalar values and additional flags for individual voxels.
+	class ScalarGrid2D
+	{
+	public:
+		ScalarGrid2D(const float& cellSize, const pmp::BoundingBox2& box);
+
+		ScalarGrid2D(const float& cellSize, const pmp::BoundingBox2& box, const double& initVal);
+
+		// ====== Getters ======================
+
+		pmp::BoundingBox2& Box()
+		{
+			return m_Box;
+		}
+
+		[[nodiscard]] const pmp::BoundingBox2& Box() const
+		{
+			return m_Box;
+		}
+
+		GridDimensions2D& Dimensions()
+		{
+			return m_Dimensions;
+		}
+
+		[[nodiscard]] const GridDimensions2D Dimensions() const
+		{
+			return m_Dimensions;
+		}
+
+		float& CellSize()
+		{
+			return m_CellSize;
+		}
+
+		[[nodiscard]] const float& CellSize() const
+		{
+			return m_CellSize;
+		}
+
+		std::vector<double>& Values()
+		{
+			return m_Values;
+		}
+
+		[[nodiscard]] const std::vector<double>& Values() const
+		{
+			return m_Values;
+		}
+
+		std::vector<bool>& FrozenValues()
+		{
+			return m_FrozenValues;
+		}
+
+		[[nodiscard]] const std::vector<bool>& FrozenValues() const
+		{
+			return m_FrozenValues;
+		}
+
+		// ====== Operators ======================
+
+		bool operator==(const ScalarGrid2D& other) const;
+		bool operator!=(const ScalarGrid2D& other) const;
+		ScalarGrid2D& operator*= (const double& scalar);
+		ScalarGrid2D& operator*= (const ScalarGrid2D& other);
+		ScalarGrid2D& operator/= (const double& scalar);
+		ScalarGrid2D& operator/= (const ScalarGrid2D& other);
+		ScalarGrid2D& operator+= (const double& scalar);
+		ScalarGrid2D& operator+= (const ScalarGrid2D& other);
+		ScalarGrid2D& operator-= (const double& scalar);
+		ScalarGrid2D& operator-= (const ScalarGrid2D& other);
+		ScalarGrid2D operator* (const double& scalar) const;
+		ScalarGrid2D operator* (const ScalarGrid2D& other) const;
+		ScalarGrid2D operator/ (const double& scalar) const;
+		ScalarGrid2D operator/ (const ScalarGrid2D& other) const;
+		ScalarGrid2D operator+ (const double& scalar) const;
+		ScalarGrid2D operator+ (const ScalarGrid2D& other) const;
+		ScalarGrid2D operator- (const double& scalar) const;
+		ScalarGrid2D operator- (const ScalarGrid2D& other) const;
+
+		ScalarGrid2D& operator*= (const pmp::mat3& mat);
+
+		// ====== Validity ======================
+
+		[[nodiscard]] bool IsValid() const;
+
+	private:
+		pmp::BoundingBox2 m_Box{};
+		GridDimensions2D m_Dimensions{};
+		float m_CellSize{};
+		std::vector<double> m_Values{};
+		std::vector<bool> m_FrozenValues{};
+	};
+
+	/// \brief A 2D grid object containing vector values and additional flags for individual voxels.
+	class VectorGrid2D
+	{
+	public:
+		/**
+		 * \brief Constructor. Initializes from a scalar grid with default initialization vector value.
+		 * \param scalarGrid      scalar grid to initialize from.
+		 */
+		explicit VectorGrid2D(const ScalarGrid2D& scalarGrid);
+
+		VectorGrid2D(const float& cellSize, const pmp::BoundingBox2& box);
+
+		VectorGrid2D(const float& cellSize, const pmp::BoundingBox2& box, const pmp::vec2& initVal);
+
+		// ====== Getters ======================
+
+		pmp::BoundingBox2& Box()
+		{
+			return m_Box;
+		}
+
+		[[nodiscard]] const pmp::BoundingBox2& Box() const
+		{
+			return m_Box;
+		}
+
+		GridDimensions2D& Dimensions()
+		{
+			return m_Dimensions;
+		}
+
+		[[nodiscard]] const GridDimensions2D& Dimensions() const
+		{
+			return m_Dimensions;
+		}
+
+		float& CellSize()
+		{
+			return m_CellSize;
+		}
+
+		[[nodiscard]] const float& CellSize() const
+		{
+			return m_CellSize;
+		}
+
+		std::vector<double>& ValuesX()
+		{
+			return m_ValuesX;
+		}
+
+		[[nodiscard]] const std::vector<double>& ValuesX() const
+		{
+			return m_ValuesX;
+		}
+
+		std::vector<double>& ValuesY()
+		{
+			return m_ValuesY;
+		}
+
+		[[nodiscard]] const std::vector<double>& ValuesY() const
+		{
+			return m_ValuesY;
+		}
+
+		std::vector<bool>& FrozenValues()
+		{
+			return m_FrozenValues;
+		}
+
+		[[nodiscard]] const std::vector<bool>& FrozenValues() const
+		{
+			return m_FrozenValues;
+		}
+
+		// ====== Operators ======================
+
+		bool operator==(const VectorGrid2D& other) const;
+		bool operator!=(const VectorGrid2D& other) const;
+		VectorGrid2D& operator*= (const double& scalar);
+		VectorGrid2D& operator*= (const VectorGrid2D& other);
+		VectorGrid2D& operator/= (const double& scalar);
+		VectorGrid2D& operator/= (const VectorGrid2D& other);
+		VectorGrid2D& operator+= (const double& scalar);
+		VectorGrid2D& operator+= (const VectorGrid2D& other);
+		VectorGrid2D& operator-= (const double& scalar);
+		VectorGrid2D& operator-= (const VectorGrid2D& other);
+		VectorGrid2D operator* (const double& scalar) const;
+		VectorGrid2D operator* (const VectorGrid2D& other) const;
+		VectorGrid2D operator/ (const double& scalar) const;
+		VectorGrid2D operator/ (const VectorGrid2D& other) const;
+		VectorGrid2D operator+ (const double& scalar) const;
+		VectorGrid2D operator+ (const VectorGrid2D& other) const;
+		VectorGrid2D operator- (const double& scalar) const;
+		VectorGrid2D operator- (const VectorGrid2D& other) const;
+
+		// ====== Validity ======================
+
+		[[nodiscard]] bool IsValid() const;
+
+	private:
+		pmp::BoundingBox2 m_Box{};
+		GridDimensions2D m_Dimensions{};
+		float m_CellSize{};
+
+		std::vector<double> m_ValuesX{};
+		std::vector<double> m_ValuesY{};
+
+		std::vector<bool> m_FrozenValues{};
+	};
 	
 } // namespace Geometry

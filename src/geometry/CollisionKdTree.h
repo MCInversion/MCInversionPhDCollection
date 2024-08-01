@@ -9,6 +9,7 @@ namespace Geometry
 	// forward decl
 	struct Ray;
 	class CollisionKdTree;
+	class CollisionKdTree2D;
 
 	/**
 	 * \brief helper data item for splitting box.
@@ -62,7 +63,7 @@ namespace Geometry
 			return m_VertexPositions;
 		}
 
-		[[nodiscard]] const std::vector<Triangle>& TriVertexIds() const
+		[[nodiscard]] const Triangles& TriVertexIds() const
 		{
 			return m_Triangles;
 		}
@@ -153,10 +154,105 @@ namespace Geometry
 		std::vector<Triangle> m_Triangles{};
 	};
 
-	//! \brief A 2D binary tree for collision detection with curve edges (line segments)
-	//class Collision2DTree
-	//{
-	//public:
+	// ===========================================================================================
 
-	//};
+	/**
+	 * \brief helper data item for splitting box.
+	 */
+	struct BoxSplitData2D
+	{
+		CollisionKdTree2D* kdTree{ nullptr };
+		const pmp::BoundingBox2* box{ nullptr };
+		unsigned int axis{ 0 };
+	};
+
+	/**
+	 * \brief primitive data item for an edge of a curve containing vertex indices
+	 */
+	struct Edge
+	{
+		unsigned int v0Id;
+		unsigned int v1Id;
+	};
+
+	using Edges = std::vector<Edge>;
+
+	// function used to find split position and fill child primitive buffers.
+	using SplitFunction2D = std::function<float(
+		const BoxSplitData2D&,             // data of box to be split
+		const std::vector<unsigned int>&,  // input edge ids 
+		std::vector<unsigned int>&,        // output left edge ids
+		std::vector<unsigned int>&)>;      // output right edge ids
+
+	// ===================== Split functions ================================
+
+	[[nodiscard]] float CenterSplitFunction2D(const BoxSplitData2D& splitData,
+		const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
+
+	[[nodiscard]] float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData,
+		const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
+
+	// ======================================================================
+
+	//! \brief A 2D binary tree for collision detection with curve edges (line segments)
+	class Collision2DTree
+	{
+	public:
+		//! Construct with mesh.
+		Collision2DTree(const CurveAdapter& curveAdapter, const SplitFunction2D& spltFunc);
+
+		// getters
+		[[nodiscard]] const std::vector<pmp::Point2>& VertexPositions() const
+		{
+			return m_VertexPositions;
+		}
+
+		[[nodiscard]] const Edges& TriVertexIds() const
+		{
+			return m_Edges;
+		}
+	private:
+
+		/// \brief a node object of this tree.
+		struct Node
+		{
+			Node() = default;
+
+			~Node()
+			{
+				delete left_child;
+				delete right_child;
+			}
+
+			[[nodiscard]] bool IsALeaf() const
+			{
+				return (left_child == nullptr && right_child == nullptr);
+			}
+
+			unsigned int axis{ 0 };
+			float splitPosition{ 0.0f };
+			pmp::BoundingBox2 box{};
+			std::vector<unsigned int> triangleIds{};
+			Node* left_child{ nullptr };
+			Node* right_child{ nullptr };
+		};
+
+		/**
+		 * \brief The recursive part of building this 2D tree.
+		 * \param node             node to be initialized.
+		 * \param box              bounding box of the node to be initialized.
+		 * \param edgeIds          indices of edges to construct node from.
+		 * \param remainingDepth   depth remaining for node construction.
+		 */
+		void BuildRecurse(Node* node, const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, unsigned int remainingDepth);
+
+		Node* m_Root{ nullptr };
+
+		size_t m_NodeCount{ 0 };
+
+		SplitFunction m_FindSplitAndClassify{};
+		std::vector<pmp::Point2> m_VertexPositions{};
+		Edges m_Edges{};
+
+	};
 }
