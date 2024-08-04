@@ -68,6 +68,7 @@ namespace SDF
 		 * \param inputMesh               an adapter for the evaluated mesh.
 		 * \param settings                settings for the distance field.
 		 * \return the computed distance field's ScalarGrid.
+		 * \throw std::invalid_argument if inputMesh contains no spatial data!
 		 */
 		static [[nodiscard]] Geometry::ScalarGrid Generate(const Geometry::MeshAdapter& inputMesh, const DistanceFieldSettings& settings);
 		
@@ -129,6 +130,7 @@ namespace SDF
 		 * \param inputPoints             evaluated point cloud.
 		 * \param settings                settings for the distance field.
 		 * \return the computed distance field's ScalarGrid.
+		 * \throw std::invalid_argument if inputMesh contains no spatial data!
 		 */
 		static [[nodiscard]] Geometry::ScalarGrid Generate(const std::vector<pmp::vec3>& inputPoints, const PointCloudDistanceFieldSettings& settings);
 
@@ -213,6 +215,7 @@ namespace SDF
 		 * \param inputCurve              an adapter for the evaluated curve.
 		 * \param settings                settings for the distance field.
 		 * \return the computed distance field's ScalarGrid2D.
+		 * \throw std::invalid_argument if inputMesh contains no spatial data!
 		 */
 		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings);
 
@@ -242,6 +245,7 @@ namespace SDF
 		 * \param inputPoints             evaluated point cloud.
 		 * \param settings                settings for the distance field.
 		 * \return the computed distance field's ScalarGrid.
+		 * \throw std::invalid_argument if inputMesh contains no spatial data!
 		 */
 		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const std::vector<pmp::Point2>& inputPoints, const PointCloudDistanceField2DSettings& settings);
 

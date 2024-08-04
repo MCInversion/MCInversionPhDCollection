@@ -2,6 +2,8 @@
 
 #include "Grid.h"
 
+#include <functional>
+
 namespace pmp
 {
 	class SurfaceMesh;
@@ -11,13 +13,26 @@ namespace Geometry
 {
 	/**
 	 * \brief Negate the values of a scalar grid.
-	 * \param grid    input scalar grid.
+	 * \param grid    2D/3D input scalar grid.
 	 */
-	inline void NegateGrid(ScalarGrid& grid)
+	template <typename Grid>
+	void NegateGrid(Grid& grid)
 	{
 		if (!grid.IsValid())
 			return;
 		grid *= -1.0;
+	}
+
+	/// \brief Compute a hash from the provided 2D/3D scalar grid
+	template <typename Grid>
+	[[nodiscard]] size_t HashScalarGrid(const Grid& grid)
+	{
+		std::size_t hash = 0;
+		for (const auto& value : grid.Values())
+		{
+			hash ^= std::hash<double>{}(value) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+		}
+		return hash;
 	}
 
 	/**

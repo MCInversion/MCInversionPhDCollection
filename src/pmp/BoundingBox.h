@@ -207,7 +207,7 @@ public:
     BoundingBox2(const Point2& min, const Point2& max) : min_(min), max_(max) {}
 
     //! Construct from a vector of points.
-    explicit BoundingBox2(const std::vector<Point>& pts)
+    explicit BoundingBox2(const std::vector<Point2>& pts)
         : min_(std::numeric_limits<Scalar>::max()),
         max_(-std::numeric_limits<Scalar>::max())
     {

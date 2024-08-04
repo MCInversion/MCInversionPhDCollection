@@ -19,6 +19,9 @@ namespace Geometry
 		 */
 		virtual [[nodiscard]] std::unique_ptr<MeshAdapter> Clone() const = 0;
 
+		/// \brief Verifies whether this adapter applies to an empty mesh.
+		virtual [[nodiscard]] bool IsEmpty() const = 0;
+
 		/**
 		 * \brief Retrieves the vertices of the mesh.
 		 * \return A vector containing the vertices of the mesh.
@@ -62,6 +65,15 @@ namespace Geometry
 		 * \param mesh Shared pointer to BaseMeshGeometryData.
 		 */
 		explicit BaseMeshAdapter(std::shared_ptr<BaseMeshGeometryData> mesh) : m_BaseMesh(std::move(mesh)) {}
+
+		/// \brief Verifies whether this adapter applies to an empty mesh.
+		[[nodiscard]] bool IsEmpty() const override
+		{
+			if (!m_BaseMesh)
+				return true;
+
+			return m_BaseMesh->Vertices.empty() || m_BaseMesh->PolyIndices.empty();
+		}
 
 		/// \copydoc MeshAdapter::Clone
 		[[nodiscard]] std::unique_ptr<MeshAdapter> Clone() const override
@@ -128,6 +140,15 @@ namespace Geometry
 		 * \param mesh Shared pointer to pmp::SurfaceMesh.
 		 */
 		explicit PMPSurfaceMeshAdapter(std::shared_ptr<pmp::SurfaceMesh> mesh) : m_SurfaceMesh(std::move(mesh)) {}
+
+		/// \brief Verifies whether this adapter applies to an empty mesh.
+		[[nodiscard]] bool IsEmpty() const override
+		{
+			if (!m_SurfaceMesh)
+				return true;
+
+			return m_SurfaceMesh->is_empty();
+		}
 
 		/// \copydoc MeshAdapter::Clone
 		[[nodiscard]] std::unique_ptr<MeshAdapter> Clone() const override
@@ -214,6 +235,9 @@ namespace Geometry
 		 */
 		virtual [[nodiscard]] std::unique_ptr<CurveAdapter> Clone() const = 0;
 
+		/// \brief Verifies whether this adapter applies to an empty curve.
+		virtual [[nodiscard]] bool IsEmpty() const = 0;
+
 		/**
 		 * \brief Retrieves the vertices of the curve.
 		 * \return A vector containing the vertices of the curve.
@@ -250,6 +274,15 @@ namespace Geometry
 		 * \param curve Shared pointer to BaseCurveGeometryData.
 		 */
 		explicit BaseCurveAdapter(std::shared_ptr<BaseCurveGeometryData> curve) : m_BaseCurve(std::move(curve)) {}
+
+		/// \brief Verifies whether this adapter applies to an empty curve.
+		[[nodiscard]] bool IsEmpty() const override
+		{
+			if (!m_BaseCurve)
+				return true;
+
+			return m_BaseCurve->Vertices.empty() || m_BaseCurve->EdgeIndices.empty();
+		}
 
 		/// \copydoc CurveAdapter::Clone
 		[[nodiscard]] std::unique_ptr<CurveAdapter> Clone() const override
@@ -293,6 +326,15 @@ namespace Geometry
 		 * \param curve Shared pointer to ManifoldCurve2D.
 		 */
 		explicit ManifoldCurve2DAdapter(std::shared_ptr<pmp::ManifoldCurve2D> curve) : m_ManifoldCurve(std::move(curve)) {}
+
+		/// \brief Verifies whether this adapter applies to an empty curve.
+		[[nodiscard]] bool IsEmpty() const override
+		{
+			if (!m_ManifoldCurve)
+				return true;
+
+			return m_ManifoldCurve->is_empty();
+		}
 
 		/// \copydoc CurveAdapter::Clone
 		[[nodiscard]] std::unique_ptr<CurveAdapter> Clone() const override

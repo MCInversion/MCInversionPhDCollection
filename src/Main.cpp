@@ -97,7 +97,8 @@ constexpr bool performApollonArtecEvaLSWHausdorffEval = false;
 constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
-constexpr bool performManifoldCurve2DTests = true;
+constexpr bool performDistanceFieldHashTest = true;
+constexpr bool performManifoldCurve2DTests = false;
 constexpr bool performPairedCurveEvolverTests = false;
 // constexpr bool performPairedSurfaceEvolverTests = true;
 
@@ -3193,6 +3194,80 @@ int main()
 		}
 
 	} // endif perfromTerrainTriangulationTest
+
+	if (performDistanceFieldHashTest)
+	{
+		//
+		// ====== Full tetra ========
+		//
+		const std::vector tetraVertices = { pmp::Point(0, 0, 0), pmp::Point(1, 0, 0), pmp::Point(0, 1, 0), pmp::Point(0, 0, 1) };
+		Geometry::BaseMeshGeometryData meshData;
+		meshData.Vertices = tetraVertices;
+		meshData.PolyIndices = { {0, 1, 3}, {1, 0, 2}, {0, 3, 2}, {1, 2, 3} };
+		const Geometry::BaseMeshAdapter meshAdapter(std::make_shared<Geometry::BaseMeshGeometryData>(meshData));
+
+		const auto meshBBox = meshAdapter.GetBounds();
+		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+		const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const float cellSize = minSize / 10.0f;
+
+		const SDF::DistanceFieldSettings sdfSettings{
+			cellSize,
+			1.0f,
+			DBL_MAX,
+			SDF::KDTreeSplitType::Center,
+			SDF::SignComputation::VoxelFloodFill,
+			SDF::BlurPostprocessingType::None,
+			SDF::PreprocessingType::Octree
+		};
+		const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
+
+		const auto sdfHash = Geometry::HashScalarGrid(sdf);
+		std::cout << "Hash of fullTetra_SDF: " << sdfHash << "\n";
+		ExportToVTI(dataOutPath + "fullTetra_SDF", sdf);
+
+		//
+		// ============== Tetra without bottom face ===========
+		//
+
+		Geometry::BaseMeshGeometryData meshData2;
+		meshData2.Vertices = tetraVertices;
+		meshData2.PolyIndices = { {0, 1, 3}, {0, 3, 2}, {1, 2, 3}};
+		const Geometry::BaseMeshAdapter mesh2Adapter(std::make_shared<Geometry::BaseMeshGeometryData>(meshData2));
+		const SDF::DistanceFieldSettings sdfSettings2{
+			cellSize,
+			1.0f,
+			DBL_MAX,
+			SDF::KDTreeSplitType::Center,
+			SDF::SignComputation::None,
+			SDF::BlurPostprocessingType::None,
+			SDF::PreprocessingType::Octree
+		};
+		const auto sdf2 = SDF::DistanceFieldGenerator::Generate(mesh2Adapter, sdfSettings2);
+
+		const auto sdfHash2 = Geometry::HashScalarGrid(sdf2);
+		std::cout << "Hash of tetraWithoutBottomFace_SDF: " << sdfHash2 << "\n";
+		ExportToVTI(dataOutPath + "tetraWithoutBottomFace_SDF", sdf2);
+
+		//
+		// ============ Tetra points =========================
+		//
+
+		const SDF::PointCloudDistanceFieldSettings sdfSettings3{
+				cellSize,
+				1.0f,
+				DBL_MAX,
+				SDF::BlurPostprocessingType::None
+		};
+
+		// Act
+		const auto sdf3 = SDF::PointCloudDistanceFieldGenerator::Generate(tetraVertices, sdfSettings3);
+
+		const auto sdfHash3 = Geometry::HashScalarGrid(sdf3);
+		std::cout << "Hash of tetraPoints_SDF: " << sdfHash3 << "\n";
+		ExportToVTI(dataOutPath + "tetraPoints_SDF", sdf3);
+
+	} // endif performDistanceFieldHashTest
 
 	if (performManifoldCurve2DTests)
 	{

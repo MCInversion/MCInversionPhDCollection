@@ -291,6 +291,11 @@ namespace SDF
 		assert(settings.TruncationFactor > 0);
 
 		m_Mesh = inputMesh.Clone();
+		if (m_Mesh->IsEmpty())
+		{
+			throw std::invalid_argument("DistanceFieldGenerator::Generate: m_Mesh->IsEmpty()! inputMesh contains no spatial data!\n");
+		}
+
 		if (settings.SignMethod != SignComputation::None)
 		{
 #if REPORT_SDF_STEPS
@@ -313,7 +318,7 @@ namespace SDF
 		}
 
 		// percentage of the minimum half-size of the mesh's bounding box.
-		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * static_cast<double>(minSize) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, sdfBBox, truncationValue);
 #if REPORT_SDF_STEPS
 		std::cout << "truncationValue: " << truncationValue << "\n";
@@ -571,6 +576,10 @@ namespace SDF
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
 		assert(settings.TruncationFactor > 0);
+		if (inputPoints.empty())
+		{
+			throw std::invalid_argument("PointCloudDistanceFieldGenerator::Generate: inputPoints.empty()! inputPoints contains no spatial data!\n");
+		}
 
 		pmp::BoundingBox dfBBox(inputPoints);
 		const auto size = dfBBox.max() - dfBBox.min();
@@ -583,7 +592,7 @@ namespace SDF
 		}
 
 		// percentage of the minimum half-size of the mesh's bounding box.
-		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * (static_cast<double>(minSize) / 2.0) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * static_cast<double>(minSize) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
 		Geometry::ScalarGrid resultGrid(settings.CellSize, dfBBox, truncationValue);
 
 		m_Points = inputPoints;
