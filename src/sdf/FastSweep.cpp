@@ -151,4 +151,81 @@ namespace SDF
 		}
 
 	}
+
+	void FastSweep2D(Geometry::ScalarGrid2D& grid, const SweepSolver2DSettings& settings)
+	{
+		const double f = settings.EikonalRHS;
+		assert(grid.CellSize() > 0.0);
+		const auto h = static_cast<double>(grid.CellSize());
+		const unsigned int NSweeps = settings.NSweeps;
+
+		const auto& dims = grid.Dimensions();
+		auto& gridValues = grid.Values();
+		const auto& gridFrozen = grid.FrozenValues();
+
+		const int Nx = static_cast<int>(dims.Nx);
+		const int Ny = static_cast<int>(dims.Ny);
+
+		// sweep directions { start, end, step }
+		const int dirX[4][3] = {
+			{0, Nx - 1, 1} , {Nx - 1, 0, -1}, {Nx - 1, 0, -1}, {0, Nx - 1, 1} };
+		const int dirY[4][3] = {
+			{0, Ny - 1, 1}, {0, Ny - 1, 1}, {Ny - 1, 0, -1}, {Ny - 1, 0, -1} };
+
+		unsigned int s;
+		int ix, iy, gridPos;
+		double aa[3], tmp, eps = 1e-6;
+		double d_curr, d_new, a, b, c, D;
+
+		for (s = 0; s < NSweeps; s++)
+		{
+			for (iy = dirY[s][0]; dirY[s][2] * iy <= dirY[s][1]; iy += dirY[s][2]) 
+			{
+				for (ix = dirX[s][0]; dirX[s][2] * ix <= dirX[s][1]; ix += dirX[s][2]) 
+				{
+					gridPos = iy * Nx + ix;
+					if (gridFrozen[gridPos])
+						continue;
+
+					// === neighboring cells (Upwind Godunov) ===
+					if (iy == 0 || iy == (Ny - 1)) 
+					{
+						if (iy == 0)
+						{
+							aa[1] = gridValues[gridPos] < gridValues[(iy + 1) * Nx + ix] ? gridValues[gridPos] : gridValues[(iy + 1) * Nx + ix];
+						}
+						if (iy == (Ny - 1)) 
+						{
+							aa[1] = gridValues[(iy - 1) * Nx + ix] < gridValues[gridPos] ? gridValues[(iy - 1) * Nx + ix] : gridValues[gridPos];
+						}
+					}
+					else
+					{
+						aa[1] = gridValues[(iy - 1) * Nx + ix] < gridValues[(iy + 1) * Nx + ix] ? gridValues[(iy - 1) * Nx + ix] : gridValues[(iy + 1) * Nx + ix];
+					}
+
+					if (ix == 0 || ix == (Nx - 1)) 
+					{
+						if (ix == 0) 
+						{
+							aa[0] = gridValues[gridPos] < gridValues[iy * Nx + (ix + 1)] ? gridValues[gridPos] : gridValues[iy * Nx + (ix + 1)];
+						}
+						if (ix == (Nx - 1))
+						{
+							aa[0] = gridValues[iy * Nx + (ix - 1)] < gridValues[gridPos] ? gridValues[iy * Nx + (ix - 1)] : gridValues[gridPos];
+						}
+					}
+					else
+					{
+						aa[0] = gridValues[iy * Nx + (ix - 1)] < gridValues[iy * Nx + (ix + 1)] ? gridValues[iy * Nx + (ix - 1)] : gridValues[iy * Nx + (ix + 1)];
+					}
+
+					a = aa[0]; b = aa[1];
+					d_new = (fabs(a - b) < f * h ? (a + b + sqrt(2.0 * f * f * h * h - (a - b) * (a - b))) * 0.5 : std::fminf(a, b) + f * h);
+
+					gridValues[gridPos] = gridValues[gridPos] < d_new ? gridValues[gridPos] : d_new;
+				}				
+			}
+		}
+	}
 }

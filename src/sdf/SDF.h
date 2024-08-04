@@ -220,9 +220,37 @@ namespace SDF
 		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings);
 
 	private:
-		inline static std::unique_ptr<Geometry::CurveAdapter> m_Mesh{ nullptr }; //>! curve to be (pre)processed.
+		inline static std::unique_ptr<Geometry::CurveAdapter> m_Curve{ nullptr }; //>! curve to be (pre)processed.
 		inline static std::unique_ptr<Geometry::Collision2DTree> m_KdTree{ nullptr }; //>! curve kd tree.
 
+		/**
+		 * \brief provides the SignFunction, a function from this generator's private interface that computes the sign of the distance field.
+		 * \param signCompType      sign computation function type identifier.
+		 * \return the sign function identified by signCompType.
+		 */
+		static [[nodiscard]] SignFunction2D GetSignFunction(const SignComputation2D& signCompType);
+
+		/**
+		 * \brief Provides a preprocessing functor according to the given setting.
+		 * \param preprocType      preprocessing type identifier.
+		 * \return the preprocessing function identified by preprocType.
+		 */
+		static [[nodiscard]] PreprocessingFunction2D GetPreprocessingFunction(const PreprocessingType2D& preprocType);
+
+		/**
+		 * \brief A preprocessing approach for distance grid using Collision2DTree to create "pixel outline" of inputCurve.
+		 * \param grid         modifiable input grid.
+		 */
+		static void PreprocessGridNoQuadtree(Geometry::ScalarGrid2D& grid);
+
+		/**
+		 * \brief A preprocessing approach for distance grid using Collision2DTree and QuadtreeVoxelizer to create "pixel outline" of inputMesh.
+		 * \param grid         modifiable input grid.
+		 */
+		static void PreprocessGridWithQuadtree(Geometry::ScalarGrid2D& grid);
+
+		/// \brief computes sign of the distance field by negating and applying a recursive flood-fill algorithm for non-frozen pixels.
+		static void ComputeSignUsingFloodFill(Geometry::ScalarGrid2D& grid);
 	};
 
 	/// \brief A wrapper for input settings for computing distance field.

@@ -204,6 +204,7 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPOpenTetrahedron)
     EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25f, -1.0f, 0.25f))), cellSize);
     EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0f, 1.0f, 1.0f))), cellSize);
 }
+
 TEST(DistanceField3DTests, PointCloudDistanceFieldGenerator_TetrahedronPointCloud)
 {
     // Arrange

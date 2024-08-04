@@ -4,7 +4,7 @@
 #include "geometry/GridUtil.h"
 
 #include "FastSweep.h"
-#include "OctreeVoxelizer.h"
+#include "Voxelizer.h"
 #include "pmp/algorithms/HoleFilling.h"
 
 #include <stack>
@@ -132,6 +132,19 @@ namespace SDF
 
 		return Geometry::AdaptiveSplitFunction;
 	}
+
+	///**
+	// * \brief Provides a split functor according to the given setting.
+	// * \param splitType      split type identifier.
+	// * \return the split function identified by splitType.
+	// */
+	//[[nodiscard]] Geometry::SplitFunction2D GetSplitFunction2D(const KDTreeSplitType& splitType)
+	//{
+	//	if (splitType == KDTreeSplitType::Center)
+	//		return Geometry::CenterSplitFunction2D;
+
+	//	return Geometry::AdaptiveSplitFunction2D;
+	//}
 
 	/// \brief a blur function for postprocessing the distance field.
 	using BlurFunction = std::function<void(Geometry::ScalarGrid&)>;
@@ -667,16 +680,350 @@ namespace SDF
 
 	Geometry::ScalarGrid2D PlanarDistanceFieldGenerator::Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings)
 	{
-		return { 0.5f, {} };
+		assert(settings.CellSize > 0.0f);
+		assert(settings.AreaExpansionFactor >= 0.0f);
+		assert(settings.TruncationFactor > 0);
+
+		m_Curve = inputCurve.Clone();
+		if (m_Curve->IsEmpty())
+		{
+			throw std::invalid_argument("PlanarDistanceFieldGenerator::Generate: m_Curve->IsEmpty()! inputCurve contains no spatial data!\n");
+		}
+
+//		if (settings.SignMethod != SignComputation2D::None)
+//		{
+//#if REPORT_SDF_STEPS
+//			std::cout << "FillCurveHoles ... ";
+//#endif
+//			FillCurveHoles(*m_Curve); // make the curve watertight
+//#if REPORT_SDF_STEPS
+//			std::cout << "done\n";
+//#endif
+//		}
+
+		auto sdfBBox = m_Curve->GetBounds();
+		const auto size = sdfBBox.max() - sdfBBox.min();
+		const float minSize = std::min( size[0], size[1] );
+
+		if (settings.AreaExpansionFactor > 0.0f)
+		{
+			const float expansion = settings.AreaExpansionFactor * minSize;
+			sdfBBox.expand(expansion, expansion);
+		}
+
+		// percentage of the minimum half-size of the mesh's bounding box.
+		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * static_cast<double>(minSize) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		Geometry::ScalarGrid2D resultGrid(settings.CellSize, sdfBBox, truncationValue);
+#if REPORT_SDF_STEPS
+		std::cout << "truncationValue: " << truncationValue << "\n";
+		std::cout << "CollisionKdTree ... ";
+#endif
+		m_KdTree = std::make_unique<Geometry::Collision2DTree>(*m_Curve, Geometry::CenterSplitFunction2D);
+#if REPORT_SDF_STEPS
+		std::cout << "done\n";
+#endif
+#if REPORT_SDF_STEPS
+		std::cout << "preprocessGrid ... ";
+#endif
+		const auto preprocessGrid = GetPreprocessingFunction(settings.PreprocType);
+		preprocessGrid(resultGrid);
+#if REPORT_SDF_STEPS
+		std::cout << "done\n";
+#endif
+
+		if (truncationValue > 0.0)
+		{
+#if REPORT_SDF_STEPS
+			std::cout << "FastSweep ... ";
+#endif
+			constexpr SweepSolver2DSettings fsSettings{};
+			FastSweep2D(resultGrid, fsSettings);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
+		}
+
+		if (settings.SignMethod != SignComputation2D::None)
+		{
+#if REPORT_SDF_STEPS
+			std::cout << "signFunction ... ";
+#endif
+			const auto signFunction = GetSignFunction(settings.SignMethod);
+			signFunction(resultGrid);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
+		}
+
+		// blur postprocessing
+//		if (settings.BlurType != BlurPostprocessingType::None)
+//		{
+//#if REPORT_SDF_STEPS
+//			std::cout << "blurFunction ... ";
+//#endif
+//			const auto blurFunction = GetBlurFunction(settings.BlurType);
+//			blurFunction(resultGrid);
+//#if REPORT_SDF_STEPS
+//			std::cout << "done\n";
+//#endif
+//		}
+		return resultGrid;
+	}
+
+	SignFunction2D PlanarDistanceFieldGenerator::GetSignFunction(const SignComputation2D& signCompType)
+	{
+		if (signCompType == SignComputation2D::PixelFloodFill)
+			return ComputeSignUsingFloodFill;
+
+		return {}; // empty sign function
+	}
+
+	PreprocessingFunction2D PlanarDistanceFieldGenerator::GetPreprocessingFunction(const PreprocessingType2D& preprocType)
+	{
+		if (preprocType == PreprocessingType2D::Quadtree)
+			return PreprocessGridWithQuadtree;
+
+		return PreprocessGridNoQuadtree;
+	}
+
+	void PlanarDistanceFieldGenerator::PreprocessGridNoQuadtree(Geometry::ScalarGrid2D& grid)
+	{
+		assert(m_KdTree);
+		auto& gridVals = grid.Values();
+		auto& gridFrozenVals = grid.FrozenValues();
+		const auto& vertexPositions = m_KdTree->VertexPositions();
+		const auto& edges = m_KdTree->EdgeVertexIds();
+
+		const auto& dims = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		std::vector edge{ pmp::vec2(), pmp::vec2() };
+		pmp::vec2 pixelCenter, pixelMin, pixelMax;
+
+		for (unsigned int iy = 0; iy < dims.Ny; iy++)
+		{
+			for (unsigned int ix = 0; ix < dims.Nx; ix++)
+			{
+				pixelCenter[0] = orig[0] + (static_cast<float>(ix) + 0.5f) * cellSize;
+				pixelCenter[1] = orig[1] + (static_cast<float>(iy) + 0.5f) * cellSize;
+
+				pixelMin[0] = pixelCenter[0] - 0.5f * cellSize;
+				pixelMin[1] = pixelCenter[1] - 0.5f * cellSize;
+
+				pixelMax[0] = pixelCenter[0] + 0.5f * cellSize;
+				pixelMax[1] = pixelCenter[1] + 0.5f * cellSize;
+
+				const pmp::BoundingBox2 pixelBox{ pixelMin , pixelMax };
+				std::vector<unsigned int> pixelEdgeIds{};
+				m_KdTree->GetEdgesInABox(pixelBox, pixelEdgeIds);
+
+				if (pixelEdgeIds.empty())
+					continue; // no edges found
+
+				double distToEdgeSq = DBL_MAX;
+
+				for (const auto& eId : pixelEdgeIds)
+				{
+					edge[0] = vertexPositions[edges[eId].v0Id];
+					edge[1] = vertexPositions[edges[eId].v1Id];
+
+					const double currentEdgeDistSq = Geometry::GetDistanceToLine2DSq(edge, pixelCenter);
+
+					if (currentEdgeDistSq < distToEdgeSq)
+						distToEdgeSq = currentEdgeDistSq;
+				}
+
+				assert(distToEdgeSq < DBL_MAX);
+
+				const unsigned int gridPos = dims.Nx * iy + ix;
+				gridVals[gridPos] = sqrt(distToEdgeSq);
+				gridFrozenVals[gridPos] = true;
+			}
+		}
+	}
+
+	void PlanarDistanceFieldGenerator::PreprocessGridWithQuadtree(Geometry::ScalarGrid2D& grid)
+	{
+		assert(m_KdTree);
+		auto& gridVals = grid.Values();
+		auto& gridFrozenVals = grid.FrozenValues();
+		const float cellSize = grid.CellSize();
+		const auto& gridBox = grid.Box();
+		const auto quadtreeVox = QuadtreeVoxelizer(*m_KdTree, gridBox, cellSize);
+
+		// extract leaf boxes and distance values from their centroids
+		std::vector<pmp::BoundingBox2*> boxBuffer{};
+		std::vector<double> valueBuffer{};
+		quadtreeVox.GetLeafBoxesAndValues(boxBuffer, valueBuffer);
+		const size_t nOutlinePixels = boxBuffer.size();
+		const float gBoxMinX = gridBox.min()[0];
+		const float gBoxMinY = gridBox.min()[1];
+
+		const auto& dims = grid.Dimensions();
+		const auto Nx = static_cast<unsigned int>(dims.Nx);
+		unsigned int ix, iy, gridPos;
+
+		for (size_t i = 0; i < nOutlinePixels; i++)
+		{
+			// transform from real space to grid index space
+			ix = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
+			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
+
+			gridPos = Nx * iy + ix;
+			gridVals[gridPos] = valueBuffer[i];
+			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
+		}
+	}
+
+	void PlanarDistanceFieldGenerator::ComputeSignUsingFloodFill(Geometry::ScalarGrid2D& grid)
+	{
+		const auto origFrozenFlags = grid.FrozenValues();
+		Geometry::NegateGrid(grid);
+		auto& gridVals = grid.Values();
+		auto& gridFrozenVals = grid.FrozenValues();
+		const auto& dim = grid.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const int nx = static_cast<int>(dim.Nx) - 1;
+		const int ny = static_cast<int>(dim.Ny) - 1;
+
+		unsigned int gridPos;
+		int iy = 0, ix = 0;
+
+		std::stack<std::tuple<int, int>> stack = {};
+		std::tuple<int, int> idsPair;
+		// find the first unfrozen cell
+		gridPos = 0;
+		while (gridFrozenVals[gridPos])
+		{
+			ix += (ix < nx ? 1 : 0);
+			iy += (iy < ny ? 1 : 0);
+			gridPos = Nx * iy + ix;
+		}
+		stack.push({ ix, iy });
+		// a simple pixel flood
+		while (!stack.empty())
+		{
+			idsPair = stack.top();
+			stack.pop();
+			ix = std::get<0>(idsPair);
+			iy = std::get<1>(idsPair);
+			gridPos = Nx * iy + ix;
+			if (!gridFrozenVals[gridPos]) 
+			{
+				gridVals[gridPos] = -1.0 * gridVals[gridPos];
+				gridFrozenVals[gridPos] = true; // freeze cell when done
+				if (ix > 0) 
+				{
+					stack.push({ ix - 1, iy });
+				}
+				if (ix < nx)
+				{
+					stack.push({ ix + 1, iy });
+				}
+				if (iy > 0) 
+				{
+					stack.push({ ix, iy - 1 });
+				}
+				if (iy < ny)
+				{
+					stack.push({ ix, iy + 1 });
+				}
+			}
+		}
+
+		grid.FrozenValues() = origFrozenFlags;
 	}
 
 	Geometry::ScalarGrid2D PlanarPointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::Point2>& inputPoints, const PointCloudDistanceField2DSettings& settings)
 	{
-		return { 0.5f, {} };
+		assert(settings.CellSize > 0.0f);
+		assert(settings.AreaExpansionFactor >= 0.0f);
+		assert(settings.TruncationFactor > 0);
+		if (inputPoints.empty())
+		{
+			throw std::invalid_argument("PlanarPointCloudDistanceFieldGenerator::Generate: inputPoints.empty()! inputPoints contains no spatial data!\n");
+		}
+
+		pmp::BoundingBox2 dfBBox(inputPoints);
+		const auto size = dfBBox.max() - dfBBox.min();
+		const float minSize = std::min({ size[0], size[1], size[2] });
+
+		if (settings.AreaExpansionFactor > 0.0f)
+		{
+			const float expansion = settings.AreaExpansionFactor * minSize;
+			dfBBox.expand(expansion, expansion);
+		}
+
+		// percentage of the minimum half-size of the mesh's bounding box.
+		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * static_cast<double>(minSize) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);
+		Geometry::ScalarGrid2D resultGrid(settings.CellSize, dfBBox, truncationValue);
+
+		m_Points = inputPoints;
+		PreprocessGridFromPoints(resultGrid);
+
+		if (truncationValue > 0.0)
+		{
+#if REPORT_SDF_STEPS
+			std::cout << "FastSweep ... ";
+#endif
+			constexpr SweepSolver2DSettings fsSettings{};
+			FastSweep2D(resultGrid, fsSettings);
+#if REPORT_SDF_STEPS
+			std::cout << "done\n";
+#endif
+		}
+
+//		// blur postprocessing
+//		if (settings.BlurType != BlurPostprocessingType::None)
+//		{
+//#if REPORT_SDF_STEPS
+//			std::cout << "blurFunction ... ";
+//#endif
+//			const auto blurFunction = GetBlurFunction(settings.BlurType);
+//			blurFunction(resultGrid);
+//#if REPORT_SDF_STEPS
+//			std::cout << "done\n";
+//#endif
+//		}
+		return resultGrid;
 	}
 
 	void PlanarPointCloudDistanceFieldGenerator::PreprocessGridFromPoints(Geometry::ScalarGrid2D& grid)
 	{
+		if (m_Points.empty())
+		{
+			std::cerr << "PlanarPointCloudDistanceFieldGenerator::PreprocessGridFromPoints: m_Points.empty()!\n";
+			return;
+		}
+		auto& gridVals = grid.Values();
+		auto& gridFrozenVals = grid.FrozenValues();
+		const float cellSize = grid.CellSize();
+
+		const auto& gridBox = grid.Box();
+		const float gBoxMinX = gridBox.min()[0];
+		const float gBoxMinY = gridBox.min()[1];
+
+		const auto& dims = grid.Dimensions();
+		const auto Nx = static_cast<unsigned int>(dims.Nx);
+		unsigned int ix, iy, gridPos;
+		pmp::vec2 gridPt;
+
+		for (const auto& p : m_Points)
+		{
+			// transform from real space to grid index space
+			ix = static_cast<unsigned int>(std::floor((p[0] - gBoxMinX) / cellSize));
+			iy = static_cast<unsigned int>(std::floor((p[1] - gBoxMinY) / cellSize));
+
+			gridPt[0] = gBoxMinX + ix * cellSize;
+			gridPt[1] = gBoxMinY + iy * cellSize;
+
+			gridPos = Nx * iy + ix;
+			assert(gridPos < gridVals.size());
+			gridVals[gridPos] = norm(gridPt - p);
+			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
+		}
 	}
 
 } // namespace SDF

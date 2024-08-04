@@ -42,6 +42,19 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
     ASSERT_TRUE(sdf.IsValid());
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    auto index = [&sdf](size_t i, size_t j) {
+        return i + j * sdf.Dimensions().Nx;
+    };
+    EXPECT_TRUE(sdf.Values()[index(15, 15)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
@@ -74,6 +87,19 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
     ASSERT_TRUE(sdf.IsValid());
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    auto index = [&sdf](size_t i, size_t j) {
+        return i + j * sdf.Dimensions().Nx;
+    };
+    EXPECT_FALSE(sdf.Values()[index(15, 15)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurve)
@@ -107,6 +133,19 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
     ASSERT_TRUE(sdf.IsValid());
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    auto index = [&sdf](size_t i, size_t j) {
+        return i + j * sdf.Dimensions().Nx;
+    };
+    EXPECT_TRUE(sdf.Values()[index(15, 15)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
@@ -140,6 +179,19 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
     ASSERT_TRUE(sdf.IsValid());
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    auto index = [&sdf](size_t i, size_t j) {
+        return i + j * sdf.Dimensions().Nx;
+    };
+    EXPECT_FALSE(sdf.Values()[index(15, 15)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointCloud)
@@ -164,4 +216,17 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
     ASSERT_TRUE(sdf.IsValid());
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    auto index = [&sdf](size_t i, size_t j) {
+        return i + j * sdf.Dimensions().Nx;
+    };
+    EXPECT_FALSE(sdf.Values()[index(15, 15)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(1, 15)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 1)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 15)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 29)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 15)], sqrt(5.0) / 2.0, cellSize);
 }

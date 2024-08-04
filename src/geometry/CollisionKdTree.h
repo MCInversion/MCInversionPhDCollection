@@ -189,8 +189,8 @@ namespace Geometry
 	[[nodiscard]] float CenterSplitFunction2D(const BoxSplitData2D& splitData,
 		const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
 
-	[[nodiscard]] float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData,
-		const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
+	//[[nodiscard]] float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData,
+	//	const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
 
 	// ======================================================================
 
