@@ -46,3 +46,6 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 
 /// \brief Export 2D manifold curve to PLY data.
 [[nodiscard]] bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName);
+
+/// \brief Export a 2D scalar field as an RGB PNG image
+void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, float nPixelsPerCellX = 1, float nPixelsPerCellY = 1);

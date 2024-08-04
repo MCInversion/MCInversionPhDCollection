@@ -11,7 +11,7 @@
 namespace Geometry
 {
 	//! \brief the amount by which boxes of kd-tree nodes are inflated to account for round-off errors.
-	constexpr float BOX_INFLATION = 1e-6f;
+	constexpr float BOX_INFLATION = 1e-4f;
 
 	//! \brief maximum allowed depth of the CollisionKdTree.
 	constexpr unsigned int MAX_DEPTH = 20;
@@ -47,7 +47,8 @@ namespace Geometry
 	CollisionKdTree::CollisionKdTree(const MeshAdapter& meshAdapter, const SplitFunction& spltFunc)
 	{
 		auto bbox = meshAdapter.GetBounds();
-		bbox.expand(BOX_INFLATION, BOX_INFLATION, BOX_INFLATION);
+		const auto bboxSize = bbox.max() - bbox.min();
+		bbox.expand(BOX_INFLATION * bboxSize[0], BOX_INFLATION * bboxSize[1], BOX_INFLATION * bboxSize[1]);
 		const auto triMesh = meshAdapter.Clone();
 		TriangulateMesh(*triMesh);
 
@@ -389,7 +390,8 @@ namespace Geometry
 		else
 			childBox.min()[axisId] = splitPos;
 
-		childBox.expand(BOX_INFLATION, BOX_INFLATION, BOX_INFLATION);
+		const auto chBoxSize = childBox.max() - childBox.min();
+		childBox.expand(BOX_INFLATION * chBoxSize[0], BOX_INFLATION * chBoxSize[1], BOX_INFLATION * chBoxSize[2]);
 
 		return childBox;
 	}
@@ -830,7 +832,8 @@ namespace Geometry
 		else
 			childBox.min()[axisId] = splitPos;
 
-		childBox.expand(BOX_INFLATION, BOX_INFLATION);
+		const auto chBoxSize = childBox.max() - childBox.min();
+		childBox.expand(BOX_INFLATION * chBoxSize[0], BOX_INFLATION * chBoxSize[1]);
 
 		return childBox;
 	}
@@ -838,7 +841,8 @@ namespace Geometry
 	Collision2DTree::Collision2DTree(const CurveAdapter& curveAdapter, const SplitFunction2D& spltFunc)
 	{
 		auto bbox = curveAdapter.GetBounds();
-		bbox.expand(BOX_INFLATION, BOX_INFLATION);
+		const auto bboxSize = bbox.max() - bbox.min();
+		bbox.expand(BOX_INFLATION * bboxSize[0], BOX_INFLATION * bboxSize[1]);
 		const auto curve = curveAdapter.Clone();
 
 		// extract vertex positions

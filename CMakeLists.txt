@@ -206,6 +206,7 @@ add_subdirectory(src/pmp)
 add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
+add_subdirectory(src/stb_image)
 add_subdirectory(src/utils)
 
 # ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
@@ -240,6 +241,7 @@ target_link_libraries(${PROJECT_NAME}
     pmp
     SDF
     Geometry
+    STBImage
 )
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 

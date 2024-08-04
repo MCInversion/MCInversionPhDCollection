@@ -5,6 +5,9 @@
 #include "geometry/GridUtil.h"
 #include "utils/StringUtils.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image/stb_image_write.h"
+
 void ExportToVTI(const std::string& filename, const Geometry::ScalarGrid& scalarGrid)
 {
     if (!scalarGrid.IsValid())
@@ -597,4 +600,59 @@ bool Export2DPointCloudToPLY(const std::vector<pmp::vec2>& points, const std::st
 bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName)
 {
 	return pmp::write_to_ply(curve, fileName);
+}
+
+void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, float nPixelsPerCellX, float nPixelsPerCellY)
+{
+	if (!grid.IsValid())
+	{
+		throw std::invalid_argument("ExportScalarGrid2DToPNG: grid to be exported is invalid!\n");
+	}
+	if (filename.empty())
+	{
+		throw std::invalid_argument("ExportScalarGrid2DToPNG: filename cannot be empty!\n");
+	}
+
+	const auto& dims = grid.Dimensions();
+	const int nx = static_cast<int>(dims.Nx);
+	const int ny = static_cast<int>(dims.Ny);
+
+	const int imageWidth = static_cast<int>(nx * nPixelsPerCellX);
+	const int imageHeight = static_cast<int>(ny * nPixelsPerCellY);
+
+	std::vector<uint8_t> image(imageWidth * imageHeight * 3);
+
+	// Normalize the scalar values to [0, 255]
+	auto minMax = std::minmax_element(grid.Values().begin(), grid.Values().end());
+	double minVal = *minMax.first;
+	double maxVal = *minMax.second;
+
+	for (int i = 0; i < imageWidth; ++i)
+	{
+		for (int j = 0; j < imageHeight; ++j)
+		{
+			// Map the pixel position to the grid position
+			int gridX = static_cast<int>(i / nPixelsPerCellX);
+			int gridY = static_cast<int>(j / nPixelsPerCellY);
+
+			// Ensure we do not go out of bounds
+			gridX = std::min(gridX, nx - 1);
+			gridY = std::min(gridY, ny - 1);
+
+			// Get the corresponding grid value
+			double value = grid.Values()[gridX + gridY * nx];
+			uint8_t intensity = static_cast<uint8_t>(255.0 * (value - minVal) / (maxVal - minVal));
+
+			// Set the pixel value (RGB)
+			image[3 * (i + j * imageWidth) + 0] = intensity; // R
+			image[3 * (i + j * imageWidth) + 1] = intensity; // G
+			image[3 * (i + j * imageWidth) + 2] = intensity; // B
+		}
+	}
+
+	// Save the image to a file
+	if (!stbi_write_png(filename.c_str(), imageWidth, imageHeight, 3, image.data(), imageWidth * 3))
+	{
+		throw std::runtime_error("ExportToPNG: Failed to save image to file!");
+	}
 }

@@ -5,12 +5,18 @@
 #include "pmp/BoundingBox.h"
 
 #include "geometry/Grid.h"
+#include "geometry/GridUtil.h"
 #include "geometry/GeometryUtil.h"
 #include "geometry/GeometryAdapters.h"
 
 using namespace SDF;
 using namespace Geometry;
 using namespace pmp;
+
+// Hashes of the tested distance fields
+constexpr size_t HASH_square_SDF{ 11463448448184433784 };
+constexpr size_t HASH_openSquare_SDF{ 9360073553033082223 };
+constexpr size_t HASH_squarePts_SDF{ 12327925769871880303 };
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 {
@@ -40,21 +46,22 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
+    EXPECT_EQ(HashScalarGrid(sdf), HASH_square_SDF);
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
-    EXPECT_TRUE(sdf.Values()[index(15, 15)] < 0.0);
-    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
+    EXPECT_TRUE(sdf.Values()[index(14, 14)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 0)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 14)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 0)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 14)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 14)], -0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
@@ -76,7 +83,7 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
         1.0f,
         DBL_MAX,
         KDTreeSplitType::Center,
-        SignComputation2D::PixelFloodFill,
+        SignComputation2D::None,
         PreprocessingType2D::Quadtree
     };
 
@@ -85,21 +92,21 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
+    EXPECT_EQ(HashScalarGrid(sdf), HASH_openSquare_SDF);
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
-    EXPECT_FALSE(sdf.Values()[index(15, 15)] < 0.0);
-    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
+    EXPECT_FALSE(sdf.Values()[index(14, 14)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 0)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 0)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 14)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 14)], 0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurve)
@@ -131,21 +138,22 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
+    EXPECT_EQ(HashScalarGrid(sdf), HASH_square_SDF);
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
-    EXPECT_TRUE(sdf.Values()[index(15, 15)] < 0.0);
-    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
+    EXPECT_TRUE(sdf.Values()[index(14, 14)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 0)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 14)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(15, 0)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 14)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 14)], -0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
@@ -168,7 +176,7 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
         1.0f,
         DBL_MAX,
         KDTreeSplitType::Center,
-        SignComputation2D::PixelFloodFill,
+        SignComputation2D::None,
         PreprocessingType2D::Quadtree
     };
 
@@ -177,21 +185,21 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
+    EXPECT_EQ(HashScalarGrid(sdf), HASH_openSquare_SDF);
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
-    EXPECT_FALSE(sdf.Values()[index(15, 15)] < 0.0);
-    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 15)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 29)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 15)], 0.5, cellSize);
+    EXPECT_FALSE(sdf.Values()[index(14, 14)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 0)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 0)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 14)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 29)], 1.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 14)], 0.5, cellSize);
 }
 
 TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointCloud)
@@ -214,19 +222,20 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
+    EXPECT_EQ(HashScalarGrid(sdf), HASH_squarePts_SDF);
     ASSERT_EQ(sdf.Dimensions().Nx, 30);
     ASSERT_EQ(sdf.Dimensions().Ny, 30);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
-    EXPECT_FALSE(sdf.Values()[index(15, 15)] < 0.0);
-    EXPECT_NEAR(sdf.Values()[index(1, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 1)], sqrt(3.0), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(1, 15)], sqrt(5.0) / 2.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 1)], sqrt(5.0) / 2.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(29, 15)], sqrt(5.0) / 2.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 29)], sqrt(5.0) / 2.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(15, 15)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_FALSE(sdf.Values()[index(14, 14)] < 0.0);
+    EXPECT_NEAR(sdf.Values()[index(0, 0)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 0)], sqrt(2.0), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 14)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 0)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 14)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(14, 29)], sqrt(5.0) / 2.0, cellSize);
+    EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
 }

@@ -1139,154 +1139,84 @@ namespace Geometry
 
 	// =====================================================================================
 
-	// ====== Helper macros for vectors (to increase speed) ============
-
-#define CROSS_2D(dest, v1, v2)						     \
-	          dest[0] = v1[1] * v2[2] - v1[2] * v2[1];   \
-	          dest[1] = v1[2] * v2[0] - v1[0] * v2[2];
-
-#define DOT_2D(v1, v2) (v1[0] * v2[0] + v1[1] * v2[1])
-
-#define SUB_2D(dest, v1, v2)						\
-	          dest[0] = v1[0] - v2[0];				\
-	          dest[1] = v1[1] - v2[1];
-
-#define FINDMINMAX_2D(x0, x1, x2, min, max)		\
-			  min = max = x0;						\
-			  if (x1 < min) min = x1;				\
-			  if (x1 > max) max = x1;				\
-			  if (x2 < min) min = x2;				\
-			  if (x2 > max) max = x2;
-
-#define SCALAR_2D(dest,alpha,v) dest[0] = alpha * v[0]; \
-	                             dest[1] = alpha * v[1];
-
 
 	double GetDistanceToLine2DSq(const std::vector<pmp::Point2>& vertices, const pmp::vec2& point)
 	{
 		if (vertices.size() != 2)
 		{
-			throw std::invalid_argument("The vertices vector must contain exactly two points.");
+			throw std::invalid_argument("GetDistanceToLine2DSq: The vertices vector must contain exactly two points!\n");
 		}
 
 		// Extract vertices
-		const pmp::Point2& p0 = vertices[0];
-		const pmp::Point2& p1 = vertices[1];
+		const pmp::Point2& p1 = vertices[0];
+		const pmp::Point2& p2 = vertices[1];
 
-		// Vector from p0 to p1 (line segment vector)
-		pmp::vec2 v0p1;
-		SUB_2D(v0p1, p1, p0);
+		// Vector from p1 to p2
+		pmp::vec2 v(p2[0] - p1[0], p2[1] - p1[1]);
 
-		// Vector from p0 to point
-		pmp::vec2 v0point;
-		SUB_2D(v0point, point, p0);
+		// Vector from p1 to the point
+		pmp::vec2 w(point[0] - p1[0], point[1] - p1[1]);
 
-		// Project v0point onto v0p1 to get the projection parameter t
-		double dot0 = DOT_2D(v0point, v0p1);
-		double dot1 = DOT_2D(v0p1, v0p1);
-		double t = dot0 / dot1;
+		// Calculate the projection of w onto v to find the closest point on the line segment
+		double c1 = w[0] * v[0] + w[1] * v[1];
+		double c2 = v[0] * v[0] + v[1] * v[1];
 
-		// Clamp t to the range [0, 1] to get the nearest point on the segment
-		t = std::clamp(t, 0.0, 1.0);
-
-		// Compute the nearest point on the segment
-		pmp::vec2 nearestPoint;
-		SCALAR_2D(nearestPoint, t, v0p1);
-		nearestPoint[0] += p0[0];
-		nearestPoint[1] += p0[1];
-
-		// Vector from point to nearestPoint
-		pmp::vec2 pointToNearest;
-		SUB_2D(pointToNearest, point, nearestPoint);
-
-		// Return the squared distance
-		return DOT_2D(pointToNearest, pointToNearest);
-	}
-
-	/**
-	 * \brief Utility to compute intersection between a line (defined by normal and ref point) and a box (defined by its min and max points).
-	 * \param normal     line normal.
-	 * \param refPt      line reference point.
-	 * \param boxMin     min point of the box.
-	 * \param boxMax     max point of the box.
-	 * \return true if the line intersects the box.
-	 */
-	[[nodiscard]] bool LineIntersectsBox2D(const pmp::vec2& normal, const pmp::vec2& refPt, const pmp::vec2& boxMin, const pmp::vec2& boxMax)
-	{
-		pmp::vec2 vmin, vmax;
-
-		for (int q = 0; q <= 1; q++)
+		// If the line segment is degenerate (i.e., p1 == p2), return the distance to p1
+		if (c2 == 0.0) 
 		{
-			if (normal[q] > 0.0f)
-			{
-				vmin[q] = boxMin[q] - refPt[q];
-				vmax[q] = boxMax[q] - refPt[q];
-			}
-			else
-			{
-				vmin[q] = boxMax[q] - refPt[q];
-				vmax[q] = boxMin[q] - refPt[q];
-			}
+			return (w[0] * w[0] + w[1] * w[1]);
 		}
 
-		if (DOT_2D(normal, vmin) > 0.0f) return false;
-		if (DOT_2D(normal, vmax) >= 0.0f) return true;
-		return false;
+		double t = c1 / c2;
+
+		// Clamp t to the range [0, 1] to ensure the closest point is on the segment
+		t = std::max(0.0, std::min(1.0, t));
+
+		// Calculate the closest point on the line segment
+		pmp::vec2 closestPoint(p1[0] + t * v[0], p1[1] + t * v[1]);
+
+		// Vector from the closest point to the point
+		pmp::vec2 distVec(point[0] - closestPoint[0], point[1] - closestPoint[1]);
+
+		// Return the squared distance
+		return distVec[0] * distVec[0] + distVec[1] * distVec[1];
 	}
-
-	// =================== Helper macros for 2D axis tests ======================
-
-// X-tests for 2D:
-#define AXISTEST2D_X(a, b, fa, fb) \
-    p0 = (a) * v0[1] - (b) * v0[0]; \
-    p1 = (a) * v1[1] - (b) * v1[0]; \
-    if (p0 < p1) { min = p0; max = p1; } else { min = p1; max = p0; } \
-    rad = (fa) * boxHalfSize[1] + (fb) * boxHalfSize[0]; \
-    if (min > rad || max < -rad) return false
-
-// Y-tests for 2D:
-#define AXISTEST2D_Y(a, b, fa, fb) \
-    p0 = -(a) * v0[0] + (b) * v0[1]; \
-    p1 = -(a) * v1[0] + (b) * v1[1]; \
-    if (p0 < p1) { min = p0; max = p1; } else { min = p1; max = p0; } \
-    rad = (fa) * boxHalfSize[0] + (fb) * boxHalfSize[1]; \
-    if (min > rad || max < -rad) return false
 
 	bool Line2DIntersectsBox(const std::vector<pmp::Point2>& vertices, const pmp::Point2& boxCenter, const pmp::vec2& boxHalfSize)
 	{
-		assert(vertices.size() == 2); // only two vertices for a line
+		if (vertices.size() != 2)
+		{
+			throw std::invalid_argument("Line2DIntersectsBox: The vertices vector must contain exactly two points!\n");
+		}
 
-		pmp::vec2 v0, v1;
-		float min, max, p0, p1, rad, fe;
-		pmp::vec2 normal, e0;
+		const pmp::Point2& p1 = vertices[0];
+		const pmp::Point2& p2 = vertices[1];
 
-		SUB_2D(v0, vertices[0], boxCenter);
-		SUB_2D(v1, vertices[1], boxCenter);
+		// direction vector
+		pmp::vec2 d(p2[0] - p1[0], p2[1] - p1[1]);
 
-		// line edge:
-		SUB_2D(e0, v1, v0);
+		// Compute the half extents of the box
+		const pmp::vec2& e = boxHalfSize;
 
-		// 2 axis tests:
-		fe = fabsf(e0[0]);
-		AXISTEST2D_X(e0[1], e0[0], fe, fe);
+		// Compute the center of the line segment
+		pmp::vec2 lineCenter((p1[0] + p2[0]) * 0.5f, (p1[1] + p2[1]) * 0.5f);
 
-		fe = fabsf(e0[1]);
-		AXISTEST2D_Y(e0[1], e0[0], fe, fe);
+		// Translate the box and the line segment to the origin
+		pmp::vec2 T(lineCenter[0] - boxCenter[0], lineCenter[1] - boxCenter[1]);
 
-		// test for AABB overlap in x and y:
-		// test in x:
-		FINDMINMAX_2D(v0[0], v1[0], v1[0], min, max); // v2 is the same as v1 in 2D
-		if (min > boxHalfSize[0] || max < -boxHalfSize[0]) return false;
+		// Compute the absolute values of the direction vector components
+		pmp::vec2 absD(std::fabs(d[0]), std::fabs(d[1]));
 
-		// test in y:
-		FINDMINMAX_2D(v0[1], v1[1], v1[1], min, max); // v2 is the same as v1 in 2D
-		if (min > boxHalfSize[1] || max < -boxHalfSize[1]) return false;
+		// Perform the SAT test
+		// Test the box's x and y axes
+		if (std::fabs(T[0]) > e[0] + 0.5f * absD[0]) return false;
+		if (std::fabs(T[1]) > e[1] + 0.5f * absD[1]) return false;
 
-		// test if the box intersects the line plane
-		CROSS_2D(normal, e0, e0); // since it's 2D, normal calculation can be simplified
+		// Test the line segment's direction vector
+		float r = e[1] * std::fabs(d[0]) + e[0] * std::fabs(d[1]);
+		if (std::fabs(T[0] * d[1] - T[1] * d[0]) > r) return false;
 
-		if (!LineIntersectsBox2D(normal, v0, pmp::vec2{ -boxHalfSize[0], -boxHalfSize[1] }, pmp::vec2{ boxHalfSize[0], boxHalfSize[1] })) return false;
-
+		// No separating axis found, the line segment intersects the box
 		return true;
 	}
 

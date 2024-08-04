@@ -948,7 +948,7 @@ namespace SDF
 
 		pmp::BoundingBox2 dfBBox(inputPoints);
 		const auto size = dfBBox.max() - dfBBox.min();
-		const float minSize = std::min({ size[0], size[1], size[2] });
+		const float minSize = std::min(size[0], size[1]);
 
 		if (settings.AreaExpansionFactor > 0.0f)
 		{
