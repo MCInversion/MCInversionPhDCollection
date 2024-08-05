@@ -168,13 +168,15 @@ private:
 
     bool use_projection_;
     bool has_feature_vertices_{ false };
-    bool has_feature_edges_{ false };
     VertexProperty<Point2> points_;
+    VertexProperty<Point2> vnormal_;
     VertexProperty<bool> vfeature_;
-    EdgeProperty<bool> efeature_;
     VertexProperty<bool> vlocked_;
-    EdgeProperty<bool> elocked_;
     VertexProperty<Scalar> vsizing_;
+
+    VertexProperty<Point2> refpoints_;
+    VertexProperty<Point2> refnormals_;
+    VertexProperty<Scalar> refsizing_;
 };
 
 } // namespace pmp

@@ -15,10 +15,10 @@ protected:
     void SetUp() override
     {
         curve = CurveFactory::circle(Point2(0, 0), 1.0, 32);
-        deform_circle_with_sine_wave(M_PI_2, 4);
+        DeformCircleWithSineWave(M_PI_2, 4);
     }
 
-    void deform_circle_with_sine_wave(float amplitude, float period)
+    void DeformCircleWithSineWave(float amplitude, float period)
     {
         for (auto v : curve.vertices())
         {
@@ -29,7 +29,7 @@ protected:
         }
     }
 
-    [[nodiscard]] std::map<Vertex, float> compute_local_curvatures(const ManifoldCurve2D& curve)
+    [[nodiscard]] std::map<Vertex, float> ComputeLocalCurvature(const ManifoldCurve2D& curve)
     {
         std::map<Vertex, float> curvatures;
         for (auto v : curve.vertices())
@@ -48,7 +48,7 @@ protected:
         return curvatures;
     }
 
-    [[nodiscard]] std::map<Vertex, float> compute_local_densities(const ManifoldCurve2D& curve, float radius)
+    [[nodiscard]] std::map<Vertex, float> ComputeLocalDensities(const ManifoldCurve2D& curve, float radius)
     {
         std::map<Vertex, float> densities;
         for (auto v : curve.vertices())
@@ -69,27 +69,27 @@ protected:
         return densities;
     }
 
-    [[nodiscard]] float compute_mean_density(const std::map<Vertex, float>& densities)
+    [[nodiscard]] float ComputeMeanDensity(const std::map<Vertex, float>& densities)
     {
-        float total_density = 0.0f;
+        float totalDensity = 0.0f;
         for (const auto& [vertex, density] : densities)
         {
-            total_density += density;
+            totalDensity += density;
         }
-        return total_density / densities.size();
+        return totalDensity / densities.size();
     }
 
-    [[nodiscard]] float compute_mean_curvature(const std::map<Vertex, float>& curvatures)
+    [[nodiscard]] float ComputeMeanCurvature(const std::map<Vertex, float>& curvatures)
     {
-        float total_curvature = 0.0f;
+        float totalCurvature = 0.0f;
         for (const auto& [vertex, curvature] : curvatures)
         {
-            total_curvature += curvature;
+            totalCurvature += curvature;
         }
-        return total_curvature / curvatures.size();
+        return totalCurvature / curvatures.size();
     }
 
-    [[nodiscard]] float compute_density_variance(const std::map<Vertex, float>& densities, float mean_density)
+    [[nodiscard]] float ComputeDensityVariance(const std::map<Vertex, float>& densities, float mean_density)
     {
         float variance = 0.0f;
         for (const auto& [vertex, density] : densities)
@@ -99,7 +99,7 @@ protected:
         return variance / densities.size();
     }
 
-    [[nodiscard]] float compute_curvature_variance(const std::map<Vertex, float>& curvatures, float mean_curvature)
+    [[nodiscard]] float ComputeCurvatureVariance(const std::map<Vertex, float>& curvatures, float mean_curvature)
     {
         float variance = 0.0f;
         for (const auto& [vertex, curvature] : curvatures)
@@ -113,31 +113,31 @@ protected:
 TEST_F(CurveRemeshingTests_DeformedCircle, UniformRemeshing_VertexDensity)
 {
     // Arrange
-    float edge_length = 0.2f;
+    float edgeLength = 0.2f;
     unsigned int iterations = 10;
     CurveRemeshing remesher(curve);
 
     // Act
-    remesher.uniform_remeshing(edge_length, iterations);
+    remesher.uniform_remeshing(edgeLength, iterations);
 
     // Assert
-    std::map<Vertex, float> densities = compute_local_densities(curve, edge_length);
-    float mean_density = compute_mean_density(densities);
-    float density_variance = compute_density_variance(densities, mean_density);
-    EXPECT_NEAR(mean_density, 1.0f / edge_length, 0.1f);
-    EXPECT_LT(density_variance, 0.1f);
+    std::map<Vertex, float> densities = ComputeLocalDensities(curve, edgeLength);
+    float meanDensity = ComputeMeanDensity(densities);
+    float densityVariance = ComputeDensityVariance(densities, meanDensity);
+    EXPECT_NEAR(meanDensity, 1.0f / edgeLength, 0.1f);
+    EXPECT_LT(densityVariance, 0.1f);
 }
 
 TEST_F(CurveRemeshingTests_DeformedCircle, AdaptiveRemeshing_VertexDensity)
 {
     // Arrange
-    float edge_length = 0.2f;
+    float edgeLength = 0.2f;
     unsigned int iterations = 10;
     CurveRemeshing remesher(curve);
     AdaptiveRemeshingSettings settings;
-    settings.MinEdgeLength = edge_length;
-    settings.MaxEdgeLength = 2.0f * edge_length;
-    settings.ApproxError = 1.5f * edge_length;
+    settings.MinEdgeLength = edgeLength;
+    settings.MaxEdgeLength = 2.0f * edgeLength;
+    settings.ApproxError = 1.5f * edgeLength;
     settings.NRemeshingIterations = iterations;
     settings.NTangentialSmoothingIters = 6;
     settings.UseProjection = true;
@@ -146,14 +146,14 @@ TEST_F(CurveRemeshingTests_DeformedCircle, AdaptiveRemeshing_VertexDensity)
     remesher.adaptive_remeshing(settings);
 
     // Assert
-    std::map<Vertex, float> curvatures = compute_local_curvatures(curve);
-    std::map<Vertex, float> densities = compute_local_densities(curve, edge_length);
-    float mean_curvature = compute_mean_curvature(curvatures);
-    float curvature_variance = compute_curvature_variance(curvatures, mean_curvature);
+    std::map<Vertex, float> curvatures = ComputeLocalCurvature(curve);
+    std::map<Vertex, float> densities = ComputeLocalDensities(curve, edgeLength);
+    float meanCurvature = ComputeMeanCurvature(curvatures);
+    float curvatureVariance = ComputeCurvatureVariance(curvatures, meanCurvature);
 
-    float mean_density = compute_mean_density(densities);
-    float density_variance = compute_density_variance(densities, mean_density);
+    float meanDensity = ComputeMeanDensity(densities);
+    float densityVariance = ComputeDensityVariance(densities, meanDensity);
 
-    EXPECT_LT(curvature_variance, 0.1f);
-    EXPECT_LT(density_variance, 0.1f);
+    EXPECT_LT(curvatureVariance, 0.1f);
+    EXPECT_LT(densityVariance, 0.1f);
 }

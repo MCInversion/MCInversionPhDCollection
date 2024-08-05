@@ -184,4 +184,72 @@ void Normals::compute_face_normals(SurfaceMesh& mesh)
         fnormal[f] = compute_face_normal(mesh, f);
 }
 
+//
+// =============== 2D Manifold curve ====================
+//
+
+void Normals::compute_vertex_normals(ManifoldCurve2D& curve)
+{
+    auto vnormal = curve.vertex_property<Normal2>("v:normal");
+    for (auto v : curve.vertices())
+        vnormal[v] = compute_vertex_normal(curve, v);
+}
+
+Normal2 Normals::compute_vertex_normal(const ManifoldCurve2D& curve, Vertex v)
+{
+    std::vector<Normal2> edge_normals;
+
+    // Get the adjacent edges of the vertex
+    auto edges = curve.edges(v);
+    for (Edge e : {edges.first, edges.second})
+    {
+        if (curve.is_valid(e))
+        {
+            edge_normals.push_back(compute_edge_normal(curve, e));
+        }
+    }
+
+    // Compute the average normal
+    Normal2 vertex_normal(0.0f, 0.0f);
+    for (const auto& normal : edge_normals)
+    {
+        vertex_normal += normal;
+    }
+
+    // Normalize the vertex normal
+    float length = std::sqrt(vertex_normal[0] * vertex_normal[0] + vertex_normal[1] * vertex_normal[1]);
+    if (length > 0.0f)
+    {
+        vertex_normal /= length;
+    }
+
+    return vertex_normal;
+}
+
+Normal2 Normals::compute_edge_normal(const ManifoldCurve2D& curve, Edge e)
+{
+    // Get the start and end vertices of the edge
+    Vertex v0 = curve.from_vertex(e);
+    Vertex v1 = curve.to_vertex(e);
+
+    // Get the positions of the vertices
+    Point2 p0 = curve.position(v0);
+    Point2 p1 = curve.position(v1);
+
+    // Compute the edge vector
+    Point2 edge_vector = p1 - p0;
+
+    // Compute the perpendicular vector (normal)
+    Normal2 normal(-edge_vector[1], edge_vector[0]);
+
+    // Normalize the normal
+    float length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1]);
+    if (length > 0.0f)
+    {
+        normal /= length;
+    }
+
+    return normal;
+}
+
 } // namespace pmp

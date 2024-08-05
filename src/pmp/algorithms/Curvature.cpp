@@ -393,4 +393,68 @@ void Curvature::curvature_to_texture_coordinates() const
     }
 }
 
+Curvature1D::Curvature1D(ManifoldCurve2D& curve) : curve_(curve)
+{
+    curvature_ = curve_.add_vertex_property<Scalar>("curv:1D");
+}
+
+Curvature1D::~Curvature1D()
+{
+    curve_.remove_vertex_property(curvature_);
+}
+
+void Curvature1D::analyze()
+{
+    for (auto v : curve_.vertices())
+    {
+        // If the vertex is isolated, its curvature is zero
+        if (curve_.is_isolated(v))
+        {
+            curvature_[v] = 0.0f;
+            continue;
+        }
+
+        // Get the previous and next vertices
+        auto [v_prev, v_next] = curve_.vertices(v);
+
+        if (!curve_.is_valid(v_prev) || !curve_.is_valid(v_next))
+        {
+            curvature_[v] = 0.0f;
+            continue;
+        }
+
+        // Get the positions of the vertices
+        Point2 p_prev = curve_.position(v_prev);
+        Point2 p = curve_.position(v);
+        Point2 p_next = curve_.position(v_next);
+
+        // Compute the edge vectors
+        Point2 e1 = p - p_prev;
+        Point2 e2 = p_next - p;
+
+        // Normalize the edge vectors
+        Scalar len1 = norm(e1);
+        Scalar len2 = norm(e2);
+        if (len1 > FLT_EPSILON) e1 /= len1;
+        if (len2 > FLT_EPSILON) e2 /= len2;
+
+        // Compute the cross product (z-component) and dot product
+        Scalar eCross = e1[0] * e2[1] - e1[1] * e2[0];
+        Scalar eDot = dot(e1, e2);
+
+        // Compute the curvature
+        if (std::fabs(eDot) < 1.0)
+        {
+            Scalar angle = std::acos(eDot);
+            Scalar curvature = 2 * std::sin(angle / 2) / ((len1 + len2) / 2);
+            curvature_[v] = curvature * ((eCross >= 0) ? 1.0f : -1.0f);
+        }
+        else
+        {
+            curvature_[v] = 0.0f;
+        }
+    }
+}
+
+
 } // namespace pmp

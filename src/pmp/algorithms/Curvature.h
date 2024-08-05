@@ -4,6 +4,7 @@
 #pragma once
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 
 namespace pmp {
 
@@ -74,6 +75,29 @@ private:
     SurfaceMesh& mesh_;
     VertexProperty<Scalar> min_curvature_;
     VertexProperty<Scalar> max_curvature_;
+};
+
+//! \brief Compute per-vertex curvature for a 1D curve.
+//! \details Curvature values are computed for each vertex.
+//! \ingroup algorithms
+class Curvature1D
+{
+public:
+    //! construct with curve to be analyzed
+    Curvature1D(ManifoldCurve2D& curve);
+
+    //! destructor
+    ~Curvature1D();
+
+    //! compute curvature information for each vertex
+    void analyze();
+
+    //! return curvature
+    Scalar curvature(Vertex v) const { return curvature_[v]; }
+
+private:
+    ManifoldCurve2D& curve_;
+    VertexProperty<Scalar> curvature_;
 };
 
 } // namespace pmp

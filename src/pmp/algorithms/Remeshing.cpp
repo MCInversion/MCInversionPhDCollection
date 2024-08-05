@@ -943,19 +943,244 @@ Point Remeshing::weighted_centroid(Vertex v)
 CurveRemeshing::CurveRemeshing(ManifoldCurve2D& curve)
     : curve_(curve), refcurve_(nullptr), kd_tree_(nullptr)
 {
+    if (curve_.is_empty())
+        throw InvalidInputException("CurveRemeshing::CurveRemeshing: Input has to be a non-empty manifold curve!");
+
+    points_ = curve_.vertex_property<Point2>("v:point");
+
+    Normals::compute_vertex_normals(curve_);
+    vnormal_ = curve_.vertex_property<Point2>("v:normal");
+
+    has_feature_vertices_ = curve_.has_vertex_property("v:feature");
 }
 
 void CurveRemeshing::uniform_remeshing(Scalar edge_length, unsigned int iterations, bool use_projection)
 {
+    uniform_ = true;
+    use_projection_ = use_projection;
+    target_edge_length_ = edge_length;
+
+    preprocessing();
+
+    for (unsigned int i = 0; i < iterations; ++i)
+    {
+        split_long_edges();
+
+        Normals::compute_vertex_normals(curve_);
+
+        collapse_short_edges();
+
+        tangential_smoothing(5);
+    }
+
+    //remove_caps();
+
+    postprocessing();
 }
 
 void CurveRemeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings, bool use_projection)
 {
+    uniform_ = false;
+    min_edge_length_ = settings.MinEdgeLength;
+    max_edge_length_ = settings.MaxEdgeLength;
+    approx_error_ = settings.ApproxError;
+    use_projection_ = settings.UseProjection;
+
+    preprocessing();
+
+    for (unsigned int i = 0; i < settings.NRemeshingIterations; ++i)
+    {
+        split_long_edges();
+
+        Normals::compute_vertex_normals(curve_);
+
+        collapse_short_edges();
+
+        tangential_smoothing(settings.NTangentialSmoothingIters);
+    }
+
+    //remove_caps();
+
+    postprocessing();
 }
 
 void CurveRemeshing::preprocessing()
 {
+    // properties
+    if (!vfeature_)
+        vfeature_ = curve_.vertex_property<bool>("v:feature", false);
+    if (!vlocked_)
+        vlocked_ = curve_.add_vertex_property<bool>("v:locked", false);
+    if (!vsizing_)
+        vsizing_ = curve_.add_vertex_property<Scalar>("v:sizing");
+
+    // lock unselected vertices if some vertices are selected
+    auto vselected = curve_.get_vertex_property<bool>("v:selected");
+    if (vselected)
+    {
+        bool has_selection = false;
+        for (auto v : curve_.vertices())
+        {
+            if (vselected[v])
+            {
+                has_selection = true;
+                break;
+            }
+        }
+
+        if (has_selection)
+        {
+            for (auto v : curve_.vertices())
+            {
+                vlocked_[v] = !vselected[v];
+            }
+
+            // lock an edge if one of its vertices is locked
+            for (auto e : curve_.edges())
+            {
+                vlocked_[curve_.from_vertex(e)] = vlocked_[curve_.from_vertex(e)] || vlocked_[curve_.to_vertex(e)];
+                vlocked_[curve_.to_vertex(e)] = vlocked_[curve_.from_vertex(e)] || vlocked_[curve_.to_vertex(e)];
+            }
+        }
+    }
+
+    // lock feature corners
+    for (auto v : curve_.vertices())
+    {
+        if (vfeature_[v])
+        {
+            int c = 0;
+            auto [e1, e2] = curve_.edges(v);
+            if (curve_.is_valid(e1) && curve_.is_valid(e2))
+            {
+                if (vfeature_[curve_.from_vertex(e1)] && vfeature_[curve_.to_vertex(e1)])
+                    ++c;
+                if (vfeature_[curve_.from_vertex(e2)] && vfeature_[curve_.to_vertex(e2)])
+                    ++c;
+            }
+
+            if (c != 2)
+                vlocked_[v] = true;
+        }
+    }
+
+    // compute sizing field
+    if (uniform_)
+    {
+        for (auto v : curve_.vertices())
+        {
+            vsizing_[v] = target_edge_length_;
+        }
+    }
+    else
+    {
+        // compute curvature for all curve vertices
+        Curvature1D curv(curve_);
+        curv.analyze();
+
+        // use vsizing_ to store/smooth curvatures to avoid another vertex property
+
+        // curvature values for feature vertices are not meaningful. mark them as negative values.
+        for (auto v : curve_.vertices())
+        {
+            if (vfeature_ && vfeature_[v])
+                vsizing_[v] = -1.0;
+            else
+                vsizing_[v] = curv.curvature(v);
+        }
+
+        // curvature values might be noisy. smooth them.
+        // don't consider feature vertices' curvatures.
+        for (int iters = 0; iters < 2; ++iters)
+        {
+            for (auto v : curve_.vertices())
+            {
+                Scalar w, ww = 0.0;
+                Scalar c, cc = 0.0;
+
+                auto [e1, e2] = curve_.edges(v);
+                if (curve_.is_valid(e1))
+                {
+                    auto tv = curve_.to_vertex(e1);
+                    c = vsizing_[tv];
+                    if (c > 0.0)
+                    {
+                        w = 1.0; // simple uniform weight for 2D curves
+                        ww += w;
+                        cc += w * c;
+                    }
+                }
+                if (curve_.is_valid(e2))
+                {
+                    auto tv = curve_.from_vertex(e2);
+                    c = vsizing_[tv];
+                    if (c > 0.0)
+                    {
+                        w = 1.0; // simple uniform weight for 2D curves
+                        ww += w;
+                        cc += w * c;
+                    }
+                }
+
+                if (ww)
+                    cc /= ww;
+                vsizing_[v] = cc;
+            }
+        }
+
+        // now convert per-vertex curvature into target edge length
+        for (auto v : curve_.vertices())
+        {
+            Scalar c = vsizing_[v];
+
+            // get edge length from curvature
+            const Scalar r = 1.0 / c;
+            const Scalar e = approx_error_;
+            Scalar h;
+            if (e < r)
+            {
+                // see mathworld: "circle segment" and "equilateral triangle"
+                // h = sqrt(2.0*r*e-e*e) * 3.0 / sqrt(3.0);
+                h = sqrt(6.0 * e * r - 3.0 * e * e); // simplified...
+            }
+            else
+            {
+                // this does not really make sense
+                h = e * 3.0 / sqrt(3.0);
+            }
+
+            // clamp to min. and max. edge length
+            if (h < min_edge_length_)
+                h = min_edge_length_;
+            else if (h > max_edge_length_)
+                h = max_edge_length_;
+
+            // store target edge length
+            vsizing_[v] = h;
+        }
+    }
+
+    if (use_projection_)
+    {
+        // build reference curve
+        refcurve_ = std::make_shared<ManifoldCurve2D>();
+        refcurve_->assign(curve_);
+        Normals::compute_vertex_normals(*refcurve_);
+        refpoints_ = refcurve_->vertex_property<Point2>("v:point");
+        refnormals_ = refcurve_->vertex_property<Normal2>("v:normal");
+
+        // copy sizing field from curve_
+        refsizing_ = refcurve_->add_vertex_property<Scalar>("v:sizing");
+        for (auto v : refcurve_->vertices())
+        {
+            refsizing_[v] = vsizing_[v];
+        }
+
+        // build kd-tree
+        kd_tree_ = std::make_unique<EdgeKdTree>(refcurve_, 0);
+    }
 }
+
 
 void CurveRemeshing::postprocessing()
 {
