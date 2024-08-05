@@ -4,7 +4,9 @@
 #pragma once
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 #include "pmp/algorithms/TriangleKdTree.h"
+#include "pmp/algorithms/EdgeKdTree.h"
 
 #include <memory>
 
@@ -106,6 +108,73 @@ private:
     VertexProperty<Point> refpoints_;
     VertexProperty<Point> refnormals_;
     VertexProperty<Scalar> refsizing_;
+};
+
+//! \brief A class for uniform and adaptive 2D curve remeshing.
+//! \details The algorithm implemented here performs incremental remeshing based
+//! on edge collapse, split, and tangential relaxation, with optional reprojection.
+//! \ingroup algorithms
+class CurveRemeshing
+{
+public:
+    //! \brief Construct with curve to be remeshed.
+    //! \pre Input curve needs to be a pure manifold curve.
+    //! \throw InvalidInputException if the input precondition is violated.
+    CurveRemeshing(ManifoldCurve2D& curve);
+
+    //! \brief Perform uniform remeshing.
+    //! \param edge_length the target edge length.
+    //! \param iterations the number of iterations.
+    //! \param use_projection use back-projection to the input curve.
+    void uniform_remeshing(Scalar edge_length, unsigned int iterations = 10,
+        bool use_projection = true);
+
+    //! \brief Perform adaptive remeshing.
+    //! \param settings input settings.
+    //! \param use_projection use back-projection to the input curve.
+    void adaptive_remeshing(const AdaptiveRemeshingSettings& settings,
+        bool use_projection = true);
+
+private:
+    void preprocessing();
+    void postprocessing();
+
+    void split_long_edges(unsigned int nIterations = 10);
+    void collapse_short_edges();
+    void tangential_smoothing(unsigned int iterations);
+    void project_to_reference(Vertex v);
+
+    bool is_too_long(Vertex v0, Vertex v1) const
+    {
+        return distance(points_[v0], points_[v1]) >
+            4.0 / 3.0 * std::min(vsizing_[v0], vsizing_[v1]);
+    }
+    bool is_too_short(Vertex v0, Vertex v1) const
+    {
+        return distance(points_[v0], points_[v1]) <
+            4.0 / 5.0 * std::min(vsizing_[v0], vsizing_[v1]);
+    }
+
+    ManifoldCurve2D& curve_;
+    std::shared_ptr<ManifoldCurve2D> refcurve_;
+
+    std::unique_ptr<EdgeKdTree> kd_tree_;
+
+    bool uniform_;
+    Scalar target_edge_length_;
+    Scalar min_edge_length_;
+    Scalar max_edge_length_;
+    Scalar approx_error_;
+
+    bool use_projection_;
+    bool has_feature_vertices_{ false };
+    bool has_feature_edges_{ false };
+    VertexProperty<Point2> points_;
+    VertexProperty<bool> vfeature_;
+    EdgeProperty<bool> efeature_;
+    VertexProperty<bool> vlocked_;
+    EdgeProperty<bool> elocked_;
+    VertexProperty<Scalar> vsizing_;
 };
 
 } // namespace pmp

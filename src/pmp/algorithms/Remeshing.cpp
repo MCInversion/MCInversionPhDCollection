@@ -940,4 +940,41 @@ Point Remeshing::weighted_centroid(Vertex v)
     return p;
 }
 
+CurveRemeshing::CurveRemeshing(ManifoldCurve2D& curve)
+    : curve_(curve), refcurve_(nullptr), kd_tree_(nullptr)
+{
+}
+
+void CurveRemeshing::uniform_remeshing(Scalar edge_length, unsigned int iterations, bool use_projection)
+{
+}
+
+void CurveRemeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings, bool use_projection)
+{
+}
+
+void CurveRemeshing::preprocessing()
+{
+}
+
+void CurveRemeshing::postprocessing()
+{
+}
+
+void CurveRemeshing::split_long_edges(unsigned int nIterations)
+{
+}
+
+void CurveRemeshing::collapse_short_edges()
+{
+}
+
+void CurveRemeshing::tangential_smoothing(unsigned int iterations)
+{
+}
+
+void CurveRemeshing::project_to_reference(Vertex v)
+{
+}
+
 } // namespace pmp

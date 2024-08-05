@@ -10,9 +10,13 @@ namespace pmp {
 //! \addtogroup algorithms
 //! @{
 
-//! Compute the distance of a point p to a line segment given by points (v0,v1).
+//! Compute the distance of a point p to a 3D line segment given by points (v0,v1).
 Scalar dist_point_line_segment(const Point& p, const Point& v0, const Point& v1,
                                Point& nearest_point);
+
+//! Compute the distance of a point p to a 2D line segment given by 2D points (v0,v1).
+Scalar dist_point_line_segment(const Point2& p, const Point2& v0, const Point2& v1,
+    Point2& nearest_point);
 
 //! Compute the distance of a point p to the triangle given by points (v0, v1, v2).
 Scalar dist_point_triangle(const Point& p, const Point& v0, const Point& v1,

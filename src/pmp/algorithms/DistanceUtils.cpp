@@ -1,7 +1,7 @@
 // Copyright 2011-2020 the Polygon Mesh Processing Library developers.
 // Distributed under a MIT-style license, see LICENSE.txt for details.
 
-#include "pmp/algorithms/DistancePointTriangle.h"
+#include "pmp/algorithms/DistanceUtils.h"
 
 #include <cmath>
 
@@ -28,6 +28,40 @@ Scalar dist_point_line_segment(const Point& p, const Point& v0, const Point& v1,
 
     nearest_point = min_v;
     return norm(d1);
+}
+
+Scalar dist_point_line_segment(const Point2& p, const Point2& v0, const Point2& v1, Point2& nearest_point)
+{
+    // Vector from v0 to v1
+    pmp::vec2 v(v1[0] - v0[0], v1[1] - v0[1]);
+
+    // Vector from v0 to the point p
+    pmp::vec2 w(p[0] - v0[0], p[1] - v0[1]);
+
+    // Calculate the projection of w onto v to find the closest point on the line segment
+    Scalar c1 = w[0] * v[0] + w[1] * v[1];
+    Scalar c2 = v[0] * v[0] + v[1] * v[1];
+
+    // If the line segment is degenerate (i.e., v0 == v1), return the distance to v0
+    if (std::abs(c2) < 1e-6)
+    {
+        nearest_point = v0;
+        return sqrt(w[0] * w[0] + w[1] * w[1]);
+    }
+
+    Scalar t = c1 / c2;
+
+    // Clamp t to the range [0, 1] to ensure the closest point is on the segment
+    t = std::max(0.0f, std::min(1.0f, t));
+
+    // Calculate the closest point on the line segment
+    nearest_point[0] = v0[0] + t * v[0];
+    nearest_point[1] = v0[1] + t * v[1];
+
+    // Vector from the closest point to the point p
+    pmp::vec2 distVec(p[0] - nearest_point[0], p[1] - nearest_point[1]);
+
+    return sqrt(distVec[0] * distVec[0] + distVec[1] * distVec[1]);
 }
 
 Scalar dist_point_triangle(const Point& p, const Point& v0, const Point& v1,

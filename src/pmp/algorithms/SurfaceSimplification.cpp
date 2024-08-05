@@ -6,7 +6,7 @@
 #include <iterator>
 #include <limits>
 
-#include "pmp/algorithms/DistancePointTriangle.h"
+#include "pmp/algorithms/DistanceUtils.h"
 #include "pmp/algorithms/SurfaceNormals.h"
 
 namespace pmp {
