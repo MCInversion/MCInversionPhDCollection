@@ -3271,6 +3271,8 @@ int main()
 
 	if (performDistanceField2DHashTest)
 	{
+		constexpr double truncationFactor = DBL_MAX; //  0.75
+
 		//
 		// ================= Simple closed square =======================
 		//
@@ -3289,7 +3291,7 @@ int main()
 		const SDF::DistanceField2DSettings sdfSettings{
 			cellSize,
 			1.0f,
-			DBL_MAX,
+			truncationFactor,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation2D::PixelFloodFill,
 			SDF::PreprocessingType2D::Quadtree
@@ -3318,7 +3320,7 @@ int main()
 		const SDF::DistanceField2DSettings sdfSettings2{
 			cellSize2,
 			1.0f,
-			DBL_MAX,
+			truncationFactor,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation2D::None,
 			SDF::PreprocessingType2D::Quadtree
@@ -3342,7 +3344,7 @@ int main()
 		const SDF::PointCloudDistanceField2DSettings sdfSettings3{
 			cellSize3,
 			1.0f,
-			DBL_MAX
+			truncationFactor
 		};
 
 		const auto sdf3 = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings3);

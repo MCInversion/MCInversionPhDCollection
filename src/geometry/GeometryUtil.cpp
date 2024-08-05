@@ -1162,7 +1162,7 @@ namespace Geometry
 		double c2 = v[0] * v[0] + v[1] * v[1];
 
 		// If the line segment is degenerate (i.e., p1 == p2), return the distance to p1
-		if (c2 == 0.0) 
+		if (std::abs(c2) < 1e-6) 
 		{
 			return (w[0] * w[0] + w[1] * w[1]);
 		}
