@@ -973,12 +973,10 @@ void CurveRemeshing::uniform_remeshing(Scalar edge_length, unsigned int iteratio
         tangential_smoothing(5);
     }
 
-    //remove_caps();
-
     postprocessing();
 }
 
-void CurveRemeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings, bool use_projection)
+void CurveRemeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& settings)
 {
     uniform_ = false;
     min_edge_length_ = settings.MinEdgeLength;
@@ -998,8 +996,6 @@ void CurveRemeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& setting
 
         tangential_smoothing(settings.NTangentialSmoothingIters);
     }
-
-    //remove_caps();
 
     postprocessing();
 }
@@ -1184,22 +1180,268 @@ void CurveRemeshing::preprocessing()
 
 void CurveRemeshing::postprocessing()
 {
+    // remove properties
+    curve_.remove_vertex_property(vlocked_);
+    curve_.remove_vertex_property(vsizing_);
+
+    if (!has_feature_vertices_)
+    {
+        curve_.remove_vertex_property(vfeature_);
+    }
 }
 
 void CurveRemeshing::split_long_edges(unsigned int nIterations)
 {
+    Vertex vnew, v0, v1;
+    bool ok;
+    unsigned int i;
+
+    for (ok = false, i = 0; !ok && i < nIterations; ++i)
+    {
+        ok = true;
+
+        for (auto e : curve_.edges())
+        {
+            std::tie(v0, v1) = curve_.vertices(e);
+
+            if (!(vlocked_[v0] || vlocked_[v1]) && is_too_long(v0, v1))
+            {
+                const Point2& p0 = curve_.position(v0);
+                const Point2& p1 = curve_.position(v1);
+
+                vnew = curve_.split_edge_with_vertex(e, (p0 + p1) * 0.5f);
+
+                // need normal or sizing for adaptive refinement
+                vnormal_[vnew] = Normals::compute_vertex_normal(curve_, vnew);
+                vsizing_[vnew] = 0.5f * (vsizing_[v0] + vsizing_[v1]);
+
+                // Check if either vertex is a feature vertex
+                if (vfeature_[v0] || vfeature_[v1])
+                {
+                    vfeature_[vnew] = true;
+                }
+                else
+                {
+                    project_to_reference(vnew);
+                }
+
+                ok = false;
+            }
+        }
+    }
 }
 
 void CurveRemeshing::collapse_short_edges()
 {
+    Vertex v0, v1;
+    bool ok, b0, b1, l0, l1, f0, f1;
+    int i;
+
+    for (ok = false, i = 0; !ok && i < 10; ++i)
+    {
+        ok = true;
+
+        for (auto e : curve_.edges())
+        {
+            if (!curve_.is_deleted(e))
+            {
+                v0 = curve_.from_vertex(e);
+                v1 = curve_.to_vertex(e);
+
+                if (is_too_short(v0, v1))
+                {
+                    // get status
+                    b0 = curve_.is_boundary(v0);
+                    b1 = curve_.is_boundary(v1);
+                    l0 = vlocked_[v0];
+                    l1 = vlocked_[v1];
+                    f0 = vfeature_[v0];
+                    f1 = vfeature_[v1];
+
+                    // Locked rules
+                    if (l0 && l1)
+                        continue;
+
+                    // Feature rules
+                    if (f0 && f1)
+                        continue;
+
+                    // Collapse v1 to v0 if possible
+                    if (!l0 && (!f0 || f1) && !(b0 && !b1))
+                    {
+                        curve_.collapse_edge(v0, v1, true);
+                        ok = false;
+                    }
+                    // Collapse v0 to v1 if possible
+                    else if (!l1 && (!f1 || f0) && !(b1 && !b0))
+                    {
+                        curve_.collapse_edge(v0, v1, false);
+                        ok = false;
+                    }
+                }
+            }
+        }
+    }
+
+    curve_.garbage_collection();
 }
+
 
 void CurveRemeshing::tangential_smoothing(unsigned int iterations)
 {
+    Vertex v_prev, v_next;
+    Point2 u, t, b;
+
+    // add property
+    auto update = curve_.add_vertex_property<Point2>("v:update");
+
+    // project at the beginning to get valid sizing values and normal vectors
+    // for vertices introduced by splitting
+    if (use_projection_)
+    {
+        for (const auto v : curve_.vertices())
+        {
+            if (!curve_.is_boundary(v) && !vlocked_[v])
+            {
+                project_to_reference(v);
+            }
+        }
+    }
+
+    for (unsigned int iters = 0; iters < iterations; ++iters)
+    {
+        for (const auto v : curve_.vertices())
+        {
+            if (!curve_.is_boundary(v) && !vlocked_[v])
+            {
+                if (vfeature_[v])
+                {
+                    u = Point2(0.0);
+                    t = Point2(0.0);
+                    int c = 0;
+
+                    std::tie(v_prev, v_next) = curve_.vertices(v);
+
+                    if (curve_.is_valid(v_prev) && vfeature_[v_prev])
+                    {
+                        b = (curve_.position(v) + curve_.position(v_prev)) * 0.5;
+
+                        u += b;
+
+                        if (c == 0)
+                        {
+                            t = normalize(curve_.position(v_prev) - curve_.position(v));
+                            ++c;
+                        }
+                        else
+                        {
+                            t -= normalize(curve_.position(v_prev) - curve_.position(v));
+                        }
+                    }
+
+                    if (curve_.is_valid(v_next) && vfeature_[v_next])
+                    {
+                        b = (curve_.position(v) + curve_.position(v_next)) * 0.5;
+
+                        u += b;
+
+                        if (c == 0)
+                        {
+                            t = normalize(curve_.position(v_next) - curve_.position(v));
+                            ++c;
+                        }
+                        else
+                        {
+                            t -= normalize(curve_.position(v_next) - curve_.position(v));
+                        }
+                    }
+
+                    assert(c == 2);
+
+                    u *= 0.5; // average of the two midpoints
+                    u -= curve_.position(v);
+                    u = t * dot(u, t);
+
+                    update[v] = u;
+                }
+                else
+                {
+                    u = (curve_.position(v_prev) + curve_.position(v_next)) * 0.5 - curve_.position(v);
+                    t = normalize(curve_.position(v_next) - curve_.position(v_prev));
+                    u = t * dot(u, t);
+
+                    update[v] = u;
+                }
+            }
+        }
+
+        // update vertex positions
+        for (const auto v : curve_.vertices())
+        {
+            if (!curve_.is_boundary(v) && !vlocked_[v])
+            {
+                curve_.position(v) += update[v];
+            }
+        }
+    }
+
+    // project at the end
+    if (use_projection_)
+    {
+        for (const auto v : curve_.vertices())
+        {
+            if (!curve_.is_boundary(v) && !vlocked_[v])
+            {
+                project_to_reference(v);
+            }
+        }
+    }
+
+    // remove property
+    curve_.remove_vertex_property(update);
 }
+
 
 void CurveRemeshing::project_to_reference(Vertex v)
 {
+    if (!use_projection_)
+    {
+        return;
+    }
+
+    // find closest triangle of reference mesh
+    const auto nn = kd_tree_->nearest(points_[v]);
+    const Point2 p = nn.nearest;
+    const Edge e = nn.edge;
+
+    // Get edge data
+    const Vertex v0 = curve_.from_vertex(e);
+    const Vertex v1 = curve_.to_vertex(e);
+
+    const Point2 p0 = refpoints_[v0];
+    const Point2 n0 = refnormals_[v0];
+    const Scalar s0 = refsizing_[v0];
+
+    const Point2 p1 = refpoints_[v1];
+    const Point2 n1 = refnormals_[v1];
+    const Scalar s1 = refsizing_[v1];
+
+    // Compute the barycentric coordinate t along the edge
+    const Scalar edge_length = distance(p0, p1);
+    const Scalar t = distance(p0, p) / edge_length;
+
+    // Interpolate normal
+    Point2 n = (1 - t) * n0 + t * n1;
+    n.normalize();
+    assert(!std::isnan(n[0]));
+
+    // Interpolate sizing field
+    const Scalar s = (1 - t) * s0 + t * s1;
+
+    // Set result
+    curve_.position(v) = p;
+    refnormals_[v] = n;
+    vsizing_[v] = s;
 }
 
 } // namespace pmp

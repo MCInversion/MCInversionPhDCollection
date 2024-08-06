@@ -131,9 +131,7 @@ public:
 
     //! \brief Perform adaptive remeshing.
     //! \param settings input settings.
-    //! \param use_projection use back-projection to the input curve.
-    void adaptive_remeshing(const AdaptiveRemeshingSettings& settings,
-        bool use_projection = true);
+    void adaptive_remeshing(const AdaptiveRemeshingSettings& settings);
 
 private:
     void preprocessing();
