@@ -1312,6 +1312,8 @@ void CurveRemeshing::tangential_smoothing(unsigned int iterations)
     {
         for (const auto v : curve_.vertices())
         {
+            std::tie(v_prev, v_next) = curve_.vertices(v);
+
             if (!curve_.is_boundary(v) && !vlocked_[v])
             {
                 if (vfeature_[v])
@@ -1319,8 +1321,6 @@ void CurveRemeshing::tangential_smoothing(unsigned int iterations)
                     u = Point2(0.0);
                     t = Point2(0.0);
                     int c = 0;
-
-                    std::tie(v_prev, v_next) = curve_.vertices(v);
 
                     if (curve_.is_valid(v_prev) && vfeature_[v_prev])
                     {
@@ -1376,19 +1376,22 @@ void CurveRemeshing::tangential_smoothing(unsigned int iterations)
         }
 
         // update vertex positions
-        for (const auto v : curve_.vertices())
+        for (auto v : curve_.vertices())
         {
             if (!curve_.is_boundary(v) && !vlocked_[v])
             {
-                curve_.position(v) += update[v];
+                points_[v] += update[v];
             }
         }
+
+        // update normal vectors (if not done so through projection)
+        Normals::compute_vertex_normals(curve_);
     }
 
     // project at the end
     if (use_projection_)
     {
-        for (const auto v : curve_.vertices())
+        for (auto v : curve_.vertices())
         {
             if (!curve_.is_boundary(v) && !vlocked_[v])
             {
@@ -1415,8 +1418,8 @@ void CurveRemeshing::project_to_reference(Vertex v)
     const Edge e = nn.edge;
 
     // Get edge data
-    const Vertex v0 = curve_.from_vertex(e);
-    const Vertex v1 = curve_.to_vertex(e);
+    const Vertex v0 = refcurve_->from_vertex(e);
+    const Vertex v1 = refcurve_->to_vertex(e);
 
     const Point2 p0 = refpoints_[v0];
     const Point2 n0 = refnormals_[v0];
@@ -1440,7 +1443,7 @@ void CurveRemeshing::project_to_reference(Vertex v)
 
     // Set result
     curve_.position(v) = p;
-    refnormals_[v] = n;
+    vnormal_[v] = n;
     vsizing_[v] = s;
 }
 

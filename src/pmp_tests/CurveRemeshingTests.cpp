@@ -7,6 +7,39 @@
 
 using namespace pmp;
 
+#define EXPORT_TEST_BEFORE_AFTER_CURVES true
+
+#if EXPORT_TEST_BEFORE_AFTER_CURVES
+#include <filesystem>
+// set up root directory
+const std::filesystem::path fsRootPath = DROOT_DIR;
+const auto fsDataDirPath = fsRootPath / "data\\";
+const auto fsDataOutPath = fsRootPath / "output\\";
+const std::string dataDirPath = fsDataDirPath.string();
+const std::string dataOutPath = fsDataOutPath.string();
+#define EXPORT_BEFORE(curve, name) \
+    do { \
+        const auto fileName = dataOutPath + "/pmp_tests/" + (name) + "_before.ply"; \
+        if (!write_to_ply((curve), fileName)) { \
+            EXPECT_TRUE(false); \
+        } \
+    } while (0)
+
+#define EXPORT_AFTER(curve, name) \
+    do { \
+        const auto fileName = dataOutPath + "/pmp_tests/" + (name) + "_after.ply"; \
+        if (!write_to_ply((curve), fileName)) { \
+            EXPECT_TRUE(false); \
+        } \
+    } while (0)
+
+#else
+
+#define EXPORT_BEFORE(curve, name) do {} while (0)
+#define EXPORT_AFTER(curve, name) do {} while (0)
+
+#endif
+
 namespace
 {
     [[nodiscard]] std::map<Vertex, float> ComputeLocalCurvature(const ManifoldCurve2D& curve)
@@ -99,17 +132,17 @@ protected:
     void SetUp() override
     {
         curve = CurveFactory::circle(Point2(0, 0), 1.0, 32);
-        DeformCircleWithSineWave(M_PI_2, 4);
+        DeformCircleWithSineWave(1.0, 4);
     }
 
-    void DeformCircleWithSineWave(float amplitude, float period)
+    void DeformCircleWithSineWave(float amplitude, float freq)
     {
         for (const auto v : curve.vertices())
         {
-            Point2 p = curve.position(v);
+            Point2 p = curve.position(v) - Point2(0, 0);
             const float angle = atan2(p[1], p[0]);
-            const float radius = 1.0f + amplitude * sin(period * angle);
-            curve.position(v) = Point2(radius * cos(angle), radius * sin(angle));
+            vec2 direction = normalize(p);
+            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0f);
         }
     }
 };
@@ -121,14 +154,18 @@ TEST_F(CurveRemeshingTests_DeformedCircle, UniformRemeshing_VertexDensity)
     constexpr unsigned int iterations = 10;
     CurveRemeshing remesher(curve);
 
+    EXPORT_BEFORE(curve, "CurveRemeshingTests_DeformedCircle_UniformRemeshing");
+
     // Act
     remesher.uniform_remeshing(edgeLength, iterations);
+
+    EXPORT_AFTER(curve, "CurveRemeshingTests_DeformedCircle_UniformRemeshing");
 
     // Assert
     const std::map<Vertex, float> densities = ComputeLocalDensities(curve, edgeLength);
     const float meanDensity = ComputeMeanDensity(densities);
     const float densityVariance = ComputeDensityVariance(densities, meanDensity);
-    EXPECT_NEAR(meanDensity, 1.0f / edgeLength, 0.1f);
+    EXPECT_NEAR(meanDensity, 1.0f / edgeLength, 1e-3f);
     EXPECT_LT(densityVariance, 0.1f);
 }
 
@@ -140,14 +177,16 @@ TEST_F(CurveRemeshingTests_DeformedCircle, AdaptiveRemeshing_VertexDensity)
     CurveRemeshing remesher(curve);
     AdaptiveRemeshingSettings settings;
     settings.MinEdgeLength = edgeLength;
-    settings.MaxEdgeLength = 2.0f * edgeLength;
-    settings.ApproxError = 1.5f * edgeLength;
+    settings.MaxEdgeLength = 1.5f * edgeLength;
+    settings.ApproxError = 0.05f * edgeLength;
     settings.NRemeshingIterations = iterations;
     settings.NTangentialSmoothingIters = 6;
     settings.UseProjection = true;
 
     // Act
     remesher.adaptive_remeshing(settings);
+
+    EXPORT_AFTER(curve, "CurveRemeshingTests_DeformedCircle_AdaptiveRemeshing");
 
     // Assert
     const std::map<Vertex, float> curvatures = ComputeLocalCurvature(curve);
