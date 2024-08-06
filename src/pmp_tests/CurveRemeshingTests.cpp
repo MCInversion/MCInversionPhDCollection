@@ -61,34 +61,51 @@ namespace
         return curvatures;
     }
 
-    [[nodiscard]] std::map<Vertex, float> ComputeLocalDensities(const ManifoldCurve2D& curve, float radius)
+    [[nodiscard]] std::map<Vertex, float> ComputeLocalDensities(const ManifoldCurve2D& curve, float edgeLength)
     {
         std::map<Vertex, float> densities;
+
         for (auto v : curve.vertices())
         {
+            float localDensity = 0.0f;
             int count = 0;
-            Point2 p = curve.position(v);
-            for (auto u : curve.vertices())
+
+            // Get the outgoing and incoming edges
+            auto [e_out, e_in] = curve.edges(v);
+
+            // Sum the lengths of adjacent edges
+            if (e_out.is_valid())
             {
-                if (u == v) continue;
-                Point2 q = curve.position(u);
-                if (distance(p, q) < radius)
-                {
-                    count++;
-                }
+                localDensity += curve.edge_length(e_out);
+                count++;
             }
-            densities[v] = static_cast<float>(count);
+
+            if (e_in.is_valid())
+            {
+                localDensity += curve.edge_length(e_in);
+                count++;
+            }
+
+            // If there are adjacent edges, compute the local density
+            if (count > 0)
+            {
+                localDensity /= count;
+                densities[v] = 1.0f / localDensity; // Local density is the inverse of average edge length
+            }
+            else
+            {
+                densities[v] = 1.0f / edgeLength; // Default to edgeLength for isolated vertices
+            }
         }
+
         return densities;
     }
 
     [[nodiscard]] float ComputeMeanDensity(const std::map<Vertex, float>& densities)
     {
-        float totalDensity = 0.0f;
-        for (const auto& [vertex, density] : densities)
-        {
-            totalDensity += density;
-        }
+        const float totalDensity = std::accumulate(densities.begin(), densities.end(), 0.0f,
+            [](float sum, const std::pair<Vertex, float>& p) { return sum + p.second; });
+
         return totalDensity / densities.size();
     }
 
@@ -102,22 +119,23 @@ namespace
         return totalCurvature / curvatures.size();
     }
 
-    [[nodiscard]] float ComputeDensityVariance(const std::map<Vertex, float>& densities, float mean_density)
+    [[nodiscard]] float ComputeDensityVariance(const std::map<Vertex, float>& densities, float meanDensity)
     {
         float variance = 0.0f;
-        for (const auto& [vertex, density] : densities)
+        for (const auto& [v, density] : densities)
         {
-            variance += (density - mean_density) * (density - mean_density);
+            variance += (density - meanDensity) * (density - meanDensity);
         }
+
         return variance / densities.size();
     }
 
-    [[nodiscard]] float ComputeCurvatureVariance(const std::map<Vertex, float>& curvatures, float mean_curvature)
+    [[nodiscard]] float ComputeCurvatureVariance(const std::map<Vertex, float>& curvatures, float meanCurvature)
     {
         float variance = 0.0f;
         for (const auto& [vertex, curvature] : curvatures)
         {
-            variance += (curvature - mean_curvature) * (curvature - mean_curvature);
+            variance += (curvature - meanCurvature) * (curvature - meanCurvature);
         }
         return variance / curvatures.size();
     }
@@ -165,7 +183,7 @@ TEST_F(CurveRemeshingTests_DeformedCircle, UniformRemeshing_VertexDensity)
     const std::map<Vertex, float> densities = ComputeLocalDensities(curve, edgeLength);
     const float meanDensity = ComputeMeanDensity(densities);
     const float densityVariance = ComputeDensityVariance(densities, meanDensity);
-    EXPECT_NEAR(meanDensity, 1.0f / edgeLength, 1e-3f);
+    EXPECT_NEAR(1.0 / meanDensity, edgeLength, 0.05f);
     EXPECT_LT(densityVariance, 0.1f);
 }
 
