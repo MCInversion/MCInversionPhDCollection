@@ -1,6 +1,8 @@
 cmake_policy(SET CMP0048 NEW)
-project(MCInversionPhDCollection
-  VERSION 1.0)
+
+set(MAIN_PROJECT_NAME "MCInversionPhDCollection")
+
+project(${MAIN_PROJECT_NAME} VERSION 1.0)
 cmake_minimum_required(VERSION 3.16.3)
 cmake_policy(SET CMP0072 NEW)
 
@@ -200,6 +202,7 @@ include(clang-tidy)
 # ====================================================
 # which directories to process
 # ....................................................
+add_subdirectory(src/core)
 add_subdirectory(src/fade2d)
 add_subdirectory(src/poly2tri)
 add_subdirectory(src/pmp)
@@ -208,6 +211,20 @@ add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
 add_subdirectory(src/stb_image)
 add_subdirectory(src/utils)
+
+file(GLOB Main_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
+
+add_executable(${PROJECT_NAME} ${Main_Src})
+
+target_link_libraries(${PROJECT_NAME}
+    pmp
+    SDF
+    Geometry
+    Core
+    STBImage
+)
+target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/src/")
+target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
 
 # ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
 #
@@ -233,16 +250,9 @@ if (BUILD_UNIT_TESTS)
     add_subdirectory(src/pmp_tests)
     add_subdirectory(src/geometry_tests)
     add_subdirectory(src/sdf_tests)
+    add_subdirectory(src/core_tests)
 endif()
 
-file(GLOB MCInversionPhDCollection_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
-add_executable(${PROJECT_NAME} ${MCInversionPhDCollection_Src})
-target_link_libraries(${PROJECT_NAME}
-    pmp
-    SDF
-    Geometry
-    STBImage
-)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set_target_properties(
@@ -254,8 +264,7 @@ set_target_properties(
     pmp
 PROPERTIES FOLDER "PMP_Lib")
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
-# Set MCInversionPhDCollection the startup project
+# Set PROJECT_NAME the startup project
 if (MSVC)
 	set_property(DIRECTORY ${ROOT_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 endif()
