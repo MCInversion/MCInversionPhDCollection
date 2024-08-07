@@ -5,8 +5,15 @@
 
 namespace Geometry
 {
-	/// \brief A builder object for an inner circle curve to an arbitrary 2D geometry.
-	class InnerCircleBuilder
+	/// \brief Enumerator for choosing the calculation method for inner circle/sphere.
+	enum class [[nodiscard]] InscribedSphereMethod
+	{
+		MinDistToBBoxCenter = 0 //>! this is a naive method to calculate the inner sphere.
+	};
+
+
+	/// \brief A builder object for an inscribed circle curve to an arbitrary 2D geometry.
+	class InscribedCircleBuilder
 	{
 	public:
 		/**
@@ -14,7 +21,7 @@ namespace Geometry
 		 * \param points        input point cloud.
 		 * \return pair { radius, center } of the resulting circle.
 		 */
-		static [[nodiscard]] std::pair<pmp::Scalar, pmp::Point2> CalculateInnerCircleRadiusAndCenter(const std::vector<pmp::Point2>& points);
+		static [[nodiscard]] std::pair<pmp::Scalar, pmp::Point2> CalculateInscribedCircleRadiusAndCenter(const std::vector<pmp::Point2>& points);
 
 		/**
 		 * \brief Tessellates the resulting curve from the computed radius and center.
@@ -24,8 +31,8 @@ namespace Geometry
 
 	private:
 
-		pmp::Scalar m_Radius;
-		pmp::Point2 m_Center;
+		pmp::Scalar m_Radius; //>! the radius of the inner circle
+		pmp::Point2 m_Center; //>! the center point of the inner circle
 	};
 	
 } // namespace Geometry
