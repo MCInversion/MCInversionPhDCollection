@@ -223,9 +223,8 @@ target_link_libraries(${PROJECT_NAME}
     Core
     STBImage
 )
-target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/src/")
-target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
 
+target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/src/")
 # ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
 #
 # VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
@@ -233,6 +232,8 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
 #
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 #message("ROOT_DIR: ${ROOT_DIR}")
+target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
+
 
 if (BUILD_UNIT_TESTS)
     set(GOOGLE_TEST_ROOT

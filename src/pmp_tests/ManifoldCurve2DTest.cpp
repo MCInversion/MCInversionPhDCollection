@@ -4,7 +4,7 @@
 
 using namespace pmp;
 
-#define EXPORT_TEST_BEFORE_AFTER_CURVES false
+#define EXPORT_TEST_BEFORE_AFTER_CURVES true
 
 #if EXPORT_TEST_BEFORE_AFTER_CURVES
 #include <filesystem>

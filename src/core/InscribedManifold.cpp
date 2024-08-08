@@ -1,5 +1,7 @@
 #include "InscribedManifold.h"
 
+#include "geometry/GridUtil.h"
+
 // ---------------------------------------------------------------------------
 
 std::vector<Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
@@ -36,6 +38,8 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
 
     std::vector<Circle2D> circles;
     auto& grid = *data.DistanceField;
+    ApplyNarrowGaussianBlur2D(grid);
+
     auto& values = grid.Values();
     const auto& dim = grid.Dimensions();
     const auto& orig = grid.Box().min();
@@ -46,10 +50,10 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
 
     // Calculate grid bounds within the bounding box
     const auto bbox = pmp::BoundingBox2(data.Points);
-    unsigned int minX = static_cast<unsigned int>((bbox.min()[0] - orig[0]) / cellSize);
-    unsigned int maxX = static_cast<unsigned int>((bbox.max()[0] - orig[0]) / cellSize);
-    unsigned int minY = static_cast<unsigned int>((bbox.min()[1] - orig[1]) / cellSize);
-    unsigned int maxY = static_cast<unsigned int>((bbox.max()[1] - orig[1]) / cellSize);
+    auto minX = static_cast<unsigned int>((bbox.min()[0] - orig[0]) / cellSize);
+    auto maxX = static_cast<unsigned int>((bbox.max()[0] - orig[0]) / cellSize);
+    auto minY = static_cast<unsigned int>((bbox.min()[1] - orig[1]) / cellSize);
+    auto maxY = static_cast<unsigned int>((bbox.max()[1] - orig[1]) / cellSize);
 
     minX = std::max(1u, minX);
     maxX = std::min(Nx - 2, maxX);
@@ -61,36 +65,11 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
     {
         for (unsigned int ix = minX; ix <= maxX; ix++)
         {
-            const unsigned int gridPos = Nx * iy + ix;
-            pmp::Scalar value = values[gridPos];
+            auto localMaxPt = FindLocalMinimumNearScalarGridCell(grid, ix, iy);
+            if (!localMaxPt.has_value())
+                continue;
 
-            bool isLocalMaximum = true;
-            for (int di = -1; di <= 1; ++di)
-            {
-                for (int dj = -1; dj <= 1; ++dj)
-                {
-                    if (di == 0 && dj == 0) continue;
-
-                    const unsigned int gridNeighborPos = Nx * (iy + dj) + ix + di;
-                    if (values[gridNeighborPos] > value)
-                    {
-                        isLocalMaximum = false;
-                        break;
-                    }
-                }
-                if (!isLocalMaximum) break;
-            }
-
-            if (isLocalMaximum)
-            {
-                Circle2D circle;
-                circle.Center = pmp::Point2{
-                    orig[0] + static_cast<float>(ix) * cellSize,
-                    orig[1] + static_cast<float>(iy) * cellSize
-                };
-                circle.Radius = value;
-                circles.push_back(circle);
-            }
+            circles.push_back({ *localMaxPt, 1.0f /* TODO: calculate dist to nearest neighbor using kDTree */});
         }
     }
 

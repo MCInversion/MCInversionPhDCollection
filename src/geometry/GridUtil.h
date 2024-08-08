@@ -3,6 +3,7 @@
 #include "Grid.h"
 
 #include <functional>
+#include <optional>
 
 namespace pmp
 {
@@ -65,6 +66,30 @@ namespace Geometry
 	 * \param grid    input grid.
 	 */
 	void ApplyWideGaussianBlur(ScalarGrid& grid);
+
+	/**
+	 * \brief Apply a 3x3 averaging kernel onto a given grid
+	 * \param grid    input grid.
+	 */
+	void ApplyNarrowAveragingBlur2D(ScalarGrid2D& grid);
+
+	/**
+	 * \brief Apply a 5x5 averaging kernel onto a given grid
+	 * \param grid    input grid.
+	 */
+	void ApplyWideAveragingBlur2D(ScalarGrid2D& grid);
+
+	/**
+	 * \brief Apply a 3x3 Gaussian kernel onto a given grid
+	 * \param grid    input grid.
+	 */
+	void ApplyNarrowGaussianBlur2D(ScalarGrid2D& grid);
+
+	/**
+	 * \brief Apply a 5x5 Gaussian kernel onto a given grid
+	 * \param grid    input grid.
+	 */
+	void ApplyWideGaussianBlur2D(ScalarGrid2D& grid);
 
 	/**
 	 * \brief Looks for nans and infinities in the grid, if the cell neighbors have valid values, averaged value is written for an invalid cell. Otherwise the cell value is set to default init value.
@@ -270,5 +295,11 @@ namespace Geometry
 	 * NOTE: Using trilinear interpolation because the new cells don't need to align with the original grid's cells.
 	 */
 	[[nodiscard]] ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid);
+
+	/**
+	 * \brief Searches the cell (ix, iy) and its neighbors for a local maximum of a 2D quadratic polynomial.
+	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
+	 */
+	[[nodiscard]] std::optional<pmp::Point2> FindLocalMinimumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy);
 
 } // namespace Geometry

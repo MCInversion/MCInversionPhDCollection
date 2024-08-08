@@ -34,12 +34,12 @@ namespace
         const auto pointBBox = pmp::BoundingBox2(points);
         const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
         const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-        const float cellSize = minSize / 10.0f;
+        const float cellSize = minSize / 20.0f;
 
         const SDF::PointCloudDistanceField2DSettings sdfSettings{
             cellSize,
             1.0f,
-            truncationFactor
+        DBL_MAX
         };
         return std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings));
     }
@@ -61,7 +61,7 @@ namespace
 TEST_F(NaiveInscribedCircleCalculatorTests, UnitSquareVertices) 
 {
     // Arrange
-    auto inputData = CreateUnitSquareVerticesData();
+    const auto inputData = CreateUnitSquareVerticesData();
 
     // Act
     auto circles = calculator.Calculate(inputData);
@@ -76,7 +76,7 @@ TEST_F(NaiveInscribedCircleCalculatorTests, UnitSquareVertices)
 TEST_F(NaiveInscribedCircleCalculatorTests, UniformCircleSampling) 
 {
     // Arrange
-    auto inputData = CreateUniformCircleSamplingData();
+    const auto inputData = CreateUniformCircleSamplingData();
 
     // Act
     auto circles = calculator.Calculate(inputData);
@@ -91,7 +91,7 @@ TEST_F(NaiveInscribedCircleCalculatorTests, UniformCircleSampling)
 TEST_F(NaiveInscribedCircleCalculatorTests, EllipseSampling)
 {
     // Arrange
-    auto inputData = CreateEllipseSamplingData();
+    const auto inputData = CreateEllipseSamplingData();
 
     // Act
     auto circles = calculator.Calculate(inputData);
@@ -110,7 +110,7 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, UnitSquareVertices)
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
 
     // Act
-    auto circles = calculator.Calculate(inputData);
+    const auto circles = calculator.Calculate(inputData);
 
     // Assert
     ASSERT_GT(circles.size(), 0);
@@ -134,7 +134,7 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, UniformCircleSampling)
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
 
     // Act
-    auto circles = calculator.Calculate(inputData);
+    const auto circles = calculator.Calculate(inputData);
 
     // Assert
     ASSERT_GT(circles.size(), 0);
@@ -158,7 +158,7 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
 
     // Act
-    auto circles = calculator.Calculate(inputData);
+    const auto circles = calculator.Calculate(inputData);
 
     // Assert
     ASSERT_GT(circles.size(), 0);

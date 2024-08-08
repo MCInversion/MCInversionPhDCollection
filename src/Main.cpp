@@ -3277,81 +3277,113 @@ int main()
 		// ================= Simple closed square =======================
 		//
 
-		const std::vector curveVertices = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
-		Geometry::BaseCurveGeometryData curveData;
-		curveData.Vertices = curveVertices;
-		curveData.EdgeIndices = { {0, 1}, {1, 2}, {2, 3}, {3, 0} };
-		const Geometry::BaseCurveAdapter curveAdapter(std::make_shared<Geometry::BaseCurveGeometryData>(curveData));
+		{
+			const std::vector curveVertices = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
+			Geometry::BaseCurveGeometryData curveData;
+			curveData.Vertices = curveVertices;
+			curveData.EdgeIndices = { {0, 1}, {1, 2}, {2, 3}, {3, 0} };
+			const Geometry::BaseCurveAdapter curveAdapter(std::make_shared<Geometry::BaseCurveGeometryData>(curveData));
 
-		const auto curveBBox = curveAdapter.GetBounds();
-		const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-		const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-		const float cellSize = minSize / 10.0f;
+			const auto curveBBox = curveAdapter.GetBounds();
+			const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
+			const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+			const float cellSize = minSize / 10.0f;
 
-		const SDF::DistanceField2DSettings sdfSettings{
-			cellSize,
-			1.0f,
-			truncationFactor,
-			SDF::KDTreeSplitType::Center,
-			SDF::SignComputation2D::PixelFloodFill,
-			SDF::PreprocessingType2D::Quadtree
-		};
-		const auto sdf = SDF::PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+			const SDF::DistanceField2DSettings sdfSettings{
+				cellSize,
+				1.0f,
+				truncationFactor,
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation2D::PixelFloodFill,
+				SDF::PreprocessingType2D::Quadtree
+			};
+			const auto sdf = SDF::PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
 
-		const auto sdfHash = Geometry::HashScalarGrid(sdf);
-		std::cout << "Hash of square_SDF: " << sdfHash << "\n";
-		ExportScalarGrid2DToPNG(dataOutPath + "square_SDF.png", sdf, 10, 10);
+			const auto sdfHash = Geometry::HashScalarGrid(sdf);
+			std::cout << "Hash of square_SDF: " << sdfHash << "\n";
+			ExportScalarGrid2DToPNG(dataOutPath + "square_SDF.png", sdf, 10, 10);
+		}
 
 		//
 		// ================= Simple open square =======================
 		//
 
-		const std::vector curveVertices2 = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
-		Geometry::BaseCurveGeometryData curveData2;
-		curveData2.Vertices = curveVertices2;
-		curveData2.EdgeIndices = { {0, 1}, {1, 2}, {2, 3} };
-		const Geometry::BaseCurveAdapter curveAdapter2(std::make_shared<Geometry::BaseCurveGeometryData>(curveData2));
+		{
+			const std::vector curveVertices = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
+			Geometry::BaseCurveGeometryData curveData;
+			curveData.Vertices = curveVertices;
+			curveData.EdgeIndices = { {0, 1}, {1, 2}, {2, 3} };
+			const Geometry::BaseCurveAdapter curveAdapter(std::make_shared<Geometry::BaseCurveGeometryData>(curveData));
 
-		const auto curveBBox2 = curveAdapter.GetBounds();
-		const auto curveBBoxSize2 = curveBBox2.max() - curveBBox2.min();
-		const float minSize2 = std::min(curveBBoxSize2[0], curveBBoxSize2[1]);
-		const float cellSize2 = minSize2 / 10.0f;
+			const auto curveBBox = curveAdapter.GetBounds();
+			const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
+			const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+			const float cellSize = minSize / 10.0f;
 
-		const SDF::DistanceField2DSettings sdfSettings2{
-			cellSize2,
-			1.0f,
-			truncationFactor,
-			SDF::KDTreeSplitType::Center,
-			SDF::SignComputation2D::None,
-			SDF::PreprocessingType2D::Quadtree
-		};
-		const auto sdf2 = SDF::PlanarDistanceFieldGenerator::Generate(curveAdapter2, sdfSettings2);
+			const SDF::DistanceField2DSettings sdfSettings{
+				cellSize,
+				1.0f,
+				truncationFactor,
+				SDF::KDTreeSplitType::Center,
+				SDF::SignComputation2D::None,
+				SDF::PreprocessingType2D::Quadtree
+			};
+			const auto sdf = SDF::PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
 
-		const auto sdfHash2 = Geometry::HashScalarGrid(sdf2);
-		std::cout << "Hash of squareOpen_SDF: " << sdfHash2 << "\n";
-		ExportScalarGrid2DToPNG(dataOutPath + "squareOpen_SDF.png", sdf2, 10, 10);
+			const auto sdfHash = Geometry::HashScalarGrid(sdf);
+			std::cout << "Hash of squareOpen_SDF: " << sdfHash << "\n";
+			ExportScalarGrid2DToPNG(dataOutPath + "squareOpen_SDF.png", sdf, 10, 10);
+		}
 
 		//
 		// ============= Square vertices pt cloud ==============
 		//
 
-		const std::vector points = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
-		const auto pointBBox = pmp::BoundingBox2(points);
-		const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-		const float minSize3 = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-		const float cellSize3 = minSize3 / 10.0f;
+		{
+			const std::vector points = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
+			const auto pointBBox = pmp::BoundingBox2(points);
+			const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+			const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+			const float cellSize = minSize / 10.0f;
 
-		const SDF::PointCloudDistanceField2DSettings sdfSettings3{
-			cellSize3,
-			1.0f,
-			truncationFactor
-		};
+			const SDF::PointCloudDistanceField2DSettings sdfSettings{
+				cellSize,
+				1.0f,
+				truncationFactor
+			};
 
-		const auto sdf3 = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings3);
+			const auto sdf = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings);
 
-		const auto sdfHash3 = Geometry::HashScalarGrid(sdf3);
-		std::cout << "Hash of squarePts_SDF: " << sdfHash3 << "\n";
-		ExportScalarGrid2DToPNG(dataOutPath + "squarePts_SDF.png", sdf3, 10, 10);
+			const auto sdfHash = Geometry::HashScalarGrid(sdf);
+			std::cout << "Hash of squarePts_SDF: " << sdfHash << "\n";
+			ExportScalarGrid2DToPNG(dataOutPath + "squarePts_SDF.png", sdf, 10, 10);
+		}
+
+		//
+		// ============= Ellipse ==============
+		//
+
+		{
+			auto ellipse = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0f, 32);
+			ellipse *= scaling_matrix_2d(pmp::vec2(2.0f, 1.0f));
+
+			const auto pointBBox = pmp::BoundingBox2(ellipse.positions());
+			const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+			const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+			const float cellSize = minSize / 20.0f;
+
+			const SDF::PointCloudDistanceField2DSettings sdfSettings{
+				cellSize,
+				1.0f,
+				truncationFactor
+			};
+
+			const auto sdf = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(ellipse.positions(), sdfSettings);
+
+			const auto sdfHash = Geometry::HashScalarGrid(sdf);
+			std::cout << "Hash of ellipse_SDF: " << sdfHash << "\n";
+			ExportScalarGrid2DToPNG(dataOutPath + "ellipse_SDF.png", sdf, 10, 10);
+		}
 		
 	} // endif performDistanceField2DHashTest
 

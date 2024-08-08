@@ -33,6 +33,22 @@ namespace Geometry
 	}
 
 	/**
+	 * \brief Computes an averaging kernel for a 2D pixel grid with a given radius.
+	 * \param radius     number of pixel (in each axis direction) by which the kernel reaches beyond the central pixel.
+	 * \return a kernel with radius and values.
+	 */
+	[[nodiscard]] BlurKernel GetAveragingKernel2D(const unsigned int& radius)
+	{
+		assert(radius > 0);
+		const unsigned int nCellsAxis = (2 * radius + 1);
+		const unsigned int size = nCellsAxis * nCellsAxis;
+		const double cellWeight = 1.0 / size;
+		return { std::vector(size, cellWeight), radius };
+	}
+
+
+
+	/**
 	 * \brief Universal internal procedure for applying a blur kernel onto a ScalarGrid.
 	 * \param grid      input grid.
 	 * \param kernel    blur kernel to be applied.
@@ -116,38 +132,74 @@ namespace Geometry
 		}
 	}
 
-	void NegateGridSubVolume(ScalarGrid& grid, const pmp::BoundingBox& subBox)
+	/**
+	 * \brief Universal internal procedure for applying a blur kernel onto a ScalarGrid2D.
+	 * \param grid      input grid.
+	 * \param kernel    blur kernel to be applied.
+	 */
+	void ApplyBlurKernelInternal(ScalarGrid2D& grid, const BlurKernel& kernel)
 	{
-		const auto& gridBox = grid.Box();
-		const auto dMin = subBox.min() - gridBox.min();
-		const auto dMax = subBox.max() - gridBox.min();
-		assert(dMin[0] >= 0.0f && dMin[1] >= 0.0f && dMin[2] >= 0.0f);
-		assert(dMax[0] >= 0.0f && dMax[1] >= 0.0f && dMax[2] >= 0.0f);
-
-		// compute sub-grid bounds
-		const auto& cellSize = grid.CellSize();
-		const unsigned int iXStart = std::floor(dMin[0] / cellSize);
-		const unsigned int iYStart = std::floor(dMin[1] / cellSize);
-		const unsigned int iZStart = std::floor(dMin[2] / cellSize);
-
-		const unsigned int iXEnd = std::ceil(dMax[0] / cellSize);
-		const unsigned int iYEnd = std::ceil(dMax[1] / cellSize);
-		const unsigned int iZEnd = std::ceil(dMax[2] / cellSize);
+		const auto& kernelVals = kernel.KernelValues;
+		const int rad = static_cast<int>(kernel.Radius);
+		const auto& values = grid.Values();
+		auto resultFieldValues = values;
 		const auto& dims = grid.Dimensions();
-		auto& values = grid.Values();
-		
-		for (unsigned int iz = iZStart; iz < iZEnd; iz++)
+		const int Nx = static_cast<int>(dims.Nx), Ny = static_cast<int>(dims.Ny);
+
+		const int nKernelCellsAxis = 2 * rad + 1;
+		const auto applyKernelToGridPoint = [&](const int& ix, const int& iy)
 		{
-			for (unsigned int iy = iYStart; iy < iYEnd; iy++)
+			double weightedSum = 0.0;
+			for (int i = -rad; i <= rad; i++)
 			{
-				for (unsigned int ix = iXStart; ix < iXEnd; ix++)
+				for (int j = -rad; j <= rad; j++)
 				{
-					const unsigned int gridPos = dims.Nx * dims.Ny * iz + dims.Nx * iy + ix;
-					values[gridPos] *= -1.0;
+					// =========== x-indices =====================
+					int iKernX = rad + i, iGridX = ix + i;
+					// ...... x-index bounds adjustment .....
+					if (iGridX < 0)
+					{
+						iGridX = 0; iKernX = 0;
+					}
+					else if (iGridX > Nx - 1)
+					{
+						iGridX = Nx - 1; iKernX = nKernelCellsAxis - 1;
+					}
+
+					// =========== y-indices =====================
+					int iKernY = rad + j, iGridY = iy + j;
+					// ...... y-index bounds adjustment .....
+					if (iGridY < 0)
+					{
+						iGridY = 0; iKernY = 0;
+					}
+					else if (iGridY > Ny - 1)
+					{
+						iGridY = Ny - 1; iKernY = nKernelCellsAxis - 1;
+					}
+
+					const unsigned int kernelGridPos = nKernelCellsAxis * iKernY + iKernX;
+					const unsigned int blurredGridPos = Nx * iGridY + iGridX;
+
+					weightedSum += values[blurredGridPos] * kernelVals[kernelGridPos];
 				}
 			}
+			resultFieldValues[Nx * iy + ix] = weightedSum;
+		};
+
+		// Apply kernel for each grid point
+		for (int iy = 0; iy < Ny; iy++)
+		{
+			for (int ix = 0; ix < Nx; ix++)
+			{
+				applyKernelToGridPoint(ix, iy);
+			}
 		}
+
+		grid.Values() = resultFieldValues;
 	}
+
+	// ---------------------------------------------------
 
 	void ApplyNarrowAveragingBlur(ScalarGrid& grid)
     {
@@ -162,6 +214,22 @@ namespace Geometry
 		const auto kernel = GetAveragingKernel(rad);
 		ApplyBlurKernelInternal(grid, kernel);
     }
+
+	// ---------------------------------------------------
+
+	void ApplyNarrowAveragingBlur2D(ScalarGrid2D& grid)
+	{
+		constexpr int rad = static_cast<int>(NARROW_KERNEL_RADIUS);
+		const auto kernel = GetAveragingKernel2D(rad);
+		ApplyBlurKernelInternal(grid, kernel);
+	}
+
+	void ApplyWideAveragingBlur2D(ScalarGrid2D& grid)
+	{
+		constexpr int rad = static_cast<int>(WIDE_KERNEL_RADIUS);
+		const auto kernel = GetAveragingKernel2D(rad);
+		ApplyBlurKernelInternal(grid, kernel);
+	}
 
 	/**
 	 * \brief Computes a Gaussian kernel for a voxel grid with a given radius.
@@ -215,6 +283,52 @@ namespace Geometry
 		return {resultVals, radius };
 	}
 
+	/**
+	 * \brief Computes a Gaussian kernel for a pixel grid with a given radius.
+	 * \param radius     number of pixel (in each axis direction) by which the kernel reaches beyond the central pixel.
+	 * \return a kernel with radius and values.
+	 */
+	[[nodiscard]] BlurKernel GetGaussianKernel2D(const unsigned int& radius)
+	{
+		assert(radius > 0);
+		const unsigned int nCellsAxis = (2 * radius + 1);
+		const unsigned int size = nCellsAxis * nCellsAxis;
+		auto resultVals = std::vector(size, 0.0);
+
+		const double sigma = radius / 3.0;
+		double wSum = 0.0;
+
+		// Direct integration of the kernel using error function (erf)
+		for (unsigned int i = 0; i <= 2 * radius; i++)
+		{
+			for (unsigned int j = 0; j <= 2 * radius; j++)
+			{
+				const double x0 = static_cast<double>(2 * i - 1) * 0.5 - radius;
+				const double x1 = static_cast<double>(2 * i + 1) * 0.5 - radius;
+
+				const double y0 = static_cast<double>(2 * j - 1) * 0.5 - radius;
+				const double y1 = static_cast<double>(2 * j + 1) * 0.5 - radius;
+
+				// 2D gaussians are independent G(x,y) = G(x) G(y) and so are their integrals
+				const double cellIntegral = 0.25 *
+					(std::erf(x1 / (M_SQRT2 * sigma)) - std::erf(x0 / (M_SQRT2 * sigma))) *
+					(std::erf(y1 / (M_SQRT2 * sigma)) - std::erf(y0 / (M_SQRT2 * sigma)));
+
+				const unsigned int id = i * nCellsAxis + j;
+				resultVals[id] = cellIntegral;
+				wSum += cellIntegral;
+			}
+		}
+
+		// Normalize
+		for (auto& val : resultVals)
+			val /= wSum;
+
+		return { resultVals, radius };
+	}
+
+	// -----------------------------------------------------
+
     void ApplyNarrowGaussianBlur(ScalarGrid& grid)
     {
 		constexpr int rad = static_cast<int>(NARROW_KERNEL_RADIUS);
@@ -228,6 +342,59 @@ namespace Geometry
 		const auto kernel = GetGaussianKernel(rad);
 		ApplyBlurKernelInternal(grid, kernel);
     }
+
+	// --------------------------------------------------------
+
+	void ApplyNarrowGaussianBlur2D(ScalarGrid2D& grid)
+	{
+		constexpr int rad = static_cast<int>(NARROW_KERNEL_RADIUS);
+		const auto kernel = GetGaussianKernel2D(rad);
+		ApplyBlurKernelInternal(grid, kernel);
+	}
+
+	void ApplyWideGaussianBlur2D(ScalarGrid2D& grid)
+	{
+		constexpr int rad = static_cast<int>(WIDE_KERNEL_RADIUS);
+		const auto kernel = GetGaussianKernel2D(rad);
+		ApplyBlurKernelInternal(grid, kernel);
+	}
+
+	//
+	// ============================================================================
+	//
+
+	void NegateGridSubVolume(ScalarGrid& grid, const pmp::BoundingBox& subBox)
+	{
+		const auto& gridBox = grid.Box();
+		const auto dMin = subBox.min() - gridBox.min();
+		const auto dMax = subBox.max() - gridBox.min();
+		assert(dMin[0] >= 0.0f && dMin[1] >= 0.0f && dMin[2] >= 0.0f);
+		assert(dMax[0] >= 0.0f && dMax[1] >= 0.0f && dMax[2] >= 0.0f);
+
+		// compute sub-grid bounds
+		const auto& cellSize = grid.CellSize();
+		const unsigned int iXStart = std::floor(dMin[0] / cellSize);
+		const unsigned int iYStart = std::floor(dMin[1] / cellSize);
+		const unsigned int iZStart = std::floor(dMin[2] / cellSize);
+
+		const unsigned int iXEnd = std::ceil(dMax[0] / cellSize);
+		const unsigned int iYEnd = std::ceil(dMax[1] / cellSize);
+		const unsigned int iZEnd = std::ceil(dMax[2] / cellSize);
+		const auto& dims = grid.Dimensions();
+		auto& values = grid.Values();
+		
+		for (unsigned int iz = iZStart; iz < iZEnd; iz++)
+		{
+			for (unsigned int iy = iYStart; iy < iYEnd; iy++)
+			{
+				for (unsigned int ix = iXStart; ix < iXEnd; ix++)
+				{
+					const unsigned int gridPos = dims.Nx * dims.Ny * iz + dims.Nx * iy + ix;
+					values[gridPos] *= -1.0;
+				}
+			}
+		}
+	}
 
 	/// \brief a validation helper for scalar grid values. Also increments nanCount and infCount if encountering nan or inf.
 	[[nodiscard]] bool IsGridValueValid(const double& val, size_t& nanCount, size_t& infCount)
@@ -1273,6 +1440,85 @@ namespace Geometry
 		}
 
 		return result;
+	}
+
+	std::optional<pmp::Point2> FindLocalMinimumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy)
+	{
+		using namespace Eigen;
+
+		const auto& values = grid.Values();
+		const auto Nx = static_cast<unsigned int>(grid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(grid.Dimensions().Ny);
+		assert(ix < Nx);
+		assert(iy < Ny);
+		const auto cellSize = grid.CellSize();
+		const auto& orig = grid.Box().min();
+
+		// Collect the values in the 3x3 neighborhood
+		std::array<pmp::Scalar, 9> neighborhood_values;
+		int idx = 0;
+		for (int di = -1; di <= 1; ++di)
+		{
+			for (int dj = -1; dj <= 1; ++dj)
+			{
+				if (ix + di >= Nx || iy + dj >= Ny) return std::nullopt;
+				neighborhood_values[idx++] = values[Nx * (iy + dj) + ix + di];
+			}
+		}
+
+		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
+		Matrix<float, 9, 6> A;
+		Vector<float, 9> b;
+
+		// normalized cell coordinates
+		A << 1, -1, -1, 1, 1, 1,
+			1, 0, -1, 0, 0, 1,
+			1, 1, -1, 1, -1, 1,
+			1, -1, 0, 1, 0, 0,
+			1, 0, 0, 0, 0, 0,
+			1, 1, 0, 1, 0, 0,
+			1, -1, 1, 1, -1, 1,
+			1, 0, 1, 0, 0, 1,
+			1, 1, 1, 1, 1, 1;
+
+		for (int i = 0; i < 9; ++i)
+		{
+			b[i] = neighborhood_values[i];
+		}
+
+		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
+		//const float a00 = coeffs[0];
+		const float a10 = coeffs[1];
+		const float a01 = coeffs[2];
+		const float a20 = coeffs[3];
+		const float a11 = coeffs[4];
+		const float a02 = coeffs[5];
+
+		// Solve for the critical point
+		Matrix2f H;
+		H << 2 * a20, a11, a11, 2 * a02;
+		Vector2f grad;
+		grad << a10, a01;
+
+		if (H.determinant() < FLT_EPSILON || H(0, 0) < FLT_EPSILON || H(1, 1) < FLT_EPSILON)
+		{
+			return {}; // Not a local maximum
+		}
+
+		Vector2f critical_point = -H.inverse() * grad;
+
+		if (critical_point[0] < -1 || critical_point[0] > 1 || critical_point[1] < -1 || critical_point[1] > 1)
+		{
+			return {}; // Critical point outside the 9 grid cells
+		}
+
+		//float f_max = a00 + a10 * critical_point[0] + a01 * critical_point[1] +
+		//	a20 * critical_point[0] * critical_point[0] + a11 * critical_point[0] * critical_point[1] +
+		//	a02 * critical_point[1] * critical_point[1];
+
+		const pmp::Point2 max_point = orig + pmp::Point2((ix + critical_point[0]) * cellSize, (iy + critical_point[1]) * cellSize);
+
+		return max_point;
 	}
 
 } // namespace Geometry
