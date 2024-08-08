@@ -108,23 +108,20 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, UnitSquareVertices)
     // Arrange
     auto inputData = CreateUnitSquareVerticesData();
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
 
     // Act
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
-    ASSERT_GT(circles.size(), 0);
-    bool foundExpectedCircle = false;
+    ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        if (std::fabs(circle.Center[0] - 0.5f) < 1e-3f && std::fabs(circle.Center[1] - 0.5f) < 1e-3f) 
-        {
-            foundExpectedCircle = true;
-            EXPECT_FLOAT_EQ(circle.Radius, std::sqrt(2) / 2);
-            break;
-        }
+        EXPECT_NEAR(circle.Center[0], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Radius, std::sqrt(2) / 2, epsilon);
     }
-    EXPECT_TRUE(foundExpectedCircle);
 }
 
 TEST_F(DistanceFieldInscribedCircleCalculatorTests, UniformCircleSampling) 
@@ -132,23 +129,20 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, UniformCircleSampling)
     // Arrange
     auto inputData = CreateUniformCircleSamplingData();
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
 
     // Act
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
-    ASSERT_GT(circles.size(), 0);
-    bool foundExpectedCircle = false;
+    ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        if (std::fabs(circle.Center[0]) < 1e-3f && std::fabs(circle.Center[1]) < 1e-3f) 
-        {
-            foundExpectedCircle = true;
-            EXPECT_FLOAT_EQ(circle.Radius, 1.0f);
-            break;
-        }
+        EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
     }
-    EXPECT_TRUE(foundExpectedCircle);
 }
 
 TEST_F(DistanceFieldInscribedCircleCalculatorTests, EllipseSampling) 
@@ -156,21 +150,18 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
     // Arrange
     auto inputData = CreateEllipseSamplingData();
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
 
     // Act
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
-    ASSERT_GT(circles.size(), 0);
-    bool foundExpectedCircle = false;
+    ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        if (std::fabs(circle.Center[0]) < 1e-3f && std::fabs(circle.Center[1]) < 1e-3f) 
-        {
-            foundExpectedCircle = true;
-            EXPECT_FLOAT_EQ(circle.Radius, 1.0f);
-            break;
-        }
+        EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
     }
-    EXPECT_TRUE(foundExpectedCircle);
 }

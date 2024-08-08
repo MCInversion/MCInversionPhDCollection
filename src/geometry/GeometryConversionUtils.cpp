@@ -8,12 +8,12 @@
 #include <thread>
 #include <unordered_set>
 #include <cassert>
+#include <memory>
 
 #include <vcg/complex/complex.h>
 #include <vcg/complex/algorithms/update/bounding.h>
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
 
-#include <nanoflann.hpp>
 #include <numeric>
 
 #include "pmp/algorithms/Normals.h"
@@ -1726,6 +1726,35 @@ namespace Geometry
 		if (num_results > 0)
 			return ret_index[0];
 		return -1;  // Indicate failure
+	}
+
+	//
+	// =======================================================================================================================
+	//
+
+	std::optional<pmp::Scalar> GetDistanceToClosestPoint2DSquared(const PointCloud2DTree& kdTree, const pmp::Point2& sampledPoint)
+	{
+		if (kdTree.size_ == 0)
+		{
+			std::cerr << "GetDistanceToClosestPoint2D: kdTree contains no points!\n";
+			return {};
+		}
+
+		// Find the nearest neighbor distance using KD-tree
+		const float query_pt[2] = { sampledPoint[0], sampledPoint[1] };
+		size_t nearest_index;
+		float out_dist_sqr;
+		nanoflann::KNNResultSet<float> resultSet(1);
+		resultSet.init(&nearest_index, &out_dist_sqr);
+		kdTree.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters(10));
+
+		if (resultSet.size() == 0)
+		{
+			std::cerr << "GetDistanceToClosestPoint2D: resultSet contains no points!\n";
+			return {};
+		}
+
+		return out_dist_sqr;
 	}
 
 	//

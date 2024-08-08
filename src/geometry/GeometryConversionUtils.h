@@ -3,6 +3,7 @@
 #include "pmp/SurfaceMesh.h"
 #include "MarchingCubes.h"
 #include <optional>
+#include <nanoflann.hpp>
 
 namespace Geometry
 {
@@ -199,6 +200,34 @@ namespace Geometry
 
 	/// \brief Computes the index of the closest point in the x,y plane.
 	[[nodiscard]] int GetClosestPointIndex2D(const std::vector<pmp::Point>& points, const pmp::Point& sampledPoint);
+
+	// Define a point cloud adapter for nanoflann
+	struct PointCloud2D
+	{
+		std::vector<pmp::Point2> points;
+
+		// Must return the number of data points
+		inline size_t kdtree_get_point_count() const { return points.size(); }
+
+		// Returns the dim'th component of the idx'th point in the class
+		inline float kdtree_get_pt(const size_t idx, const size_t dim) const
+		{
+			if (dim == 0) return points[idx][0];
+			else return points[idx][1];
+		}
+
+		// Optional bounding-box computation
+		template <class BBOX>
+		bool kdtree_get_bbox(BBOX&) const { return false; }
+	};
+
+	using PointCloud2DTree = nanoflann::KDTreeSingleIndexAdaptor<
+		nanoflann::L2_Simple_Adaptor<float, PointCloud2D>,
+		PointCloud2D,
+		2 /* dimensions */
+	>;
+
+	[[nodiscard]] std::optional<pmp::Scalar> GetDistanceToClosestPoint2DSquared(const PointCloud2DTree& kdTree, const pmp::Point2& sampledPoint);
 
 	/**
 	 * \brief Obtains a 2D slice of a given 3D point cloud from given slicing plane and distance tolerance.

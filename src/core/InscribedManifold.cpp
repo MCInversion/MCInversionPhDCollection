@@ -1,6 +1,7 @@
 #include "InscribedManifold.h"
 
 #include "geometry/GridUtil.h"
+#include "geometry/GeometryConversionUtils.h"
 
 // ---------------------------------------------------------------------------
 
@@ -60,6 +61,12 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
     minY = std::max(1u, minY);
     maxY = std::min(Ny - 2, maxY);
 
+    // Build the KD-tree
+    Geometry::PointCloud2D pointCloud;
+    pointCloud.points = data.Points;
+    Geometry::PointCloud2DTree kdTree(2, pointCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */));
+    kdTree.buildIndex();
+
     // Find local maxima of the distance field
     for (unsigned int iy = minY; iy <= maxY; iy++)
     {
@@ -69,7 +76,11 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
             if (!localMaxPt.has_value())
                 continue;
 
-            circles.push_back({ *localMaxPt, 1.0f /* TODO: calculate dist to nearest neighbor using kDTree */});
+            auto closestPtDistSq = Geometry::GetDistanceToClosestPoint2DSquared(kdTree, *localMaxPt);
+            if (!closestPtDistSq.has_value())
+                continue;
+
+            circles.push_back({ *localMaxPt, std::sqrt(*closestPtDistSq) });
         }
     }
 
