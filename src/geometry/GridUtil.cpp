@@ -1487,7 +1487,6 @@ namespace Geometry
 		}
 
 		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
-		//const float a00 = coeffs[0];
 		const float a10 = coeffs[1];
 		const float a01 = coeffs[2];
 		const float a20 = coeffs[3];
@@ -1500,9 +1499,10 @@ namespace Geometry
 		Vector2f grad;
 		grad << a10, a01;
 
-		if (H.determinant() < FLT_EPSILON || H(0, 0) < FLT_EPSILON || H(1, 1) < FLT_EPSILON)
+		SelfAdjointEigenSolver<Matrix2f> solver(H);
+		if (solver.eigenvalues()(0) > FLT_EPSILON || solver.eigenvalues()(1) > FLT_EPSILON)
 		{
-			return {}; // Not a local maximum
+			return {}; // Hessian is not negative definite
 		}
 
 		Vector2f critical_point = -H.inverse() * grad;
@@ -1511,10 +1511,6 @@ namespace Geometry
 		{
 			return {}; // Critical point outside the 9 grid cells
 		}
-
-		//float f_max = a00 + a10 * critical_point[0] + a01 * critical_point[1] +
-		//	a20 * critical_point[0] * critical_point[0] + a11 * critical_point[0] * critical_point[1] +
-		//	a02 * critical_point[1] * critical_point[1];
 
 		const pmp::Point2 max_point = orig + pmp::Point2((ix + critical_point[0]) * cellSize, (iy + critical_point[1]) * cellSize);
 
