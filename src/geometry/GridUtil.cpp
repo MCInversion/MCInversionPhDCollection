@@ -248,20 +248,20 @@ namespace Geometry
 		double wSum = 0.0;
 
 		// direct integration of the kernel using error function (erf)
-		for (unsigned int i = 0; i <= 2 * radius; i++) 
+		for (unsigned int i = 0; i <= 2 * radius; i++)
 		{
-			for (unsigned int j = 0; j <= 2 * radius; j++) 
+			for (unsigned int j = 0; j <= 2 * radius; j++)
 			{
 				for (unsigned int k = 0; k <= 2 * radius; k++)
 				{
-					const double x0 = static_cast<double>(2 * i - 1) * 0.5 - radius;
-					const double x1 = static_cast<double>(2 * i + 1) * 0.5 - radius;
+					const double x0 = static_cast<double>(2 * static_cast<int>(i) - 1) * 0.5 - radius;
+					const double x1 = static_cast<double>(2 * static_cast<int>(i) + 1) * 0.5 - radius;
 
-					const double y0 = static_cast<double>(2 * j - 1) * 0.5 - radius;
-					const double y1 = static_cast<double>(2 * j + 1) * 0.5 - radius;
+					const double y0 = static_cast<double>(2 * static_cast<int>(j) - 1) * 0.5 - radius;
+					const double y1 = static_cast<double>(2 * static_cast<int>(j) + 1) * 0.5 - radius;
 
-					const double z0 = static_cast<double>(2 * k - 1) * 0.5 - radius;
-					const double z1 = static_cast<double>(2 * k + 1) * 0.5 - radius;
+					const double z0 = static_cast<double>(2 * static_cast<int>(k) - 1) * 0.5 - radius;
+					const double z1 = static_cast<double>(2 * static_cast<int>(k) + 1) * 0.5 - radius;
 
 					// 3D gaussians are independent G(x,y,z) = G(x) G(y) G(z) and so are their integrals
 					const double voxIntegral = 0.25 * 
@@ -303,11 +303,11 @@ namespace Geometry
 		{
 			for (unsigned int j = 0; j <= 2 * radius; j++)
 			{
-				const double x0 = static_cast<double>(2 * i - 1) * 0.5 - radius;
-				const double x1 = static_cast<double>(2 * i + 1) * 0.5 - radius;
+				const double x0 = static_cast<double>(2 * static_cast<int>(i) - 1) * 0.5 - radius;
+				const double x1 = static_cast<double>(2 * static_cast<int>(i) + 1) * 0.5 - radius;
 
-				const double y0 = static_cast<double>(2 * j - 1) * 0.5 - radius;
-				const double y1 = static_cast<double>(2 * j + 1) * 0.5 - radius;
+				const double y0 = static_cast<double>(2 * static_cast<int>(j) - 1) * 0.5 - radius;
+				const double y1 = static_cast<double>(2 * static_cast<int>(j) + 1) * 0.5 - radius;
 
 				// 2D gaussians are independent G(x,y) = G(x) G(y) and so are their integrals
 				const double cellIntegral = 0.25 *

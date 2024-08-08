@@ -37,7 +37,7 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
     }
 
     std::vector<Circle2D> circles;
-    auto& grid = *data.DistanceField;
+    auto grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
 
     auto& values = grid.Values();
