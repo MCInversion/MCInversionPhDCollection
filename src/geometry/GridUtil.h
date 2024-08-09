@@ -113,6 +113,15 @@ namespace Geometry
 	[[nodiscard]] VectorGrid ComputeGradient(const ScalarGrid& scalarGrid);
 
 	/**
+	 * \brief Computes a gradient from a given 2D scalar grid.
+	 * \param scalarGrid     input grid.
+	 * \return gradient field.
+	 *
+	 * DISCLAIMER: This function uses central difference for approximating partial derivatives of scalarGrid values. Boundary pixels are skipped and contain default vector values.
+	 */
+	[[nodiscard]] VectorGrid2D ComputeGradient(const ScalarGrid2D& scalarGrid);
+
+	/**
 	 * \brief Computes a normalized gradient from a given scalar grid.
 	 * \param scalarGrid     input grid.
 	 * \return normalized gradient field.
@@ -313,5 +322,8 @@ namespace Geometry
 	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
 	 */
 	[[nodiscard]] std::optional<pmp::Point2> FindLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
+
+	/// \brief Verifies whether the vector field has a non-zero divergence at position (ix, iy) within a given radius.
+	[[nodiscard]] bool IsConvergentOrDivergentNearCell(const VectorGrid2D& vecGrid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
 
 } // namespace Geometry

@@ -613,6 +613,57 @@ namespace Geometry
 		return result;
 	}
 
+	VectorGrid2D ComputeGradient(const ScalarGrid2D& scalarGrid)
+	{
+		if (!scalarGrid.IsValid())
+			throw std::invalid_argument("ComputeGradient: scalarGrid to be processed is invalid!\n");
+
+		VectorGrid2D result(scalarGrid);
+		const auto cellSize = static_cast<double>(result.CellSize());
+		const auto& dim = result.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		const auto& gridValues = scalarGrid.Values();
+
+		auto& gradValsX = result.ValuesX();
+		auto& gradValsY = result.ValuesY();
+
+			for (unsigned int iy = 1; iy < Ny - 1; iy++) {
+				for (unsigned int ix = 1; ix < Nx - 1; ix++) {
+
+					const unsigned int gridPosPrevX = Nx * iy + (ix - 1);
+					const unsigned int gridPosNextX = Nx * iy + (ix + 1);
+
+					const unsigned int gridPosPrevY = Nx * (iy - 1) + ix;
+					const unsigned int gridPosNextY = Nx * (iy + 1) + ix;
+
+					const unsigned int gradPos = Nx * iy + ix;
+
+					// central difference for non-boundary pixels
+					const double grad_x = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+					const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+
+#if EXPECT_INVALID_VALUES
+					if (std::isnan(grad_x) || std::isinf(grad_x) ||
+						std::isnan(grad_y) || std::isinf(grad_y))
+					{
+						const std::string msg = "ComputeGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
+						assert(false);
+						std::cerr << msg;
+						continue;
+					}
+#endif
+
+					gradValsX[gradPos] = grad_x;
+					gradValsY[gradPos] = grad_y;
+				}
+			}
+
+		return result;
+	}
+
 	//! tolerance for gradient vector norms
 	constexpr double NORM_EPSILON = 1e-6;
 
@@ -1662,6 +1713,55 @@ namespace Geometry
 		return orig + pmp::Point2(
 			(ix + radius * critical_point[0]) * cellSize,
 			(iy + radius * critical_point[1]) * cellSize);
+	}
+
+	bool IsConvergentOrDivergentNearCell(const VectorGrid2D& vecGrid, unsigned int ix, unsigned int iy, unsigned int radius)
+	{
+		const auto Nx = static_cast<unsigned int>(vecGrid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(vecGrid.Dimensions().Ny);
+
+		const auto& valuesX = vecGrid.ValuesX();
+		const auto& valuesY = vecGrid.ValuesY();
+
+		float divergenceSum = 0.0f;
+		const int r = static_cast<int>(radius);
+
+		// Iterate over the neighborhood of the cell (ix, iy)
+		for (int di = -r; di <= r; di += r)
+		{
+			for (int dj = -r; dj <= r; dj += r)
+			{
+				// Ensure we don't go out of bounds
+				const int ni = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
+				const int nj = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
+
+				// Approximate divergence: calculating partial derivatives of vector components with respect to x and y
+				float divX = 0.0f;
+				float divY = 0.0f;
+
+				// Compute divergence for X component (partial derivative with respect to x)
+				if (ni > 0 && ni < Nx - 1)
+				{
+					divX = (valuesX[Nx * nj + ni + 1] - valuesX[Nx * nj + ni - 1]) / 2.0f;
+				}
+
+				// Compute divergence for Y component (partial derivative with respect to y)
+				if (nj > 0 && nj < Ny - 1)
+				{
+					divY = (valuesY[Nx * (nj + 1) + ni] - valuesY[Nx * (nj - 1) + ni]) / 2.0f;
+				}
+
+				// Sum up the divergence for the neighborhood
+				divergenceSum += divX + divY;
+			}
+		}
+
+		// Average divergence over the neighborhood
+		const float avgDivergence = divergenceSum / 9.0f;
+
+		// We consider this point convergent or divergent if the average divergence is significantly non-zero
+		constexpr float divergenceThreshold = 1e-3f;
+		return std::abs(avgDivergence) > divergenceThreshold;
 	}
 
 } // namespace Geometry

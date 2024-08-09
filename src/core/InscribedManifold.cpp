@@ -38,7 +38,7 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
     }
 
     std::vector<Circle2D> circles;
-    auto grid = *data.DistanceField;
+    auto& grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
 
     const auto& dim = grid.Dimensions();
@@ -88,11 +88,12 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
 
 // ------------------------------------------------------------------------------------
 
-//namespace
-//{
+namespace
+{
     void RecursiveSearchForMaxima(
         std::vector<Circle2D>& circles,
         const Geometry::ScalarGrid2D& grid,
+        const Geometry::VectorGrid2D& gridGradient,
         unsigned int minX,
         unsigned int minY,
         unsigned int maxX,
@@ -100,8 +101,8 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
         unsigned int radius,
         const std::function<void(const pmp::Point2& localMaxPt)>& onTerminate)
     {
-        // Base case: Stop recursion when the radius is 1 or the region is too small
-        if (radius < 1 || maxX - minX < 2 || maxY - minY < 2)
+        // Base case: Stop recursion when the radius is 2 or the region is too small
+        if (radius < 1)
         {
             return;
         }
@@ -109,31 +110,32 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
         const unsigned int centerX = (minX + maxX) / 2;
         const unsigned int centerY = (minY + maxY) / 2;
 
-        // Check if there's a local extreme near the center of this region
-        if (ContainsLocalExtremesNearScalarGridCell(grid, centerX, centerY, radius))
+        if (radius == 1)
         {
-            if (radius == 1)
-            {
-                const auto localMaxPt = FindLocalMaximumNearScalarGridCell(grid, centerX, centerY, radius);
-                if (!localMaxPt.has_value())
-                    return;
+            const auto localMaxPt = FindLocalMaximumNearScalarGridCell(grid, centerX, centerY, radius);
+            if (!localMaxPt.has_value())
+                return;
 
-                onTerminate(*localMaxPt);
-            }
+            onTerminate(*localMaxPt);
+            return;
+        }
 
+        // Check if there's a local extreme near the center of this region
+        if (IsConvergentOrDivergentNearCell(gridGradient, centerX, centerY, radius))
+        {
             // Subdivide the region into four quadrants and search each
             const unsigned int midX = (minX + maxX) / 2;
             const unsigned int midY = (minY + maxY) / 2;
-            const unsigned int newRadius = radius / 2 + /* slightly inflate */ 1;
+            const auto newRadius = static_cast<unsigned int>(std::floor(static_cast<float>(radius) / 2));
 
-            RecursiveSearchForMaxima(circles, grid, minX, minY, midX, midY, newRadius, onTerminate);
-            RecursiveSearchForMaxima(circles, grid, midX, minY, maxX, midY, newRadius, onTerminate);
-            RecursiveSearchForMaxima(circles, grid, minX, midY, midX, maxY, newRadius, onTerminate);
-            RecursiveSearchForMaxima(circles, grid, midX, midY, maxX, maxY, newRadius, onTerminate);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, minX, minY, midX, midY, newRadius, onTerminate);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, midX, minY, maxX, midY, newRadius, onTerminate);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, minX, midY, midX, maxY, newRadius, onTerminate);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, midX, midY, maxX, maxY, newRadius, onTerminate);
         }
     }
 
-//} // anonymous namespace
+} // anonymous namespace
 
 std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
@@ -143,9 +145,27 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
     }
 
     std::vector<Circle2D> circles;
-    const auto& grid = *data.DistanceField;
-    const auto Nx = static_cast<unsigned int>(grid.Dimensions().Nx);
-    const auto Ny = static_cast<unsigned int>(grid.Dimensions().Ny);
+    auto& grid = *data.DistanceField;
+    ApplyNarrowGaussianBlur2D(grid);
+    const auto gridGradient = ComputeGradient(grid);
+
+    const auto& dim = grid.Dimensions();
+    const auto& orig = grid.Box().min();
+    const float cellSize = grid.CellSize();
+    const auto Nx = static_cast<unsigned int>(dim.Nx);
+    const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+    // Calculate grid bounds within the bounding box
+    const auto bbox = pmp::BoundingBox2(data.Points);
+    auto minX = static_cast<unsigned int>((bbox.min()[0] - orig[0]) / cellSize);
+    auto maxX = static_cast<unsigned int>((bbox.max()[0] - orig[0]) / cellSize);
+    auto minY = static_cast<unsigned int>((bbox.min()[1] - orig[1]) / cellSize);
+    auto maxY = static_cast<unsigned int>((bbox.max()[1] - orig[1]) / cellSize);
+
+    minX = std::max(1u, minX);
+    maxX = std::min(Nx - 2, maxX);
+    minY = std::max(1u, minY);
+    maxY = std::min(Ny - 2, maxY);
 
     // Build the KD-tree
     Geometry::PointCloud2D pointCloud;
@@ -157,12 +177,14 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
     const unsigned int initialRadius = std::max(Nx, Ny) / 2;
 
     // Recursively find local maxima in the grid
-    RecursiveSearchForMaxima(circles, grid, 0, 0, Nx, Ny, initialRadius, [&](const pmp::Point2& localMaxPt) {
-        const auto nearestPointDistanceSq = Geometry::GetDistanceToClosestPoint2DSquared(kdTree, localMaxPt);
+    RecursiveSearchForMaxima(circles, grid, gridGradient, minX, minY, maxX, maxY, initialRadius,
+        // Termination function:
+    [&](const pmp::Point2& localMaxPt) {
+        const auto nearestPointDistanceSq = GetDistanceToClosestPoint2DSquared(kdTree, localMaxPt);
         if (!nearestPointDistanceSq.has_value())
             return;
         circles.push_back({ localMaxPt, sqrt(*nearestPointDistanceSq) });
-     });
+    });
 
     return circles;
 }
