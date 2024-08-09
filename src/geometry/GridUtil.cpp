@@ -1726,34 +1726,38 @@ namespace Geometry
 		float divergenceSum = 0.0f;
 		const int r = static_cast<int>(radius);
 
-		// Iterate over the neighborhood of the cell (ix, iy)
-		for (int di = -r; di <= r; di += r)
+		// Iterate over the 4 key points in the neighborhood of the cell (ix, iy)
+		const std::array<std::pair<int, int>, 4> keyPoints = { {
+			{ -r, 0 }, // left
+			{ r, 0 },  // right
+			{ 0, -r }, // bottom
+			{ 0, r }   // top
+		} };
+
+		for (const auto& [di, dj] : keyPoints)
 		{
-			for (int dj = -r; dj <= r; dj += r)
+			// Ensure we don't go out of bounds
+			const int ni = std::clamp(static_cast<int>(ix) + di, 1, static_cast<int>(Nx) - 2);
+			const int nj = std::clamp(static_cast<int>(iy) + dj, 1, static_cast<int>(Ny) - 2);
+
+			// Approximate divergence: calculating partial derivatives of vector components with respect to x and y
+			float divX = 0.0f;
+			float divY = 0.0f;
+
+			// Compute divergence for X component (partial derivative with respect to x)
+			if (ni > 0 && ni < Nx - 1)
 			{
-				// Ensure we don't go out of bounds
-				const int ni = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
-				const int nj = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
-
-				// Approximate divergence: calculating partial derivatives of vector components with respect to x and y
-				float divX = 0.0f;
-				float divY = 0.0f;
-
-				// Compute divergence for X component (partial derivative with respect to x)
-				if (ni > 0 && ni < Nx - 1)
-				{
-					divX = (valuesX[Nx * nj + ni + 1] - valuesX[Nx * nj + ni - 1]) / 2.0f;
-				}
-
-				// Compute divergence for Y component (partial derivative with respect to y)
-				if (nj > 0 && nj < Ny - 1)
-				{
-					divY = (valuesY[Nx * (nj + 1) + ni] - valuesY[Nx * (nj - 1) + ni]) / 2.0f;
-				}
-
-				// Sum up the divergence for the neighborhood
-				divergenceSum += divX + divY;
+				divX = (valuesX[Nx * nj + ni + 1] - valuesX[Nx * nj + ni - 1]) / 2.0f;
 			}
+
+			// Compute divergence for Y component (partial derivative with respect to y)
+			if (nj > 0 && nj < Ny - 1)
+			{
+				divY = (valuesY[Nx * (nj + 1) + ni] - valuesY[Nx * (nj - 1) + ni]) / 2.0f;
+			}
+
+			// Sum up the divergence for the selected points
+			divergenceSum += divX + divY;
 		}
 
 		// Average divergence over the neighborhood

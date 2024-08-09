@@ -123,4 +123,14 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool RayIntersectsABox(const Ray& ray, const pmp::BoundingBox& box);
 
+	/**
+	 * \brief Verifies whether two planar circles intersect.
+	 * \param center1       center of the first circle.
+	 * \param radius1       radius of the first circle.
+	 * \param center2       center of the second circle.
+	 * \param radius2       radius of the second circle.
+	 * \return true if circles intersect.
+	 */
+	[[nodiscard]] bool CircleIntersectsCircle2D(const pmp::Point2& center1, const pmp::Scalar& radius1, const pmp::Point2& center2, const pmp::Scalar& radius2);
+
 } // namespace Geometry

@@ -1139,6 +1139,17 @@ namespace Geometry
 
 	// =====================================================================================
 
+	bool CircleIntersectsCircle2D(const pmp::Point2& center1, const pmp::Scalar& radius1, const pmp::Point2& center2, const pmp::Scalar& radius2)
+	{
+		// Calculate the distance between the centers of the two circles
+		const pmp::Scalar distance = norm(center1 - center2);
+
+		// Check if the circles intersect
+		return distance < (radius1 + radius2);
+	}
+
+	// =====================================================================================
+
 
 	double GetDistanceToLine2DSq(const std::vector<pmp::Point2>& vertices, const pmp::vec2& point)
 	{

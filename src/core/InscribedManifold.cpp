@@ -2,6 +2,7 @@
 
 #include "geometry/GridUtil.h"
 #include "geometry/GeometryConversionUtils.h"
+#include "geometry/GeometryUtil.h"
 
 // ---------------------------------------------------------------------------
 
@@ -29,6 +30,40 @@ std::vector<Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedC
 }
 
 // ---------------------------------------------------------------------------
+
+namespace
+{
+    std::vector<Circle2D> FilterOverlappingCircles(const std::vector<Circle2D>& circles)
+    {
+        std::vector<Circle2D> filteredCircles;
+
+        for (const auto& circle : circles)
+        {
+            bool intersects = false;
+
+            // Check if the current circle intersects with any circle in the filtered list
+            for (const auto& filteredCircle : filteredCircles)
+            {
+                if (Geometry::CircleIntersectsCircle2D(circle.Center, circle.Radius, filteredCircle.Center, filteredCircle.Radius))
+                {
+                    intersects = true;
+                    break;
+                }
+            }
+
+            // If it doesn't intersect with any filtered circle, add it to the filtered list
+            if (!intersects)
+            {
+                filteredCircles.push_back(circle);
+            }
+        }
+
+        return filteredCircles;
+    }
+
+} // anonymous namespace
+
+// ...........................................................................
 
 std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
@@ -83,7 +118,7 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
         }
     }
 
-    return circles;
+    return FilterOverlappingCircles(circles);
 }
 
 // ------------------------------------------------------------------------------------
@@ -137,6 +172,8 @@ namespace
 
 } // anonymous namespace
 
+// ...........................................................................
+
 std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
     if (!data.DistanceField)
@@ -174,7 +211,7 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
     kdTree.buildIndex();
 
     // Initial search radius - start with half of the largest dimension
-    const unsigned int initialRadius = std::max(Nx, Ny) / 2;
+    const unsigned int initialRadius = std::max(Nx, Ny) / 2 - 1;
 
     // Recursively find local maxima in the grid
     RecursiveSearchForMaxima(circles, grid, gridGradient, minX, minY, maxX, maxY, initialRadius,
@@ -186,5 +223,123 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
         circles.push_back({ localMaxPt, sqrt(*nearestPointDistanceSq) });
     });
 
-    return circles;
+    return FilterOverlappingCircles(circles);
+}
+
+// ------------------------------------------------------------------------------------
+
+namespace
+{
+    /// \brief A very simple index warpper for a 2D grid particle acting in the "particle swarm optimization" (PSO).
+    struct Grid2DParticle
+    {
+        int ix, iy; // -1 means invalid
+    };
+} // anonymous namespace
+
+// ....................................................................................
+
+std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
+{
+    if (!data.DistanceField)
+    {
+        throw std::invalid_argument("ParticleSwarmDistanceFieldInscribedCircleCalculator::Calculate: Distance field is not provided!");
+    }
+
+    std::vector<Circle2D> circles;
+    auto& grid = *data.DistanceField;
+    ApplyNarrowGaussianBlur2D(grid);
+    const auto gridGradient = ComputeGradient(grid);
+
+    const auto& dim = grid.Dimensions();
+    const auto Nx = static_cast<unsigned int>(dim.Nx);
+    const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+    // Derive the sample interval from grid dimensions
+    constexpr float factor = 0.1f; // TODO: make this value a parameter
+    const auto sampleInterval = static_cast<unsigned int>(std::max(1u, static_cast<unsigned int>(Nx * factor)));
+
+    // Build the KD-tree
+    Geometry::PointCloud2D pointCloud;
+    pointCloud.points = data.Points;
+    Geometry::PointCloud2DTree kdTree(2, pointCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */));
+    kdTree.buildIndex();
+
+    std::vector<Grid2DParticle> particles;
+
+    // Initialize the covered grid with false values
+    std::vector coveredGrid(Nx, std::vector(Ny, false));
+
+    // Initialize the particles
+    for (unsigned int iy = sampleInterval; iy < Ny - 1; iy += sampleInterval)
+    {
+        for (unsigned int ix = sampleInterval; ix < Nx - 1; ix += sampleInterval)
+        {
+            particles.push_back({ static_cast<int>(ix), static_cast<int>(iy) });
+        }
+    }
+
+    // Iterate over active particles
+    while (!particles.empty())
+    {
+        std::vector<Grid2DParticle> activeParticles;
+        for (const auto& particle : particles)
+        {
+            int ix = particle.ix;
+            int iy = particle.iy;
+
+            // Check if the position has already been covered
+            if (coveredGrid[ix][iy])
+                continue;
+
+            // Get the gradient at the particle's position
+            const pmp::Scalar gradientX = gridGradient.ValuesX()[Nx * iy + ix];
+            const pmp::Scalar gradientY = gridGradient.ValuesY()[Nx * iy + ix];
+
+            // Determine the direction of movement based on the gradient
+            int moveX = 0, moveY = 0;
+            if (std::abs(gradientX) > std::abs(gradientY))
+            {
+                moveX = (gradientX > 0) ? 1 : -1;
+            }
+            else
+            {
+                moveY = (gradientY > 0) ? 1 : -1;
+            }
+
+            // ignore stuck particles
+            if (moveX == 0 && moveY == 0)
+                continue;
+
+            // Update particle position
+            ix = std::clamp(ix + moveX, 1, static_cast<int>(Nx) - 2);
+            iy = std::clamp(iy + moveY, 1, static_cast<int>(Ny) - 2);
+
+            // Check if the particle has reached the boundary
+            if (ix <= 1 || ix >= static_cast<int>(Nx) - 2 || iy <= 1 || iy >= static_cast<int>(Ny) - 2)
+            {
+                continue; // Particle has reached the boundary and is discarded
+            }
+
+            // Check if the particle's position is a local maximum
+            const auto localMaxPt = FindLocalMaximumNearScalarGridCell(grid, ix, iy, 1);
+            if (localMaxPt.has_value())
+            {
+                const auto nearestPointDistanceSq = GetDistanceToClosestPoint2DSquared(kdTree, *localMaxPt);
+                if (nearestPointDistanceSq.has_value())
+                {
+                    circles.push_back({ *localMaxPt, sqrt(*nearestPointDistanceSq) });
+                    coveredGrid[ix][iy] = true;  // Mark this position as covered
+                }
+                continue; // Particle stops if it finds a local maximum
+            }
+
+            // Otherwise, keep the particle active for the next iteration
+            activeParticles.push_back({ ix, iy });
+        }
+
+        particles.swap(activeParticles); // Update the active particles for the next iteration
+    }
+
+    return FilterOverlappingCircles(circles);
 }

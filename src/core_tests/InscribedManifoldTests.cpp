@@ -62,6 +62,12 @@ namespace
         HierarchicalDistanceFieldInscribedCircleCalculator calculator;
     };
 
+    class ParticleSwarmDistanceFieldInscribedCircleCalculatorTests : public ::testing::Test
+    {
+    protected:
+        ParticleSwarmDistanceFieldInscribedCircleCalculator calculator;
+    };
+
 } // anonymous namespace
 
 TEST_F(NaiveInscribedCircleCalculatorTests, UnitSquareVertices) 
@@ -238,3 +244,69 @@ TEST_F(HierarchicalDistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
         EXPECT_GT(circle.Radius, 0.75f);
     }
 }
+
+TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, UnitSquareVertices)
+{
+    // Arrange
+    auto inputData = CreateUnitSquareVerticesData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto circles = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(circles.size(), 1);
+    for (const auto& circle : circles)
+    {
+        EXPECT_NEAR(circle.Center[0], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Radius, std::sqrt(2) / 2, epsilon);
+    }
+}
+
+TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, UniformCircleSampling)
+{
+    // Arrange
+    auto inputData = CreateUniformCircleSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto circles = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(circles.size(), 1);
+    for (const auto& circle : circles)
+    {
+        EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
+{
+    // Arrange
+    auto inputData = CreateEllipseSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto circles = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_GT(circles.size(), 0);
+    for (const auto& circle : circles)
+    {
+        // TODO: fix multiple circles selection.
+        //EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
+        //EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
+        //EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_GT(circle.Radius, 0.75f);
+    }
+}
+
