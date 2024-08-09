@@ -296,6 +296,9 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
             const pmp::Scalar gradientX = gridGradient.ValuesX()[Nx * iy + ix];
             const pmp::Scalar gradientY = gridGradient.ValuesY()[Nx * iy + ix];
 
+            if (std::abs(gradientX * gradientX + gradientY * gradientY) < 1e-6f)
+                continue; // the particle can't move with a zero gradient
+
             // Determine the direction of movement based on the gradient
             int moveX = 0, moveY = 0;
             if (std::abs(gradientX) > std::abs(gradientY))
