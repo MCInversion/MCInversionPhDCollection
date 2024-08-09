@@ -297,9 +297,21 @@ namespace Geometry
 	[[nodiscard]] ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid);
 
 	/**
+	 * \brief Searches the cell (ix, iy) and its neighbors at given radius for a local maximum of a 2D quadratic polynomial.
+	 * \return true if the maximum is found between the 9 cells.
+	 */
+	[[nodiscard]] bool ContainsLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
+
+	/**
+	 * \brief Searches the cell (ix, iy) and its neighbors at given radius for a local extreme of a 2D quadratic polynomial.
+	 * \return true if the extreme is found between the 9 cells.
+	 */
+	[[nodiscard]] bool ContainsLocalExtremesNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
+
+	/**
 	 * \brief Searches the cell (ix, iy) and its neighbors for a local maximum of a 2D quadratic polynomial.
 	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
 	 */
-	[[nodiscard]] std::optional<pmp::Point2> FindLocalMinimumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy);
+	[[nodiscard]] std::optional<pmp::Point2> FindLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
 
 } // namespace Geometry

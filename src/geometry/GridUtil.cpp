@@ -1442,7 +1442,151 @@ namespace Geometry
 		return result;
 	}
 
-	std::optional<pmp::Point2> FindLocalMinimumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy)
+
+	bool ContainsLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius)
+	{
+		using namespace Eigen;
+
+		const auto& values = grid.Values();
+		const auto Nx = static_cast<unsigned int>(grid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(grid.Dimensions().Ny);
+		assert(ix < Nx);
+		assert(iy < Ny);
+
+		// Collect the values in the 3x3 neighborhood
+		std::array<pmp::Scalar, 9> neighborhood_values;
+		int idx = 0;
+		const auto r = static_cast<int>(radius);
+		for (int di = -r; di <= r; di += r)
+		{
+			for (int dj = -r; dj <= r; dj += r)
+			{
+				const int adjusted_ix = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
+				const int adjusted_iy = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
+
+				neighborhood_values[idx++] = values[Nx * adjusted_iy + adjusted_ix];
+			}
+		}
+
+		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
+		Matrix<float, 9, 6> A;
+		Vector<float, 9> b;
+
+		// normalized cell coordinates
+		A << 1, -1, -1, 1, 1, 1,
+			1, 0, -1, 0, 0, 1,
+			1, 1, -1, 1, -1, 1,
+			1, -1, 0, 1, 0, 0,
+			1, 0, 0, 0, 0, 0,
+			1, 1, 0, 1, 0, 0,
+			1, -1, 1, 1, -1, 1,
+			1, 0, 1, 0, 0, 1,
+			1, 1, 1, 1, 1, 1;
+
+		for (int i = 0; i < 9; ++i)
+		{
+			b[i] = neighborhood_values[i];
+		}
+
+		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
+		const float a10 = coeffs[1];
+		const float a01 = coeffs[2];
+		const float a20 = coeffs[3];
+		const float a11 = coeffs[4];
+		const float a02 = coeffs[5];
+
+		// Solve for the critical point
+		Matrix2f H;
+		H << 2 * a20, a11, a11, 2 * a02;
+		Vector2f grad;
+		grad << a10, a01;
+
+		SelfAdjointEigenSolver<Matrix2f> solver(H);
+		if (solver.eigenvalues()(0) > FLT_EPSILON || solver.eigenvalues()(1) > FLT_EPSILON)
+		{
+			return false; // Hessian is not negative definite
+		}
+
+		Vector2f critical_point = -H.inverse() * grad;
+
+		if (critical_point[0] < -1 || critical_point[0] > 1 || critical_point[1] < -1 || critical_point[1] > 1)
+		{
+			return false; // Critical point outside the 9 grid cells
+		}
+
+		return true;
+	}
+
+	bool ContainsLocalExtremesNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius)
+	{
+		using namespace Eigen;
+
+		const auto& values = grid.Values();
+		const auto Nx = static_cast<unsigned int>(grid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(grid.Dimensions().Ny);
+		assert(ix < Nx);
+		assert(iy < Ny);
+
+		// Collect the values in the 3x3 neighborhood
+		std::array<pmp::Scalar, 9> neighborhood_values;
+		int idx = 0;
+		const auto r = static_cast<int>(radius);
+		for (int di = -r; di <= r; di += r)
+		{
+			for (int dj = -r; dj <= r; dj += r)
+			{
+				// Ensure indices are within grid bounds
+				const int clamped_ix = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
+				const int clamped_iy = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
+				neighborhood_values[idx++] = values[Nx * clamped_iy + clamped_ix];
+			}
+		}
+
+		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
+		Matrix<float, 9, 6> A;
+		Vector<float, 9> b;
+
+		// normalized cell coordinates
+		A << 1, -1, -1, 1, 1, 1,
+			1, 0, -1, 0, 0, 1,
+			1, 1, -1, 1, -1, 1,
+			1, -1, 0, 1, 0, 0,
+			1, 0, 0, 0, 0, 0,
+			1, 1, 0, 1, 0, 0,
+			1, -1, 1, 1, -1, 1,
+			1, 0, 1, 0, 0, 1,
+			1, 1, 1, 1, 1, 1;
+
+		for (int i = 0; i < 9; ++i)
+		{
+			b[i] = neighborhood_values[i];
+		}
+
+		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
+		const float a10 = coeffs[1];
+		const float a01 = coeffs[2];
+		const float a20 = coeffs[3];
+		const float a11 = coeffs[4];
+		const float a02 = coeffs[5];
+
+		// Solve for the critical point
+		Matrix2f H;
+		H << 2 * a20, a11, a11, 2 * a02;
+		Vector2f grad;
+		grad << a10, a01;
+
+		Vector2f critical_point = -H.inverse() * grad;
+
+		// Check if the critical point lies within the [-1, 1] x [-1, 1] range of the neighborhood
+		if (critical_point[0] >= -1 && critical_point[0] <= 1 && critical_point[1] >= -1 && critical_point[1] <= 1)
+		{
+			return true;  // A local extreme (max or min) is present
+		}
+
+		return false;
+	}
+
+	std::optional<pmp::Point2> FindLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius)
 	{
 		using namespace Eigen;
 
@@ -1457,12 +1601,15 @@ namespace Geometry
 		// Collect the values in the 3x3 neighborhood
 		std::array<pmp::Scalar, 9> neighborhood_values;
 		int idx = 0;
-		for (int di = -1; di <= 1; ++di)
+		const auto r = static_cast<int>(radius);
+		for (int di = -r; di <= r; di += r)
 		{
-			for (int dj = -1; dj <= 1; ++dj)
+			for (int dj = -r; dj <= r; dj += r)
 			{
-				if (ix + di >= Nx || iy + dj >= Ny) return std::nullopt;
-				neighborhood_values[idx++] = values[Nx * (iy + dj) + ix + di];
+				const int adjusted_ix = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
+				const int adjusted_iy = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
+
+				neighborhood_values[idx++] = values[Nx * adjusted_iy + adjusted_ix];
 			}
 		}
 
@@ -1512,9 +1659,9 @@ namespace Geometry
 			return {}; // Critical point outside the 9 grid cells
 		}
 
-		const pmp::Point2 max_point = orig + pmp::Point2((ix + critical_point[0]) * cellSize, (iy + critical_point[1]) * cellSize);
-
-		return max_point;
+		return orig + pmp::Point2(
+			(ix + radius * critical_point[0]) * cellSize,
+			(iy + radius * critical_point[1]) * cellSize);
 	}
 
 } // namespace Geometry

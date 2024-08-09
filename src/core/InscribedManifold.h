@@ -53,6 +53,16 @@ public:
 	[[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) override;
 };
 
+/// \brief Calculates the centers and radii of circles inscribed to a point cloud using the distance-field-based approach:
+/// Find the approximate locations of local maxima of the point cloud distance field which will serve as centers, and the distance to the closest point as radii.
+/// In this calculator, we use a quadtree-based approach instead of analyzing all grid points
+class HierarchicalDistanceFieldInscribedCircleCalculator : public InscribedCircleCalculator
+{
+public:
+	/// \copydoc InscribedCircleCalculator::Calculate
+	[[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) override;
+};
+
 /**
  * \brief Tessellates the resulting curve from the computed radius and center.
  * \param circle        A parametric circle to be reconstructed.
