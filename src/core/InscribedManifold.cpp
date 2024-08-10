@@ -250,6 +250,7 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
     auto& grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
     const auto gridGradient = ComputeGradient(grid);
+    constexpr float GRAD_EPSILON = 1e-5f;
 
     const auto& dim = grid.Dimensions();
     const auto Nx = static_cast<unsigned int>(dim.Nx);
@@ -296,19 +297,12 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
             const pmp::Scalar gradientX = gridGradient.ValuesX()[Nx * iy + ix];
             const pmp::Scalar gradientY = gridGradient.ValuesY()[Nx * iy + ix];
 
-            if (std::abs(gradientX * gradientX + gradientY * gradientY) < 1e-6f)
+            if (gradientX * gradientX + gradientY * gradientY < GRAD_EPSILON)
                 continue; // the particle can't move with a zero gradient
 
             // Determine the direction of movement based on the gradient
-            int moveX = 0, moveY = 0;
-            if (std::abs(gradientX) > std::abs(gradientY))
-            {
-                moveX = (gradientX > 0) ? 1 : -1;
-            }
-            else
-            {
-                moveY = (gradientY > 0) ? 1 : -1;
-            }
+            const int moveX = (gradientX > GRAD_EPSILON) ? 1 : (std::abs(gradientX) < GRAD_EPSILON ? 0 : -1);
+            const int moveY = (gradientY > GRAD_EPSILON) ? 1 : (std::abs(gradientY) < GRAD_EPSILON ? 0 : -1);
 
             // ignore stuck particles
             if (moveX == 0 && moveY == 0)
