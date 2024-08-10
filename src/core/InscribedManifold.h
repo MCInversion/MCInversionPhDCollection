@@ -29,7 +29,6 @@ public:
 	/**
 	 * \brief Estimates inscribed circles to a point cloud.
 	 * \param data        input point cloud data.
-	 * \param method      a calculation method to be used.
 	 * \return a vector of circles.
 	 */
 	virtual [[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) = 0;

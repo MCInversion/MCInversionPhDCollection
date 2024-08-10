@@ -257,7 +257,7 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
     const auto Ny = static_cast<unsigned int>(dim.Ny);
 
     // Derive the sample interval from grid dimensions
-    constexpr float factor = 0.1f; // TODO: make this value a parameter
+    constexpr float factor = 0.2f; // TODO: make this value a parameter
     const auto sampleInterval = static_cast<unsigned int>(std::max(1u, static_cast<unsigned int>(Nx * factor)));
 
     // Build the KD-tree
