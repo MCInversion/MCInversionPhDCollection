@@ -169,14 +169,10 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
-    ASSERT_GT(circles.size(), 0);
+    ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        // TODO: fix multiple circles selection.
-        //EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
-        //EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
-        //EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
-        EXPECT_GT(circle.Radius, 0.75f);
+        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
     }
 }
 
@@ -234,14 +230,10 @@ TEST_F(HierarchicalDistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
-    ASSERT_GT(circles.size(), 0);
+    ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        // TODO: fix multiple circles selection.
-        //EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
-        //EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
-        //EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
-        EXPECT_GT(circle.Radius, 0.75f);
+        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
     }
 }
 
@@ -293,20 +285,16 @@ TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, EllipseSampling
     auto inputData = CreateEllipseSamplingData();
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
     EXPECT_TRUE(inputData.DistanceField != nullptr);
-    const auto epsilon = inputData.DistanceField->CellSize();
+    const auto epsilon = 1.5 * inputData.DistanceField->CellSize();
 
     // Act
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
-    ASSERT_GT(circles.size(), 0);
+    ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        // TODO: fix multiple circles selection.
-        //EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
-        //EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
-        //EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
-        EXPECT_GT(circle.Radius, 0.75f);
+        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
     }
 }
 

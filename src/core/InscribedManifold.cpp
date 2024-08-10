@@ -36,17 +36,23 @@ namespace
     std::vector<Circle2D> FilterOverlappingCircles(const std::vector<Circle2D>& circles)
     {
         std::vector<Circle2D> filteredCircles;
+        filteredCircles.reserve(circles.size());
 
         for (const auto& circle : circles)
         {
             bool intersects = false;
 
-            // Check if the current circle intersects with any circle in the filtered list
-            for (const auto& filteredCircle : filteredCircles)
+            for (auto& filteredCircle : filteredCircles)
             {
                 if (Geometry::CircleIntersectsCircle2D(circle.Center, circle.Radius, filteredCircle.Center, filteredCircle.Radius))
                 {
                     intersects = true;
+
+                    // If the current circle has a larger radius, replace the existing one
+                    if (circle.Radius > filteredCircle.Radius)
+                    {
+                        filteredCircle = circle;
+                    }
                     break;
                 }
             }
@@ -58,6 +64,7 @@ namespace
             }
         }
 
+        filteredCircles.shrink_to_fit();
         return filteredCircles;
     }
 
@@ -230,10 +237,10 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
 
 namespace
 {
-    /// \brief A very simple index warpper for a 2D grid particle acting in the "particle swarm optimization" (PSO).
+    /// \brief A very simple index wrapper for a 2D grid particle acting in the "particle swarm optimization" (PSO).
     struct Grid2DParticle
     {
-        int ix, iy; // -1 means invalid
+        int ix{ -1 }, iy{ -1 }; // -1 means invalid
     };
 } // anonymous namespace
 
@@ -268,8 +275,8 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
 
     std::vector<Grid2DParticle> particles;
 
-    // Initialize the covered grid with false values
-    std::vector coveredGrid(Nx, std::vector(Ny, false));
+    // A container for grid pts where particles have terminated
+    std::unordered_set<unsigned int> processedGridPts{};
 
     // Initialize the particles
     for (unsigned int iy = sampleInterval; iy < Ny - 1; iy += sampleInterval)
@@ -290,7 +297,7 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
             int iy = particle.iy;
 
             // Check if the position has already been covered
-            if (coveredGrid[ix][iy])
+            if (processedGridPts.contains(iy * Nx + ix))
                 continue;
 
             // Get the gradient at the particle's position
@@ -326,7 +333,7 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
                 if (nearestPointDistanceSq.has_value())
                 {
                     circles.push_back({ *localMaxPt, sqrt(*nearestPointDistanceSq) });
-                    coveredGrid[ix][iy] = true;  // Mark this position as covered
+                    processedGridPts.insert(iy * Nx + ix);  // Mark this position as covered
                 }
                 continue; // Particle stops if it finds a local maximum
             }
