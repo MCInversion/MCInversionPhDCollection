@@ -57,7 +57,7 @@ public:
     virtual void ExportFinalResult() = 0;
 private:
 
-    std::function<void(unsigned int /* step */)> m_Integrate; //>! numerical integration function.
+    std::function<void(unsigned int /* step */)> m_Integrate; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
 };
 
 class ManifoldCurveEvolutionStrategy : public ManifoldEvolutionStrategy
@@ -75,8 +75,8 @@ private:
     std::shared_ptr<pmp::ManifoldCurve2D> m_OuterCurve{ nullptr }; //>! evolving outer manifold which evolves inward, attempting to shrink-wrap m_TargetGeometryAdapter if it's defined.
     std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> m_InnerCurves{}; //>! evolving inner manifolds which evolves outward
 
-    std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr };
-    std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr };
+    std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 2D scalar grid.
+    std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 };
 
 class ManifoldSurfaceEvolutionStrategy : public ManifoldEvolutionStrategy
@@ -94,8 +94,8 @@ private:
     std::shared_ptr<pmp::SurfaceMesh> m_OuterSurface{ nullptr }; //>! evolving outer manifold which evolves inward, attempting to shrink-wrap m_TargetGeometryAdapter if it's defined.
     std::vector<std::shared_ptr<pmp::SurfaceMesh>> m_InnerSurfaces{ nullptr }; //>! evolving inner manifolds which evolves outward
 
-    std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr };
-    std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr };
+    std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
+    std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 };
 
 /**
@@ -105,8 +105,9 @@ class ManifoldEvolver
 {
 public:
 
-	ManifoldEvolver(ManifoldEvolutionSettings settings)
-        : m_Settings(std::move(settings))
+	ManifoldEvolver(ManifoldEvolutionSettings settings, std::unique_ptr<ManifoldEvolutionStrategy> strategy)
+        : m_Settings(std::move(settings)),
+		  m_Strategy(std::move(strategy))
 	{
 	}
 
