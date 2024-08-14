@@ -1,4 +1,3 @@
-#include "ConvexHullEvolver.h"
 
 #include "pmp/algorithms/Normals.h"
 #include "geometry/GeometryConversionUtils.h"
@@ -6,6 +5,8 @@
 #include "geometry/MeshAnalysis.h"
 #include "sdf/SDF.h"
 #include "ConversionUtils.h"
+
+#include "ConvexHullEvolver.h"
 
 #include <fstream>
 
