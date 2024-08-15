@@ -102,7 +102,7 @@ private:
 class ManifoldCurveEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
-    ManifoldCurveEvolutionStrategy(std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
+    explicit ManifoldCurveEvolutionStrategy(std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
 	    : m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
@@ -137,6 +137,30 @@ public:
      */
     void ExportFinalResult() override;
 
+    /// \brief get outer curve as a pmp::ManifoldCurve2D
+    [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D> GetResultOuterCurve() const
+    {
+        return m_OuterCurve;
+    }
+
+    /// \brief get inner curves as pmp::ManifoldCurve2D instances
+    [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> GetResultInnerCurves() const
+    {
+        return m_InnerCurves;
+    }
+
+protected:
+
+    [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
+	{
+        return m_OuterCurve;
+    }
+
+    [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>>& GetInnerCurves()
+    {
+        return m_InnerCurves;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point2>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -149,13 +173,43 @@ private:
 };
 
 /**
+ * \brief An internal functionality of the ManifoldEvolver handling custom pmp::ManifoldCurve2Ds and 2D target set and its distance represented by 2D scalar and vector field.
+ * \class CustomManifoldCurveEvolutionStrategy
+ */
+class CustomManifoldCurveEvolutionStrategy : public ManifoldCurveEvolutionStrategy
+{
+public:
+    /**
+     * \brief Constructor that accepts custom outer and inner curves.
+     * \param outerCurve Custom outer curve.
+     * \param innerCurves Vector of custom inner curves.
+     * \param targetPointCloud target point cloud.
+     */
+    CustomManifoldCurveEvolutionStrategy(
+        pmp::ManifoldCurve2D outerCurve,
+        std::vector<pmp::ManifoldCurve2D> innerCurves = {},
+        std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
+        : ManifoldCurveEvolutionStrategy(targetPointCloud)
+    {
+        GetOuterCurve() = std::make_shared<pmp::ManifoldCurve2D>(std::move(outerCurve));
+        for (auto& c : innerCurves)
+            GetInnerCurves().push_back(std::make_shared<pmp::ManifoldCurve2D>(std::move(c)));
+    }
+
+    /**
+     * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
+     */
+    void Preprocess() override;
+};
+
+/**
  * \brief The internal functionality of the ManifoldEvolver handling pmp::SurfaceMesh and 3D target set and its distance represented by 3D scalar and vector field.
  * \class ManifoldSurfaceEvolutionStrategy
  */
 class ManifoldSurfaceEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
-    ManifoldSurfaceEvolutionStrategy(std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
+    explicit ManifoldSurfaceEvolutionStrategy(std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
         : m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
@@ -190,6 +244,18 @@ public:
      */
     void ExportFinalResult() override;
 
+    /// \brief get outer surface as a pmp::SurfaceMesh
+    [[nodiscard]] std::shared_ptr<pmp::SurfaceMesh> GetResultOuterSurface() const
+    {
+        return m_OuterSurface;
+    }
+
+    /// \brief get inner surfaces as pmp::SurfaceMesh instances
+    [[nodiscard]] std::vector<std::shared_ptr<pmp::SurfaceMesh>> GetResultInnerSurfaces() const
+    {
+        return m_InnerSurfaces;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -203,7 +269,7 @@ private:
 
 //
 // ===============================================================================================
-//                               Main evolver interface 
+//                                   Main evolver interface 
 // -----------------------------------------------------------------------------------------------
 //
 
@@ -214,7 +280,7 @@ class ManifoldEvolver
 {
 public:
 
-	ManifoldEvolver(ManifoldEvolutionSettings settings, std::unique_ptr<ManifoldEvolutionStrategy> strategy)
+	ManifoldEvolver(ManifoldEvolutionSettings settings, std::shared_ptr<ManifoldEvolutionStrategy> strategy)
         : m_Settings(std::move(settings)),
 		  m_Strategy(std::move(strategy))
 	{
@@ -248,6 +314,11 @@ public:
         }
     }
 
+    const std::shared_ptr<ManifoldEvolutionStrategy>& GetStrategy() const
+	{
+        return m_Strategy;
+	}
+
 private:
 
     //
@@ -258,5 +329,5 @@ private:
     ManifoldEvolutionSettings m_Settings;
 
     // Evolution strategy
-    std::unique_ptr<ManifoldEvolutionStrategy> m_Strategy{ nullptr };
+    std::shared_ptr<ManifoldEvolutionStrategy> m_Strategy{ nullptr };
 };
