@@ -5,6 +5,12 @@
 
 #include "EvolverUtilsCommon.h"
 
+//
+// ===============================================================================================
+//                                          Settings
+// -----------------------------------------------------------------------------------------------
+//
+
 struct AmbientFieldSettings
 {
     float FieldExpansionFactor{ 1.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
@@ -21,7 +27,7 @@ struct ManifoldEvolutionSettings
 
     unsigned int Dimension{ 2 }; //>! the dimension of the evolving manifold(s). 1 for curves, 2 for surfaces.
     bool UseSemiImplicit{ true }; //>! whether to use a more numerically stable, but computationally costly numerical scheme (has to solve a linear system for each coord for each time step).
-    unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle could be a regular pentagon
+    unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle is a regular pentagon, and the sphere an icosahedron.
 
     unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
     double TimeStep{ 0.01 };     //>! time step size.
@@ -39,27 +45,60 @@ struct ManifoldEvolutionSettings
     double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
 };
 
+//
+// ===============================================================================================
+//                                     Evolver strategies
+// -----------------------------------------------------------------------------------------------
+//
+
+/**
+ * \brief An interface for the internal functionality of the ManifoldEvolver handling specific geometry types.
+ * \class ManifoldEvolutionStrategy
+ */
 class ManifoldEvolutionStrategy
 {
 public:
     virtual ~ManifoldEvolutionStrategy() = default;
 
+    /**
+     * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
+     */
     virtual void Preprocess() = 0;
 
+    /**
+     * \brief Performs a single step of manifold evolution from the configuration at previous time step.
+     */
     virtual void PerformEvolutionStep(unsigned int step) = 0;
 
+    /**
+     * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
+     */
     virtual [[nodiscard]] bool ShouldRemesh() = 0;
 
+    /**
+     * \brief Perform remeshing on the evolving manifold(s).
+     */
     virtual void Remesh() = 0;
 
+    /**
+     * \brief Exports the current state of evolving manifold(s).
+     */
     virtual void ExportCurrentState(unsigned int step) = 0;
 
+    /**
+     * \brief Exports the final state of evolving manifold(s).
+     */
     virtual void ExportFinalResult() = 0;
+
 private:
 
     std::function<void(unsigned int /* step */)> m_Integrate; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
 };
 
+/**
+ * \brief The internal functionality of the ManifoldEvolver handling pmp::ManifoldCurve2D and 2D target set and its distance represented by 2D scalar and vector field.
+ * \class ManifoldCurveEvolutionStrategy
+ */
 class ManifoldCurveEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
@@ -67,6 +106,36 @@ public:
 	    : m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
+
+    /**
+     * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
+     */
+    void Preprocess() override;
+
+    /**
+     * \brief Performs a single step of manifold evolution from the configuration at previous time step.
+     */
+    void PerformEvolutionStep(unsigned int step) override;
+
+    /**
+     * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
+     */
+    [[nodiscard]] bool ShouldRemesh() override;
+
+    /**
+     * \brief Perform remeshing on the evolving manifold(s).
+     */
+    void Remesh() override;
+
+    /**
+     * \brief Exports the current state of evolving manifold(s).
+     */
+    void ExportCurrentState(unsigned int step) override;
+
+    /**
+     * \brief Exports the final state of evolving manifold(s).
+     */
+    void ExportFinalResult() override;
 
 private:
 
@@ -79,6 +148,10 @@ private:
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 };
 
+/**
+ * \brief The internal functionality of the ManifoldEvolver handling pmp::SurfaceMesh and 3D target set and its distance represented by 3D scalar and vector field.
+ * \class ManifoldSurfaceEvolutionStrategy
+ */
 class ManifoldSurfaceEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
@@ -86,6 +159,36 @@ public:
         : m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
+
+    /**
+     * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
+     */
+    void Preprocess() override;
+
+    /**
+     * \brief Performs a single step of manifold evolution from the configuration at previous time step.
+     */
+    void PerformEvolutionStep(unsigned int step) override;
+
+    /**
+     * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
+     */
+    [[nodiscard]] bool ShouldRemesh() override;
+
+    /**
+     * \brief Perform remeshing on the evolving manifold(s).
+     */
+    void Remesh() override;
+
+    /**
+     * \brief Exports the current state of evolving manifold(s).
+     */
+    void ExportCurrentState(unsigned int step) override;
+
+    /**
+     * \brief Exports the final state of evolving manifold(s).
+     */
+    void ExportFinalResult() override;
 
 private:
 
@@ -97,6 +200,12 @@ private:
     std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 };
+
+//
+// ===============================================================================================
+//                               Main evolver interface 
+// -----------------------------------------------------------------------------------------------
+//
 
 /**
  * \brief A class for evolving general manifolds (curves and surfaces) in Euclidean space.
