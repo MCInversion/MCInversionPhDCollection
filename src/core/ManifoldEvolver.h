@@ -138,15 +138,17 @@ public:
     void ExportFinalResult() override;
 
     /// \brief get outer curve as a pmp::ManifoldCurve2D
-    [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D> GetResultOuterCurve() const
+    [[nodiscard]] pmp::ManifoldCurve2D GetResultOuterCurve() const
     {
-        return m_OuterCurve;
+        return *m_OuterCurve;
     }
 
     /// \brief get inner curves as pmp::ManifoldCurve2D instances
-    [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> GetResultInnerCurves() const
+    [[nodiscard]] std::vector<pmp::ManifoldCurve2D> GetResultInnerCurves() const
     {
-        return m_InnerCurves;
+        std::vector<pmp::ManifoldCurve2D> result;
+        std::ranges::transform(m_InnerCurves, std::back_inserter(result), [](const auto& c) { return *c; });
+        return result;
     }
 
 protected:
@@ -200,6 +202,8 @@ public:
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
     void Preprocess() override;
+
+
 };
 
 /**
@@ -245,15 +249,17 @@ public:
     void ExportFinalResult() override;
 
     /// \brief get outer surface as a pmp::SurfaceMesh
-    [[nodiscard]] std::shared_ptr<pmp::SurfaceMesh> GetResultOuterSurface() const
+    [[nodiscard]] pmp::SurfaceMesh GetResultOuterSurface() const
     {
-        return m_OuterSurface;
+        return *m_OuterSurface;
     }
 
     /// \brief get inner surfaces as pmp::SurfaceMesh instances
-    [[nodiscard]] std::vector<std::shared_ptr<pmp::SurfaceMesh>> GetResultInnerSurfaces() const
+    [[nodiscard]] std::vector<pmp::SurfaceMesh> GetResultInnerSurfaces() const
     {
-        return m_InnerSurfaces;
+        std::vector<pmp::SurfaceMesh> result;
+        std::ranges::transform(m_InnerSurfaces, std::back_inserter(result), [](const auto& c) { return *c; });
+        return result;
     }
 
 private:

@@ -20,7 +20,7 @@ TEST(ManifoldEvolverTests, CustomCurveInitialization)
     evolver.Evolve();
 
     // Assert
-    auto resultOuterCurve = customStrategy->GetResultOuterCurve();
+    auto resultOuterCurve = evolver.GetStrategy()->GetResultOuterCurve();
     auto resultInnerCurves = customStrategy->GetResultInnerCurves();
     //EXPECT_LT(resultOuterCurve->ComputeRadius(), 1.0f);
     //EXPECT_GT(resultInnerCurves[0]->ComputeRadius(), 0.5f);
