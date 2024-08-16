@@ -23,16 +23,27 @@ struct AmbientFieldSettings
  */
 struct ManifoldEvolutionSettings
 {
-    std::string ProcedureName{}; //>! name for the evolution procedure.
-
     unsigned int Dimension{ 2 }; //>! the dimension of the evolving manifold(s). 1 for curves, 2 for surfaces.
     bool UseSemiImplicit{ true }; //>! whether to use a more numerically stable, but computationally costly numerical scheme (has to solve a linear system for each coord for each time step).
     unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle is a regular pentagon, and the sphere an icosahedron.
 
+    AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
+
+    AmbientFieldSettings FieldSettings{}; //>! the settings for the construction of the ambient fields.
+
+    double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
+};
+
+/**
+ * \brief A wrapper for the global manifold evolution settings.
+ * \struct GlobalManifoldEvolutionSettings
+ */
+struct GlobalManifoldEvolutionSettings
+{
+    std::string ProcedureName{}; //>! name for the evolution procedure.
+
     unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
     double TimeStep{ 0.01 };     //>! time step size.
-
-    AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 
     bool ExportPerTimeStep{ false };  //>! whether to export evolving manifold for each time step.
     bool ExportResult{ true }; //>! whether to export resulting evolving manifold.
@@ -41,9 +52,30 @@ struct ManifoldEvolutionSettings
     std::string OutputPath{}; //>! path where output manifolds are to be exported.
 
     bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
-
-    double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
+	
 };
+
+//
+// ===============================================================================================
+//                                     Evolver functions
+// -----------------------------------------------------------------------------------------------
+//
+
+/// \brief eps(d) = 1, eps(d) = C_1 * (1 - exp(-d^2/C_2)), or any other control function for the Laplacian term in the equation. 
+using CurvatureCtrlFunction = std::function<double(double /* distance */)>;
+
+const CurvatureCtrlFunction TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
+const CurvatureCtrlFunction STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
+
+/// \brief eta(d) = 0, eta(d) = D_1 * d * ((grad d . N) - D_2 * sqrt(1 - (grad d . N)^2), or any other control function for the advection term in the equation.
+using AdvectionCtrlFunction2D = std::function<double(double /* distance */, const pmp::vec2& /* -grad distance */)>;
+using AdvectionCtrlFunction3D = std::function<double(double /* distance */, const pmp::vec3& /* -grad distance */)>;
+
+const AdvectionCtrlFunction2D TRIVIAL_ETA_2D = [](double /* distance */, const pmp::vec2& /* -grad distance */) { return 0.0; };
+const AdvectionCtrlFunction3D TRIVIAL_ETA_3D = [](double /* distance */, const pmp::vec3& /* -grad distance */) { return 0.0; };
+
+/// \brief A placeholder for the numerical integration function specific to the scheme and dimension.
+using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
 
 //
 // ===============================================================================================
@@ -58,6 +90,13 @@ struct ManifoldEvolutionSettings
 class ManifoldEvolutionStrategy
 {
 public:
+
+    /// \brief Base constructor from given settings.
+    explicit ManifoldEvolutionStrategy(ManifoldEvolutionSettings settings)
+	    : m_Settings(settings)
+    {	    
+    }
+
     virtual ~ManifoldEvolutionStrategy() = default;
 
     /**
@@ -90,9 +129,24 @@ public:
      */
     virtual void ExportFinalResult() = 0;
 
+    /// \brief Settings getter.
+    ManifoldEvolutionSettings& GetSettings()
+    {
+        return m_Settings;
+    }
+
+protected:
+
+    CurvatureCtrlFunction& GetCurvatureTermControlFunction()
+    {
+        return m_CurvatureTermControlFunction;
+    }
+
 private:
 
-    std::function<void(unsigned int /* step */)> m_Integrate; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
+    ManifoldEvolutionSettings m_Settings{};                 //>! settings for the evolution strategy.
+    NumericalStepIntegrateFunction m_Integrate{};           //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
+    CurvatureCtrlFunction m_CurvatureTermControlFunction{}; //>! an adjustable control function for the main curvature term. See "\varepsilon" in the article.
 };
 
 /**
@@ -102,8 +156,15 @@ private:
 class ManifoldCurveEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
-    explicit ManifoldCurveEvolutionStrategy(std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
-	    : m_TargetPointCloud(std::move(targetPointCloud))
+	/**
+	 * \brief A base constructor for curve evolution strategy.
+	 * \param settings           evolution strategy settings.
+	 * \param targetPointCloud   target point cloud data.
+	 */
+	explicit ManifoldCurveEvolutionStrategy(ManifoldEvolutionSettings settings, 
+	                                        std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
+	    : ManifoldEvolutionStrategy(settings),
+        m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
 
@@ -137,30 +198,26 @@ public:
      */
     void ExportFinalResult() override;
 
-    /// \brief get outer curve as a pmp::ManifoldCurve2D
-    [[nodiscard]] pmp::ManifoldCurve2D GetResultOuterCurve() const
-    {
-        return *m_OuterCurve;
-    }
-
-    /// \brief get inner curves as pmp::ManifoldCurve2D instances
-    [[nodiscard]] std::vector<pmp::ManifoldCurve2D> GetResultInnerCurves() const
-    {
-        std::vector<pmp::ManifoldCurve2D> result;
-        std::ranges::transform(m_InnerCurves, std::back_inserter(result), [](const auto& c) { return *c; });
-        return result;
-    }
-
-protected:
-
-    [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
+    /// \brief A getter for the outer curve
+    std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
 	{
         return m_OuterCurve;
     }
 
-    [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>>& GetInnerCurves()
+    /// \brief A getter for the vector of inner curves
+    std::vector<std::shared_ptr<pmp::ManifoldCurve2D>>& GetInnerCurves()
     {
         return m_InnerCurves;
+    }
+
+protected:
+
+    /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
+    void ComputeAmbientFields();
+
+    AdvectionCtrlFunction2D& GetAdvectionCtrlFunction()
+    {
+        return m_AdvectionCtrlFunction;
     }
 
 private:
@@ -172,6 +229,8 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 2D scalar grid.
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
+
+    AdvectionCtrlFunction2D m_AdvectionCtrlFunction{}; //>! 2D version of the advection control function which takes into account both fields and drags the evolving manifold. See "\eta" in the article.
 };
 
 /**
@@ -183,15 +242,17 @@ class CustomManifoldCurveEvolutionStrategy : public ManifoldCurveEvolutionStrate
 public:
     /**
      * \brief Constructor that accepts custom outer and inner curves.
-     * \param outerCurve Custom outer curve.
-     * \param innerCurves Vector of custom inner curves.
-     * \param targetPointCloud target point cloud.
+     * \param settings            evolution strategy settings.
+     * \param outerCurve          Custom outer curve.
+     * \param innerCurves         Vector of custom inner curves.
+     * \param targetPointCloud    target point cloud.
      */
     CustomManifoldCurveEvolutionStrategy(
-        pmp::ManifoldCurve2D outerCurve,
-        std::vector<pmp::ManifoldCurve2D> innerCurves = {},
+        ManifoldEvolutionSettings settings,
+        pmp::ManifoldCurve2D& outerCurve,
+        std::vector<pmp::ManifoldCurve2D>& innerCurves,
         std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
-        : ManifoldCurveEvolutionStrategy(targetPointCloud)
+        : ManifoldCurveEvolutionStrategy(settings, std::move(targetPointCloud))
     {
         GetOuterCurve() = std::make_shared<pmp::ManifoldCurve2D>(std::move(outerCurve));
         for (auto& c : innerCurves)
@@ -202,8 +263,6 @@ public:
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
     void Preprocess() override;
-
-
 };
 
 /**
@@ -213,8 +272,9 @@ public:
 class ManifoldSurfaceEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
-    explicit ManifoldSurfaceEvolutionStrategy(std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
-        : m_TargetPointCloud(std::move(targetPointCloud))
+    explicit ManifoldSurfaceEvolutionStrategy(ManifoldEvolutionSettings settings, 
+        std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
+        : ManifoldEvolutionStrategy(std::move(settings)), m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
 
@@ -248,18 +308,26 @@ public:
      */
     void ExportFinalResult() override;
 
-    /// \brief get outer surface as a pmp::SurfaceMesh
-    [[nodiscard]] pmp::SurfaceMesh GetResultOuterSurface() const
+    /// \brief A getter for the outer surface
+    std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface()
     {
-        return *m_OuterSurface;
+        return m_OuterSurface;
     }
 
-    /// \brief get inner surfaces as pmp::SurfaceMesh instances
-    [[nodiscard]] std::vector<pmp::SurfaceMesh> GetResultInnerSurfaces() const
+    /// \brief A getter for the vector of inner surfaces
+    std::vector<std::shared_ptr<pmp::SurfaceMesh>>& GetInnerSurfaces()
     {
-        std::vector<pmp::SurfaceMesh> result;
-        std::ranges::transform(m_InnerSurfaces, std::back_inserter(result), [](const auto& c) { return *c; });
-        return result;
+        return m_InnerSurfaces;
+    }
+
+protected:
+
+    /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
+    void ComputeAmbientFields();
+
+    AdvectionCtrlFunction3D& GetAdvectionCtrlFunction()
+    {
+        return m_AdvectionCtrlFunction;
     }
 
 private:
@@ -271,6 +339,40 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
+
+    AdvectionCtrlFunction3D m_AdvectionCtrlFunction{}; //>! 3D version of the advection control function which takes into account both fields and drags the evolving manifold. See "\eta" in the article.
+};
+
+/**
+ * \brief An internal functionality of the ManifoldEvolver handling custom pmp::ManifoldCurve2Ds and 2D target set and its distance represented by 2D scalar and vector field.
+ * \class CustomManifoldSurfaceEvolutionStrategy
+ */
+class CustomManifoldSurfaceEvolutionStrategy : public ManifoldSurfaceEvolutionStrategy
+{
+public:
+    /**
+     * \brief Constructor that accepts custom outer and inner surfaces.
+     * \param settings         evolution strategy settings.
+     * \param outerSurface     Custom outer surface.
+     * \param innerSurfaces    Vector of custom inner surfaces.
+     * \param targetPointCloud target point cloud.
+     */
+    CustomManifoldSurfaceEvolutionStrategy(
+        ManifoldEvolutionSettings settings,
+        pmp::SurfaceMesh& outerSurface,
+        std::vector<pmp::SurfaceMesh>& innerSurfaces,
+        std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
+        : ManifoldSurfaceEvolutionStrategy(settings, std::move(targetPointCloud))
+    {
+        GetOuterSurface() = std::make_shared<pmp::SurfaceMesh>(std::move(outerSurface));
+        for (auto& s : innerSurfaces)
+            GetInnerSurfaces().push_back(std::make_shared<pmp::SurfaceMesh>(std::move(s)));
+    }
+
+    /**
+     * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
+     */
+    void Preprocess() override;
 };
 
 //
@@ -286,7 +388,7 @@ class ManifoldEvolver
 {
 public:
 
-	ManifoldEvolver(ManifoldEvolutionSettings settings, std::shared_ptr<ManifoldEvolutionStrategy> strategy)
+	ManifoldEvolver(GlobalManifoldEvolutionSettings settings, std::shared_ptr<ManifoldEvolutionStrategy> strategy)
         : m_Settings(std::move(settings)),
 		  m_Strategy(std::move(strategy))
 	{
@@ -298,8 +400,12 @@ public:
     void Evolve() const
 	{
         m_Strategy->Preprocess();
+        if (m_Settings.ExportPerTimeStep)
+        {
+            m_Strategy->ExportCurrentState(0);
+        }
 
-        for (unsigned int step = 0; step < m_Settings.NSteps; ++step)
+        for (unsigned int step = 1; step <= m_Settings.NSteps; ++step)
         {
             m_Strategy->PerformEvolutionStep(step);
 
@@ -320,7 +426,7 @@ public:
         }
     }
 
-    const std::shared_ptr<ManifoldEvolutionStrategy>& GetStrategy() const
+    [[nodiscard]] std::shared_ptr<ManifoldEvolutionStrategy>& GetStrategy()
 	{
         return m_Strategy;
 	}
@@ -332,7 +438,7 @@ private:
     //
 
     // Key settings
-    ManifoldEvolutionSettings m_Settings;
+    GlobalManifoldEvolutionSettings m_Settings;
 
     // Evolution strategy
     std::shared_ptr<ManifoldEvolutionStrategy> m_Strategy{ nullptr };
