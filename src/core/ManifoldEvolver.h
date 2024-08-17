@@ -218,6 +218,14 @@ public:
      */
     void ExportFinalResult() override;
 
+    /// \brief A specialized external getter which also transforms the stabilized outer curve to its original scale.
+    [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D> GetOuterCurveInOrigScale() const;
+
+    /// \brief A specialized external getter which also transforms the stabilized inner curves to its original scale.
+    [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> GetInnerCurvesInOrigScale() const;
+
+protected:
+
     /// \brief A getter for the outer curve
     std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
 	{
@@ -241,8 +249,6 @@ public:
     {
         return m_InnerCurves;
     }
-
-protected:
 
     /// \brief A getter for the inverse stabilization transformation matrix.
     pmp::mat3& GetTransformToOriginal()
@@ -383,6 +389,14 @@ public:
      */
     void ExportFinalResult() override;
 
+    /// \brief A specialized external getter which also transforms the stabilized outer surface to its original scale.
+    [[nodiscard]] std::shared_ptr<pmp::SurfaceMesh> GetOuterSurfaceInOrigScale() const;
+
+    /// \brief A specialized external getter which also transforms the stabilized inner surfaces to its original scale.
+    [[nodiscard]] std::vector<std::shared_ptr<pmp::SurfaceMesh>> GetInnerSurfacesInOrigScale() const;
+
+protected:
+
     /// \brief A getter for the outer surface
     std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface()
     {
@@ -406,8 +420,6 @@ public:
     {
         return m_InnerSurfaces;
     }
-
-protected:
 
     /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.

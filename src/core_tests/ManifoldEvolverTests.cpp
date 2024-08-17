@@ -28,8 +28,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
 
     // Assert
     auto strategy = dynamic_cast<CustomManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
-    auto& resultOuterCurve = strategy->GetOuterCurve();
-    auto& resultInnerCurves = strategy->GetInnerCurves();
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
 
     ASSERT_TRUE(resultOuterCurve != nullptr);
     ASSERT_FALSE(resultInnerCurves.empty());
@@ -48,6 +48,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
     const auto targetPts = targetCurve.positions();
 
     ManifoldEvolutionSettings strategySettings;
+    strategySettings.UseInnerManifolds = false;
     strategySettings.Epsilon = STANDARD_EPSILON;
     strategySettings.Eta = STANDARD_ETA;
     GlobalManifoldEvolutionSettings globalSettings;
@@ -65,15 +66,15 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
 
     // Assert
     auto strategy = dynamic_cast<ManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
-    auto& resultOuterCurve = strategy->GetOuterCurve();
-    auto& resultInnerCurves = strategy->GetInnerCurves();
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
 
     ASSERT_TRUE(resultOuterCurve != nullptr);
     ASSERT_TRUE(resultInnerCurves.empty());
 
-    for (int i = 0; i < 32; ++i)
+    for (const auto vPos : resultOuterCurve->positions())
     {
-        EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0f);
-        EXPECT_GT(norm(resultOuterCurve->position(pmp::Vertex(i))), 0.75f);
+        EXPECT_LT(norm(vPos), 1.0f);
+        EXPECT_GT(norm(vPos), 0.75f);
     }
 }

@@ -61,6 +61,33 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult()
 {
 }
 
+std::shared_ptr<pmp::ManifoldCurve2D> ManifoldCurveEvolutionStrategy::GetOuterCurveInOrigScale() const
+{
+	if (!m_OuterCurve)
+		return nullptr;
+
+	auto outerCurveTransformed = std::make_shared<pmp::ManifoldCurve2D>(*m_OuterCurve);
+	*outerCurveTransformed *= m_TransformToOriginal;
+	return outerCurveTransformed;
+}
+
+std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrategy::GetInnerCurvesInOrigScale() const
+{
+	std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> innerCurvesTransformed{};
+	innerCurvesTransformed.reserve(m_InnerCurves.size());
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		if (!innerCurve)
+			continue;
+
+		auto innerCurveTransformed = std::make_shared<pmp::ManifoldCurve2D>(*innerCurve);
+		*innerCurveTransformed *= m_TransformToOriginal;
+		innerCurvesTransformed.push_back(innerCurveTransformed);
+	}
+	innerCurvesTransformed.shrink_to_fit();
+	return innerCurvesTransformed;
+}
+
 // -------------------------------------------------------------------------------------
 
 std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
@@ -274,6 +301,33 @@ void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step)
 
 void ManifoldSurfaceEvolutionStrategy::ExportFinalResult()
 {
+}
+
+std::shared_ptr<pmp::SurfaceMesh> ManifoldSurfaceEvolutionStrategy::GetOuterSurfaceInOrigScale() const
+{
+	if (!m_OuterSurface)
+		return nullptr;
+
+	auto outerSurfaceTransformed = std::make_shared<pmp::SurfaceMesh>(*m_OuterSurface);
+	*outerSurfaceTransformed *= m_TransformToOriginal;
+	return outerSurfaceTransformed;
+}
+
+std::vector<std::shared_ptr<pmp::SurfaceMesh>> ManifoldSurfaceEvolutionStrategy::GetInnerSurfacesInOrigScale() const
+{
+	std::vector<std::shared_ptr<pmp::SurfaceMesh>> innerSurfacesTransformed{};
+	innerSurfacesTransformed.reserve(m_InnerSurfaces.size());
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		if (!innerSurface)
+			continue;
+
+		auto innerCurveTransformed = std::make_shared<pmp::SurfaceMesh>(*innerSurface);
+		*innerCurveTransformed *= m_TransformToOriginal;
+		innerSurfacesTransformed.push_back(innerCurveTransformed);
+	}
+	innerSurfacesTransformed.shrink_to_fit();
+	return innerSurfacesTransformed;
 }
 
 // ------------------------------------------------
