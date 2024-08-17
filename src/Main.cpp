@@ -6,8 +6,8 @@
 #include "core/ConvexHullEvolver.h"
 #include "core/IcoSphereEvolver.h"
 #include "core/SphereTest.h"
-
 #include "core/IncrementalMeshBuilder.h"
+#include "core/MeasurementUtils.h"
 
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"

@@ -514,6 +514,14 @@ namespace Geometry
 		return result;
 	}
 
+	VectorGrid& VectorGrid::operator*=(const pmp::mat4& mat)
+	{
+		// assuming mat is a uniform scaling + translation matrix only.
+		m_CellSize *= mat(0, 0);
+		m_Box *= mat;
+		return *this;
+	}
+
 	bool VectorGrid::IsValid() const
 	{
 		if (m_CellSize <= 0.0f)
@@ -1018,6 +1026,14 @@ namespace Geometry
 		VectorGrid2D result(*this);
 		result -= other;
 		return result;
+	}
+
+	VectorGrid2D& VectorGrid2D::operator*=(const pmp::mat3& mat)
+	{
+		// assuming mat is a uniform scaling + translation matrix only.
+		m_CellSize *= mat(0, 0);
+		m_Box *= mat;
+		return *this;
 	}
 
 	bool VectorGrid2D::IsValid() const

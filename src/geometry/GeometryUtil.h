@@ -61,6 +61,14 @@ namespace Geometry
 	[[nodiscard]] bool TriangleIntersectsTriangle(const std::vector<pmp::vec3>& vertices0, const std::vector<pmp::vec3>& vertices1);
 
 	/**
+	 * \brief An intersection test between a two 2D line segments
+	 * \param vertices0    first line segment endpoints list.
+	 * \param vertices1    second line segment endpoints list.
+	 * \return true if the line segments intersect.
+	 */
+	[[nodiscard]] bool Line2DIntersectsLine2D(const std::vector<pmp::Point2>& vertices0, const std::vector<pmp::Point2>& vertices1);
+
+	/**
 	 * \brief A utility that returns an intersector line between two triangles.
 	 * \param vertices0    first triangle vertices list.
 	 * \param vertices1    second triangle vertices list.

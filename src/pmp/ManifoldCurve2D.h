@@ -632,6 +632,9 @@ namespace pmp
         //! \return vector of point positions
         std::vector<Point2>& positions() { return vpoint_.vector(); }
 
+        //! \return vector of point positions
+        [[nodiscard]] const std::vector<Point2>& positions() const { return vpoint_.vector(); }
+
         //! compute the bounding box of the object
         [[nodiscard]] BoundingBox2 bounds() const
         {

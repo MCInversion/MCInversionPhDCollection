@@ -1231,4 +1231,56 @@ namespace Geometry
 		return true;
 	}
 
+	/// \brief a helper func for the 2x2 determinant
+	inline double Det(double a, double b, double c, double d)
+	{
+		return a * d - b * c;
+	}
+
+	bool Line2DIntersectsLine2D(const std::vector<pmp::Point2>& vertices0, const std::vector<pmp::Point2>& vertices1)
+	{
+		if (vertices0.size() < 2 || vertices1.size() < 2)
+			throw std::invalid_argument("Line2DIntersectsLine2D requires exactly two points per line.");
+
+		// Extract coordinates for the first line
+		float x1 = vertices0[0][0], y1 = vertices0[0][1];
+		float x2 = vertices0[1][0], y2 = vertices0[1][1];
+
+		// Extract coordinates for the second line
+		float x3 = vertices1[0][0], y3 = vertices1[0][1];
+		float x4 = vertices1[1][0], y4 = vertices1[1][1];
+
+		// Compute determinants
+		float detL1 = Det(x1, y1, x2, y2);
+		float detL2 = Det(x3, y3, x4, y4);
+		float x1mx2 = x1 - x2;
+		float x3mx4 = x3 - x4;
+		float y1my2 = y1 - y2;
+		float y3my4 = y3 - y4;
+
+		float xnom = Det(detL1, x1mx2, detL2, x3mx4);
+		float ynom = Det(detL1, y1my2, detL2, y3my4);
+		float denom = Det(x1mx2, y1my2, x3mx4, y3my4);
+
+		if (std::abs(denom) < FLT_EPSILON) // Lines are parallel or collinear
+		{
+			return false;
+		}
+
+		// Calculate intersection point
+		float ix = xnom / denom;
+		float iy = ynom / denom;
+
+		if (!std::isfinite(ix) || !std::isfinite(iy)) // Check for numerical stability
+		{
+			return false;
+		}
+
+		// Ensure the intersection point is within both line segments
+		bool onSegment1 = (std::min(x1, x2) <= ix && ix <= std::max(x1, x2)) && (std::min(y1, y2) <= iy && iy <= std::max(y1, y2));
+		bool onSegment2 = (std::min(x3, x4) <= ix && ix <= std::max(x3, x4)) && (std::min(y3, y4) <= iy && iy <= std::max(y3, y4));
+
+		return onSegment1 && onSegment2;
+	}
+
 } // namespace Geometry

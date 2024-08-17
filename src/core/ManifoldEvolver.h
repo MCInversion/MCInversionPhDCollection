@@ -150,19 +150,23 @@ protected:
         return m_Settings.Eta;
     }
 
-    /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
-    /// \return pair { minTargetSize, maxTargetSize }.
-    virtual [[nodiscard]] std::pair<float, float> ComputeAmbientFields() = 0;
+    pmp::Scalar& GetScalingFactor()
+    {
+        return m_ScalingFactor;
+    }
 
-    /// \brief Constructs the starting outer and inner manifolds from given settings.
-    /// \param[in] minTargetSize      minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
-    /// \param[in] maxTargetSize      maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
-    virtual void ConstructInitialManifolds(float minTargetSize, float maxTargetSize) = 0;
+    /// \brief Transform all of the geometries so that numerical stability is ensured.
+    /// \param[in] timeStep      stabilization is ultimately dependent on the time step size.
+    /// \param[in] outerRadius   radius of outer sphere to calculate the approx co-volume measure.
+    /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
+    virtual void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) = 0;
 
 private:
 
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
     NumericalStepIntegrateFunction m_Integrate{}; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
+
+    pmp::Scalar m_ScalingFactor{ 1.0f }; //>! the computed scaling factor for numerical stabilization.
 };
 
 /**
@@ -226,16 +230,54 @@ public:
         return m_InnerCurves;
     }
 
+    /// \brief A const getter for the outer curve
+    [[nodiscard]] const std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve() const
+    {
+        return m_OuterCurve;
+    }
+
+    /// \brief A const getter for the vector of inner curves
+    [[nodiscard]] const std::vector<std::shared_ptr<pmp::ManifoldCurve2D>>& GetInnerCurves() const
+    {
+        return m_InnerCurves;
+    }
+
 protected:
 
+    /// \brief A getter for the inverse stabilization transformation matrix.
+    pmp::mat3& GetTransformToOriginal()
+    {
+        return m_TransformToOriginal;
+    }
+
+    /// \brief A getter for the distance field scalar grid.
+    std::shared_ptr<Geometry::ScalarGrid2D>& GetDistanceField()
+    {
+        return m_DistanceField;
+    }
+
+    /// \brief A getter for the distance field normalized negative gradient vector grid.
+    std::shared_ptr<Geometry::VectorGrid2D>& GetDFNegNormalizedGradient()
+    {
+        return m_DFNegNormalizedGradient;
+    }
+
     /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
-    /// \return pair { minTargetSize, maxTargetSize }.
-    [[nodiscard]] std::pair<float, float> ComputeAmbientFields() override;
+    /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
+    [[nodiscard]] std::tuple<float, float, pmp::Point2> ComputeAmbientFields();
 
     /// \brief Construct m_OuterCurve and m_InnerCurves from settings.
-    /// \param[in] minTargetSize      minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
-    /// \param[in] maxTargetSize      maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
-    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize) override;
+    /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
+    /// \return radius of outer sphere.
+    [[nodiscard]] float ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
+
+    /// \brief Transform all of the geometries so that numerical stability is ensured.
+    /// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
+    /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
+    /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
+    void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) override;
 
 private:
 
@@ -246,6 +288,8 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 2D scalar grid.
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
+
+    pmp::mat3 m_TransformToOriginal; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 };
 
 /**
@@ -262,7 +306,7 @@ public:
      * \param innerCurves         Vector of custom inner curves.
      * \param targetPointCloud    target point cloud.
      */
-    CustomManifoldCurveEvolutionStrategy(
+    explicit CustomManifoldCurveEvolutionStrategy(
         ManifoldEvolutionSettings settings,
         pmp::ManifoldCurve2D& outerCurve,
         std::vector<pmp::ManifoldCurve2D>& innerCurves,
@@ -278,6 +322,21 @@ public:
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
     void Preprocess(double timeStep) override;
+
+private:
+
+    /// \brief Verifies whether all custom inner curves are contained within the custom outer curve if not, throw std::invalid_argument
+    [[nodiscard]] bool HasValidInnerOuterManifolds() const;
+
+    /// \brief Computes the full range of co-volume sizes (lengths) to help compute the stabilization scaling factor.
+    [[nodiscard]] std::pair<float, float> CalculateCoVolumeRange() const;
+
+    /// \brief Transform all of the geometries so that numerical stability is ensured.
+	/// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
+	/// \param[in] minLength               the minimum length of a 1D co-volume within the custom curves.
+	/// \param[in] maxLength               the maximum length of a 1D co-volume within the custom curves.
+	/// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
+    void StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor = 1.0f);
 };
 
 /**
@@ -289,7 +348,8 @@ class ManifoldSurfaceEvolutionStrategy : public ManifoldEvolutionStrategy
 public:
     explicit ManifoldSurfaceEvolutionStrategy(ManifoldEvolutionSettings settings, 
         std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
-        : ManifoldEvolutionStrategy(std::move(settings)), m_TargetPointCloud(std::move(targetPointCloud))
+        : ManifoldEvolutionStrategy(std::move(settings)),
+		m_TargetPointCloud(std::move(targetPointCloud))
     {
     }
 
@@ -335,16 +395,54 @@ public:
         return m_InnerSurfaces;
     }
 
+    /// \brief A const getter for the outer surface
+    [[nodiscard]] const std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface() const
+    {
+        return m_OuterSurface;
+    }
+
+    /// \brief A const getter for the vector of inner surfaces
+    [[nodiscard]] const std::vector<std::shared_ptr<pmp::SurfaceMesh>>& GetInnerSurfaces() const
+    {
+        return m_InnerSurfaces;
+    }
+
 protected:
 
     /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
-    /// \return pair { minTargetSize, maxTargetSize }.
-    [[nodiscard]] std::pair<float, float> ComputeAmbientFields() override;
+    /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
+    [[nodiscard]] std::tuple<float, float, pmp::Point> ComputeAmbientFields();
 
     /// \brief Construct m_OuterSurface and m_InnerSurfaces from settings.
-    /// \param[in] minTargetSize      minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
-    /// \param[in] maxTargetSize      maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
-    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize) override;
+    /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
+    /// \return radius of outer sphere.
+    [[nodiscard]] float ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
+
+    /// \brief Transform all of the geometries so that numerical stability is ensured.
+	/// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
+    /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
+    /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
+    void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) override;
+
+    /// \brief A getter for the inverse stabilization transformation matrix.
+    pmp::mat4& GetTransformToOriginal()
+    {
+        return m_TransformToOriginal;
+    }
+
+    /// \brief A getter for the distance field scalar grid.
+    std::shared_ptr<Geometry::ScalarGrid>& GetDistanceField()
+    {
+        return m_DistanceField;
+    }
+
+    /// \brief A getter for the distance field normalized negative gradient vector grid.
+    std::shared_ptr<Geometry::VectorGrid>& GetDFNegNormalizedGradient()
+    {
+        return m_DFNegNormalizedGradient;
+    }
 
 private:
 
@@ -355,6 +453,8 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
+
+    pmp::mat4 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 };
 
 /**

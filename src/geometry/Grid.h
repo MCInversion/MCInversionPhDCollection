@@ -227,6 +227,8 @@ namespace Geometry
 		VectorGrid operator- (const double& scalar) const;
 		VectorGrid operator- (const VectorGrid& other) const;
 
+		VectorGrid& operator*= (const pmp::mat4& mat);
+
 		// ====== Validity ======================
 
 		[[nodiscard]] bool IsValid() const;
@@ -448,6 +450,8 @@ namespace Geometry
 		VectorGrid2D operator+ (const VectorGrid2D& other) const;
 		VectorGrid2D operator- (const double& scalar) const;
 		VectorGrid2D operator- (const VectorGrid2D& other) const;
+
+		VectorGrid2D& operator*= (const pmp::mat3& mat);
 
 		// ====== Validity ======================
 
