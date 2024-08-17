@@ -7,6 +7,30 @@
 
 //
 // ===============================================================================================
+//                                     Evolver functions
+// -----------------------------------------------------------------------------------------------
+//
+
+/// \brief eps(d) = 1, eps(d) = C_1 * (1 - exp(-d^2/C_2)), or any other control function for the Laplacian term in the equation. 
+using CurvatureCtrlFunction = std::function<double(double /* distance */)>;
+
+const CurvatureCtrlFunction TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
+const CurvatureCtrlFunction STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
+
+/// \brief eta(d) = 0, eta(d) = D_1 * d * ((grad d . N) - D_2 * sqrt(1 - (grad d . N)^2), or any other control function for the advection term in the equation.
+using AdvectionCtrlFunction = std::function<double(double /* distance */, double /* negGradDotNormal */)>;
+
+const AdvectionCtrlFunction TRIVIAL_ETA = [](double /* distance */, double /* negGradDotNormal */) { return 0.0; };
+const AdvectionCtrlFunction STANDARD_ETA = [](double distance, double negGradDotNormal)
+{
+    return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+};
+
+/// \brief A placeholder for the numerical integration function specific to the scheme and dimension.
+using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
+
+//
+// ===============================================================================================
 //                                          Settings
 // -----------------------------------------------------------------------------------------------
 //
@@ -23,11 +47,13 @@ struct AmbientFieldSettings
  */
 struct ManifoldEvolutionSettings
 {
+    bool UseInnerManifolds{ true }; //>! whether to construct outward-evolving inner manifolds.
     unsigned int Dimension{ 2 }; //>! the dimension of the evolving manifold(s). 1 for curves, 2 for surfaces.
     bool UseSemiImplicit{ true }; //>! whether to use a more numerically stable, but computationally costly numerical scheme (has to solve a linear system for each coord for each time step).
     unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle is a regular pentagon, and the sphere an icosahedron.
-
-    AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
+        
+    CurvatureCtrlFunction Epsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term.
+    AdvectionCtrlFunction Eta{ TRIVIAL_ETA }; //>! control function for the advection term.
 
     AmbientFieldSettings FieldSettings{}; //>! the settings for the construction of the ambient fields.
 
@@ -52,30 +78,7 @@ struct GlobalManifoldEvolutionSettings
     std::string OutputPath{}; //>! path where output manifolds are to be exported.
 
     bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
-	
 };
-
-//
-// ===============================================================================================
-//                                     Evolver functions
-// -----------------------------------------------------------------------------------------------
-//
-
-/// \brief eps(d) = 1, eps(d) = C_1 * (1 - exp(-d^2/C_2)), or any other control function for the Laplacian term in the equation. 
-using CurvatureCtrlFunction = std::function<double(double /* distance */)>;
-
-const CurvatureCtrlFunction TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
-const CurvatureCtrlFunction STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
-
-/// \brief eta(d) = 0, eta(d) = D_1 * d * ((grad d . N) - D_2 * sqrt(1 - (grad d . N)^2), or any other control function for the advection term in the equation.
-using AdvectionCtrlFunction2D = std::function<double(double /* distance */, const pmp::vec2& /* -grad distance */)>;
-using AdvectionCtrlFunction3D = std::function<double(double /* distance */, const pmp::vec3& /* -grad distance */)>;
-
-const AdvectionCtrlFunction2D TRIVIAL_ETA_2D = [](double /* distance */, const pmp::vec2& /* -grad distance */) { return 0.0; };
-const AdvectionCtrlFunction3D TRIVIAL_ETA_3D = [](double /* distance */, const pmp::vec3& /* -grad distance */) { return 0.0; };
-
-/// \brief A placeholder for the numerical integration function specific to the scheme and dimension.
-using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
 
 //
 // ===============================================================================================
@@ -102,7 +105,7 @@ public:
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
-    virtual void Preprocess() = 0;
+    virtual void Preprocess(double /* timeStep */) = 0;
 
     /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
@@ -139,14 +142,27 @@ protected:
 
     CurvatureCtrlFunction& GetCurvatureTermControlFunction()
     {
-        return m_CurvatureTermControlFunction;
+        return m_Settings.Epsilon;
     }
+
+    AdvectionCtrlFunction& GetAdvectionCtrlFunction()
+    {
+        return m_Settings.Eta;
+    }
+
+    /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
+    /// \return pair { minTargetSize, maxTargetSize }.
+    virtual [[nodiscard]] std::pair<float, float> ComputeAmbientFields() = 0;
+
+    /// \brief Constructs the starting outer and inner manifolds from given settings.
+    /// \param[in] minTargetSize      minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] maxTargetSize      maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    virtual void ConstructInitialManifolds(float minTargetSize, float maxTargetSize) = 0;
 
 private:
 
-    ManifoldEvolutionSettings m_Settings{};                 //>! settings for the evolution strategy.
-    NumericalStepIntegrateFunction m_Integrate{};           //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
-    CurvatureCtrlFunction m_CurvatureTermControlFunction{}; //>! an adjustable control function for the main curvature term. See "\varepsilon" in the article.
+    ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
+    NumericalStepIntegrateFunction m_Integrate{}; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
 };
 
 /**
@@ -171,7 +187,7 @@ public:
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
-    void Preprocess() override;
+    void Preprocess(double timeStep) override;
 
     /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
@@ -213,12 +229,13 @@ public:
 protected:
 
     /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
-    void ComputeAmbientFields();
+    /// \return pair { minTargetSize, maxTargetSize }.
+    [[nodiscard]] std::pair<float, float> ComputeAmbientFields() override;
 
-    AdvectionCtrlFunction2D& GetAdvectionCtrlFunction()
-    {
-        return m_AdvectionCtrlFunction;
-    }
+    /// \brief Construct m_OuterCurve and m_InnerCurves from settings.
+    /// \param[in] minTargetSize      minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] maxTargetSize      maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize) override;
 
 private:
 
@@ -229,8 +246,6 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 2D scalar grid.
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
-
-    AdvectionCtrlFunction2D m_AdvectionCtrlFunction{}; //>! 2D version of the advection control function which takes into account both fields and drags the evolving manifold. See "\eta" in the article.
 };
 
 /**
@@ -262,7 +277,7 @@ public:
     /**
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
-    void Preprocess() override;
+    void Preprocess(double timeStep) override;
 };
 
 /**
@@ -281,7 +296,7 @@ public:
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
-    void Preprocess() override;
+    void Preprocess(double timeStep) override;
 
     /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
@@ -323,12 +338,13 @@ public:
 protected:
 
     /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
-    void ComputeAmbientFields();
+    /// \return pair { minTargetSize, maxTargetSize }.
+    [[nodiscard]] std::pair<float, float> ComputeAmbientFields() override;
 
-    AdvectionCtrlFunction3D& GetAdvectionCtrlFunction()
-    {
-        return m_AdvectionCtrlFunction;
-    }
+    /// \brief Construct m_OuterSurface and m_InnerSurfaces from settings.
+    /// \param[in] minTargetSize      minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    /// \param[in] maxTargetSize      maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
+    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize) override;
 
 private:
 
@@ -339,8 +355,6 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
-
-    AdvectionCtrlFunction3D m_AdvectionCtrlFunction{}; //>! 3D version of the advection control function which takes into account both fields and drags the evolving manifold. See "\eta" in the article.
 };
 
 /**
@@ -372,7 +386,7 @@ public:
     /**
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
-    void Preprocess() override;
+    void Preprocess(double timeStep) override;
 };
 
 //
@@ -399,7 +413,7 @@ public:
      */
     void Evolve() const
 	{
-        m_Strategy->Preprocess();
+        m_Strategy->Preprocess(m_Settings.TimeStep);
         if (m_Settings.ExportPerTimeStep)
         {
             m_Strategy->ExportCurrentState(0);

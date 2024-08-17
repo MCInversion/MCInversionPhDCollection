@@ -738,7 +738,7 @@ namespace Geometry
 	VectorGrid ComputeNormalizedNegativeGradient(const ScalarGrid& scalarGrid)
 	{
 		if (!scalarGrid.IsValid())
-			throw std::invalid_argument("ComputeGradient: scalarGrid to be processed is invalid!\n");
+			throw std::invalid_argument("ComputeNormalizedNegativeGradient: scalarGrid to be processed is invalid!\n");
 
 		VectorGrid result(scalarGrid);
 		const auto cellSize = static_cast<double>(result.CellSize());
@@ -797,6 +797,64 @@ namespace Geometry
 					gradValsY[gradPos] = grad_y / norm;
 					gradValsZ[gradPos] = grad_z / norm;
 				}
+			}
+		}
+
+		return result;
+	}
+
+	VectorGrid2D ComputeNormalizedNegativeGradient(const ScalarGrid2D& scalarGrid)
+	{
+		if (!scalarGrid.IsValid())
+			throw std::invalid_argument("ComputeNormalizedNegativeGradient: scalarGrid to be processed is invalid!\n");
+
+		VectorGrid2D result(scalarGrid);
+		const auto cellSize = static_cast<double>(result.CellSize());
+		const auto& dim = result.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		const auto& gridValues = scalarGrid.Values();
+
+		auto& gradValsX = result.ValuesX();
+		auto& gradValsY = result.ValuesY();
+
+		for (unsigned int iy = 1; iy < Ny - 1; iy++) {
+			for (unsigned int ix = 1; ix < Nx - 1; ix++) {
+
+				const unsigned int gridPosPrevX = Nx * iy + (ix - 1);
+				const unsigned int gridPosNextX = Nx * iy + (ix + 1);
+
+				const unsigned int gridPosPrevY = Nx * (iy - 1) + ix;
+				const unsigned int gridPosNextY = Nx * (iy + 1) + ix;
+
+				const unsigned int gradPos =  Nx * iy + ix;
+
+				// central difference for non-boundary voxels
+				const double grad_x = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+				const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+
+#if EXPECT_INVALID_VALUES
+				if (std::isnan(grad_x) || std::isinf(grad_x) ||
+					std::isnan(grad_y) || std::isinf(grad_y))
+				{
+					const std::string msg = "ComputeNormalizedNegativeGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
+					assert(false);
+					std::cerr << msg;
+					continue;
+				}
+#endif
+
+				const double norm = -1.0 * sqrt(grad_x * grad_x + grad_y * grad_y);
+
+				assert(!std::isnan(norm) && !std::isinf(norm));
+
+				if (norm > -NORM_EPSILON)
+					continue; // keep zero init val
+
+				gradValsX[gradPos] = grad_x / norm;
+				gradValsY[gradPos] = grad_y / norm;
 			}
 		}
 

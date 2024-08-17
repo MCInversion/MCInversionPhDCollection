@@ -140,6 +140,15 @@ namespace Geometry
 	[[nodiscard]] VectorGrid ComputeNormalizedNegativeGradient(const ScalarGrid& scalarGrid);
 
 	/**
+	 * \brief Computes a normalized negative gradient from a given scalar grid.
+	 * \param scalarGrid     input grid.
+	 * \return normalized negative gradient field.
+	 *
+	 * DISCLAIMER: This function uses central difference for approximating partial derivatives of scalarGrid values. Boundary voxels are skipped and contain default vector values.
+	 */
+	[[nodiscard]] VectorGrid2D ComputeNormalizedNegativeGradient(const ScalarGrid2D& scalarGrid);
+
+	/**
 	 * \brief Trilinearly interpolates from the surrounding cell values of a sampled point.
 	 * \param samplePt    point where the grid is sampled.
 	 * \param grid        interpolated scalar grid.
