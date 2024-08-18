@@ -4,6 +4,26 @@
 #include "pmp/ManifoldCurve2D.h"
 
 #include "core/ManifoldEvolver.h"
+#include "geometry/IcoSphereBuilder.h"
+
+// Suite: ManifoldEvolverTests_ManifoldCurveSuite
+
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, IntersectingInnerAndOuterCircles_InvalidArgThrown)
+{
+    // Arrange
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    std::vector<pmp::ManifoldCurve2D> innerCurves;
+    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(-0.7f, 0.0f), 0.5f, 32));
+
+    ManifoldEvolutionSettings strategySettings;
+    auto customStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+        strategySettings, outerCurve, innerCurves);
+    GlobalManifoldEvolutionSettings globalSettings;
+    ManifoldEvolver evolver(globalSettings, std::move(customStrategy));
+
+    // Act & Assert
+    EXPECT_THROW(evolver.Evolve(), std::invalid_argument);
+}
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoRemeshing)
 {
@@ -77,4 +97,41 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
         EXPECT_LT(norm(vPos), 1.0f);
         EXPECT_GT(norm(vPos), 0.75f);
     }
+}
+
+// Suite: ManifoldEvolverTests_ManifoldSurfaceSuite
+
+namespace
+{
+	[[nodiscard]] pmp::SurfaceMesh ConstructIcoSphere(const pmp::Point& center, const pmp::Scalar& radius, const unsigned int& subdiv)
+	{
+		Geometry::IcoSphereBuilder icoBuilder({ subdiv, radius });
+        icoBuilder.BuildBaseData();
+        icoBuilder.BuildPMPSurfaceMesh();
+        if (center == pmp::Point(0, 0, 0))
+            return icoBuilder.GetPMPSurfaceMeshResult();
+
+        auto mesh = icoBuilder.GetPMPSurfaceMeshResult();
+        const auto translationMatrix = translation_matrix(center);
+        mesh *= translationMatrix;
+        return mesh;
+	}
+
+} // anonymous namespace
+
+TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, IntersectingInnerAndOuterSpheres_InvalidArgThrown)
+{
+    // Arrange
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    std::vector<pmp::SurfaceMesh> innerSurfaces;
+    innerSurfaces.push_back(ConstructIcoSphere(pmp::Point(-0.7f, 0.0f, 0.0f), 0.5f, 2));
+
+    ManifoldEvolutionSettings strategySettings;
+    auto customStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+        strategySettings, MeshLaplacian::Barycentric, outerSurface, innerSurfaces);
+    GlobalManifoldEvolutionSettings globalSettings;
+    ManifoldEvolver evolver(globalSettings, std::move(customStrategy));
+
+    // Act & Assert
+    EXPECT_THROW(evolver.Evolve(), std::invalid_argument);
 }

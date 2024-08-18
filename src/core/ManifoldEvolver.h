@@ -4,6 +4,7 @@
 #include "geometry/Grid.h"
 
 #include "EvolverUtilsCommon.h"
+#include "pmp/algorithms/DifferentialGeometry.h"
 
 //
 // ===============================================================================================
@@ -319,9 +320,9 @@ public:
         std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
         : ManifoldCurveEvolutionStrategy(settings, std::move(targetPointCloud))
     {
-        GetOuterCurve() = std::make_shared<pmp::ManifoldCurve2D>(std::move(outerCurve));
+        GetOuterCurve() = std::make_shared<pmp::ManifoldCurve2D>(outerCurve);
         for (auto& c : innerCurves)
-            GetInnerCurves().push_back(std::make_shared<pmp::ManifoldCurve2D>(std::move(c)));
+            GetInnerCurves().emplace_back(std::make_shared<pmp::ManifoldCurve2D>(c));
     }
 
     /**
@@ -352,11 +353,14 @@ private:
 class ManifoldSurfaceEvolutionStrategy : public ManifoldEvolutionStrategy
 {
 public:
-    explicit ManifoldSurfaceEvolutionStrategy(ManifoldEvolutionSettings settings, 
+    explicit ManifoldSurfaceEvolutionStrategy(
+        ManifoldEvolutionSettings settings, MeshLaplacian laplacianType,
         std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
         : ManifoldEvolutionStrategy(std::move(settings)),
 		m_TargetPointCloud(std::move(targetPointCloud))
     {
+        m_LaplacianAreaFunction = (laplacianType == MeshLaplacian::Barycentric ?
+                pmp::voronoi_area_barycentric : pmp::voronoi_area);
     }
 
     /**
@@ -456,17 +460,31 @@ protected:
         return m_DFNegNormalizedGradient;
     }
 
+    /// \brief A getter for the area function of the chosen Laplacian scheme.
+    AreaFunction& GetLaplacianAreaFunction()
+    {
+        return m_LaplacianAreaFunction;
+    }
+
+    /// \brief A const getter for the area function of the chosen Laplacian scheme.
+    [[nodiscard]] const AreaFunction& GetLaplacianAreaFunction() const
+    {
+        return m_LaplacianAreaFunction;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
 
     std::shared_ptr<pmp::SurfaceMesh> m_OuterSurface{ nullptr }; //>! evolving outer manifold which evolves inward, attempting to shrink-wrap m_TargetGeometryAdapter if it's defined.
-    std::vector<std::shared_ptr<pmp::SurfaceMesh>> m_InnerSurfaces{ nullptr }; //>! evolving inner manifolds which evolves outward
+    std::vector<std::shared_ptr<pmp::SurfaceMesh>> m_InnerSurfaces{}; //>! evolving inner manifolds which evolves outward
 
     std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 
     pmp::mat4 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+
+    AreaFunction m_LaplacianAreaFunction{}; //>! a function for calculating co-volume areas (see [Meyer, Desbrun, Schroder, Barr, 2003])
 };
 
 /**
@@ -479,20 +497,22 @@ public:
     /**
      * \brief Constructor that accepts custom outer and inner surfaces.
      * \param settings         evolution strategy settings.
+     * \param laplacianType    the type of Laplacian area element used during calculations.
      * \param outerSurface     Custom outer surface.
      * \param innerSurfaces    Vector of custom inner surfaces.
      * \param targetPointCloud target point cloud.
      */
     CustomManifoldSurfaceEvolutionStrategy(
-        ManifoldEvolutionSettings settings,
+        ManifoldEvolutionSettings settings, 
+        MeshLaplacian laplacianType,
         pmp::SurfaceMesh& outerSurface,
         std::vector<pmp::SurfaceMesh>& innerSurfaces,
         std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
-        : ManifoldSurfaceEvolutionStrategy(settings, std::move(targetPointCloud))
+        : ManifoldSurfaceEvolutionStrategy(settings, laplacianType, std::move(targetPointCloud))
     {
-        GetOuterSurface() = std::make_shared<pmp::SurfaceMesh>(std::move(outerSurface));
+        GetOuterSurface() = std::make_shared<pmp::SurfaceMesh>(outerSurface);
         for (auto& s : innerSurfaces)
-            GetInnerSurfaces().push_back(std::make_shared<pmp::SurfaceMesh>(std::move(s)));
+            GetInnerSurfaces().emplace_back(std::make_shared<pmp::SurfaceMesh>(s));
     }
 
     /**

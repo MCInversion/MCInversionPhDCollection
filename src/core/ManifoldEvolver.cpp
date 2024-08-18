@@ -492,36 +492,34 @@ bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
 
 std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolumeRange() const
 {
-	float minCoVolLength = FLT_MAX;
-	float maxCoVolLength = -FLT_MAX;
+	float minCoVolArea = FLT_MAX;
+	float maxCoVolArea = -FLT_MAX;
 
-	/*if (GetOuterSurface())
+	if (GetOuterSurface())
 	{
 		const auto& outerSurface = *GetOuterSurface();
 		for (const auto v : outerSurface.vertices())
 		{
-			const auto [eTo, eFrom] = outerSurface.edges(v);
-			const auto currentCoVolLength = 0.5f * (outerCurve.edge_length(eTo) + outerCurve.edge_length(eFrom));
+			const auto currentCoVolArea = GetLaplacianAreaFunction()(outerSurface, v);
 
-			if (currentCoVolLength > maxCoVolLength) maxCoVolLength = currentCoVolLength;
-			if (currentCoVolLength < minCoVolLength) minCoVolLength = currentCoVolLength;
+			if (currentCoVolArea > maxCoVolArea) maxCoVolArea = currentCoVolArea;
+			if (currentCoVolArea < minCoVolArea) minCoVolArea = currentCoVolArea;
 		}
 	}
 
-	for (const auto& curve : GetInnerCurves())
+	for (const auto& surface : GetInnerSurfaces())
 	{
-		const auto& innerCurve = *curve;
-		for (const auto v : innerCurve.vertices())
+		const auto& innerSurface = *surface;
+		for (const auto v : innerSurface.vertices())
 		{
-			const auto [eTo, eFrom] = innerCurve.edges(v);
-			const auto currentCoVolLength = 0.5f * (innerCurve.edge_length(eTo) + innerCurve.edge_length(eFrom));
+			const auto currentCoVolArea = GetLaplacianAreaFunction()(innerSurface, v);
 
-			if (currentCoVolLength > maxCoVolLength) maxCoVolLength = currentCoVolLength;
-			if (currentCoVolLength < minCoVolLength) minCoVolLength = currentCoVolLength;
+			if (currentCoVolArea > maxCoVolArea) maxCoVolArea = currentCoVolArea;
+			if (currentCoVolArea < minCoVolArea) minCoVolArea = currentCoVolArea;
 		}
-	}*/
+	}
 
-	return { minCoVolLength, maxCoVolLength };
+	return { minCoVolArea, maxCoVolArea };
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor)
