@@ -331,6 +331,10 @@ private:
     std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 2D scalar grid.
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 
+    // TODO: investigate performance
+    std::shared_ptr<Geometry::ScalarGrid2D> m_OuterCurveDistanceField{ nullptr }; //>! the updated distance field of the evolving outer surface.
+    std::vector<std::shared_ptr<Geometry::ScalarGrid2D>> m_InnerCurvesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
+
     pmp::mat3 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 };
 
@@ -537,6 +541,10 @@ private:
 
     std::shared_ptr<Geometry::ScalarGrid> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 3D scalar grid.
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
+
+    // TODO: investigate performance
+    std::shared_ptr<Geometry::ScalarGrid> m_OuterSurfaceDistanceField{ nullptr }; //>! the updated distance field of the evolving outer surface.
+    std::vector<std::shared_ptr<Geometry::ScalarGrid>> m_InnerSurfacesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
 
     pmp::mat4 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
