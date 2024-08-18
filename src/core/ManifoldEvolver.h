@@ -141,16 +141,19 @@ public:
 
 protected:
 
+    /// \brief A getter for the curvature term control function (epsilon).
     CurvatureCtrlFunction& GetCurvatureTermControlFunction()
     {
         return m_Settings.Epsilon;
     }
 
+    /// \brief A getter for the advection control function (eta).
     AdvectionCtrlFunction& GetAdvectionCtrlFunction()
     {
         return m_Settings.Eta;
     }
 
+    /// \brief A getter for the stabilization scaling factor.
     pmp::Scalar& GetScalingFactor()
     {
         return m_ScalingFactor;
@@ -587,6 +590,7 @@ public:
         }
     }
 
+    /// \brief A getter for this evolver's strategy.
     [[nodiscard]] std::shared_ptr<ManifoldEvolutionStrategy>& GetStrategy()
 	{
         return m_Strategy;
