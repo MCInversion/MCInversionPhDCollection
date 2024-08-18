@@ -125,12 +125,12 @@ public:
     /**
      * \brief Exports the current state of evolving manifold(s).
      */
-    virtual void ExportCurrentState(unsigned int step) = 0;
+    virtual void ExportCurrentState(unsigned int step, const std::string& baseOutputFilename) = 0;
 
     /**
      * \brief Exports the final state of evolving manifold(s).
      */
-    virtual void ExportFinalResult() = 0;
+    virtual void ExportFinalResult(const std::string& baseOutputFilename) = 0;
 
     /// \brief Settings getter.
     ManifoldEvolutionSettings& GetSettings()
@@ -211,12 +211,12 @@ public:
     /**
      * \brief Exports the current state of evolving manifold(s).
      */
-    void ExportCurrentState(unsigned int step) override;
+    void ExportCurrentState(unsigned int step, const std::string& baseOutputFilename) override;
 
     /**
      * \brief Exports the final state of evolving manifold(s).
      */
-    void ExportFinalResult() override;
+    void ExportFinalResult(const std::string& baseOutputFilename) override;
 
     /// \brief A specialized external getter which also transforms the stabilized outer curve to its original scale.
     [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D> GetOuterCurveInOrigScale() const;
@@ -295,7 +295,7 @@ private:
     std::shared_ptr<Geometry::ScalarGrid2D> m_DistanceField{ nullptr }; //>! the computed distance field of m_TargetPointCloud on a 2D scalar grid.
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 
-    pmp::mat3 m_TransformToOriginal; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+    pmp::mat3 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 };
 
 /**
@@ -382,12 +382,12 @@ public:
     /**
      * \brief Exports the current state of evolving manifold(s).
      */
-    void ExportCurrentState(unsigned int step) override;
+    void ExportCurrentState(unsigned int step, const std::string& baseOutputFilename) override;
 
     /**
      * \brief Exports the final state of evolving manifold(s).
      */
-    void ExportFinalResult() override;
+    void ExportFinalResult(const std::string& baseOutputFilename) override;
 
     /// \brief A specialized external getter which also transforms the stabilized outer surface to its original scale.
     [[nodiscard]] std::shared_ptr<pmp::SurfaceMesh> GetOuterSurfaceInOrigScale() const;
@@ -499,6 +499,21 @@ public:
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
     void Preprocess(double timeStep) override;
+
+private:
+
+    /// \brief Verifies whether all custom inner surfaces are contained within the custom outer surface if not, throw std::invalid_argument
+    [[nodiscard]] bool HasValidInnerOuterManifolds() const;
+
+    /// \brief Computes the full range of co-volume sizes (lengths) to help compute the stabilization scaling factor.
+    [[nodiscard]] std::pair<float, float> CalculateCoVolumeRange() const;
+
+    /// \brief Transform all of the geometries so that numerical stability is ensured.
+    /// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
+    /// \param[in] minLength               the minimum length of a 1D co-volume within the custom surfaces.
+    /// \param[in] maxLength               the maximum length of a 1D co-volume within the custom surfaces.
+    /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
+    void StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor = 1.0f);
 };
 
 //
@@ -528,7 +543,7 @@ public:
         m_Strategy->Preprocess(m_Settings.TimeStep);
         if (m_Settings.ExportPerTimeStep)
         {
-            m_Strategy->ExportCurrentState(0);
+            m_Strategy->ExportCurrentState(0, m_Settings.OutputPath + m_Settings.ProcedureName);
         }
 
         for (unsigned int step = 1; step <= m_Settings.NSteps; ++step)
@@ -537,7 +552,7 @@ public:
 
             if (m_Settings.ExportPerTimeStep)
             {
-                m_Strategy->ExportCurrentState(step);
+                m_Strategy->ExportCurrentState(step, m_Settings.OutputPath + m_Settings.ProcedureName);
             }
 
             if (m_Settings.DoRemeshing && m_Strategy->ShouldRemesh())
@@ -548,7 +563,7 @@ public:
 
         if (m_Settings.ExportResult) 
         {
-            m_Strategy->ExportFinalResult();
+            m_Strategy->ExportFinalResult(m_Settings.OutputPath + m_Settings.ProcedureName);
         }
     }
 

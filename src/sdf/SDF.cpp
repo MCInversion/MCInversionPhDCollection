@@ -571,8 +571,7 @@ namespace SDF
 
 					ray.StartPt = gridPt;
 					ray.HitParam = FLT_MAX;
-					const unsigned int nRayTriIntersections = m_KdTree->GetRayTriangleIntersectionCount(ray);
-					if (nRayTriIntersections % 2 == 1)
+					if (m_KdTree->IsRayStartPointInsideTriangleMesh(ray))
 						continue; // skip negated values of interior grid points
 
 					// negate negated values for exterior grid points

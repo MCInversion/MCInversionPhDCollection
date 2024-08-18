@@ -12,6 +12,7 @@ namespace Geometry
 {
 	// forward declarations
 	class ScalarGrid;
+	class CollisionKdTree;
 
 	/// \brief Computes minimum internal angle per triangle averaged for each vertex over adjacent triangles
 	///        & stores the values as vertex scalar data.
@@ -96,7 +97,13 @@ namespace Geometry
 	/// \brief A fast verification for the presence of self-intersecting faces of the input manifold curve.
 	[[nodiscard]] bool PMPManifoldCurve2DHasSelfIntersections(const pmp::ManifoldCurve2D& curve);
 
-	/// \brief A ray-casting verification whether a given point is inside a ManifoldCurve2D.
+	/// \brief A ray-casting verification whether a given 2D point is inside a ManifoldCurve2D.
 	[[nodiscard]] bool IsPointInsidePMPManifoldCurve(const pmp::Point2& point, const pmp::ManifoldCurve2D& curve);
+
+	/// \brief A ray-casting verification whether a given 3D point is inside a SurfaceMesh.
+	[[nodiscard]] bool IsPointInsidePMPSurfaceMesh(const pmp::Point& point, const pmp::SurfaceMesh& mesh);
+
+	/// \brief A ray-casting verification whether a given 3D point is inside a SurfaceMesh. The mesh is already converted to a kd-tree.
+	[[nodiscard]] bool IsPointInsidePMPSurfaceMesh(const pmp::Point& point, const std::shared_ptr<CollisionKdTree>& meshKdTree);
 
 } // namespace Geometry

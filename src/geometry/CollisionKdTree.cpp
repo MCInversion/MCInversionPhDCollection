@@ -7,6 +7,21 @@
 #include <numeric>
 #include <stack>
 
+#include <utility>
+#include <functional>
+
+// Custom hash function for std::pair
+struct PairHash
+{
+	template <typename T1, typename T2>
+	std::size_t operator()(const std::pair<T1, T2>& pair) const
+	{
+		// Hash the first and second element of the pair and combine them
+		auto hash1 = std::hash<T1>{}(pair.first);
+		auto hash2 = std::hash<T2>{}(pair.second);
+		return hash1 ^ (hash2 << 1); // Combine the two hashes
+	}
+};
 
 namespace Geometry
 {
@@ -62,6 +77,47 @@ namespace Geometry
 		for (const auto& tri : triIds)
 		{
 			m_Triangles.emplace_back(Triangle{ tri[0], tri[1], tri[2] });
+		}
+
+		// Find and set neighboring triangles
+		std::unordered_map<std::pair<unsigned int, unsigned int>, unsigned int, PairHash> edgeToTriangleMap;
+		for (unsigned int i = 0; i < nTriangles; ++i)
+		{
+			auto& triangle = m_Triangles[i];
+
+			// Define the three edges of the triangle
+			std::pair<unsigned int, unsigned int> edges[3] = {
+				{triangle.v0Id, triangle.v1Id},
+				{triangle.v1Id, triangle.v2Id},
+				{triangle.v2Id, triangle.v0Id}
+			};
+
+			// Ensure the smaller index comes first in each edge
+			for (auto& edge : edges)
+			{
+				if (edge.first > edge.second)
+				{
+					std::swap(edge.first, edge.second);
+				}
+			}
+
+			// Check for neighbors
+			for (int j = 0; j < 3; ++j)
+			{
+				auto& edge = edges[j];
+				auto it = edgeToTriangleMap.find(edge);
+				if (it != edgeToTriangleMap.end())
+				{
+					unsigned int neighborIndex = it->second;
+					m_Triangles[neighborIndex].t0Id = i; // Link this triangle to its neighbor
+					triangle.t0Id = neighborIndex;
+					edgeToTriangleMap.erase(it); // Remove edge since it's now matched
+				}
+				else
+				{
+					edgeToTriangleMap[edge] = i; // Add this edge to the map
+				}
+			}
 		}
 
 		m_FindSplitAndClassify = spltFunc;
@@ -734,11 +790,26 @@ namespace Geometry
 		return false;
 	}
 
-	unsigned int CollisionKdTree::GetRayTriangleIntersectionCount(Geometry::Ray& ray) const
+	static pmp::vec3 ComputeTriangleNormal(const std::vector<pmp::vec3>& triVerts)
 	{
-		unsigned int hitCount = 0;
-		if (!Geometry::RayIntersectsABox(ray, m_Root->box))
-			return hitCount;
+		// Calculate the vectors representing two edges of the triangle
+		const pmp::vec3 edge1 = triVerts[1] - triVerts[0];
+		const pmp::vec3 edge2 = triVerts[2] - triVerts[0];
+
+		// Compute the cross product of the two edges to get the normal vector
+		const pmp::vec3 normal = cross(edge1, edge2);
+
+		// Normalize the normal vector to ensure it's a unit vector
+		return normalize(normal);
+	}
+
+	bool CollisionKdTree::IsRayStartPointInsideTriangleMesh(Ray& ray) const
+	{
+		int transitionCount = 0;
+		std::unordered_set<unsigned int> visitedTriangles;
+
+		if (!RayIntersectsABox(ray, m_Root->box))
+			return false;
 
 		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		std::stack<Node*> stack = {};
@@ -753,38 +824,56 @@ namespace Geometry
 			{
 				for (const auto& triId : currentNode->triangleIds)
 				{
+					if (visitedTriangles.contains(triId))
+						continue; // Skip if already processed
+
 					triVerts[0] = m_VertexPositions[m_Triangles[triId].v0Id];
 					triVerts[1] = m_VertexPositions[m_Triangles[triId].v1Id];
 					triVerts[2] = m_VertexPositions[m_Triangles[triId].v2Id];
-					if (Geometry::RayIntersectsTriangle(ray, triVerts))
+
+					if (RayIntersectsTriangle(ray, triVerts))
 					{
-						hitCount++;
+						// Determine if the ray is entering or exiting the mesh
+						pmp::vec3 normal = ComputeTriangleNormal(triVerts);
+
+						if (dot(ray.Direction, normal) < 0)
+						{
+							// entering
+							transitionCount++;
+						}
+						else
+						{
+							// exiting
+							transitionCount--;
+						}
+
+						// Mark the triangle and its neighbors as processed
+						visitedTriangles.insert(triId);
+						const auto& triangle = m_Triangles[triId];
+						if (triangle.t0Id != UINT_MAX) visitedTriangles.insert(triangle.t0Id);
+						if (triangle.t1Id != UINT_MAX) visitedTriangles.insert(triangle.t1Id);
+						if (triangle.t2Id != UINT_MAX) visitedTriangles.insert(triangle.t2Id);
 					}
 				}
 				continue;
 			}
 
 			// currentNode is not a leaf
-
-			if (currentNode->left_child)
+			if (currentNode->left_child && RayIntersectsABox(ray, currentNode->left_child->box))
 			{
-				if (Geometry::RayIntersectsABox(ray, currentNode->left_child->box))
-				{
-					stack.push(currentNode->left_child);
-				}				
+				stack.push(currentNode->left_child);
 			}
 
-			if (currentNode->right_child)
+			if (currentNode->right_child && RayIntersectsABox(ray, currentNode->right_child->box))
 			{
-				if (Geometry::RayIntersectsABox(ray, currentNode->right_child->box))
-				{
-					stack.push(currentNode->right_child);
-				}				
+				stack.push(currentNode->right_child);
 			}
 		}
 
-		return hitCount;
+		// Final determination: if transitionCount > 0, the point is inside
+		return transitionCount < 0;
 	}
+
 
 	//
 	// ========================================================================================================================

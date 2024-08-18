@@ -1755,6 +1755,9 @@ public:
     //! \return vector of point positions
     std::vector<Point>& positions() { return vpoint_.vector(); }
 
+    //! \return const vector of point positions
+    [[nodiscard]] const std::vector<Point>& positions() const { return vpoint_.vector(); }
+
     //! compute the bounding box of the object
     BoundingBox bounds() const
     {

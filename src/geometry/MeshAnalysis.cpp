@@ -1009,4 +1009,32 @@ namespace Geometry
 		return inside;
 	}
 
+	bool IsPointInsidePMPSurfaceMesh(const pmp::Point& point, const pmp::SurfaceMesh& mesh)
+	{
+		if (mesh.is_empty())
+			return false;
+
+		if (!mesh.is_triangle_mesh())
+		{
+			throw std::invalid_argument("IsPointInsidePMPSurfaceMesh: non-triangle SurfaceMesh not supported for this function!\n");
+		}
+
+		const PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(meshAdapter, CenterSplitFunction);
+
+		// Cast a ray in an arbitrary direction (e.g., +X direction)
+		Ray ray(point, pmp::vec3(1.0f, 0.0f, 0.0f));
+		return ptrMeshCollisionKdTree->IsRayStartPointInsideTriangleMesh(ray);
+	}
+
+	bool IsPointInsidePMPSurfaceMesh(const pmp::Point& point, const std::shared_ptr<CollisionKdTree>& meshKdTree)
+	{
+		if (!meshKdTree)
+			return false;
+
+		// Cast a ray in an arbitrary direction (e.g., +X direction)
+		Ray ray(point, pmp::vec3(1.0f, 0.0f, 0.0f));
+		return meshKdTree->IsRayStartPointInsideTriangleMesh(ray);
+	}
+
 } // namespace Geometry

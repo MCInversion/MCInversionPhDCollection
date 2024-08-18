@@ -29,6 +29,10 @@ namespace Geometry
 		unsigned int v0Id;
 		unsigned int v1Id;
 		unsigned int v2Id;
+
+		unsigned int t0Id{ UINT_MAX }; // a neighbor sharing edge between v0 and v1
+		unsigned int t1Id{ UINT_MAX }; // a neighbor sharing edge between v1 and v2
+		unsigned int t2Id{ UINT_MAX }; // a neighbor sharing edge between v2 and v0
 	};
 
 	using Triangles = std::vector<Triangle>;
@@ -104,11 +108,11 @@ namespace Geometry
         [[nodiscard]] bool RayIntersectsATriangle(Geometry::Ray& ray) const;
 
         /**
-         * \brief Counts the number of intersections between a given ray and triangles in this kd-tree.
+         * \brief Counts the number of inward/outward transitions between a given ray and triangles in this kd-tree.
          * \param ray    intersecting ray.
-         * \return the number of intersections.
+         * \return true if the number of transitions is negative.
          */
-        [[nodiscard]] unsigned int GetRayTriangleIntersectionCount(Geometry::Ray& ray) const;
+        [[nodiscard]] bool IsRayStartPointInsideTriangleMesh(Geometry::Ray& ray) const;
 
 	private:
 

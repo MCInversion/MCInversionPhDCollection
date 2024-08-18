@@ -925,7 +925,7 @@ namespace Geometry
 	}
 
 	/// \brief intersection tolerance for Moller-Trumbore algorithm.
-	constexpr float MT_INTERSECTION_EPSILON = 1e-6f;
+	constexpr float MT_INTERSECTION_EPSILON = 1e-5f;
 
 	bool RayIntersectsTriangle(Ray& ray, const std::vector<pmp::vec3>& triVertices)
 	{
@@ -934,27 +934,27 @@ namespace Geometry
 		pmp::vec3 cross1;
 		CROSS(cross1, ray.Direction, edge2);
 		const float det = DOT(edge1, cross1);
-		if (det > -MT_INTERSECTION_EPSILON && det < MT_INTERSECTION_EPSILON)
+		if (std::fabs(det) < MT_INTERSECTION_EPSILON)
 		{
-			return false; // This ray is parallel to this triangle.
+			return false; // Ray is parallel to triangle
 		}
 
 		const float invDet = 1.0f / det;
 		const auto startToTri0 = ray.StartPt - triVertices[0];
 		const float u = invDet * DOT(startToTri0, cross1);
-		if (u < 0.0f || u > 1.0f)
-		{
-			return false;
-		}
-		pmp::vec3 cross2;
-		CROSS(cross2, startToTri0, edge1);
-		const float v = invDet * DOT(ray.Direction, cross2);
-		if (v < 0.0f || u + v > 1.0f) 
+		if (u < -MT_INTERSECTION_EPSILON || u > 1.0f + MT_INTERSECTION_EPSILON)
 		{
 			return false;
 		}
 
-		// At this stage we can compute t to find out where the intersection point is on the line.
+		pmp::vec3 cross2;
+		CROSS(cross2, startToTri0, edge1);
+		const float v = invDet * DOT(ray.Direction, cross2);
+		if (v < -MT_INTERSECTION_EPSILON || u + v > 1.0f + MT_INTERSECTION_EPSILON)
+		{
+			return false;
+		}
+
 		const float t = invDet * DOT(edge2, cross2);
 		if (t > MT_INTERSECTION_EPSILON && t < 1.0f / MT_INTERSECTION_EPSILON &&
 			t >= ray.ParamMin && t <= ray.ParamMax)
@@ -962,8 +962,7 @@ namespace Geometry
 			ray.HitParam = t;
 			return true;
 		}
-		// there is a line intersection but not a ray intersection.
-		return false;
+		return false; // No valid intersection
 	}
 
 	//

@@ -53,12 +53,38 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 {
 }
 
-void ManifoldCurveEvolutionStrategy::ExportCurrentState(unsigned int step)
+void ManifoldCurveEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
 {
+	const std::string connectingName = "_Evol_" + std::to_string(step);
+	auto exportedOuterCurve = *m_OuterCurve;
+	exportedOuterCurve *= m_TransformToOriginal;
+	if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
+		std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+
+	for (size_t i = 0; const auto & innerCurve : m_InnerCurves)
+	{
+		auto exportedInnerCurve = *innerCurve;
+		exportedInnerCurve *= m_TransformToOriginal;
+		if (!write_to_ply(exportedInnerCurve, baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply"))
+			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply") << "!\n";
+	}
 }
 
-void ManifoldCurveEvolutionStrategy::ExportFinalResult()
+void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOutputFilename)
 {
+	const std::string connectingName = "_Evol_Result";
+	auto exportedOuterCurve = *m_OuterCurve;
+	exportedOuterCurve *= m_TransformToOriginal;
+	if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
+		std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+
+	for (size_t i = 0; const auto & innerCurve : m_InnerCurves)
+	{
+		auto exportedInnerCurve = *innerCurve;
+		exportedInnerCurve *= m_TransformToOriginal;
+		if (!write_to_ply(exportedInnerCurve, baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply"))
+			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply") << "!\n";
+	}
 }
 
 std::shared_ptr<pmp::ManifoldCurve2D> ManifoldCurveEvolutionStrategy::GetOuterCurveInOrigScale() const
@@ -270,7 +296,7 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
-
+	StabilizeGeometries(timeStep, outerRadius);
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
@@ -278,8 +304,13 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
 	if (!GetOuterSurface() && GetInnerSurfaces().empty())
 		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
 
-	pmp::Point targetCenter;
-	std::tie(std::ignore, std::ignore, targetCenter) = ComputeAmbientFields();
+	if (!HasValidInnerOuterManifolds())
+		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
+
+	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+
+	const auto [minArea, maxArea] = CalculateCoVolumeRange();
+	StabilizeCustomGeometries(timeStep, minArea, maxArea);
 }
 
 void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int step)
@@ -295,12 +326,34 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 {
 }
 
-void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step)
+void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
 {
+	const std::string connectingName = "_Evol_" + std::to_string(step);
+	auto exportedOuterSurface = *m_OuterSurface;
+	exportedOuterSurface *= m_TransformToOriginal;
+	exportedOuterSurface.write(baseOutputFilename + "_Outer" + connectingName + ".vtk");
+
+	for (size_t i = 0; const auto& innerSurface : m_InnerSurfaces)
+	{
+		auto exportedInnerSurface = *innerSurface;
+		exportedInnerSurface *= m_TransformToOriginal;
+		exportedInnerSurface.write(baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".vtk");
+	}
 }
 
-void ManifoldSurfaceEvolutionStrategy::ExportFinalResult()
+void ManifoldSurfaceEvolutionStrategy::ExportFinalResult(const std::string& baseOutputFilename)
 {
+	const std::string connectingName = "_Evol_Result";
+	auto exportedOuterSurface = *m_OuterSurface;
+	exportedOuterSurface *= m_TransformToOriginal;
+	exportedOuterSurface.write(baseOutputFilename + "_Outer" + connectingName + ".vtk");
+
+	for (size_t i = 0; const auto & innerSurface : m_InnerSurfaces)
+	{
+		auto exportedInnerSurface = *innerSurface;
+		exportedInnerSurface *= m_TransformToOriginal;
+		exportedInnerSurface.write(baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".vtk");
+	}
 }
 
 std::shared_ptr<pmp::SurfaceMesh> ManifoldSurfaceEvolutionStrategy::GetOuterSurfaceInOrigScale() const
@@ -390,7 +443,109 @@ constexpr float INV_SHRINK_FACTOR_2D = 5.0f;
 
 void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor)
 {
+	const auto expectedVertexCount = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+	const auto expectedMeanCoVolLength = stabilizationFactor * (2.0f * static_cast<float>(M_PI) * outerRadius / static_cast<float>(expectedVertexCount));
+	const auto scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+	GetScalingFactor() = scalingFactor;
 
+	const pmp::mat4 transfMatrixGeomScale{
+		scalingFactor, 0.0f, 0.0f, 0.0f,
+		0.0f, scalingFactor, 0.0f, 0.0f,
+		0.0f, 0.0f, scalingFactor, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	m_TransformToOriginal = inverse(transfMatrixGeomScale);
+
+	// transform geometries
+	(*m_OuterSurface) *= transfMatrixGeomScale;
+	(*m_DistanceField) *= transfMatrixGeomScale;
+	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
+	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+}
+
+bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
+{
+	// check self-intersections
+	if (Geometry::PMPSurfaceMeshHasSelfIntersections(*GetOuterSurface()))
+		return false;
+
+	// check inner surfaces
+	for (const auto& innerSurface : GetInnerSurfaces())
+	{
+		// check self-intersections
+		if (Geometry::PMPSurfaceMeshHasSelfIntersections(*innerSurface))
+			return false;
+
+		// check whether the inner surface is contained inside the outer surface.
+		const auto& outerSurface = *GetOuterSurface();
+		const Geometry::PMPSurfaceMeshAdapter outerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(outerSurface));
+		const auto outerSurfaceKdTree = std::make_shared<Geometry::CollisionKdTree>(outerSurfaceAdapter, Geometry::CenterSplitFunction);
+		for (const auto& p : innerSurface->positions())
+		{
+			if (!IsPointInsidePMPSurfaceMesh(p, outerSurfaceKdTree))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolumeRange() const
+{
+	float minCoVolLength = FLT_MAX;
+	float maxCoVolLength = -FLT_MAX;
+
+	/*if (GetOuterSurface())
+	{
+		const auto& outerSurface = *GetOuterSurface();
+		for (const auto v : outerSurface.vertices())
+		{
+			const auto [eTo, eFrom] = outerSurface.edges(v);
+			const auto currentCoVolLength = 0.5f * (outerCurve.edge_length(eTo) + outerCurve.edge_length(eFrom));
+
+			if (currentCoVolLength > maxCoVolLength) maxCoVolLength = currentCoVolLength;
+			if (currentCoVolLength < minCoVolLength) minCoVolLength = currentCoVolLength;
+		}
+	}
+
+	for (const auto& curve : GetInnerCurves())
+	{
+		const auto& innerCurve = *curve;
+		for (const auto v : innerCurve.vertices())
+		{
+			const auto [eTo, eFrom] = innerCurve.edges(v);
+			const auto currentCoVolLength = 0.5f * (innerCurve.edge_length(eTo) + innerCurve.edge_length(eFrom));
+
+			if (currentCoVolLength > maxCoVolLength) maxCoVolLength = currentCoVolLength;
+			if (currentCoVolLength < minCoVolLength) minCoVolLength = currentCoVolLength;
+		}
+	}*/
+
+	return { minCoVolLength, maxCoVolLength };
+}
+
+void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor)
+{
+	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
+	const float scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	GetScalingFactor() = scalingFactor;
+	const pmp::mat4 transfMatrixGeomScale{
+		scalingFactor, 0.0f, 0.0f, 0.0f,
+		0.0f, scalingFactor, 0.0f, 0.0f,
+		0.0f, 0.0f, scalingFactor, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	GetTransformToOriginal() = inverse(transfMatrixGeomScale);
+
+	// Transform the geometries
+	(*GetOuterSurface()) *= transfMatrixGeomScale;
+	for (auto& innerSurface : GetInnerSurfaces())
+	{
+		(*innerSurface) *= transfMatrixGeomScale;
+	}
+	(*GetDistanceField()) *= transfMatrixGeomScale;
+	(*GetDFNegNormalizedGradient()) *= transfMatrixGeomScale;
+	(*GetDistanceField()) *= static_cast<double>(scalingFactor); // Scale the distance values
 }
 
 // ================================================
