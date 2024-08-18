@@ -396,6 +396,7 @@ std::vector<std::shared_ptr<pmp::SurfaceMesh>> ManifoldSurfaceEvolutionStrategy:
 
 void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
+
 }
 
 void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
@@ -460,9 +461,9 @@ constexpr float INV_SHRINK_FACTOR_2D = 5.0f;
 
 void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor)
 {
-	const auto expectedVertexCount = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
-	const auto expectedMeanCoVolLength = stabilizationFactor * (2.0f * static_cast<float>(M_PI) * outerRadius / static_cast<float>(expectedVertexCount));
-	const auto scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, GetSettings().LevelOfDetail) - 1) + 3 * N_ICO_VERTS_0) / 3;
+	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * outerRadius * outerRadius / static_cast<float>(expectedVertexCount));
+	const auto scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
@@ -539,9 +540,9 @@ std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolum
 	return { minCoVolArea, maxCoVolArea };
 }
 
-void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor)
+void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(double timeStep, float minArea, float maxArea, float stabilizationFactor)
 {
-	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
+	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
 	const float scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 	const pmp::mat4 transfMatrixGeomScale{

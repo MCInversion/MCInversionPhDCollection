@@ -586,10 +586,10 @@ private:
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
-    /// \param[in] minLength               the minimum length of a 1D co-volume within the custom surfaces.
-    /// \param[in] maxLength               the maximum length of a 1D co-volume within the custom surfaces.
+    /// \param[in] minArea                 the minimum area of a 2D co-volume within the custom surfaces.
+    /// \param[in] maxArea                 the maximum area of a 2D co-volume within the custom surfaces.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor = 1.0f);
+    void StabilizeCustomGeometries(double timeStep, float minArea, float maxArea, float stabilizationFactor = 1.0f);
 };
 
 //
