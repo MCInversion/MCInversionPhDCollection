@@ -42,6 +42,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess(double timeStep)
 
 void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int step)
 {
+
 }
 
 bool ManifoldCurveEvolutionStrategy::ShouldRemesh()
@@ -115,6 +116,14 @@ std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrateg
 }
 
 // -------------------------------------------------------------------------------------
+
+void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
+{
+}
+
+void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
+{
+}
 
 std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
 {
@@ -384,6 +393,14 @@ std::vector<std::shared_ptr<pmp::SurfaceMesh>> ManifoldSurfaceEvolutionStrategy:
 }
 
 // ------------------------------------------------
+
+void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
+{
+}
+
+void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
+{
+}
 
 std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAmbientFields()
 {

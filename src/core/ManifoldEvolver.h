@@ -98,7 +98,7 @@ public:
     /// \brief Base constructor from given settings.
     explicit ManifoldEvolutionStrategy(ManifoldEvolutionSettings settings)
 	    : m_Settings(settings)
-    {	    
+    {
     }
 
     virtual ~ManifoldEvolutionStrategy() = default;
@@ -165,6 +165,18 @@ protected:
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
     virtual void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) = 0;
 
+    /// \brief A getter for the numerical integration step function.
+    NumericalStepIntegrateFunction& GetIntegrate()
+    {
+        return m_Integrate;
+    }
+
+    /// \brief A placeholder for the semi-implicit integration method.
+    virtual void SemiImplicitIntegrationStep(unsigned int step) = 0;
+
+    /// \brief A placeholder for the explicit integration method.
+    virtual void ExplicitIntegrationStep(unsigned int step) = 0;
+
 private:
 
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
@@ -190,6 +202,20 @@ public:
 	    : ManifoldEvolutionStrategy(settings),
         m_TargetPointCloud(std::move(targetPointCloud))
     {
+        if (GetSettings().UseSemiImplicit)
+        {
+            GetIntegrate() = [this](unsigned int step)
+            {
+	            SemiImplicitIntegrationStep(step);
+            };
+        }
+        else
+        {
+            GetIntegrate() = [this](unsigned int step)
+            {
+	            ExplicitIntegrationStep(step);
+            };
+        }
     }
 
     /**
@@ -229,6 +255,12 @@ public:
     [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> GetInnerCurvesInOrigScale() const;
 
 protected:
+
+    /// \brief Semi-implicit integration method step.
+    void SemiImplicitIntegrationStep(unsigned int step) override;
+
+    /// \brief Explicit integration method step.
+    void ExplicitIntegrationStep(unsigned int step) override;
 
     /// \brief A getter for the outer curve
     std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
@@ -364,6 +396,21 @@ public:
     {
         m_LaplacianAreaFunction = (laplacianType == MeshLaplacian::Barycentric ?
                 pmp::voronoi_area_barycentric : pmp::voronoi_area);
+
+        if (GetSettings().UseSemiImplicit)
+        {
+            GetIntegrate() = [this](unsigned int step)
+            {
+	            SemiImplicitIntegrationStep(step);
+            };
+        }
+        else
+        {
+            GetIntegrate() = [this](unsigned int step)
+            {
+	            ExplicitIntegrationStep(step);
+            };
+        }
     }
 
     /**
@@ -403,6 +450,12 @@ public:
     [[nodiscard]] std::vector<std::shared_ptr<pmp::SurfaceMesh>> GetInnerSurfacesInOrigScale() const;
 
 protected:
+
+    /// \brief Semi-implicit integration method step.
+    void SemiImplicitIntegrationStep(unsigned int step) override;
+
+    /// \brief Explicit integration method step.
+    void ExplicitIntegrationStep(unsigned int step) override;
 
     /// \brief A getter for the outer surface
     std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface()
