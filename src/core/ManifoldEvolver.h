@@ -308,6 +308,9 @@ protected:
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
     [[nodiscard]] std::tuple<float, float, pmp::Point2> ComputeAmbientFields();
 
+    /// \brief Calculate m_OuterCurveDistanceField and m_InnerCurvesDistanceFields if there should be an interaction between these manifolds.
+    void ComputeVariableDistanceFields(float cellSize);
+
     /// \brief Construct m_OuterCurve and m_InnerCurves from settings.
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
@@ -488,6 +491,9 @@ protected:
     /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
     [[nodiscard]] std::tuple<float, float, pmp::Point> ComputeAmbientFields();
+
+    /// \brief Calculate m_OuterSurfaceDistanceField and m_InnerSurfacesDistanceFields if there should be an interaction between these manifolds.
+    void ComputeVariableDistanceFields(float cellSize);
 
     /// \brief Construct m_OuterSurface and m_InnerSurfaces from settings.
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.

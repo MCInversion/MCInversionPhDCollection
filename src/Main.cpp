@@ -98,10 +98,11 @@ constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
 constexpr bool performDistanceFieldHashTest = false;
-constexpr bool performDistanceField2DHashTest = true;
+constexpr bool performDistanceField2DHashTest = false;
 constexpr bool performManifoldCurve2DTests = false;
 constexpr bool performPairedCurveEvolverTests = false;
 // constexpr bool performPairedSurfaceEvolverTests = true;
+constexpr bool performPropertyPerformanceTests = false;
 
 int main()
 {
@@ -3485,4 +3486,164 @@ int main()
 		}
 
 	} // endif performPairedCurveEvolverTests
+
+	if (performPropertyPerformanceTests)
+	{
+		const std::vector<std::string> meshNames{
+			"BentChair",
+			"blub",
+			"bunny",
+			"maxPlanck",
+			"nefertiti",
+			"ogre",
+			"spot"
+		};
+
+		size_t nMainLoopIters = 80;
+
+		/// ====== The old evolver mock ======
+
+		class OrigSurfaceEvolverMock
+		{
+		public:
+
+			OrigSurfaceEvolverMock(const std::string& meshName, size_t nSteps)
+				: m_NSteps(nSteps)
+			{
+				m_Mesh = std::make_shared<pmp::SurfaceMesh>();
+				m_Mesh->read(dataDirPath + meshName + ".obj");
+			}
+
+			void Evolve()
+			{
+				auto vProp1 = m_Mesh->add_vertex_property<pmp::Scalar>("v:prop1");
+				auto vProp2 = m_Mesh->add_vertex_property<pmp::Scalar>("v:prop2");
+
+				pmp::VertexProperty<pmp::Point> vNormalsProp{};
+
+				auto aFunctionThatNeedsNormals = [&]()
+				{
+					pmp::vec3 vNormalSum{};
+					for (const auto v : m_Mesh->vertices())
+					{
+						vNormalSum += vNormalsProp[v];
+					}
+					vNormalSum;
+				};
+
+				for (const auto v : m_Mesh->vertices())
+				{
+					vProp1[v] = static_cast<pmp::Scalar>(v.idx());
+					vProp2[v] = static_cast<pmp::Scalar>(m_Mesh->n_vertices() - v.idx());
+				}
+
+				for (size_t i = 0; i < m_NSteps; ++i)
+				{
+					pmp::Normals::compute_vertex_normals(*m_Mesh);
+					vNormalsProp = m_Mesh->vertex_property<pmp::Point>("v:normal");
+
+					aFunctionThatNeedsNormals();
+
+					for (const auto v : m_Mesh->vertices())
+					{
+						vProp1[v] = static_cast<pmp::Scalar>(v.idx());
+						vProp2[v] = static_cast<pmp::Scalar>(m_Mesh->n_vertices() - v.idx());
+					}
+				}
+			}
+
+		private:
+
+			size_t m_NSteps{ 10 };
+			std::shared_ptr<pmp::SurfaceMesh> m_Mesh{ nullptr };
+		};
+
+		/// ====== These objects simulate the new evolver strategy approach ======
+
+		class NewEvolverStrategyMock
+		{
+		public:
+			NewEvolverStrategyMock(const std::string& meshName)
+			{
+				m_Mesh = std::make_shared<pmp::SurfaceMesh>();
+				m_Mesh->read(dataDirPath + meshName + ".obj");
+			}
+
+			void Preprocess()
+			{
+				auto vProp1 = m_Mesh->add_vertex_property<pmp::Scalar>("v:prop1");
+				auto vProp2 = m_Mesh->add_vertex_property<pmp::Scalar>("v:prop2");
+			}
+
+			void PerformEvolutionStep(size_t step)
+			{
+				auto vProp1 = m_Mesh->vertex_property<pmp::Scalar>("v:prop1");
+				auto vProp2 = m_Mesh->vertex_property<pmp::Scalar>("v:prop2");
+
+				pmp::Normals::compute_vertex_normals(*m_Mesh);
+				AFunctionThatNeedsNormals();
+
+				for (const auto v : m_Mesh->vertices())
+				{
+					vProp1[v] = static_cast<pmp::Scalar>(v.idx());
+					vProp2[v] = static_cast<pmp::Scalar>(m_Mesh->n_vertices() - v.idx());
+				}
+			}
+
+		private:
+
+			void AFunctionThatNeedsNormals()
+			{
+				auto vNormalsProp = m_Mesh->vertex_property<pmp::Point>("v:normal");
+				pmp::vec3 vNormalSum{};
+				for (const auto v : m_Mesh->vertices())
+				{
+					vNormalSum += vNormalsProp[v];
+				}
+				vNormalSum;
+			}
+
+			std::shared_ptr<pmp::SurfaceMesh> m_Mesh{ nullptr };
+		};
+
+		class NewEvolverMock
+		{
+		public:
+			
+			NewEvolverMock(size_t nSteps, std::shared_ptr<NewEvolverStrategyMock> strategy)
+				: m_NSteps(nSteps), m_Strategy(std::move(strategy))
+			{
+			}
+
+			void Evolve() const
+			{
+				for (size_t i = 0; i < m_NSteps; ++i)
+				{
+					m_Strategy->PerformEvolutionStep(i);
+				}
+			}
+		private:
+
+			size_t m_NSteps{ 10 };
+			std::shared_ptr<NewEvolverStrategyMock> m_Strategy{ nullptr };
+		};
+
+		constexpr size_t nRuns = 20;
+
+		for (const auto& name : meshNames)
+		{
+			std::cout << "-------------------------------------------------------------------------------------------\n";
+			std::cout << "OrigSurfaceEvolverMock vs {NewEvolverStrategyMock, NewEvolverMock} for \"" << name << "\":\n";
+			AVERAGE_TIMING(OrigEvolverPropertiesApproach, nRuns, {
+				OrigSurfaceEvolverMock se(name, nMainLoopIters);
+				se.Evolve();
+			}, true);
+
+			AVERAGE_TIMING(ProposedEncapsulatedApproach, nRuns, {
+				auto strategy = std::make_shared<NewEvolverStrategyMock>(name);
+				NewEvolverMock se(nMainLoopIters, strategy);
+				se.Evolve();
+			}, true);
+		}
+	}
 }

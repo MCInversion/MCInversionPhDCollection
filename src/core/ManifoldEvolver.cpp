@@ -23,6 +23,10 @@ void ManifoldCurveEvolutionStrategy::Preprocess(double timeStep)
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
+
+	const auto cellSize = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	ComputeVariableDistanceFields(cellSize);
+
 	StabilizeGeometries(timeStep, outerRadius);
 }
 
@@ -123,6 +127,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 {
+
 }
 
 std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
@@ -143,12 +148,40 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 	const SDF::PointCloudDistanceField2DSettings dfSettings{
 		cellSize,
 		GetSettings().FieldSettings.FieldExpansionFactor,
-		Geometry::DEFAULT_SCALAR_GRID_INIT_VAL
+		DBL_MAX
 	};
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid2D>(
 		SDF::PlanarPointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_DistanceField));
 	return { minSize, maxSize, ptCloudBBox.center() };
+}
+
+void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields(float cellSize)
+{
+	if (!m_OuterCurve || m_InnerCurves.empty())
+	{
+		// there's no possibility of interaction between the outer and the inner manifolds
+		return;
+	}
+
+	const SDF::DistanceField2DSettings curveDFSettings{
+		cellSize,
+		GetSettings().FieldSettings.FieldExpansionFactor,
+		DBL_MAX,
+		SDF::KDTreeSplitType::Center,
+		SDF::SignComputation2D::None,
+		SDF::PreprocessingType2D::Quadtree
+	};
+	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(*m_OuterCurve));
+	m_OuterCurveDistanceField = std::make_shared<Geometry::ScalarGrid2D>(
+		SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));
+
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		const Geometry::ManifoldCurve2DAdapter innerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(*innerCurve));
+		m_InnerCurvesDistanceFields.emplace_back(std::make_shared<Geometry::ScalarGrid2D>(
+			SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings)));
+	}
 }
 
 /// \brief the smallest allowed number of vertices in a manifold curve.
@@ -211,6 +244,17 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(double timeStep, float 
 	(*m_DistanceField) *= transfMatrixGeomScale;
 	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+
+	if (m_OuterCurveDistanceField)
+	{
+		(*m_OuterCurveDistanceField) *= transfMatrixGeomScale;
+		(*m_OuterCurveDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+	}
+	for (const auto& innerCurveDF : m_InnerCurvesDistanceFields)
+	{
+		(*innerCurveDF) *= transfMatrixGeomScale;
+		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
+	}
 }
 
 bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
@@ -219,6 +263,7 @@ bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 	if (Geometry::PMPManifoldCurve2DHasSelfIntersections(*GetOuterCurve()))
 		return false;
 
+	const auto& outerCurve = *GetOuterCurve();
 	// check inner curves
 	for (const auto& innerCurve : GetInnerCurves())
 	{
@@ -227,7 +272,6 @@ bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 			return false;
 
 		// check whether the inner curve is contained inside the outer curve.
-		const auto& outerCurve = *GetOuterCurve();
 		for (const auto& p : innerCurve->positions())
 		{
 			if (!Geometry::IsPointInsidePMPManifoldCurve(p, outerCurve))
@@ -305,6 +349,10 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
+
+	const auto cellSize = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	ComputeVariableDistanceFields(cellSize);
+
 	StabilizeGeometries(timeStep, outerRadius);
 }
 
@@ -421,12 +469,41 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 	const SDF::PointCloudDistanceFieldSettings dfSettings{
 		cellSize,
 		GetSettings().FieldSettings.FieldExpansionFactor,
-		Geometry::DEFAULT_SCALAR_GRID_INIT_VAL
+		DBL_MAX
 	};
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid>(
 		SDF::PointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid>(ComputeNormalizedNegativeGradient(*m_DistanceField));
 	return { minSize, maxSize, ptCloudBBox.center() };
+}
+
+void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields(float cellSize)
+{
+	if (!m_OuterSurface || m_InnerSurfaces.empty())
+	{
+		// there's no possibility of interaction between the outer and the inner manifolds
+		return;
+	}
+
+	const SDF::DistanceFieldSettings surfaceDFSettings{
+		cellSize,
+		GetSettings().FieldSettings.FieldExpansionFactor,
+		DBL_MAX,
+		SDF::KDTreeSplitType::Center,
+		SDF::SignComputation::None,
+		SDF::BlurPostprocessingType::None,
+		SDF::PreprocessingType::Octree
+	};
+	const Geometry::PMPSurfaceMeshAdapter outerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(*m_OuterSurface));
+	m_OuterSurfaceDistanceField = std::make_shared<Geometry::ScalarGrid>(
+		SDF::DistanceFieldGenerator::Generate(outerSurfaceAdapter, surfaceDFSettings));
+
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		const Geometry::PMPSurfaceMeshAdapter innerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(*innerSurface));
+		m_InnerSurfacesDistanceFields.emplace_back(std::make_shared<Geometry::ScalarGrid>(
+			SDF::DistanceFieldGenerator::Generate(innerSurfaceAdapter, surfaceDFSettings)));
+	}
 }
 
 float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
@@ -479,6 +556,17 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(double timeStep, floa
 	(*m_DistanceField) *= transfMatrixGeomScale;
 	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+
+	if (m_OuterSurfaceDistanceField)
+	{
+		(*m_OuterSurfaceDistanceField) *= transfMatrixGeomScale;
+		(*m_OuterSurfaceDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+	}
+	for (const auto& innerSurfaceDF : m_InnerSurfacesDistanceFields)
+	{
+		(*innerSurfaceDF) *= transfMatrixGeomScale;
+		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
+	}
 }
 
 bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
@@ -487,6 +575,9 @@ bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
 	if (Geometry::PMPSurfaceMeshHasSelfIntersections(*GetOuterSurface()))
 		return false;
 
+	const auto& outerSurface = *GetOuterSurface();
+	const Geometry::PMPSurfaceMeshAdapter outerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(outerSurface));
+	const auto outerSurfaceKdTree = std::make_shared<Geometry::CollisionKdTree>(outerSurfaceAdapter, Geometry::CenterSplitFunction);
 	// check inner surfaces
 	for (const auto& innerSurface : GetInnerSurfaces())
 	{
@@ -495,9 +586,6 @@ bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
 			return false;
 
 		// check whether the inner surface is contained inside the outer surface.
-		const auto& outerSurface = *GetOuterSurface();
-		const Geometry::PMPSurfaceMeshAdapter outerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(outerSurface));
-		const auto outerSurfaceKdTree = std::make_shared<Geometry::CollisionKdTree>(outerSurfaceAdapter, Geometry::CenterSplitFunction);
 		for (const auto& p : innerSurface->positions())
 		{
 			if (!IsPointInsidePMPSurfaceMesh(p, outerSurfaceKdTree))
