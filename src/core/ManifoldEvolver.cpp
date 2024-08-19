@@ -9,6 +9,7 @@
 #include "sdf/SDF.h"
 
 #include "InscribedManifold.h"
+#include "pmp/algorithms/Normals.h"
 
 /// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
 constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
@@ -19,7 +20,7 @@ constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
 // ---------------------------------------------------------------------------------------
 //
 
-void ManifoldCurveEvolutionStrategy::Preprocess(double timeStep)
+void ManifoldCurveEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
@@ -27,10 +28,10 @@ void ManifoldCurveEvolutionStrategy::Preprocess(double timeStep)
 	const auto cellSize = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields(cellSize);
 
-	StabilizeGeometries(timeStep, outerRadius);
+	StabilizeGeometries(outerRadius);
 }
 
-void CustomManifoldCurveEvolutionStrategy::Preprocess(double timeStep)
+void CustomManifoldCurveEvolutionStrategy::Preprocess()
 {
 	if (!GetOuterCurve() && GetInnerCurves().empty())
 		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
@@ -41,10 +42,10 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess(double timeStep)
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 	const auto [minLength, maxLength] = CalculateCoVolumeRange();
-	StabilizeCustomGeometries(timeStep, minLength, maxLength);
+	StabilizeCustomGeometries(minLength, maxLength);
 }
 
-void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int step)
+void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
 
 }
@@ -123,6 +124,7 @@ std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrateg
 
 void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
+
 }
 
 void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
@@ -225,11 +227,11 @@ constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
 constexpr float INV_SHRINK_FACTOR_1D = 5.0f;
 
-void ManifoldCurveEvolutionStrategy::StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor)
+void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, float stabilizationFactor)
 {
 	const auto expectedVertexCount = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
 	const auto expectedMeanCoVolLength = stabilizationFactor * (2.0f * static_cast<float>(M_PI) * outerRadius / static_cast<float>(expectedVertexCount));
-	const auto scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
@@ -316,10 +318,10 @@ std::pair<float, float> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeR
 	return { minCoVolLength, maxCoVolLength };
 }
 
-void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor)
+void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor)
 {
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
-	const float scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 	const pmp::mat3 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f,
@@ -345,7 +347,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(double time
 // ---------------------------------------------------------------------------------------
 //
 
-void ManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
+void ManifoldSurfaceEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
@@ -353,10 +355,10 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
 	const auto cellSize = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields(cellSize);
 
-	StabilizeGeometries(timeStep, outerRadius);
+	StabilizeGeometries(outerRadius);
 }
 
-void CustomManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
+void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 {
 	if (!GetOuterSurface() && GetInnerSurfaces().empty())
 		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
@@ -367,10 +369,10 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess(double timeStep)
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 	const auto [minArea, maxArea] = CalculateCoVolumeRange();
-	StabilizeCustomGeometries(timeStep, minArea, maxArea);
+	StabilizeCustomGeometries(minArea, maxArea);
 }
 
-void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int step)
+void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
 }
 
@@ -444,11 +446,203 @@ std::vector<std::shared_ptr<pmp::SurfaceMesh>> ManifoldSurfaceEvolutionStrategy:
 
 void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
+	// ================================== Handle m_OuterSurface ==========================================================
+	{
+		const auto NVertices = static_cast<unsigned int>(m_OuterSurface->n_vertices());
+		SparseMatrix sysMat(NVertices, NVertices);
+		Eigen::MatrixXd sysRhs(NVertices, 3);
 
+		auto vDistance = m_OuterSurface->vertex_property<pmp::Scalar>("v:distance");
+		const auto tStep = GetSettings().TimeStep;
+
+		for (const auto v : m_OuterSurface->vertices())
+		{
+			const auto vPos = m_OuterSurface->position(v);
+			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
+			{
+				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *innerSurfaceDf));
+				if (innerDfAtVPos < vDistance[v])
+					vDistance[v] = innerDfAtVPos;
+			}
+		}
+
+		pmp::Normals::compute_vertex_normals(*m_OuterSurface);
+		auto vNormalsProp = m_OuterSurface->get_vertex_property<pmp::vec3>("v:normal");
+
+		// prepare matrix & rhs for m_OuterSurface:
+		std::vector<Eigen::Triplet<double>> tripletList;
+		tripletList.reserve(static_cast<size_t>(NVertices) * 6);  // Assuming an average of 6 entries per vertex
+
+		for (const auto v : m_OuterSurface->vertices())
+		{
+			const auto vPosToUpdate = m_OuterSurface->position(v);
+
+			if (m_OuterSurface->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector3d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
+				continue;
+			}
+
+			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
+
+			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
+			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
+
+			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
+			sysRhs.row(v.idx()) = vertexRhs;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0f)
+			{
+				// compute tangential velocity
+				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterSurface, v, vNormal, tanRedistWeight);
+				sysRhs.row(v.idx()) += tStep * Eigen::Vector3d(vTanVelocity);
+			}
+
+			const auto laplaceWeightInfo = m_ImplicitLaplacianFunction(*m_OuterSurface, v); // Laplacian weights
+			tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum)));
+
+			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
+			{
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), w.idx(), -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight)));
+			}
+		}
+
+		// After the loop
+		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+
+		// solve
+		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
+		Eigen::MatrixXd x = solver.solve(sysRhs);
+		if (solver.info() != Eigen::Success)
+		{
+			const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
+				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
+			std::cerr << msg;
+			throw std::runtime_error(msg);
+		}
+
+		// update vertex positions & verify mesh within bounds
+		for (unsigned int i = 0; i < NVertices; i++)
+		{
+			const auto newPos = x.row(i);
+			if (!m_DistanceField->Box().Contains(newPos))
+			{
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
+					+ std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
+			}
+			m_OuterSurface->position(pmp::Vertex(i)) = newPos;
+		}
+	}
+
+	// ================================== Handle m_InnerSurfaces ==========================================================
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		const auto NVertices = static_cast<unsigned int>(innerSurface->n_vertices());
+		SparseMatrix sysMat(NVertices, NVertices);
+		Eigen::MatrixXd sysRhs(NVertices, 3);
+
+		auto vDistance = innerSurface->vertex_property<pmp::Scalar>("v:distance");
+		const auto tStep = GetSettings().TimeStep;
+
+		for (const auto v : innerSurface->vertices())
+		{
+			const auto vPos = innerSurface->position(v);
+			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			if (!m_OuterSurfaceDistanceField)
+				continue;
+
+			const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_OuterSurfaceDistanceField));
+			if (outerDfAtVPos < vDistance[v])
+				vDistance[v] = outerDfAtVPos;
+		}
+
+		pmp::Normals::compute_vertex_normals(*innerSurface);
+		auto vNormalsProp = innerSurface->get_vertex_property<pmp::vec3>("v:normal");
+
+		// prepare matrix & rhs for m_OuterSurface:
+		std::vector<Eigen::Triplet<double>> tripletList;
+		tripletList.reserve(static_cast<size_t>(NVertices) * 6);  // Assuming an average of 6 entries per vertex
+
+		for (const auto v : innerSurface->vertices())
+		{
+			const auto vPosToUpdate = innerSurface->position(v);
+
+			if (innerSurface->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector3d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
+				continue;
+			}
+
+			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
+
+			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
+			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
+
+			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
+			sysRhs.row(v.idx()) = vertexRhs;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0f)
+			{
+				// compute tangential velocity
+				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerSurface, v, vNormal, tanRedistWeight);
+				sysRhs.row(v.idx()) += tStep * Eigen::Vector3d(vTanVelocity);
+			}
+
+			const auto laplaceWeightInfo = m_ImplicitLaplacianFunction(*innerSurface, v); // Laplacian weights
+			tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum)));
+
+			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
+			{
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), w.idx(), -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight)));
+			}
+		}
+
+		// After the loop
+		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+
+		// solve
+		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
+		Eigen::MatrixXd x = solver.solve(sysRhs);
+		if (solver.info() != Eigen::Success)
+		{
+			const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
+				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
+			std::cerr << msg;
+			throw std::runtime_error(msg);
+		}
+
+		// update vertex positions & verify mesh within bounds
+		for (unsigned int i = 0; i < NVertices; i++)
+		{
+			const auto newPos = x.row(i);
+			if (!m_DistanceField->Box().Contains(newPos))
+			{
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
+					+ std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
+			}
+			innerSurface->position(pmp::Vertex(i)) = newPos;
+		}
+	}
 }
 
 void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 {
+	
 }
 
 std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAmbientFields()
@@ -536,11 +730,11 @@ constexpr float SCALE_FACTOR_POWER_2D = 1.0f / 2.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
 constexpr float INV_SHRINK_FACTOR_2D = 5.0f;
 
-void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor)
+void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, float stabilizationFactor)
 {
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, GetSettings().LevelOfDetail) - 1) + 3 * N_ICO_VERTS_0) / 3;
 	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * outerRadius * outerRadius / static_cast<float>(expectedVertexCount));
-	const auto scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
@@ -628,10 +822,10 @@ std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolum
 	return { minCoVolArea, maxCoVolArea };
 }
 
-void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(double timeStep, float minArea, float maxArea, float stabilizationFactor)
+void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor)
 {
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
-	const float scalingFactor = pow(static_cast<float>(timeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,

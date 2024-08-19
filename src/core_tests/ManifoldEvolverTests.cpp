@@ -33,9 +33,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
     innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 32));
 
     ManifoldEvolutionSettings strategySettings;
+    strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
-    globalSettings.TimeStep = 0.01;
     globalSettings.DoRemeshing = false;
 
     auto customStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
@@ -56,8 +56,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0f - 2.0f * (globalSettings.NSteps * globalSettings.TimeStep)), 1e-3f);
-        EXPECT_NEAR(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), std::sqrt(0.5f + 2.0f * (globalSettings.NSteps * globalSettings.TimeStep)), 1e-3f);
+        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0f - 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
+        EXPECT_NEAR(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), std::sqrt(0.5f + 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
     }
 }
 
@@ -71,9 +71,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
     strategySettings.UseInnerManifolds = false;
     strategySettings.Epsilon = STANDARD_EPSILON;
     strategySettings.Eta = STANDARD_ETA;
+    strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
-    globalSettings.TimeStep = 0.01;
     globalSettings.DoRemeshing = false;
 
     auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(

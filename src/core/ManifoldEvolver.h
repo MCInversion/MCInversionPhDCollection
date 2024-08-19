@@ -27,8 +27,17 @@ const AdvectionCtrlFunction STANDARD_ETA = [](double distance, double negGradDot
     return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 };
 
-/// \brief A placeholder for the numerical integration function specific to the scheme and dimension.
+/// \brief Numerical integration function specific to the scheme and dimension.
 using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
+
+/// \brief Functions for interpolating 2D scalar grids
+using ScalarGridInterpolationFunction2D = std::function<double(const pmp::Point2& /* pos */, const Geometry::ScalarGrid2D& /* grid */)>;
+/// \brief Functions for interpolating 3D scalar grids
+using ScalarGridInterpolationFunction3D = std::function<double(const pmp::Point& /* pos */, const Geometry::ScalarGrid& /* grid */)>;
+/// \brief Functions for interpolating 2D vector grids
+using VectorGridInterpolationFunction2D = std::function<pmp::dvec2(const pmp::Point2& /* pos */, const Geometry::VectorGrid2D& /* vecGrid */)>;
+/// \brief Functions for interpolating 3D vector grids
+using VectorGridInterpolationFunction3D = std::function<pmp::dvec3(const pmp::Point& /* pos */, const Geometry::VectorGrid& /* vecGrid */)>;
 
 //
 // ===============================================================================================
@@ -49,14 +58,18 @@ struct AmbientFieldSettings
 struct ManifoldEvolutionSettings
 {
     bool UseInnerManifolds{ true }; //>! whether to construct outward-evolving inner manifolds.
-    unsigned int Dimension{ 2 }; //>! the dimension of the evolving manifold(s). 1 for curves, 2 for surfaces.
     bool UseSemiImplicit{ true }; //>! whether to use a more numerically stable, but computationally costly numerical scheme (has to solve a linear system for each coord for each time step).
     unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle is a regular pentagon, and the sphere an icosahedron.
-        
+
+    double TimeStep{ 0.01 };     //>! time step size.
+
+    bool UseLinearGridInterpolation{ true }; //>! whether to use d-linear interpolation for scalar and vector fields where d is the grid dimension.
     CurvatureCtrlFunction Epsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term.
     AdvectionCtrlFunction Eta{ TRIVIAL_ETA }; //>! control function for the advection term.
 
     AmbientFieldSettings FieldSettings{}; //>! the settings for the construction of the ambient fields.
+
+    double TangentialVelocityWeight{ 0.05 }; //>! the weight of tangential velocity update vector for each time step.
 
     double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
 };
@@ -70,7 +83,6 @@ struct GlobalManifoldEvolutionSettings
     std::string ProcedureName{}; //>! name for the evolution procedure.
 
     unsigned int NSteps{ 20 };   //>! number of time steps for surface evolution.
-    double TimeStep{ 0.01 };     //>! time step size.
 
     bool ExportPerTimeStep{ false };  //>! whether to export evolving manifold for each time step.
     bool ExportResult{ true }; //>! whether to export resulting evolving manifold.
@@ -106,12 +118,12 @@ public:
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
-    virtual void Preprocess(double /* timeStep */) = 0;
+    virtual void Preprocess() = 0;
 
     /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
      */
-    virtual void PerformEvolutionStep(unsigned int step) = 0;
+    virtual void PerformEvolutionStep(unsigned int stepId) = 0;
 
     /**
      * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
@@ -160,10 +172,9 @@ protected:
     }
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-    /// \param[in] timeStep      stabilization is ultimately dependent on the time step size.
     /// \param[in] outerRadius   radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    virtual void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) = 0;
+    virtual void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) = 0;
 
     /// \brief A getter for the numerical integration step function.
     NumericalStepIntegrateFunction& GetIntegrate()
@@ -221,12 +232,12 @@ public:
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
-    void Preprocess(double timeStep) override;
+    void Preprocess() override;
 
     /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
      */
-    void PerformEvolutionStep(unsigned int step) override;
+    void PerformEvolutionStep(unsigned int stepId) override;
 
     /**
      * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
@@ -319,10 +330,21 @@ protected:
     [[nodiscard]] float ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-    /// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
     /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) override;
+    void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) override;
+
+    /// \brief A getter for the scalar grid interpolator function.
+    ScalarGridInterpolationFunction2D& GetScalarInterpolate()
+    {
+        return m_ScalarInterpolate;
+    }
+
+    /// \brief A getter for the vector grid interpolator function.
+    VectorGridInterpolationFunction2D GetVectorInterpolate()
+    {
+        return m_VectorInterpolate;
+    }
 
 private:
 
@@ -339,6 +361,9 @@ private:
     std::vector<std::shared_ptr<Geometry::ScalarGrid2D>> m_InnerCurvesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
 
     pmp::mat3 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+
+    ScalarGridInterpolationFunction2D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
+    VectorGridInterpolationFunction2D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
 };
 
 /**
@@ -370,7 +395,7 @@ public:
     /**
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
-    void Preprocess(double timeStep) override;
+    void Preprocess() override;
 
 private:
 
@@ -381,11 +406,10 @@ private:
     [[nodiscard]] std::pair<float, float> CalculateCoVolumeRange() const;
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-	/// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
 	/// \param[in] minLength               the minimum length of a 1D co-volume within the custom curves.
 	/// \param[in] maxLength               the maximum length of a 1D co-volume within the custom curves.
 	/// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(double timeStep, float minLength, float maxLength, float stabilizationFactor = 1.0f);
+    void StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor = 1.0f);
 };
 
 /**
@@ -406,6 +430,9 @@ public:
 
         if (GetSettings().UseSemiImplicit)
         {
+            m_ImplicitLaplacianFunction =
+	            (laplacianType == MeshLaplacian::Barycentric ?
+	                pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
             GetIntegrate() = [this](unsigned int step)
             {
 	            SemiImplicitIntegrationStep(step);
@@ -423,12 +450,12 @@ public:
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
-    void Preprocess(double timeStep) override;
+    void Preprocess() override;
 
     /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
      */
-    void PerformEvolutionStep(unsigned int step) override;
+    void PerformEvolutionStep(unsigned int stepId) override;
 
     /**
      * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
@@ -503,10 +530,9 @@ protected:
     [[nodiscard]] float ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-	/// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
     /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(double timeStep, float outerRadius, float stabilizationFactor = 1.0f) override;
+    void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) override;
 
     /// \brief A getter for the inverse stabilization transformation matrix.
     pmp::mat4& GetTransformToOriginal()
@@ -538,6 +564,18 @@ protected:
         return m_LaplacianAreaFunction;
     }
 
+    /// \brief A getter for the scalar interpolator function.
+    ScalarGridInterpolationFunction3D& GetScalarInterpolate()
+    {
+        return m_ScalarInterpolate;
+    }
+
+    /// \brief A getter for the vector interpolator function.
+    VectorGridInterpolationFunction3D& GetVectorInterpolate()
+    {
+        return m_VectorInterpolate;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -555,6 +593,11 @@ private:
     pmp::mat4 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
     AreaFunction m_LaplacianAreaFunction{}; //>! a function for calculating co-volume areas (see [Meyer, Desbrun, Schroder, Barr, 2003])
+
+    ScalarGridInterpolationFunction3D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
+    VectorGridInterpolationFunction3D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
+
+    std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
 };
 
 /**
@@ -588,7 +631,7 @@ public:
     /**
      * \brief Special overridden preprocessing method which omits construction of inner/outer curves.
      */
-    void Preprocess(double timeStep) override;
+    void Preprocess() override;
 
 private:
 
@@ -599,11 +642,10 @@ private:
     [[nodiscard]] std::pair<float, float> CalculateCoVolumeRange() const;
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-    /// \param[in] timeStep                stabilization is ultimately dependent on the time step size.
     /// \param[in] minArea                 the minimum area of a 2D co-volume within the custom surfaces.
     /// \param[in] maxArea                 the maximum area of a 2D co-volume within the custom surfaces.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(double timeStep, float minArea, float maxArea, float stabilizationFactor = 1.0f);
+    void StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor = 1.0f);
 };
 
 //
@@ -630,7 +672,7 @@ public:
      */
     void Evolve() const
 	{
-        m_Strategy->Preprocess(m_Settings.TimeStep);
+        m_Strategy->Preprocess();
         if (m_Settings.ExportPerTimeStep)
         {
             m_Strategy->ExportCurrentState(0, m_Settings.OutputPath + m_Settings.ProcedureName);

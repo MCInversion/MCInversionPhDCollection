@@ -3494,7 +3494,7 @@ int main()
 			"blub",
 			"bunny",
 			"maxPlanck",
-			"nefertiti",
+			//"nefertiti", // takes ~16.5 sec per 80-step evolution!
 			"ogre",
 			"spot"
 		};
