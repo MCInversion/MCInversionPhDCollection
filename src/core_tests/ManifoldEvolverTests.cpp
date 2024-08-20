@@ -1,3 +1,4 @@
+
 #include "gtest/gtest.h"
 
 #include "pmp/algorithms/CurveFactory.h"
@@ -5,6 +6,15 @@
 
 #include "core/ManifoldEvolver.h"
 #include "geometry/IcoSphereBuilder.h"
+
+#include <filesystem>
+
+// set up root directory
+const std::filesystem::path fsRootPath = DROOT_DIR;
+const auto fsDataDirPath = fsRootPath / "data\\";
+const auto fsDataOutPath = fsRootPath / "output\\";
+const std::string dataDirPath = fsDataDirPath.string();
+const std::string dataOutPath = fsDataOutPath.string();
 
 // Suite: ManifoldEvolverTests_ManifoldCurveSuite
 
@@ -25,6 +35,45 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, IntersectingInnerAndOuterCircles_I
     EXPECT_THROW(evolver.Evolve(), std::invalid_argument);
 }
 
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingCircle_NoRemeshing)
+{
+    // Arrange
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    std::vector<pmp::ManifoldCurve2D> innerCurves;
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.TimeStep = 0.01;
+    strategySettings.UseInnerManifolds = false;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 10;
+    globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ProcedureName = "ShrinkingCircle_NoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    auto customStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+        strategySettings, outerCurve, innerCurves);
+
+    ManifoldEvolver evolver(globalSettings, std::move(customStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<CustomManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
+
+    ASSERT_TRUE(resultOuterCurve != nullptr);
+    ASSERT_TRUE(resultInnerCurves.empty());
+
+    for (int i = 0; i < 32; ++i)
+    {
+        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0f - 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
+    }
+}
+
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoRemeshing)
 {
     // Arrange
@@ -37,6 +86,10 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
     globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ProcedureName = "ShrinkingAndExpandingCircle_NoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
 
     auto customStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
         strategySettings, outerCurve, innerCurves);
@@ -57,7 +110,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
     for (int i = 0; i < 32; ++i)
     {
         EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0f - 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
-        EXPECT_NEAR(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), std::sqrt(0.5f + 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
+        EXPECT_NEAR(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), std::sqrt(0.25f + 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
     }
 }
 
