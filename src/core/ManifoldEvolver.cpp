@@ -25,8 +25,8 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
-	const auto cellSize = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
-	ComputeVariableDistanceFields(cellSize);
+	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	ComputeVariableDistanceFields();
 
 	StabilizeGeometries(outerRadius);
 	PrepareManifoldProperties();
@@ -164,7 +164,7 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
-void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields(float cellSize)
+void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 {
 	if (!m_OuterCurve || m_InnerCurves.empty())
 	{
@@ -173,7 +173,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields(float cellSiz
 	}
 
 	const SDF::DistanceField2DSettings curveDFSettings{
-		cellSize,
+		GetFieldCellSize(),
 		GetSettings().FieldSettings.FieldExpansionFactor,
 		DBL_MAX,
 		SDF::KDTreeSplitType::Center,
@@ -358,8 +358,8 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
-	const auto cellSize = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
-	ComputeVariableDistanceFields(cellSize);
+	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	ComputeVariableDistanceFields();
 
 	StabilizeGeometries(outerRadius);
 	PrepareManifoldProperties();
@@ -654,7 +654,6 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 	// ================================== Handle m_OuterSurface ==========================================================
 	{
 		const auto tStep = GetSettings().TimeStep;
-		const auto NVertices = static_cast<unsigned int>(m_OuterSurface->n_vertices());
 		auto vDistance = m_OuterSurface->vertex_property<pmp::Scalar>("v:distance");
 
 		for (const auto v : m_OuterSurface->vertices())
@@ -802,7 +801,7 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
-void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields(float cellSize)
+void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 {
 	if (!m_OuterSurface || m_InnerSurfaces.empty())
 	{
@@ -811,7 +810,7 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields(float cellS
 	}
 
 	const SDF::DistanceFieldSettings surfaceDFSettings{
-		cellSize,
+		GetFieldCellSize(),
 		GetSettings().FieldSettings.FieldExpansionFactor,
 		DBL_MAX,
 		SDF::KDTreeSplitType::Center,

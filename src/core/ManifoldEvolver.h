@@ -151,6 +151,9 @@ public:
         return m_Settings;
     }
 
+    /// \brief Calculate the distance fields to evolving manifolds if there should be an interaction between these manifolds.
+    virtual void ComputeVariableDistanceFields() = 0;
+
 protected:
 
     /// \brief A getter for the curvature term control function (epsilon).
@@ -191,12 +194,19 @@ protected:
     /// \brief A placeholder for the explicit integration method.
     virtual void ExplicitIntegrationStep(unsigned int step) = 0;
 
+    /// \brief A getter for the standardized cell size for the variable distance fields
+    pmp::Scalar& GetFieldCellSize()
+    {
+        return m_FieldCellSize;
+    }
+
 private:
 
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
     NumericalStepIntegrateFunction m_Integrate{}; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
 
     pmp::Scalar m_ScalingFactor{ 1.0f }; //>! the computed scaling factor for numerical stabilization.
+    pmp::Scalar m_FieldCellSize{ 0.1f }; //>! standardized cell size for the variable distance fields.
 };
 
 /**
@@ -268,6 +278,9 @@ public:
     /// \brief A specialized external getter which also transforms the stabilized inner curves to its original scale.
     [[nodiscard]] std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> GetInnerCurvesInOrigScale() const;
 
+    /// \brief Calculate m_OuterCurveDistanceField and m_InnerCurvesDistanceFields if there should be an interaction between these manifolds.
+    void ComputeVariableDistanceFields() override;
+
 protected:
 
     /// \brief Semi-implicit integration method step.
@@ -324,9 +337,6 @@ protected:
     /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
     [[nodiscard]] std::tuple<float, float, pmp::Point2> ComputeAmbientFields();
-
-    /// \brief Calculate m_OuterCurveDistanceField and m_InnerCurvesDistanceFields if there should be an interaction between these manifolds.
-    void ComputeVariableDistanceFields(float cellSize);
 
     /// \brief Construct m_OuterCurve and m_InnerCurves from settings.
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
@@ -491,6 +501,9 @@ public:
     /// \brief A specialized external getter which also transforms the stabilized inner surfaces to its original scale.
     [[nodiscard]] std::vector<std::shared_ptr<pmp::SurfaceMesh>> GetInnerSurfacesInOrigScale() const;
 
+    /// \brief Calculate m_OuterSurfaceDistanceField and m_InnerSurfacesDistanceFields if there should be an interaction between these manifolds.
+    void ComputeVariableDistanceFields() override;
+
 protected:
 
     /// \brief Semi-implicit integration method step.
@@ -529,9 +542,6 @@ protected:
     /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
     [[nodiscard]] std::tuple<float, float, pmp::Point> ComputeAmbientFields();
-
-    /// \brief Calculate m_OuterSurfaceDistanceField and m_InnerSurfacesDistanceFields if there should be an interaction between these manifolds.
-    void ComputeVariableDistanceFields(float cellSize);
 
     /// \brief Construct m_OuterSurface and m_InnerSurfaces from settings.
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
@@ -698,6 +708,8 @@ public:
             {
                 m_Strategy->Remesh();
             }
+
+            m_Strategy->ComputeVariableDistanceFields();
 
             if (m_Settings.ExportPerTimeStep)
             {
