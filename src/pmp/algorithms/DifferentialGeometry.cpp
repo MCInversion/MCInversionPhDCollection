@@ -230,7 +230,7 @@ double voronoi_area(const SurfaceMesh& mesh, Vertex v)
     return area;
 }
 
-double voronoi_area_barycentric(const SurfaceMesh& mesh, Vertex v)
+double barycentric_area(const SurfaceMesh& mesh, Vertex v)
 {
     double area(0.0);
 
@@ -262,7 +262,7 @@ double voronoi_area_barycentric(const SurfaceMesh& mesh, Vertex v)
     return area;
 }
 
-Point laplace(const SurfaceMesh& mesh, Vertex v)
+Point laplace_voronoi(const SurfaceMesh& mesh, Vertex v)
 {
     Point laplace(0.0, 0.0, 0.0);
 
@@ -284,6 +284,28 @@ Point laplace(const SurfaceMesh& mesh, Vertex v)
     return laplace;
 }
 
+Point laplace_barycentric(const SurfaceMesh& mesh, Vertex v)
+{
+    Point laplace(0.0, 0.0, 0.0);
+
+    if (!mesh.is_isolated(v))
+    {
+        Scalar sum_weights(0.0);
+
+        for (auto h : mesh.halfedges(v))
+        {
+            const auto weight = cotan_weight(mesh, mesh.edge(h));
+            sum_weights += weight;
+            laplace += weight * mesh.position(mesh.to_vertex(h));
+        }
+
+        laplace -= sum_weights * mesh.position(v);
+        laplace /= Scalar(2.0) * barycentric_area(mesh, v);
+    }
+
+    return laplace;
+}
+
 ImplicitLaplaceInfo laplace_implicit_voronoi(const SurfaceMesh& mesh, Vertex v)
 {
     ImplicitLaplaceInfo result{};
@@ -299,8 +321,8 @@ ImplicitLaplaceInfo laplace_implicit_voronoi(const SurfaceMesh& mesh, Vertex v)
         result.vertexWeights[mesh.to_vertex(h)] = weight;
     }
 
-    const auto vorArea = static_cast<Scalar>(voronoi_area(mesh, v));
-    const Scalar areaNorm = (2.0f * vorArea);
+    const auto area = static_cast<Scalar>(voronoi_area(mesh, v));
+    const Scalar areaNorm = (2.0f * area);
     for (auto& [v, weight] : result.vertexWeights)
         weight /= areaNorm;
 
@@ -324,8 +346,8 @@ ImplicitLaplaceInfo laplace_implicit_barycentric(const SurfaceMesh& mesh, Vertex
         result.vertexWeights[mesh.to_vertex(h)] = weight;
     }
 
-    const auto vorArea = static_cast<Scalar>(voronoi_area_barycentric(mesh, v));
-    const Scalar areaNorm = (2.0f * vorArea);
+    const auto area = static_cast<Scalar>(barycentric_area(mesh, v));
+    const Scalar areaNorm = (2.0f * area);
     for (auto& [v, weight] : result.vertexWeights)
         weight /= areaNorm;
 
@@ -367,7 +389,7 @@ VertexCurvature vertex_curvature(const SurfaceMesh& mesh, Vertex v)
     const Scalar area = voronoi_area(mesh, v);
     if (area > std::numeric_limits<Scalar>::min())
     {
-        c.mean = Scalar(0.5) * norm(laplace(mesh, v));
+        c.mean = Scalar(0.5) * norm(laplace_voronoi(mesh, v));
         c.gauss = (2.0 * M_PI - angle_sum(mesh, v)) / area;
 
         const Scalar s = sqrt(std::max(Scalar(0.0), c.mean * c.mean - c.gauss));

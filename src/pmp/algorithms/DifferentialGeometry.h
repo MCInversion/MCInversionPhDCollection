@@ -85,10 +85,13 @@ double cotan_weight(const SurfaceMesh& mesh, Edge e);
 double voronoi_area(const SurfaceMesh& mesh, Vertex v);
 
 //! compute barycentric Voronoi area of vertex v
-double voronoi_area_barycentric(const SurfaceMesh& mesh, Vertex v);
+double barycentric_area(const SurfaceMesh& mesh, Vertex v);
 
 //! compute Laplace vector for vertex v (normalized by Voronoi area)
-Point laplace(const SurfaceMesh& mesh, Vertex v);
+Point laplace_voronoi(const SurfaceMesh& mesh, Vertex v);
+
+//! compute Laplace vector for vertex v (normalized by barycentric area)
+Point laplace_barycentric(const SurfaceMesh& mesh, Vertex v);
 
 //! wrapper for implicit mesh Laplacian
 struct ImplicitLaplaceInfo

@@ -29,6 +29,7 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	ComputeVariableDistanceFields(cellSize);
 
 	StabilizeGeometries(outerRadius);
+	PrepareManifoldProperties();
 }
 
 void CustomManifoldCurveEvolutionStrategy::Preprocess()
@@ -43,6 +44,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 
 	const auto [minLength, maxLength] = CalculateCoVolumeRange();
 	StabilizeCustomGeometries(minLength, maxLength);
+	PrepareManifoldProperties();
 }
 
 void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
@@ -130,6 +132,10 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 {
 
+}
+
+void ManifoldCurveEvolutionStrategy::PrepareManifoldProperties()
+{
 }
 
 std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
@@ -356,6 +362,7 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 	ComputeVariableDistanceFields(cellSize);
 
 	StabilizeGeometries(outerRadius);
+	PrepareManifoldProperties();
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
@@ -370,6 +377,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 
 	const auto [minArea, maxArea] = CalculateCoVolumeRange();
 	StabilizeCustomGeometries(minArea, maxArea);
+	PrepareManifoldProperties();
 }
 
 void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
@@ -443,6 +451,7 @@ std::vector<std::shared_ptr<pmp::SurfaceMesh>> ManifoldSurfaceEvolutionStrategy:
 }
 
 // ------------------------------------------------
+
 
 void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
@@ -642,8 +651,130 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 {
-	
+	// ================================== Handle m_OuterSurface ==========================================================
+	{
+		const auto tStep = GetSettings().TimeStep;
+		const auto NVertices = static_cast<unsigned int>(m_OuterSurface->n_vertices());
+		auto vDistance = m_OuterSurface->vertex_property<pmp::Scalar>("v:distance");
+
+		for (const auto v : m_OuterSurface->vertices())
+		{
+			const auto vPos = m_OuterSurface->position(v);
+			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
+			{
+				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *innerSurfaceDf));
+				if (innerDfAtVPos < vDistance[v])
+					vDistance[v] = innerDfAtVPos;
+			}
+		}
+
+		pmp::Normals::compute_vertex_normals(*m_OuterSurface);
+		auto vNormalsProp = m_OuterSurface->get_vertex_property<pmp::vec3>("v:normal");
+
+		for (const auto v : m_OuterSurface->vertices())
+		{
+			if (m_OuterSurface->is_boundary(v))
+				continue; // skip boundary vertices
+
+			const auto vPosToUpdate = m_OuterSurface->position(v);
+			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
+
+			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
+			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
+
+			// Laplacian term (already weighted by epsilon and area)
+			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*m_OuterSurface, v);
+
+			// Tangential redistribution velocity
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			pmp::vec3 tanVelocity(0.0, 0.0, 0.0);
+			if (tanRedistWeight > 0.0f)
+			{
+				tanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterSurface, v, vNormal, tanRedistWeight);
+			}
+
+			// Update the vertex position explicitly
+			auto updatedPosition = vPosToUpdate + tStep * (laplacianTerm + etaCtrlWeight * vNormal + tanVelocity);
+
+			// Check if the updated position is within bounds
+			if (!m_DistanceField->Box().Contains(updatedPosition))
+			{
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep: vertex " + std::to_string(v.idx()) + " outside m_DistanceField->Box() for time step id: "
+					+ std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
+			}
+
+			m_OuterSurface->position(v) = updatedPosition;
+		}
+	}
+
+	// ================================== Handle m_InnerSurfaces ==========================================================
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		const auto tStep = GetSettings().TimeStep;
+		const auto NVertices = static_cast<unsigned int>(innerSurface->n_vertices());
+		auto vDistance = innerSurface->vertex_property<pmp::Scalar>("v:distance");
+
+		for (const auto v : innerSurface->vertices())
+		{
+			const auto vPos = innerSurface->position(v);
+			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			if (!m_OuterSurfaceDistanceField)
+				continue;
+
+			const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_OuterSurfaceDistanceField));
+			if (outerDfAtVPos < vDistance[v])
+				vDistance[v] = outerDfAtVPos;
+		}
+
+		pmp::Normals::compute_vertex_normals(*innerSurface);
+		auto vNormalsProp = innerSurface->get_vertex_property<pmp::vec3>("v:normal");
+
+		for (const auto v : innerSurface->vertices())
+		{
+			if (innerSurface->is_boundary(v))
+				continue; // skip boundary vertices
+
+			const auto vPosToUpdate = innerSurface->position(v);
+			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
+
+			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
+			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
+
+			// Laplacian term (already weighted by epsilon and area)
+			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*innerSurface, v);
+
+			// Tangential redistribution velocity
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			pmp::vec3 tanVelocity(0.0, 0.0, 0.0);
+			if (tanRedistWeight > 0.0f)
+			{
+				tanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerSurface, v, vNormal, tanRedistWeight);
+			}
+
+			// Update the vertex position explicitly
+			auto updatedPosition = vPosToUpdate + tStep * (laplacianTerm + etaCtrlWeight * vNormal + tanVelocity);
+
+			// Check if the updated position is within bounds
+			if (!m_DistanceField->Box().Contains(updatedPosition))
+			{
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep: innerSurface vertex " + std::to_string(v.idx()) + " outside m_DistanceField->Box() for time step id: "
+					+ std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
+			}
+
+			innerSurface->position(v) = updatedPosition;
+		}
+	}
 }
+
 
 std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAmbientFields()
 {
@@ -698,6 +829,10 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields(float cellS
 		m_InnerSurfacesDistanceFields.emplace_back(std::make_shared<Geometry::ScalarGrid>(
 			SDF::DistanceFieldGenerator::Generate(innerSurfaceAdapter, surfaceDFSettings)));
 	}
+}
+
+void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
+{
 }
 
 float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)

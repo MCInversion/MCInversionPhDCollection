@@ -29,7 +29,7 @@ SphereTest::SphereTest(const SphereTestEvolutionSettings& settings)
 			pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
 	m_LaplacianAreaFunction =
 		(m_EvolSettings.LaplacianType == ST_MeshLaplacian::Barycentric ?
-			pmp::voronoi_area_barycentric : pmp::voronoi_area);
+			pmp::barycentric_area : pmp::voronoi_area);
 }
 
 // ================================================================================================

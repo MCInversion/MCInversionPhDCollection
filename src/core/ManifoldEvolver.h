@@ -176,6 +176,9 @@ protected:
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
     virtual void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) = 0;
 
+    /// \brief Prepares the property arrays for all evolving manifolds.
+    virtual void PrepareManifoldProperties() = 0;
+
     /// \brief A getter for the numerical integration step function.
     NumericalStepIntegrateFunction& GetIntegrate()
     {
@@ -272,6 +275,9 @@ protected:
 
     /// \brief Explicit integration method step.
     void ExplicitIntegrationStep(unsigned int step) override;
+
+    /// \brief Prepares the property arrays for all evolving manifolds.
+    void PrepareManifoldProperties() override;
 
     /// \brief A getter for the outer curve
     std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
@@ -426,13 +432,15 @@ public:
 		m_TargetPointCloud(std::move(targetPointCloud))
     {
         m_LaplacianAreaFunction = (laplacianType == MeshLaplacian::Barycentric ?
-                pmp::voronoi_area_barycentric : pmp::voronoi_area);
+                pmp::barycentric_area : pmp::voronoi_area);
+        m_ExplicitLaplacianFunction = (laplacianType == MeshLaplacian::Barycentric ?
+            pmp::laplace_barycentric : pmp::laplace_voronoi);
+        m_ImplicitLaplacianFunction =
+            (laplacianType == MeshLaplacian::Barycentric ?
+                pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
 
         if (GetSettings().UseSemiImplicit)
         {
-            m_ImplicitLaplacianFunction =
-	            (laplacianType == MeshLaplacian::Barycentric ?
-	                pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
             GetIntegrate() = [this](unsigned int step)
             {
 	            SemiImplicitIntegrationStep(step);
@@ -490,6 +498,9 @@ protected:
 
     /// \brief Explicit integration method step.
     void ExplicitIntegrationStep(unsigned int step) override;
+
+    /// \brief Prepares the property arrays for all evolving manifolds.
+    void PrepareManifoldProperties() override;
 
     /// \brief A getter for the outer surface
     std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface()
@@ -597,7 +608,8 @@ private:
     ScalarGridInterpolationFunction3D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
     VectorGridInterpolationFunction3D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
 
-    std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
+    std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
+    std::function<pmp::Point(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ExplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
 };
 
 /**
@@ -682,14 +694,14 @@ public:
         {
             m_Strategy->PerformEvolutionStep(step);
 
-            if (m_Settings.ExportPerTimeStep)
-            {
-                m_Strategy->ExportCurrentState(step, m_Settings.OutputPath + m_Settings.ProcedureName);
-            }
-
             if (m_Settings.DoRemeshing && m_Strategy->ShouldRemesh())
             {
                 m_Strategy->Remesh();
+            }
+
+            if (m_Settings.ExportPerTimeStep)
+            {
+                m_Strategy->ExportCurrentState(step, m_Settings.OutputPath + m_Settings.ProcedureName);
             }
         }
 

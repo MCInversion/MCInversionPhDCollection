@@ -57,17 +57,17 @@ TEST_F(DifferentialGeometryTest, triangle_area_face)
     EXPECT_EQ(area, 0.5);
 }
 
-TEST_F(DifferentialGeometryTest, voronoi_area_barycentric)
+TEST_F(DifferentialGeometryTest, barycentric_area)
 {
     one_ring();
-    Scalar area = voronoi_area_barycentric(mesh, central_vertex);
+    Scalar area = barycentric_area(mesh, central_vertex);
     EXPECT_FLOAT_EQ(area, 0.024590395);
 }
 
 TEST_F(DifferentialGeometryTest, laplace)
 {
     one_ring();
-    auto lv = laplace(mesh, central_vertex);
+    auto lv = laplace_voronoi(mesh, central_vertex);
     EXPECT_GT(norm(lv), 0);
 }
 
