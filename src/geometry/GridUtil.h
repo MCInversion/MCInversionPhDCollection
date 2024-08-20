@@ -148,6 +148,50 @@ namespace Geometry
 	 */
 	[[nodiscard]] VectorGrid2D ComputeNormalizedNegativeGradient(const ScalarGrid2D& scalarGrid);
 
+	// ==========================================================================================
+	//             Interpolation
+	// ------------------------------------------------------------------------------------------
+
+	/**
+	 * \brief Retrieves the value of the nearest neighbor from the surrounding cell values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated scalar grid.
+	 * \return interpolated value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] double GetNearestNeighborScalarValue(const pmp::vec3& samplePt, const ScalarGrid& grid);
+
+	/**
+	 * \brief Retrieves the value of the nearest neighbor from the surrounding cell vector values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated vector grid.
+	 * \return interpolated vector value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] pmp::dvec3 GetNearestNeighborVectorValue(const pmp::vec3& samplePt, const VectorGrid& grid);
+
+	/**
+	 * \brief Retrieves the value of the nearest neighbor from the surrounding cell values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated scalar grid.
+	 * \return interpolated value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] double GetNearestNeighborScalarValue2D(const pmp::vec2& samplePt, const ScalarGrid2D& grid);
+
+	/**
+	 * \brief Retrieves the value of the nearest neighbor from the surrounding cell vector values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated vector grid.
+	 * \return interpolated vector value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] pmp::dvec2 GetNearestNeighborVectorValue2D(const pmp::vec2& samplePt, const VectorGrid2D& grid);
+
 	/**
 	 * \brief Trilinearly interpolates from the surrounding cell values of a sampled point.
 	 * \param samplePt    point where the grid is sampled.
@@ -167,6 +211,28 @@ namespace Geometry
 	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
 	 */
 	[[nodiscard]] pmp::dvec3 TrilinearInterpolateVectorValue(const pmp::vec3& samplePt, const VectorGrid& grid);
+
+	/**
+	 * \brief Bilinearly interpolates from the surrounding cell values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated scalar grid.
+	 * \return interpolated value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] double BilinearInterpolateScalarValue(const pmp::vec2& samplePt, const ScalarGrid2D& grid);
+
+	/**
+	 * \brief Bilinearly interpolates from the surrounding cell vector values of a sampled point.
+	 * \param samplePt    point where the grid is sampled.
+	 * \param grid        interpolated vector grid.
+	 * \return interpolated vector value.
+	 *
+	 * DISCLAIMER: For samplePt outside of grid.Box(), the values are clamped to boundary values.
+	 */
+	[[nodiscard]] pmp::dvec2 BilinearInterpolateVectorValue(const pmp::vec2& samplePt, const VectorGrid2D& grid);
+
+	// ------------------------------------------------------------------------------------------------
 
 	/**
 	 * \brief Computes sign values (-1 or 1) for each grid point using mesh normals.

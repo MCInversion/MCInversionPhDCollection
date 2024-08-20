@@ -861,6 +861,72 @@ namespace Geometry
 		return result;
 	}
 
+	// ==================================================================================================
+	//                                     Interpolation utils 
+	// --------------------------------------------------------------------------------------------------
+
+	/// \brief zero index with respect to axis-aligned grid dimension.
+	constexpr size_t ZERO_CELL_ID = 0;
+
+	double GetNearestNeighborScalarValue(const pmp::vec3& samplePt, const ScalarGrid& grid)
+	{
+		const auto& [Nx, Ny, Nz] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+		const auto iz = std::max(std::min(static_cast<size_t>(std::round((samplePt[2] - boxMin[2]) / cellSize)), Nz - 1), ZERO_CELL_ID);
+
+		const auto i = Nx * Ny * iz + Nx * iy + ix;
+		return grid.Values()[i];
+	}
+
+	pmp::dvec3 GetNearestNeighborVectorValue(const pmp::vec3& samplePt, const VectorGrid& grid)
+	{
+		const auto& [Nx, Ny, Nz] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+		const auto iz = std::max(std::min(static_cast<size_t>(std::round((samplePt[2] - boxMin[2]) / cellSize)), Nz - 1), ZERO_CELL_ID);
+
+		const auto i = Nx * Ny * iz + Nx * iy + ix;
+		return pmp::dvec3(grid.ValuesX()[i], grid.ValuesY()[i], grid.ValuesZ()[i]);
+	}
+
+	// ------------------------------------------------
+
+	double GetNearestNeighborScalarValue2D(const pmp::vec2& samplePt, const ScalarGrid2D& grid)
+	{
+		const auto& [Nx, Ny] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+
+		const auto i = Nx * iy + ix;
+		return grid.Values()[i];
+	}
+
+	pmp::dvec2 GetNearestNeighborVectorValue2D(const pmp::vec2& samplePt, const VectorGrid2D& grid)
+	{
+		const auto& [Nx, Ny] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+
+		const auto i = Nx * iy + ix;
+		return pmp::dvec2(grid.ValuesX()[i], grid.ValuesY()[i]);
+	}
+
+	// --------------------------------------------------------------------------------------
+	//
+
 	/// \brief A wrapper for grid interpolation scalar values
 	struct SurroundingScalarCells
 	{
@@ -876,9 +942,6 @@ namespace Geometry
 		double Val011{ 0.0 };
 		double Val111{ 0.0 };
 	};
-
-	/// \brief zero index with respect to axis-aligned grid dimension.
-	constexpr size_t ZERO_CELL_ID = 0;
 
 	/**
 	 * \brief Gets surrounding cell values of a sampled point from a scalar grid.
@@ -1108,6 +1171,125 @@ namespace Geometry
 			interpolateValueFromCoordId(2)
 		);
 	}
+
+	// ------------------------------------------------------------------------------------------
+
+	/// \brief A wrapper for grid interpolation scalar values
+	struct SurroundingScalarCells2D
+	{
+		pmp::vec2 MinPt{};
+		pmp::vec2 MaxPt{};
+		double Val00{ 0.0 };
+		double Val10{ 0.0 };
+		double Val01{ 0.0 };
+		double Val11{ 0.0 };
+	};
+
+	SurroundingScalarCells2D GetSurroundingCells2D(const pmp::vec2& samplePt, const ScalarGrid2D& grid)
+	{
+		const auto& [Nx, Ny] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+
+		const auto ix1 = std::min(ix + 1, Nx - 1);
+		const auto iy1 = std::min(iy + 1, Ny - 1);
+
+		const auto i00 = Nx * iy + ix;
+		const auto i10 = Nx * iy + ix1;
+		const auto i01 = Nx * iy1 + ix;
+		const auto i11 = Nx * iy1 + ix1;
+
+		const auto& values = grid.Values();
+		return {
+			pmp::vec2{boxMin[0] + static_cast<float>(ix) * cellSize, boxMin[1] + static_cast<float>(iy) * cellSize},
+			pmp::vec2{boxMin[0] + static_cast<float>(ix + 1) * cellSize, boxMin[1] + static_cast<float>(iy + 1) * cellSize},
+			values[i00], values[i10], values[i01], values[i11]
+		};
+	}
+
+	double BilinearInterpolateScalarValue(const pmp::vec2& samplePt, const ScalarGrid2D& grid)
+	{
+		assert(grid.IsValid() && grid.CellSize() > 0.0f);
+		const auto surrCellVals = GetSurroundingCells2D(samplePt, grid);
+		const auto x = static_cast<double>(samplePt[0]), y = static_cast<double>(samplePt[1]);
+
+		const auto x0 = static_cast<double>(surrCellVals.MinPt[0]), y0 = static_cast<double>(surrCellVals.MinPt[1]);
+		const auto x1 = static_cast<double>(surrCellVals.MaxPt[0]), y1 = static_cast<double>(surrCellVals.MaxPt[1]);
+
+		const auto dx = (x - x0) / (x1 - x0);
+		const auto dy = (y - y0) / (y1 - y0);
+
+		return (1 - dx) * (1 - dy) * surrCellVals.Val00 +
+			dx * (1 - dy) * surrCellVals.Val10 +
+			(1 - dx) * dy * surrCellVals.Val01 +
+			dx * dy * surrCellVals.Val11;
+	}
+
+	// --------------------------------------------------------------------------------------------
+
+	/// \brief A wrapper for grid interpolation vector values
+	struct SurroundingVectorCells2D
+	{
+		pmp::vec2 MinPt{};
+		pmp::vec2 MaxPt{};
+		pmp::dvec2 Val00{ 0.0 };
+		pmp::dvec2 Val10{ 0.0 };
+		pmp::dvec2 Val01{ 0.0 };
+		pmp::dvec2 Val11{ 0.0 };
+	};
+
+	SurroundingVectorCells2D GetSurroundingCells2D(const pmp::vec2& samplePt, const VectorGrid2D& grid)
+	{
+		const auto& [Nx, Ny] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+
+		const auto ix1 = std::min(ix + 1, Nx - 1);
+		const auto iy1 = std::min(iy + 1, Ny - 1);
+
+		const auto i00 = Nx * iy + ix;
+		const auto i10 = Nx * iy + ix1;
+		const auto i01 = Nx * iy1 + ix;
+		const auto i11 = Nx * iy1 + ix1;
+
+		const auto& valuesX = grid.ValuesX();
+		const auto& valuesY = grid.ValuesY();
+		return {
+			pmp::vec2{boxMin[0] + static_cast<float>(ix) * cellSize, boxMin[1] + static_cast<float>(iy) * cellSize},
+			pmp::vec2{boxMin[0] + static_cast<float>(ix + 1) * cellSize, boxMin[1] + static_cast<float>(iy + 1) * cellSize},
+			pmp::dvec2{valuesX[i00], valuesY[i00]},
+			pmp::dvec2{valuesX[i10], valuesY[i10]},
+			pmp::dvec2{valuesX[i01], valuesY[i01]},
+			pmp::dvec2{valuesX[i11], valuesY[i11]}
+		};
+	}
+
+	pmp::dvec2 BilinearInterpolateVectorValue(const pmp::vec2& samplePt, const VectorGrid2D& grid)
+	{
+		assert(grid.IsValid() && grid.CellSize() > 0.0f);
+		const auto surrCellVals = GetSurroundingCells2D(samplePt, grid);
+		const auto x = static_cast<double>(samplePt[0]), y = static_cast<double>(samplePt[1]);
+
+		const auto x0 = static_cast<double>(surrCellVals.MinPt[0]), y0 = static_cast<double>(surrCellVals.MinPt[1]);
+		const auto x1 = static_cast<double>(surrCellVals.MaxPt[0]), y1 = static_cast<double>(surrCellVals.MaxPt[1]);
+
+		const auto dx = (x - x0) / (x1 - x0);
+		const auto dy = (y - y0) / (y1 - y0);
+
+		return
+			(1 - dx) * (1 - dy) * surrCellVals.Val00 +
+			dx * (1 - dy) * surrCellVals.Val10 +
+			(1 - dx) * dy * surrCellVals.Val01 +
+			dx * dy * surrCellVals.Val11;
+	}
+
+	// --------------------------------------------------------------------------------------------
 
 	void ComputeInteriorExteriorSignFromMeshNormals(ScalarGrid& grid, const pmp::SurfaceMesh& mesh)
 	{

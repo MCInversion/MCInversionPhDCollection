@@ -2,6 +2,7 @@
 
 #include "geometry/GeometryAdapters.h"
 #include "geometry/Grid.h"
+#include "geometry/GridUtil.h"
 
 #include "EvolverUtilsCommon.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
@@ -240,6 +241,17 @@ public:
 	            ExplicitIntegrationStep(step);
             };
         }
+
+        if (GetSettings().UseLinearGridInterpolation)
+        {
+            m_ScalarInterpolate = Geometry::BilinearInterpolateScalarValue;
+            m_VectorInterpolate = Geometry::BilinearInterpolateVectorValue;
+        }
+        else
+        {
+            m_ScalarInterpolate = Geometry::GetNearestNeighborScalarValue2D;
+            m_VectorInterpolate = Geometry::GetNearestNeighborVectorValue2D;
+        }
     }
 
     /**
@@ -445,8 +457,7 @@ public:
                 pmp::barycentric_area : pmp::voronoi_area);
         m_ExplicitLaplacianFunction = (laplacianType == MeshLaplacian::Barycentric ?
             pmp::laplace_barycentric : pmp::laplace_voronoi);
-        m_ImplicitLaplacianFunction =
-            (laplacianType == MeshLaplacian::Barycentric ?
+        m_ImplicitLaplacianFunction = (laplacianType == MeshLaplacian::Barycentric ?
                 pmp::laplace_implicit_barycentric : pmp::laplace_implicit_voronoi);
 
         if (GetSettings().UseSemiImplicit)
@@ -462,6 +473,17 @@ public:
             {
 	            ExplicitIntegrationStep(step);
             };
+        }
+
+        if (GetSettings().UseLinearGridInterpolation)
+        {
+            m_ScalarInterpolate = Geometry::TrilinearInterpolateScalarValue;
+            m_VectorInterpolate = Geometry::TrilinearInterpolateVectorValue;
+        }
+        else
+        {
+            m_ScalarInterpolate = Geometry::GetNearestNeighborScalarValue;
+            m_VectorInterpolate = Geometry::GetNearestNeighborVectorValue;
         }
     }
 

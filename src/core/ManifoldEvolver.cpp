@@ -132,7 +132,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 2);
 
-		auto vDistance = m_OuterCurve->vertex_property<pmp::Scalar>("v:distance");
+		auto vDistance = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:distance");
 		const auto tStep = GetSettings().TimeStep;
 
 		for (const auto v : m_OuterCurve->vertices())
@@ -229,7 +229,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 2);
 
-		auto vDistance = innerCurve->vertex_property<pmp::Scalar>("v:distance");
+		auto vDistance = innerCurve->get_vertex_property<pmp::Scalar>("v:distance");
 		const auto tStep = GetSettings().TimeStep;
 
 		for (const auto v : innerCurve->vertices())
@@ -661,7 +661,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 3);
 
-		auto vDistance = m_OuterSurface->vertex_property<pmp::Scalar>("v:distance");
+		auto vDistance = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:distance");
 		const auto tStep = GetSettings().TimeStep;
 
 		for (const auto v : m_OuterSurface->vertices())
@@ -758,7 +758,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 3);
 
-		auto vDistance = innerSurface->vertex_property<pmp::Scalar>("v:distance");
+		auto vDistance = innerSurface->get_vertex_property<pmp::Scalar>("v:distance");
 		const auto tStep = GetSettings().TimeStep;
 
 		for (const auto v : innerSurface->vertices())
@@ -854,7 +854,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 	// ================================== Handle m_OuterSurface ==========================================================
 	{
 		const auto tStep = GetSettings().TimeStep;
-		auto vDistance = m_OuterSurface->vertex_property<pmp::Scalar>("v:distance");
+		auto vDistance = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:distance");
 
 		for (const auto v : m_OuterSurface->vertices())
 		{
@@ -915,7 +915,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
 		const auto tStep = GetSettings().TimeStep;
-		auto vDistance = innerSurface->vertex_property<pmp::Scalar>("v:distance");
+		auto vDistance = innerSurface->get_vertex_property<pmp::Scalar>("v:distance");
 
 		for (const auto v : innerSurface->vertices())
 		{
