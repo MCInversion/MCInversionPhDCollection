@@ -7,6 +7,7 @@
 
 #include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 
 namespace pmp {
 
@@ -105,6 +106,12 @@ struct ImplicitLaplaceInfo
 
 //! compute weights for implicit Laplacian (normalized by Barycentric Voronoi area).
 [[nodiscard]] ImplicitLaplaceInfo laplace_implicit_barycentric(const SurfaceMesh& mesh, Vertex v);
+
+//! compute weights for implicit Laplacian (normalized by midpoint co-length at vertex v).
+[[nodiscard]] ImplicitLaplaceInfo laplace_implicit_1D(const ManifoldCurve2D& curve, Vertex v);
+
+//! compute the Laplace vector for vertex v
+[[nodiscard]] Point2 laplace_1D(const ManifoldCurve2D& curve, Vertex v);
 
 //! compute the sum of angles around vertex v (used for Gaussian curvature)
 Scalar angle_sum(const SurfaceMesh& mesh, Vertex v);

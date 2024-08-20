@@ -98,3 +98,47 @@ TEST_F(DifferentialGeometryTest, centroid)
     auto center = centroid(sphere);
     EXPECT_LT(norm(center), 1e-5);
 }
+
+class DifferentialGeometryCurveTest : public ::testing::Test
+{
+public:
+    ManifoldCurve2D curve;
+    Vertex v0, v1, v;
+    Edge e0, e1;
+
+    void SetUp() override
+    {
+        v0 = curve.add_vertex(Point2(-1.1f, 0.0f));
+        v1 = curve.add_vertex(Point2(1.15f, 0.0f));
+        v = curve.add_vertex(Point2(-0.1f, 0.5f));
+        e0 = curve.add_edge(v1, v);
+        e1 = curve.add_edge(v, v0);
+    }
+};
+
+TEST_F(DifferentialGeometryCurveTest, laplace_1D_TestCase)
+{
+    const auto laplaceCentral = laplace_1D(curve, v);
+    const auto laplaceBoundary0 = laplace_1D(curve, v0);
+    const auto laplaceBoundary1 = laplace_1D(curve, v1);
+    const auto vIso = curve.add_vertex(Point2(1.0, 1.0));
+    const auto laplaceIsolated = laplace_1D(curve, vIso);
+
+    EXPECT_NEAR(laplaceCentral[0], 0.034f, 1e-3f);
+    EXPECT_NEAR(laplaceCentral[1], -0.818f, 1e-3f);
+    EXPECT_NEAR(laplaceBoundary0[0], 0.0f, 1e-3f);
+    EXPECT_NEAR(laplaceBoundary0[1], 0.0f, 1e-3f);
+    EXPECT_NEAR(laplaceBoundary1[0], 0.0f, 1e-3f);
+    EXPECT_NEAR(laplaceBoundary1[1], 0.0f, 1e-3f);
+    EXPECT_NEAR(laplaceIsolated[0], 0.0f, 1e-3f);
+    EXPECT_NEAR(laplaceIsolated[1], 0.0f, 1e-3f);
+}
+
+TEST_F(DifferentialGeometryCurveTest, laplace_implicit_1D_TestCase)
+{
+    const auto laplaceWeightsCentral = laplace_implicit_1D(curve, v);
+
+    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v0), 0.8945f, 1e-3f);
+    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v1), 0.7429f, 1e-3f);
+    EXPECT_NEAR(laplaceWeightsCentral.weightSum, 1.6374f, 1e-3f);
+}

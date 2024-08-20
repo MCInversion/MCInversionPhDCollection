@@ -1,6 +1,7 @@
 #include "EvolverUtilsCommon.h"
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 #include "geometry/IcoSphereBuilder.h"
 
 CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
@@ -69,6 +70,20 @@ pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, 
 		result += (1.0f + eDot) * (e0 + e1);
 	}
 	result *= weight / static_cast<float>(mesh.valence(v));
+	const auto resultDotNormal = pmp::dot(result, vNormal);
+	return (result - resultDotNormal * vNormal);
+}
+
+pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v, const pmp::vec2& vNormal, const float& weight)
+{
+	pmp::vec2 result{};
+	if (!curve.has_vertex_property("v:normal") || curve.is_isolated(v) || curve.is_boundary(v))
+		return result;
+
+	const auto [vPrev, vNext] = curve.vertices(v);
+	const auto e0Vec = curve.position(vPrev) - curve.position(v);
+	const auto e1Vec = curve.position(vNext) - curve.position(v);
+	result += 0.5f * (e0Vec + e1Vec);
 	const auto resultDotNormal = pmp::dot(result, vNormal);
 	return (result - resultDotNormal * vNormal);
 }

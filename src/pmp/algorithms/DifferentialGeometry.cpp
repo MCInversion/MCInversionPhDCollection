@@ -356,6 +356,38 @@ ImplicitLaplaceInfo laplace_implicit_barycentric(const SurfaceMesh& mesh, Vertex
     return result;
 }
 
+ImplicitLaplaceInfo laplace_implicit_1D(const ManifoldCurve2D& curve, Vertex v)
+{
+    ImplicitLaplaceInfo result{};
+    if (curve.is_isolated(v) || curve.is_boundary(v))
+        return result;
+
+    const auto [eTo, eFrom] = curve.edges(v);
+    const Scalar l0 = curve.edge_length(eTo);
+    const Scalar l1 = curve.edge_length(eFrom);
+    const auto [vPrev, vNext] = curve.vertices(v);
+
+    result.vertexWeights[vPrev] = 1.0f / l0;
+    result.vertexWeights[vNext] = 1.0f / l1;
+    result.weightSum = (1.0f / l0) + (1.0f / l1);
+    return result;
+}
+
+Point2 laplace_1D(const ManifoldCurve2D& curve, Vertex v)
+{
+    Point2 laplace(0.0, 0.0);
+    if (curve.is_isolated(v) || curve.is_boundary(v))
+        return laplace;
+
+    const auto [eTo, eFrom] = curve.edges(v);
+    const Scalar l0 = curve.edge_length(eTo);
+    const Scalar l1 = curve.edge_length(eFrom);
+
+    laplace += (1.0f / l0) * (curve.position(curve.from_vertex(eTo)) - curve.position(v));
+    laplace += (1.0f / l1) * (curve.position(curve.to_vertex(eFrom)) - curve.position(v));
+    return laplace;
+}
+
 Scalar angle_sum(const SurfaceMesh& mesh, Vertex v)
 {
     Scalar angles(0.0);

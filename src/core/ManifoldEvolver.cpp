@@ -49,7 +49,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 
 void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
-
+	GetIntegrate()(stepId);
 }
 
 bool ManifoldCurveEvolutionStrategy::ShouldRemesh()
@@ -126,7 +126,198 @@ std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrateg
 
 void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
+	// ================================== Handle m_OuterCurve ==========================================================
+	{
+		const auto NVertices = static_cast<unsigned int>(m_OuterCurve->n_vertices());
+		SparseMatrix sysMat(NVertices, NVertices);
+		Eigen::MatrixXd sysRhs(NVertices, 2);
 
+		auto vDistance = m_OuterCurve->vertex_property<pmp::Scalar>("v:distance");
+		const auto tStep = GetSettings().TimeStep;
+
+		for (const auto v : m_OuterCurve->vertices())
+		{
+			const auto vPos = m_OuterCurve->position(v);
+			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			for (const auto& innerCurveDf : m_InnerCurvesDistanceFields)
+			{
+				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *innerCurveDf));
+				if (innerDfAtVPos < vDistance[v])
+					vDistance[v] = innerDfAtVPos;
+			}
+		}
+
+		pmp::Normals::compute_vertex_normals(*m_OuterCurve);
+		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
+
+		// prepare matrix & rhs for m_OuterCurve:
+		std::vector<Eigen::Triplet<double>> tripletList;
+		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
+
+		for (const auto v : m_OuterCurve->vertices())
+		{
+			const auto vPosToUpdate = m_OuterCurve->position(v);
+
+			if (m_OuterCurve->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector2d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
+				continue;
+			}
+
+			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
+
+			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
+			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
+
+			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
+			sysRhs.row(v.idx()) = vertexRhs;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0f)
+			{
+				// compute tangential velocity
+				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterCurve, v, vNormal, tanRedistWeight);
+				sysRhs.row(v.idx()) += tStep * Eigen::Vector2d(vTanVelocity);
+			}
+
+			const auto laplaceWeightInfo = pmp::laplace_implicit_1D(*m_OuterCurve, v); // Laplacian weights
+			tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum)));
+
+			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
+			{
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), w.idx(), -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight)));
+			}
+		}
+
+		// After the loop
+		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+
+		// solve
+		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
+		Eigen::MatrixXd x = solver.solve(sysRhs);
+		if (solver.info() != Eigen::Success)
+		{
+			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
+				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
+			std::cerr << msg;
+			throw std::runtime_error(msg);
+		}
+
+		// update vertex positions & verify mesh within bounds
+		for (unsigned int i = 0; i < NVertices; i++)
+		{
+			const auto newPos = x.row(i);
+			if (!m_DistanceField->Box().Contains(newPos))
+			{
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
+					+ std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
+			}
+			m_OuterCurve->position(pmp::Vertex(i)) = newPos;
+		}
+	}
+
+	// ================================== Handle m_InnerCurves ==========================================================
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		const auto NVertices = static_cast<unsigned int>(innerCurve->n_vertices());
+		SparseMatrix sysMat(NVertices, NVertices);
+		Eigen::MatrixXd sysRhs(NVertices, 2);
+
+		auto vDistance = innerCurve->vertex_property<pmp::Scalar>("v:distance");
+		const auto tStep = GetSettings().TimeStep;
+
+		for (const auto v : innerCurve->vertices())
+		{
+			const auto vPos = innerCurve->position(v);
+			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			if (!m_OuterCurveDistanceField)
+				continue;
+
+			const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_OuterCurveDistanceField));
+			if (outerDfAtVPos < vDistance[v])
+				vDistance[v] = outerDfAtVPos;
+		}
+
+		pmp::Normals::compute_vertex_normals(*innerCurve);
+		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
+
+		// prepare matrix & rhs for m_OuterCurve:
+		std::vector<Eigen::Triplet<double>> tripletList;
+		tripletList.reserve(static_cast<size_t>(NVertices) * 6);  // Assuming an average of 6 entries per vertex
+
+		for (const auto v : innerCurve->vertices())
+		{
+			const auto vPosToUpdate = innerCurve->position(v);
+
+			if (innerCurve->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector2d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
+				continue;
+			}
+
+			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
+
+			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
+			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
+
+			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
+			sysRhs.row(v.idx()) = vertexRhs;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0f)
+			{
+				// compute tangential velocity
+				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerCurve, v, vNormal, tanRedistWeight);
+				sysRhs.row(v.idx()) += tStep * Eigen::Vector2d(vTanVelocity);
+			}
+
+			const auto laplaceWeightInfo = pmp::laplace_implicit_1D(*innerCurve, v); // Laplacian weights
+			tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0 + tStep * epsilonCtrlWeight * static_cast<double>(laplaceWeightInfo.weightSum)));
+
+			for (const auto& [w, weight] : laplaceWeightInfo.vertexWeights)
+			{
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), w.idx(), -1.0 * tStep * epsilonCtrlWeight * static_cast<double>(weight)));
+			}
+		}
+
+		// After the loop
+		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+
+		// solve
+		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
+		Eigen::MatrixXd x = solver.solve(sysRhs);
+		if (solver.info() != Eigen::Success)
+		{
+			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
+				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
+			std::cerr << msg;
+			throw std::runtime_error(msg);
+		}
+
+		// update vertex positions & verify mesh within bounds
+		for (unsigned int i = 0; i < NVertices; i++)
+		{
+			const auto newPos = x.row(i);
+			if (!m_DistanceField->Box().Contains(newPos))
+			{
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
+					+ std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
+			}
+			innerCurve->position(pmp::Vertex(i)) = newPos;
+		}
+	}
 }
 
 void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
@@ -390,6 +581,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 
 void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
+	GetIntegrate()(stepId);
 }
 
 bool ManifoldSurfaceEvolutionStrategy::ShouldRemesh()
