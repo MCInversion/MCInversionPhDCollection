@@ -98,7 +98,7 @@ constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
 constexpr bool performDistanceFieldHashTest = false;
-constexpr bool performDistanceField2DHashTest = false;
+constexpr bool performDistanceField2DHashTest = true;
 constexpr bool performManifoldCurve2DTests = false;
 constexpr bool performPairedCurveEvolverTests = false;
 // constexpr bool performPairedSurfaceEvolverTests = true;
@@ -3302,7 +3302,7 @@ int main()
 
 			const auto sdfHash = Geometry::HashScalarGrid(sdf);
 			std::cout << "Hash of square_SDF: " << sdfHash << "\n";
-			ExportScalarGrid2DToPNG(dataOutPath + "square_SDF.png", sdf, 10, 10);
+			ExportScalarGrid2DToPNG(dataOutPath + "square_SDF.png", sdf, Geometry::BilinearInterpolateScalarValue, 10, 10);
 		}
 
 		//
@@ -3333,7 +3333,7 @@ int main()
 
 			const auto sdfHash = Geometry::HashScalarGrid(sdf);
 			std::cout << "Hash of squareOpen_SDF: " << sdfHash << "\n";
-			ExportScalarGrid2DToPNG(dataOutPath + "squareOpen_SDF.png", sdf, 10, 10);
+			ExportScalarGrid2DToPNG(dataOutPath + "squareOpen_SDF.png", sdf, Geometry::BilinearInterpolateScalarValue, 10, 10);
 		}
 
 		//
@@ -3357,7 +3357,7 @@ int main()
 
 			const auto sdfHash = Geometry::HashScalarGrid(sdf);
 			std::cout << "Hash of squarePts_SDF: " << sdfHash << "\n";
-			ExportScalarGrid2DToPNG(dataOutPath + "squarePts_SDF.png", sdf, 10, 10);
+			ExportScalarGrid2DToPNG(dataOutPath + "squarePts_SDF.png", sdf, Geometry::BilinearInterpolateScalarValue, 10, 10);
 		}
 
 		//
@@ -3383,7 +3383,7 @@ int main()
 
 			const auto sdfHash = Geometry::HashScalarGrid(sdf);
 			std::cout << "Hash of ellipse_SDF: " << sdfHash << "\n";
-			ExportScalarGrid2DToPNG(dataOutPath + "ellipse_SDF.png", sdf, 10, 10);
+			ExportScalarGrid2DToPNG(dataOutPath + "ellipse_SDF.png", sdf, Geometry::BilinearInterpolateScalarValue, 10, 10);
 		}
 		
 	} // endif performDistanceField2DHashTest

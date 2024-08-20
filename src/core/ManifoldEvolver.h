@@ -374,6 +374,12 @@ protected:
         return m_VectorInterpolate;
     }
 
+    /// \brief A getter for the test box for numerical validity.
+    pmp::BoundingBox2& GetEvolBox()
+    {
+        return m_EvolBox;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point2>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -392,6 +398,8 @@ private:
 
     ScalarGridInterpolationFunction2D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
     VectorGridInterpolationFunction2D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
+
+    pmp::BoundingBox2 m_EvolBox{}; //>! the test box for numerical validity of the evolution.
 };
 
 /**
@@ -619,6 +627,12 @@ protected:
         return m_VectorInterpolate;
     }
 
+    /// \brief A getter for the test box for numerical validity.
+    pmp::BoundingBox& GetEvolBox()
+    {
+        return m_EvolBox;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -642,6 +656,8 @@ private:
 
     std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
     std::function<pmp::Point(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ExplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
+
+    pmp::BoundingBox m_EvolBox{}; //>! the test box for numerical validity of the evolution.
 };
 
 /**

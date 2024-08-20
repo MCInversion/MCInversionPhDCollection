@@ -48,4 +48,6 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 [[nodiscard]] bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName);
 
 /// \brief Export a 2D scalar field as an RGB PNG image
-void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, float nPixelsPerCellX = 1, float nPixelsPerCellY = 1);
+void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid,
+	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate, 
+	float nPixelsPerCellX = 1, float nPixelsPerCellY = 1);

@@ -1204,8 +1204,14 @@ namespace Geometry
 
 		const auto& values = grid.Values();
 		return {
-			pmp::vec2{boxMin[0] + static_cast<float>(ix) * cellSize, boxMin[1] + static_cast<float>(iy) * cellSize},
-			pmp::vec2{boxMin[0] + static_cast<float>(ix + 1) * cellSize, boxMin[1] + static_cast<float>(iy + 1) * cellSize},
+			pmp::vec2{
+				boxMin[0] + static_cast<float>(ix) * cellSize,
+				boxMin[1] + static_cast<float>(iy) * cellSize
+			},
+			pmp::vec2{
+				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<float>(iy + 1) * cellSize
+			},
 			values[i00], values[i10], values[i01], values[i11]
 		};
 	}
@@ -1261,8 +1267,14 @@ namespace Geometry
 		const auto& valuesX = grid.ValuesX();
 		const auto& valuesY = grid.ValuesY();
 		return {
-			pmp::vec2{boxMin[0] + static_cast<float>(ix) * cellSize, boxMin[1] + static_cast<float>(iy) * cellSize},
-			pmp::vec2{boxMin[0] + static_cast<float>(ix + 1) * cellSize, boxMin[1] + static_cast<float>(iy + 1) * cellSize},
+			pmp::vec2{
+				boxMin[0] + static_cast<float>(ix) * cellSize,
+				boxMin[1] + static_cast<float>(iy) * cellSize
+			},
+			pmp::vec2{
+				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<float>(iy + 1) * cellSize
+			},
 			pmp::dvec2{valuesX[i00], valuesY[i00]},
 			pmp::dvec2{valuesX[i10], valuesY[i10]},
 			pmp::dvec2{valuesX[i01], valuesY[i01]},

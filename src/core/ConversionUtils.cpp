@@ -602,7 +602,9 @@ bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::st
 	return pmp::write_to_ply(curve, fileName);
 }
 
-void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, float nPixelsPerCellX, float nPixelsPerCellY)
+void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, 
+	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate,
+	float nPixelsPerCellX, float nPixelsPerCellY)
 {
 	if (!grid.IsValid())
 	{
@@ -616,6 +618,8 @@ void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::Scalar
 	const auto& dims = grid.Dimensions();
 	const int nx = static_cast<int>(dims.Nx);
 	const int ny = static_cast<int>(dims.Ny);
+	const auto& orig = grid.Box().min();
+	const float cellSize = grid.CellSize();
 
 	const int imageWidth = static_cast<int>(nx * nPixelsPerCellX);
 	const int imageHeight = static_cast<int>(ny * nPixelsPerCellY);
@@ -631,16 +635,11 @@ void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::Scalar
 	{
 		for (int j = 0; j < imageHeight; ++j)
 		{
-			// Map the pixel position to the grid position
-			int gridX = static_cast<int>(i / nPixelsPerCellX);
-			int gridY = static_cast<int>(j / nPixelsPerCellY);
-
-			// Ensure we do not go out of bounds
-			gridX = std::min(gridX, nx - 1);
-			gridY = std::min(gridY, ny - 1);
+			float x = orig[0] + static_cast<float>(i) / static_cast<float>(nPixelsPerCellX) * cellSize;
+			float y = orig[1] + static_cast<float>(j) / static_cast<float>(nPixelsPerCellY) * cellSize;
 
 			// Get the corresponding grid value
-			double value = grid.Values()[gridX + gridY * nx];
+			double value = interpolate(pmp::vec2(x, y), grid);
 			uint8_t intensity = static_cast<uint8_t>(255.0 * (value - minVal) / (maxVal - minVal));
 
 			// Set the pixel value (RGB)

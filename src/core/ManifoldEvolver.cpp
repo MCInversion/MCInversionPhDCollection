@@ -40,6 +40,10 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	if (!HasValidInnerOuterManifolds())
 		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
 
+	GetEvolBox() = GetOuterCurve()->bounds();
+	const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
+	GetEvolBox().expand(sizeVec[0], sizeVec[0]);
+
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 	const auto [minLength, maxLength] = CalculateCoVolumeRange();
@@ -138,7 +142,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto vPos = m_OuterCurve->position(v);
-			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField)) : DBL_MAX;
 			for (const auto& innerCurveDf : m_InnerCurvesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *innerCurveDf));
@@ -167,7 +171,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				continue;
 			}
 
-			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
@@ -211,7 +215,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
-			if (!m_DistanceField->Box().Contains(newPos))
+			if (!m_EvolBox.Contains(newPos))
 			{
 				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
 					+ std::to_string(step) + "!\n";
@@ -235,7 +239,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (const auto v : innerCurve->vertices())
 		{
 			const auto vPos = innerCurve->position(v);
-			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField)) : DBL_MAX;
 			if (!m_OuterCurveDistanceField)
 				continue;
 
@@ -264,7 +268,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				continue;
 			}
 
-			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
@@ -308,7 +312,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
-			if (!m_DistanceField->Box().Contains(newPos))
+			if (!m_EvolBox.Contains(newPos))
 			{
 				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
 					+ std::to_string(step) + "!\n";
@@ -342,8 +346,6 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 	if (!m_TargetPointCloud)
 	{
 		std::cerr << "ManifoldCurveEvolutionStrategy::ComputeAmbientFields: No m_TargetPointCloud found! Initializing empty fields: m_DistanceField and m_DFNegNormalizedGradient.\n";
-		m_DistanceField = std::make_shared<Geometry::ScalarGrid2D>(1.0f, pmp::BoundingBox2{});
-		m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(1.0f, pmp::BoundingBox2{});
 		return { FLT_MAX, FLT_MAX, pmp::Point2(0, 0)};
 	}
 
@@ -360,6 +362,7 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid2D>(
 		SDF::PlanarPointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_DistanceField));
+	m_EvolBox = m_DistanceField->Box(); // test box used for validation
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
@@ -448,9 +451,6 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, floa
 
 	// transform geometries
 	(*m_OuterCurve) *= transfMatrixGeomScale;
-	(*m_DistanceField) *= transfMatrixGeomScale;
-	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
-	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 
 	if (m_OuterCurveDistanceField)
 	{
@@ -462,6 +462,13 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, floa
 		(*innerCurveDF) *= transfMatrixGeomScale;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
+
+	if (!m_DistanceField || !m_DFNegNormalizedGradient)
+		return; // nothing to scale
+
+	(*m_DistanceField) *= transfMatrixGeomScale;
+	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
+	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 }
 
 bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
@@ -541,6 +548,9 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	{
 		(*innerCurve) *= transfMatrixGeomScale;
 	}
+
+	if (!GetDistanceField() || !GetDFNegNormalizedGradient())
+		return; // nothing to scale
 	(*GetDistanceField()) *= transfMatrixGeomScale;
 	(*GetDFNegNormalizedGradient()) *= transfMatrixGeomScale;
 	(*GetDistanceField()) *= static_cast<double>(scalingFactor); // Scale the distance values
@@ -571,6 +581,10 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 
 	if (!HasValidInnerOuterManifolds())
 		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
+
+	GetEvolBox() = GetOuterSurface()->bounds();
+	const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
+	GetEvolBox().expand(sizeVec[0], sizeVec[0], sizeVec[0]);
 
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
@@ -667,7 +681,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (const auto v : m_OuterSurface->vertices())
 		{
 			const auto vPos = m_OuterSurface->position(v);
-			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField)) : DBL_MAX;
 			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *innerSurfaceDf));
@@ -696,7 +710,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				continue;
 			}
 
-			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
@@ -740,7 +754,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
-			if (!m_DistanceField->Box().Contains(newPos))
+			if (!m_EvolBox.Contains(newPos))
 			{
 				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
 					+ std::to_string(step) + "!\n";
@@ -764,7 +778,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (const auto v : innerSurface->vertices())
 		{
 			const auto vPos = innerSurface->position(v);
-			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField)) : DBL_MAX;
 			if (!m_OuterSurfaceDistanceField)
 				continue;
 
@@ -793,7 +807,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				continue;
 			}
 
-			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
@@ -837,7 +851,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
-			if (!m_DistanceField->Box().Contains(newPos))
+			if (!m_EvolBox.Contains(newPos))
 			{
 				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i) + " outside m_DistanceField->Box() for time step id: "
 					+ std::to_string(step) + "!\n";
@@ -859,7 +873,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		for (const auto v : m_OuterSurface->vertices())
 		{
 			const auto vPos = m_OuterSurface->position(v);
-			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField)) : DBL_MAX;
 			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *innerSurfaceDf));
@@ -877,7 +891,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 				continue; // skip boundary vertices
 
 			const auto vPosToUpdate = m_OuterSurface->position(v);
-			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
@@ -920,7 +934,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		for (const auto v : innerSurface->vertices())
 		{
 			const auto vPos = innerSurface->position(v);
-			vDistance[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField));
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPos, *m_DistanceField)) : DBL_MAX;
 			if (!m_OuterSurfaceDistanceField)
 				continue;
 
@@ -938,7 +952,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 				continue; // skip boundary vertices
 
 			const auto vPosToUpdate = innerSurface->position(v);
-			const auto vNegGradDistanceToTarget = m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient);
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
@@ -979,8 +993,6 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 	if (!m_TargetPointCloud)
 	{
 		std::cerr << "ManifoldSurfaceEvolutionStrategy::ComputeAmbientFields: No m_TargetPointCloud found! Initializing empty fields: m_DistanceField and m_DFNegNormalizedGradient.\n";
-		m_DistanceField = std::make_shared<Geometry::ScalarGrid>(1.0f, pmp::BoundingBox{});
-		m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid>(1.0f, pmp::BoundingBox{});
 		return { FLT_MAX, FLT_MAX, pmp::Point(0, 0, 0)};
 	}
 
@@ -997,6 +1009,7 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid>(
 		SDF::PointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid>(ComputeNormalizedNegativeGradient(*m_DistanceField));
+	m_EvolBox = m_DistanceField->Box();
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
@@ -1088,9 +1101,6 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, fl
 
 	// transform geometries
 	(*m_OuterSurface) *= transfMatrixGeomScale;
-	(*m_DistanceField) *= transfMatrixGeomScale;
-	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
-	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 
 	if (m_OuterSurfaceDistanceField)
 	{
@@ -1102,6 +1112,13 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, fl
 		(*innerSurfaceDF) *= transfMatrixGeomScale;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
+
+	if (!m_DistanceField || !m_DFNegNormalizedGradient)
+		return; // nothing to scale
+
+	(*m_DistanceField) *= transfMatrixGeomScale;
+	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
+	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 }
 
 bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
@@ -1182,6 +1199,10 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	{
 		(*innerSurface) *= transfMatrixGeomScale;
 	}
+
+	if (!GetDistanceField() || !GetDFNegNormalizedGradient())
+		return; // nothing to scale
+
 	(*GetDistanceField()) *= transfMatrixGeomScale;
 	(*GetDFNegNormalizedGradient()) *= transfMatrixGeomScale;
 	(*GetDistanceField()) *= static_cast<double>(scalingFactor); // Scale the distance values
