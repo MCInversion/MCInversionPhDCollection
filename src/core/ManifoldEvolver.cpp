@@ -136,6 +136,14 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 
 void ManifoldCurveEvolutionStrategy::PrepareManifoldProperties()
 {
+	// distance to m_TargetPointCloud
+	m_OuterCurve->add_vertex_property<pmp::Scalar>("v:distance");
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		innerCurve->add_vertex_property<pmp::Scalar>("v:distance");
+	}
+
+	// v:normal will be added during normal computation: pmp::Normals2::compute_vertex_normals
 }
 
 std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
@@ -715,7 +723,6 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
 		const auto tStep = GetSettings().TimeStep;
-		const auto NVertices = static_cast<unsigned int>(innerSurface->n_vertices());
 		auto vDistance = innerSurface->vertex_property<pmp::Scalar>("v:distance");
 
 		for (const auto v : innerSurface->vertices())
@@ -832,6 +839,14 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 
 void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 {
+	// distance to m_TargetPointCloud
+	m_OuterSurface->add_vertex_property<pmp::Scalar>("v:distance");
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		innerSurface->add_vertex_property<pmp::Scalar>("v:distance");
+	}
+
+	// v:normal will be added during normal computation: pmp::Normals::compute_vertex_normals
 }
 
 float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
