@@ -188,3 +188,41 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, IntersectingInnerAndOuterSpheres
     // Act & Assert
     EXPECT_THROW(evolver.Evolve(), std::invalid_argument);
 }
+
+TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_NoRemeshing)
+{
+    // Arrange
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    std::vector<pmp::SurfaceMesh> innerSurfaces;
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.TimeStep = 0.01;
+    strategySettings.UseInnerManifolds = false;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 10;
+    globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ProcedureName = "ShrinkingSphere_NoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    auto customStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+        strategySettings, MeshLaplacian::Barycentric, outerSurface, innerSurfaces);
+    ManifoldEvolver evolver(globalSettings, std::move(customStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<CustomManifoldSurfaceEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterSurface = strategy->GetOuterSurfaceInOrigScale();
+    auto resultInnerSurfaces = strategy->GetInnerSurfacesInOrigScale();
+
+    ASSERT_TRUE(resultOuterSurface != nullptr);
+    ASSERT_TRUE(resultInnerSurfaces.empty());
+
+    for (int i = 0; i < 32; ++i)
+    {
+        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0f - 4.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-3f);
+    }
+}

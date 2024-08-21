@@ -428,6 +428,17 @@ void SurfaceMeshIO::write_obj(const SurfaceMesh& mesh) const
     return result;
 }
 
+/// \brief A simple verification whether the vertex property contains NaN or Inf values
+[[nodiscard]] bool HasInvalidValues(const VertexProperty<Scalar>& scalarVProp)
+{
+	for (const auto val : scalarVProp.vector())
+	{
+        if (std::isnan(val) || std::isinf(val))
+            return true;
+	}
+    return false;
+}
+
 //!> \brief Header string for VTK polydata file.
 const auto VTK_Polydata_Header_Str =
 	std::string("# vtk DataFile Version 4.2\n") +
@@ -490,6 +501,9 @@ void SurfaceMeshIO::write_vtk(const SurfaceMesh& mesh) const
 
             const auto vPropScalar = mesh.get_vertex_property<Scalar>(propName);
             if (!vPropScalar)
+                continue;
+
+            if (HasInvalidValues(vPropScalar))
                 continue;
 
             auto propNameToExport = propName.substr(propName.find(":") + 1);
