@@ -44,6 +44,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingCircle_NoRemeshing)
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
     strategySettings.UseInnerManifolds = false;
+    strategySettings.TangentialVelocityWeight = 0.0;
+    strategySettings.UseStabilizationViaScaling = false;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
     globalSettings.DoRemeshing = false;
@@ -198,6 +200,8 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_NoRemeshing)
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
     strategySettings.UseInnerManifolds = false;
+    strategySettings.TangentialVelocityWeight = 0.0;
+    strategySettings.UseStabilizationViaScaling = false;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
     globalSettings.DoRemeshing = false;

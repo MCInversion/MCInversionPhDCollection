@@ -45,7 +45,7 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 // test flags. The actual execution is just wrapped inside an if-statement.
 constexpr bool performSDFTests = false;
-constexpr bool performSphereTest = false;
+constexpr bool performSphereTest = true;
 constexpr bool performEvolverTests = false;
 constexpr bool performOldArmadilloLSWTest = false;
 constexpr bool performIsosurfaceEvolverTests = false;
@@ -98,7 +98,7 @@ constexpr bool performVertexNormalSampling = false;
 constexpr bool performTerrainPtGenerationTest = false;
 constexpr bool perfromTerrainTriangulationTest = false;
 constexpr bool performDistanceFieldHashTest = false;
-constexpr bool performDistanceField2DHashTest = true;
+constexpr bool performDistanceField2DHashTest = false;
 constexpr bool performManifoldCurve2DTests = false;
 constexpr bool performPairedCurveEvolverTests = false;
 // constexpr bool performPairedSurfaceEvolverTests = true;
@@ -191,7 +191,7 @@ int main()
 
 	if (performSphereTest)
 	{
-		/* { // Setup 1: No remeshing, No tangential redistribution
+		 { // Setup 1: No remeshing, No tangential redistribution
 			const ST_MeshTopologySettings topoSettings{};
 
 			const SphereTestEvolutionSettings stSettings{
@@ -215,9 +215,9 @@ int main()
 
 			SphereTest st(stSettings);
 			st.PerformTest(4);
-		}*/
+		}
 
-		std::cout << "=====================================================\n";
+		/*std::cout << "=====================================================\n";
 
 		{ // Setup 3: Remeshing, No tangential redistribution
 			const ST_MeshTopologySettings topoSettings{};
@@ -243,7 +243,7 @@ int main()
 
 			SphereTest st(stSettings);
 			st.PerformTest(4);
-		}
+		}*/
 
 	} // endif performSphereTest
 

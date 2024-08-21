@@ -28,7 +28,10 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
 
-	StabilizeGeometries(outerRadius);
+	if (GetSettings().UseStabilizationViaScaling)
+	{
+		StabilizeGeometries(outerRadius);
+	}
 	PrepareManifoldProperties();
 }
 
@@ -46,8 +49,11 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
-	const auto [minLength, maxLength] = CalculateCoVolumeRange();
-	StabilizeCustomGeometries(minLength, maxLength);
+	if (GetSettings().UseStabilizationViaScaling)
+	{
+		const auto [minLength, maxLength] = CalculateCoVolumeRange();
+		StabilizeCustomGeometries(minLength, maxLength);
+	}
 	PrepareManifoldProperties();
 }
 
@@ -149,7 +155,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			for (const auto& innerCurveDf : m_InnerCurvesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerCurveDf));
@@ -241,7 +247,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (const auto v : innerCurve->vertices())
 		{
 			const auto vPosToUpdate = innerCurve->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			if (m_OuterCurveDistanceField)
 			{
 				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField));
@@ -328,7 +334,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			for (const auto& innerSurfaceDf : m_InnerCurvesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerSurfaceDf));
@@ -385,7 +391,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		for (const auto v : innerCurve->vertices())
 		{
 			const auto vPosToUpdate = innerCurve->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			if (m_OuterCurveDistanceField)
 			{
 				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField));
@@ -434,10 +440,10 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 void ManifoldCurveEvolutionStrategy::PrepareManifoldProperties()
 {
 	// distance to m_TargetPointCloud
-	m_OuterCurve->add_vertex_property<pmp::Scalar>("v:distance", DBL_MAX);
+	m_OuterCurve->add_vertex_property<pmp::Scalar>("v:distance", FLT_MAX);
 	for (const auto& innerCurve : m_InnerCurves)
 	{
-		innerCurve->add_vertex_property<pmp::Scalar>("v:distance", DBL_MAX);
+		innerCurve->add_vertex_property<pmp::Scalar>("v:distance", FLT_MAX);
 	}
 
 	// v:normal will be added during normal computation: pmp::Normals2::compute_vertex_normals
@@ -672,7 +678,10 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
 
-	StabilizeGeometries(outerRadius);
+	if (GetSettings().UseStabilizationViaScaling)
+	{
+		StabilizeGeometries(outerRadius);
+	}
 	PrepareManifoldProperties();
 }
 
@@ -690,8 +699,11 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
-	const auto [minArea, maxArea] = CalculateCoVolumeRange();
-	StabilizeCustomGeometries(minArea, maxArea);
+	if (GetSettings().UseStabilizationViaScaling)
+	{
+		const auto [minArea, maxArea] = CalculateCoVolumeRange();
+		StabilizeCustomGeometries(minArea, maxArea);
+	}
 	PrepareManifoldProperties();
 }
 
@@ -790,7 +802,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (const auto v : m_OuterSurface->vertices())
 		{
 			const auto vPosToUpdate = m_OuterSurface->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerSurfaceDf));
@@ -882,7 +894,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (const auto v : innerSurface->vertices())
 		{
 			const auto vPosToUpdate = innerSurface->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			if (m_OuterSurfaceDistanceField)
 			{
 				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField));
@@ -968,7 +980,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		for (const auto v : m_OuterSurface->vertices())
 		{
 			const auto vPosToUpdate = m_OuterSurface->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
 			{
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerSurfaceDf));
@@ -1025,7 +1037,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		for (const auto v : innerSurface->vertices())
 		{
 			const auto vPosToUpdate = innerSurface->position(v);
-			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : DBL_MAX;
+			vDistance[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
 			if (m_OuterSurfaceDistanceField)
 			{
 				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField));
@@ -1129,10 +1141,10 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 {
 	// distance to m_TargetPointCloud
-	m_OuterSurface->add_vertex_property<pmp::Scalar>("v:distance", DBL_MAX);
+	m_OuterSurface->add_vertex_property<pmp::Scalar>("v:distance", FLT_MAX);
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
-		innerSurface->add_vertex_property<pmp::Scalar>("v:distance", DBL_MAX);
+		innerSurface->add_vertex_property<pmp::Scalar>("v:distance", FLT_MAX);
 	}
 
 	// v:normal will be added during normal computation: pmp::Normals::compute_vertex_normals

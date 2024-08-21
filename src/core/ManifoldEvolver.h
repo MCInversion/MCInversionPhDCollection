@@ -1,11 +1,13 @@
 #pragma once
 
+#include "pmp/algorithms/DifferentialGeometry.h"
+#include "pmp/MatVec.h"
+
 #include "geometry/GeometryAdapters.h"
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
 
 #include "EvolverUtilsCommon.h"
-#include "pmp/algorithms/DifferentialGeometry.h"
 
 //
 // ===============================================================================================
@@ -63,6 +65,7 @@ struct ManifoldEvolutionSettings
     unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle is a regular pentagon, and the sphere an icosahedron.
 
     double TimeStep{ 0.01 };     //>! time step size.
+    bool UseStabilizationViaScaling{ true }; //>! whether to scale all evolving geometries to match with the time step.
 
     bool UseLinearGridInterpolation{ true }; //>! whether to use d-linear interpolation for scalar and vector fields where d is the grid dimension.
     CurvatureCtrlFunction Epsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term.
@@ -394,7 +397,7 @@ private:
     std::shared_ptr<Geometry::ScalarGrid2D> m_OuterCurveDistanceField{ nullptr }; //>! the updated distance field of the evolving outer surface.
     std::vector<std::shared_ptr<Geometry::ScalarGrid2D>> m_InnerCurvesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
 
-    pmp::mat3 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+    pmp::mat3 m_TransformToOriginal = pmp::mat3::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
     ScalarGridInterpolationFunction2D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
     VectorGridInterpolationFunction2D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
@@ -647,7 +650,7 @@ private:
     std::shared_ptr<Geometry::ScalarGrid> m_OuterSurfaceDistanceField{ nullptr }; //>! the updated distance field of the evolving outer surface.
     std::vector<std::shared_ptr<Geometry::ScalarGrid>> m_InnerSurfacesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
 
-    pmp::mat4 m_TransformToOriginal{}; //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+    pmp::mat4 m_TransformToOriginal = pmp::mat4::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
     AreaFunction m_LaplacianAreaFunction{}; //>! a function for calculating co-volume areas (see [Meyer, Desbrun, Schroder, Barr, 2003])
 
