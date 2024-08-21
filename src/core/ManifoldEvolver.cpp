@@ -45,9 +45,13 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 
 	GetEvolBox() = GetOuterCurve()->bounds();
 	const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
-	GetEvolBox().expand(sizeVec[0], sizeVec[0]);
+	GetEvolBox().expand(sizeVec[0], sizeVec[1]);
 
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+
+	const auto minTargetSize = std::min(sizeVec[0], sizeVec[1]);
+	GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	ComputeVariableDistanceFields();
 
 	if (GetSettings().UseStabilizationViaScaling)
 	{
@@ -242,7 +246,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// prepare matrix & rhs for m_OuterCurve:
 		std::vector<Eigen::Triplet<double>> tripletList;
-		tripletList.reserve(static_cast<size_t>(NVertices) * 6);  // Assuming an average of 6 entries per vertex
+		tripletList.reserve(static_cast<size_t>(NVertices) * 2);  // Assuming 2 entries per vertex for curves
 
 		for (const auto v : innerCurve->vertices())
 		{
@@ -268,7 +272,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const double epsilonCtrlWeight = -1.0 * GetSettings().Epsilon(static_cast<double>(vDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
 
@@ -311,7 +315,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i) + " outside m_EvolBox for time step id: "
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i) + " outside m_EvolBox for time step id: "
 					+ std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
@@ -405,7 +409,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const double epsilonCtrlWeight = - 1.0 * GetSettings().Epsilon(static_cast<double>(vDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
 
@@ -695,9 +699,13 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 
 	GetEvolBox() = GetOuterSurface()->bounds();
 	const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
-	GetEvolBox().expand(sizeVec[0], sizeVec[0], sizeVec[0]);
+	GetEvolBox().expand(sizeVec[0], sizeVec[1], sizeVec[2]);
 
 	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+
+	const auto minTargetSize = std::min({ sizeVec[0], sizeVec[1], sizeVec[2] });
+	GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	ComputeVariableDistanceFields();
 
 	if (GetSettings().UseStabilizationViaScaling)
 	{
@@ -914,7 +922,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const double epsilonCtrlWeight = -1.0 * GetSettings().Epsilon(static_cast<double>(vDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
 
@@ -1051,7 +1059,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vDistance[v]));
+			const double epsilonCtrlWeight = -1.0 * GetSettings().Epsilon(static_cast<double>(vDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double etaCtrlWeight = GetSettings().Eta(static_cast<double>(vDistance[v]), negGradDotNormal);
 
