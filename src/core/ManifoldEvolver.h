@@ -91,6 +91,7 @@ struct GlobalManifoldEvolutionSettings
     bool ExportPerTimeStep{ false };  //>! whether to export evolving manifold for each time step.
     bool ExportResult{ true }; //>! whether to export resulting evolving manifold.
     bool ExportInnerManifolds{ false }; //>! if true also m_InnerManifoldAdapters for each time step. 
+    bool ExportTargetDistanceFieldAsImage{ false }; //>! if true the m_DistanceField in the active strategy will be exported as a png/vti image.
 
     std::string OutputPath{}; //>! path where output manifolds are to be exported.
 
@@ -148,6 +149,11 @@ public:
      * \brief Exports the final state of evolving manifold(s).
      */
     virtual void ExportFinalResult(const std::string& baseOutputFilename) = 0;
+
+    /**
+	 * \brief Exports the target point cloud distance field as image data (if defined).
+	 */
+    virtual void ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename) = 0;
 
     /// \brief Settings getter.
     ManifoldEvolutionSettings& GetSettings()
@@ -286,6 +292,11 @@ public:
      * \brief Exports the final state of evolving manifold(s).
      */
     void ExportFinalResult(const std::string& baseOutputFilename) override;
+
+    /**
+     * \brief Exports the target point cloud distance field as png image data (if defined).
+     */
+    void ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename) override;
 
     /// \brief A specialized external getter which also transforms the stabilized outer curve to its original scale.
     [[nodiscard]] std::shared_ptr<pmp::ManifoldCurve2D> GetOuterCurveInOrigScale() const;
@@ -528,6 +539,11 @@ public:
      */
     void ExportFinalResult(const std::string& baseOutputFilename) override;
 
+    /**
+     * \brief Exports the target point cloud distance field as vti image data (if defined).
+     */
+    void ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename) override;
+
     /// \brief A specialized external getter which also transforms the stabilized outer surface to its original scale.
     [[nodiscard]] std::shared_ptr<pmp::SurfaceMesh> GetOuterSurfaceInOrigScale() const;
 
@@ -736,6 +752,11 @@ public:
     void Evolve() const
 	{
         m_Strategy->Preprocess();
+        if (m_Settings.ExportTargetDistanceFieldAsImage)
+        {
+            m_Strategy->ExportTargetDistanceFieldAsImage(m_Settings.OutputPath + m_Settings.ProcedureName);
+        }
+
         if (m_Settings.ExportPerTimeStep)
         {
             m_Strategy->ExportCurrentState(0, m_Settings.OutputPath + m_Settings.ProcedureName);

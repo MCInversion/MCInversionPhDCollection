@@ -602,9 +602,22 @@ bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::st
 	return pmp::write_to_ply(curve, fileName);
 }
 
+namespace
+{
+	[[nodiscard]] RGBColor InterpolateColors(const RGBColor& c1, const RGBColor& c2, float t)
+	{
+		return {
+			c1.r + t * (c2.r - c1.r),
+			c1.g + t * (c2.g - c1.g),
+			c1.b + t * (c2.b - c1.b)
+		};
+	}	
+}
+
+
 void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, 
 	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate,
-	float nPixelsPerCellX, float nPixelsPerCellY)
+	float nPixelsPerCellX, float nPixelsPerCellY, const RGBColorScheme& colorMap)
 {
 	if (!grid.IsValid())
 	{
@@ -613,6 +626,11 @@ void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::Scalar
 	if (filename.empty())
 	{
 		throw std::invalid_argument("ExportScalarGrid2DToPNG: filename cannot be empty!\n");
+	}
+
+	if (colorMap.size() < 2)
+	{
+		throw std::invalid_argument("ExportScalarGrid2DToPNG: color scheme must contain at least 2 colors!\n");
 	}
 
 	const auto& dims = grid.Dimensions();
@@ -626,26 +644,45 @@ void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::Scalar
 
 	std::vector<uint8_t> image(imageWidth * imageHeight * 3);
 
-	// Normalize the scalar values to [0, 255]
-	auto minMax = std::minmax_element(grid.Values().begin(), grid.Values().end());
-	double minVal = *minMax.first;
-	double maxVal = *minMax.second;
+	// Normalize the scalar values to [0, 1]
+	const auto minMax = std::minmax_element(grid.Values().begin(), grid.Values().end());
+	const double minVal = *minMax.first;
+	const double maxVal = *minMax.second;
 
 	for (int i = 0; i < imageWidth; ++i)
 	{
-		for (int j = 0; j < imageHeight; ++j)
+		for (int j = 0; j < imageHeight; ++j) 
 		{
-			float x = orig[0] + static_cast<float>(i) / static_cast<float>(nPixelsPerCellX) * cellSize;
-			float y = orig[1] + static_cast<float>(j) / static_cast<float>(nPixelsPerCellY) * cellSize;
+			const float x = orig[0] + static_cast<float>(i) / static_cast<float>(nPixelsPerCellX) * cellSize;
+			const float y = orig[1] + static_cast<float>(j) / static_cast<float>(nPixelsPerCellY) * cellSize;
 
-			// Get the corresponding grid value
-			double value = interpolate(pmp::vec2(x, y), grid);
-			uint8_t intensity = static_cast<uint8_t>(255.0 * (value - minVal) / (maxVal - minVal));
+			// Get the corresponding grid value and normalize it
+			const double value = interpolate(pmp::vec2(x, y), grid);
+			const double normalizedValue = (value - minVal) / (maxVal - minVal);
+
+			// Find the two closest colors in the scheme
+			auto upper = colorMap.lower_bound(normalizedValue);
+			auto lower = (upper == colorMap.begin()) ? upper : std::prev(upper);
+
+			// Handle edge cases where normalizedValue is less than the first color or greater than the last color
+			if (upper == colorMap.end())
+			{
+				upper = std::prev(upper);
+			}
+			if (lower == upper && upper == colorMap.begin())
+			{
+				lower = upper;
+			}
+
+			// Interpolate between the two colors
+			const double range = upper->first - lower->first;
+			const float t = (range > 0.0) ? static_cast<float>((normalizedValue - lower->first) / range) : 0.0f;
+			const auto color = InterpolateColors(lower->second, upper->second, t);
 
 			// Set the pixel value (RGB)
-			image[3 * (i + j * imageWidth) + 0] = intensity; // R
-			image[3 * (i + j * imageWidth) + 1] = intensity; // G
-			image[3 * (i + j * imageWidth) + 2] = intensity; // B
+			image[3 * (i + j * imageWidth) + 0] = static_cast<uint8_t>(255.0 * color.r); // R
+			image[3 * (i + j * imageWidth) + 1] = static_cast<uint8_t>(255.0 * color.g); // G
+			image[3 * (i + j * imageWidth) + 2] = static_cast<uint8_t>(255.0 * color.b); // B
 		}
 	}
 

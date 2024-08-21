@@ -47,7 +47,35 @@ void DumpMatrixAndRHSToFile(const std::string& filename, const SparseMatrix& A, 
 /// \brief Export 2D manifold curve to PLY data.
 [[nodiscard]] bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName);
 
+/// \brief A wrapper for normalized RGB values in a color scheme
+struct RGBColor
+{
+	float r, g, b; // from [0, 1]
+};
+
+/// \brief A color map placeholder
+using RGBColorScheme = std::map<double, RGBColor>;
+
+/// \brief Default grayscale color scheme
+const RGBColorScheme GRAYSCALE_MAP = {
+	{ 0.0, { 0.0f, 0.0f, 0.0f } }, // Black
+	{ 1.0, { 1.0f, 1.0f, 1.0f } }  // White
+};
+
+/// \brief Rainbow to white color scheme
+const RGBColorScheme RAINBOW_TO_WHITE_MAP = {
+	{ 0.0, { 1.0f, 0.0f, 0.0f } }, // Red
+	{ 0.05, { 0.988f, 0.518f, 0.012f } }, // Orange (252, 132, 3)
+	{ 0.1, { 0.988f, 0.957f, 0.012f } }, // Yellow (252, 244, 3)
+	{ 0.15, { 1.0f, 0.8706f, 0.3490f } }, // Yellowish (255, 222, 89)
+	//{ 0.2, {0.5294f, 0.8314f, 0.5059f } }, // Green (135, 212, 129)
+	{ 0.225, { 0.498f, 0.859f, 0.961f } }, // Light Blue (127, 219, 245)
+	{ 0.3, { 0.298f, 0.459f, 1.0f } }, // Blue
+	{ 0.4, { 1.0f, 1.0f, 1.0f } }, // White 1
+	{ 1.0, { 1.0f, 1.0f, 1.0f } }  // White 2
+};
+
 /// \brief Export a 2D scalar field as an RGB PNG image
 void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid,
 	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate, 
-	float nPixelsPerCellX = 1, float nPixelsPerCellY = 1);
+	float nPixelsPerCellX = 1, float nPixelsPerCellY = 1, const RGBColorScheme& colorMap = GRAYSCALE_MAP);

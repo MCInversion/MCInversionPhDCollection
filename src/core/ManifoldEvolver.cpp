@@ -1,6 +1,7 @@
 #include "ManifoldEvolver.h"
 
 #include "pmp/algorithms/CurveFactory.h"
+#include "pmp/algorithms/Normals.h"
 
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
@@ -8,11 +9,11 @@
 
 #include "sdf/SDF.h"
 
+#include "ConversionUtils.h"
 #include "InscribedManifold.h"
-#include "pmp/algorithms/Normals.h"
 
 /// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
-constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
+constexpr float SPHERE_RADIUS_FACTOR = 0.7f;
 
 //
 // ======================================================================================
@@ -107,6 +108,19 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOu
 		if (!write_to_ply(exportedInnerCurve, baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply"))
 			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply") << "!\n";
 	}
+}
+
+void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename)
+{
+	if (!m_DistanceField)
+		return; // field not defined
+
+	auto exportedField = *m_DistanceField;
+	exportedField *= m_TransformToOriginal;
+	exportedField /= static_cast<double>(GetScalingFactor());
+
+	ExportScalarGrid2DToPNG(baseOutputFilename + "TargetDF.png", exportedField, m_ScalarInterpolate, 
+		10, 10, RAINBOW_TO_WHITE_MAP);
 }
 
 std::shared_ptr<pmp::ManifoldCurve2D> ManifoldCurveEvolutionStrategy::GetOuterCurveInOrigScale() const
@@ -757,6 +771,18 @@ void ManifoldSurfaceEvolutionStrategy::ExportFinalResult(const std::string& base
 		exportedInnerSurface *= m_TransformToOriginal;
 		exportedInnerSurface.write(baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".vtk");
 	}
+}
+
+void ManifoldSurfaceEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename)
+{
+	if (!m_DistanceField)
+		return; // field not defined
+
+	auto exportedField = *m_DistanceField;
+	exportedField *= m_TransformToOriginal;
+	exportedField /= static_cast<double>(GetScalingFactor());
+
+	ExportToVTI(baseOutputFilename + "TargetDF", exportedField);
 }
 
 std::shared_ptr<pmp::SurfaceMesh> ManifoldSurfaceEvolutionStrategy::GetOuterSurfaceInOrigScale() const
