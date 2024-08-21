@@ -124,21 +124,21 @@ TEST_F(DifferentialGeometryCurveTest, laplace_1D_TestCase)
     const auto vIso = curve.add_vertex(Point2(1.0, 1.0));
     const auto laplaceIsolated = laplace_1D(curve, vIso);
 
-    EXPECT_NEAR(laplaceCentral[0], 0.034f, 1e-3f);
-    EXPECT_NEAR(laplaceCentral[1], -0.818f, 1e-3f);
-    EXPECT_NEAR(laplaceBoundary0[0], 0.0f, 1e-3f);
-    EXPECT_NEAR(laplaceBoundary0[1], 0.0f, 1e-3f);
-    EXPECT_NEAR(laplaceBoundary1[0], 0.0f, 1e-3f);
-    EXPECT_NEAR(laplaceBoundary1[1], 0.0f, 1e-3f);
-    EXPECT_NEAR(laplaceIsolated[0], 0.0f, 1e-3f);
-    EXPECT_NEAR(laplaceIsolated[1], 0.0f, 1e-3f);
+    EXPECT_NEAR(laplaceCentral[0], 0.0276f, 1e-4f);
+    EXPECT_NEAR(laplaceCentral[1], -0.6644f, 1e-4f);
+    EXPECT_NEAR(laplaceBoundary0[0], 0.0f, 1e-4f);
+    EXPECT_NEAR(laplaceBoundary0[1], 0.0f, 1e-4f);
+    EXPECT_NEAR(laplaceBoundary1[0], 0.0f, 1e-4f);
+    EXPECT_NEAR(laplaceBoundary1[1], 0.0f, 1e-4f);
+    EXPECT_NEAR(laplaceIsolated[0], 0.0f, 1e-4f);
+    EXPECT_NEAR(laplaceIsolated[1], 0.0f, 1e-4f);
 }
 
 TEST_F(DifferentialGeometryCurveTest, laplace_implicit_1D_TestCase)
 {
     const auto laplaceWeightsCentral = laplace_implicit_1D(curve, v);
 
-    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v0), 0.8945f, 1e-3f);
-    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v1), 0.7429f, 1e-3f);
-    EXPECT_NEAR(laplaceWeightsCentral.weightSum, 1.6374f, 1e-3f);
+    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v0), 0.7259f, 1e-4f);
+    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v1), 0.6028f, 1e-4f);
+    EXPECT_NEAR(laplaceWeightsCentral.weightSum, 1.3287f, 1e-4f);
 }

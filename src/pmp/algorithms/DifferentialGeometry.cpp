@@ -363,13 +363,18 @@ ImplicitLaplaceInfo laplace_implicit_1D(const ManifoldCurve2D& curve, Vertex v)
         return result;
 
     const auto [eTo, eFrom] = curve.edges(v);
-    const Scalar l0 = curve.edge_length(eTo);
-    const Scalar l1 = curve.edge_length(eFrom);
-    const auto [vPrev, vNext] = curve.vertices(v);
+    const Scalar l0 = curve.edge_length(eTo);    // Length from v_prev to v
+    const Scalar l1 = curve.edge_length(eFrom);  // Length from v to v_next
 
-    result.vertexWeights[vPrev] = 1.0f / l0;
-    result.vertexWeights[vNext] = 1.0f / l1;
-    result.weightSum = (1.0f / l0) + (1.0f / l1);
+    const auto vNext = curve.to_vertex(eFrom);     // Next vertex (v+1)
+    const auto vPrev = curve.from_vertex(eTo);     // Previous vertex (v-1)
+
+    const Scalar h = l0 + l1;  // Effective length of the control volume
+
+    result.vertexWeights[vPrev] = 2.0f / (h * l0);
+    result.vertexWeights[vNext] = 2.0f / (h * l1);
+    result.weightSum = 2.0f / h * (1.0f / l0 + 1.0f / l1);
+
     return result;
 }
 
@@ -380,11 +385,16 @@ Point2 laplace_1D(const ManifoldCurve2D& curve, Vertex v)
         return laplace;
 
     const auto [eTo, eFrom] = curve.edges(v);
-    const Scalar l0 = curve.edge_length(eTo);
-    const Scalar l1 = curve.edge_length(eFrom);
+    const Scalar l0 = curve.edge_length(eTo);    // Length from v_prev to v
+    const Scalar l1 = curve.edge_length(eFrom);  // Length from v to v_next
 
-    laplace += (1.0f / l0) * (curve.position(curve.from_vertex(eTo)) - curve.position(v));
-    laplace += (1.0f / l1) * (curve.position(curve.to_vertex(eFrom)) - curve.position(v));
+    const auto vNext = curve.to_vertex(eFrom);     // Next vertex (v+1)
+    const auto vPrev = curve.from_vertex(eTo);     // Previous vertex (v-1)
+
+    const Scalar h = l0 + l1;  // Effective length of the control volume
+
+    laplace += (2.0f / h) * ((curve.position(vNext) - curve.position(v)) / l1 - (curve.position(v) - curve.position(vPrev)) / l0);
+
     return laplace;
 }
 
