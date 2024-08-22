@@ -119,8 +119,9 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	exportedField *= m_TransformToOriginal;
 	exportedField /= static_cast<double>(GetScalingFactor());
 
-	ExportScalarGrid2DToPNG(baseOutputFilename + "TargetDF.png", exportedField, m_ScalarInterpolate, 
+	ExportScalarGrid2DToPNG(baseOutputFilename + "_TargetDF.png", exportedField, m_ScalarInterpolate, 
 		10, 10, RAINBOW_TO_WHITE_MAP);
+	ExportScalarGridDimInfo2D(baseOutputFilename + "_TargetDF.gdim2d", exportedField);
 }
 
 std::shared_ptr<pmp::ManifoldCurve2D> ManifoldCurveEvolutionStrategy::GetOuterCurveInOrigScale() const
@@ -577,6 +578,10 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, floa
 
 	// transform geometries
 	(*m_OuterCurve) *= transfMatrixGeomScale;
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		(*innerCurve) *= transfMatrixGeomScale;
+	}
 
 	if (m_OuterCurveDistanceField)
 	{
@@ -673,6 +678,17 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	for (auto& innerCurve : GetInnerCurves())
 	{
 		(*innerCurve) *= transfMatrixGeomScale;
+	}
+
+	if (GetOuterCurveDistanceField())
+	{
+		(*GetOuterCurveDistanceField()) *= transfMatrixGeomScale;
+		(*GetOuterCurveDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
+	}
+	for (const auto& innerCurveDF : GetInnerCurvesDistanceFields())
+	{
+		(*innerCurveDF) *= transfMatrixGeomScale;
+		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 
 	if (!GetDistanceField() || !GetDFNegNormalizedGradient())
@@ -782,7 +798,7 @@ void ManifoldSurfaceEvolutionStrategy::ExportTargetDistanceFieldAsImage(const st
 	exportedField *= m_TransformToOriginal;
 	exportedField /= static_cast<double>(GetScalingFactor());
 
-	ExportToVTI(baseOutputFilename + "TargetDF", exportedField);
+	ExportToVTI(baseOutputFilename + "_TargetDF", exportedField);
 }
 
 std::shared_ptr<pmp::SurfaceMesh> ManifoldSurfaceEvolutionStrategy::GetOuterSurfaceInOrigScale() const
@@ -1231,6 +1247,10 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, fl
 
 	// transform geometries
 	(*m_OuterSurface) *= transfMatrixGeomScale;
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		(*innerSurface) *= transfMatrixGeomScale;
+	}
 
 	if (m_OuterSurfaceDistanceField)
 	{
@@ -1328,6 +1348,17 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	for (auto& innerSurface : GetInnerSurfaces())
 	{
 		(*innerSurface) *= transfMatrixGeomScale;
+	}
+
+	if (GetOuterSurfraceDistanceField())
+	{
+		(*GetOuterSurfraceDistanceField()) *= transfMatrixGeomScale;
+		(*GetOuterSurfraceDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
+	}
+	for (const auto& innerSurfaceDF : GetInnerSurfacesDistanceFields())
+	{
+		(*innerSurfaceDF) *= transfMatrixGeomScale;
+		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 
 	if (!GetDistanceField() || !GetDFNegNormalizedGradient())

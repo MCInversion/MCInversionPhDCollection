@@ -45,8 +45,8 @@ def read_ply(file_path):
 inner_ply_files = defaultdict(list)
 
 for f in sorted(os.listdir(directory)):
-    if f.startswith(f"{procedure_name}_Inner") and f.endswith(".ply"):
-        inner_id = f.split('_')[1]
+    if f.startswith(f"{procedure_name}_Inner_") and f.endswith(".ply"):
+        inner_id = f.split('_')[0]
         inner_ply_files[inner_id].append(os.path.join(directory, f))
 
 outer_ply_files = sorted([

@@ -203,6 +203,56 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
     }
 }
 
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing)
+{
+    // Arrange
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    auto targetPts = targetCurve.positions();
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.UseInnerManifolds = false;
+    strategySettings.Epsilon = STANDARD_EPSILON;
+    strategySettings.Eta = [](double distance, double negGradDotNormal)
+    {
+        return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.TimeStep = 0.01;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 40;
+    globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ExportTargetDistanceFieldAsImage = true;
+    globalSettings.ProcedureName = "ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
+        strategySettings, std::make_shared<std::vector<pmp::Point2>>(targetPts));
+
+    ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<ManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
+
+    ASSERT_TRUE(resultOuterCurve != nullptr);
+    ASSERT_TRUE(resultInnerCurves.empty());
+
+    for (const auto vPos : resultOuterCurve->positions())
+    {
+        EXPECT_LT(norm(vPos), 2.0f);
+        EXPECT_GT(norm(vPos), 1.0f);
+    }
+}
+
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing)
 {
     // Arrange
@@ -211,14 +261,18 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     targetPts.erase(targetPts.begin());
     targetPts.erase(targetPts.begin());
     targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = true;
     strategySettings.Epsilon = STANDARD_EPSILON;
-    strategySettings.Eta = STANDARD_ETA;
+    strategySettings.Eta = [](double distance, double negGradDotNormal)
+    {
+        return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
     strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
-    globalSettings.NSteps = 10;
+    globalSettings.NSteps = 40;
     globalSettings.DoRemeshing = false;
     globalSettings.ExportPerTimeStep = true;
     globalSettings.ExportTargetDistanceFieldAsImage = true;

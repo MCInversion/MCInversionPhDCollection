@@ -79,3 +79,6 @@ const RGBColorScheme RAINBOW_TO_WHITE_MAP = {
 void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid,
 	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate, 
 	float nPixelsPerCellX = 1, float nPixelsPerCellY = 1, const RGBColorScheme& colorMap = GRAYSCALE_MAP);
+
+/// \brief A specialized export of file (*.gdim2d) for containing the proper dimensions of the 2D scalar grid.
+void ExportScalarGridDimInfo2D(const std::string& filename, const Geometry::ScalarGrid2D& grid);

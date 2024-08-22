@@ -692,3 +692,51 @@ void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::Scalar
 		throw std::runtime_error("ExportToPNG: Failed to save image to file!");
 	}
 }
+
+void ExportScalarGridDimInfo2D(const std::string& fileName, const Geometry::ScalarGrid2D& grid)
+{
+	// Validate input grid
+	if (!grid.Dimensions().Valid() || grid.CellSize() <= 0.0f)
+	{
+		throw std::invalid_argument("ExportScalarGridDimInfo2D: Invalid grid dimensions or cell size.");
+	}
+
+	// Validate filename
+	if (fileName.empty())
+	{
+		throw std::invalid_argument("ExportScalarGridDimInfo2D: Filename cannot be empty.");
+	}
+
+	const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(fileName);
+	if (extension != "gdim2d")
+	{
+		throw std::invalid_argument("ExportScalarGridDimInfo2D: Invalid file extension!");
+	}
+
+	// Open the output file
+	std::ofstream outFile(fileName);
+	if (!outFile)
+	{
+		throw std::runtime_error("ExportScalarGridDimInfo2D: Failed to open file for writing.");
+	}
+
+	// Get the grid information
+	const auto& bbox = grid.Box();
+	const auto& dims = grid.Dimensions();
+	const auto cellSize = grid.CellSize();
+
+	// Write the grid information to the file
+	outFile << "Grid Dimensions (Nx, Ny): " << dims.Nx << ", " << dims.Ny << "\n";
+	outFile << "Bounding Box (min_x, min_y) -> (max_x, max_y): "
+		<< "(" << bbox.min()[0] << ", " << bbox.min()[1] << ") -> "
+		<< "(" << bbox.max()[0] << ", " << bbox.max()[1] << ")\n";
+	outFile << "Cell Size: " << cellSize << "\n";
+
+	// Close the file
+	outFile.close();
+
+	if (!outFile)
+	{
+		throw std::runtime_error("ExportScalarGridDimInfo2D: Error occurred while writing to file.");
+	}
+}

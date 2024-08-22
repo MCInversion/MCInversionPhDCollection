@@ -394,6 +394,18 @@ protected:
         return m_EvolBox;
     }
 
+    /// \brief A getter for the distance field to outer curve
+    std::shared_ptr<Geometry::ScalarGrid2D>& GetOuterCurveDistanceField()
+    {
+        return m_OuterCurveDistanceField;
+    }
+
+    /// \brief A getter for the distance fields of inner curves
+    std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& GetInnerCurvesDistanceFields()
+    {
+        return m_InnerCurvesDistanceFields;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point2>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -650,6 +662,18 @@ protected:
     pmp::BoundingBox& GetEvolBox()
     {
         return m_EvolBox;
+    }
+
+    /// \brief A getter for the distance field to outer surface
+    std::shared_ptr<Geometry::ScalarGrid>& GetOuterSurfraceDistanceField()
+    {
+        return m_OuterSurfaceDistanceField;
+    }
+
+    /// \brief A getter for the distance fields of inner surfaces
+    std::vector<std::shared_ptr<Geometry::ScalarGrid>>& GetInnerSurfacesDistanceFields()
+    {
+        return m_InnerSurfacesDistanceFields;
     }
 
 private:
