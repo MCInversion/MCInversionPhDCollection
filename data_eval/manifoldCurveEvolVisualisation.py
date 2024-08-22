@@ -8,6 +8,8 @@ from collections import defaultdict
 # Define the procedure name and the path to your directory containing the files
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing"
 procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing"
+#procedure_name = "ShrinkingAndExpandingCircle_NoRemeshing"
+#procedure_name = "ShrinkingAndExpandingCircle_SlowerInnerEtaNoRemeshing"
 directory = "../output/core_tests/"  # Adjust this path accordingly
 
 # Helper function to read the grid dimensions from the *.gdim2d file

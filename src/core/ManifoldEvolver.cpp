@@ -13,7 +13,7 @@
 #include "InscribedManifold.h"
 
 /// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
-constexpr float SPHERE_RADIUS_FACTOR = 0.7f;
+constexpr float SPHERE_RADIUS_FACTOR = 0.6f;
 
 //
 // ======================================================================================
@@ -196,10 +196,10 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -291,10 +291,10 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = -1.0 * GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = -1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -374,10 +374,10 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
 
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*m_OuterCurve, v);
@@ -434,10 +434,10 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = - 1.0 * GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = - 1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
 
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*innerCurve, v);
@@ -565,7 +565,7 @@ float ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetS
 	for (const auto& circle : circles)
 	{
 		// keep the same vertex density for inner circles
-		const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * circle.Radius / outerCircleRadius);
+		const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * (circle.Radius * SPHERE_RADIUS_FACTOR) / outerCircleRadius);
 		m_InnerCurves.emplace_back(std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(
 			circle.Center,
 			circle.Radius * SPHERE_RADIUS_FACTOR, 
@@ -579,7 +579,7 @@ float ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetS
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 5.0f;
+constexpr float INV_SHRINK_FACTOR_1D = 10.0f;
 
 void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, float stabilizationFactor)
 {
@@ -893,10 +893,10 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -988,10 +988,10 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = -1.0 * GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = -1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -1071,10 +1071,10 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
 
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*m_OuterSurface, v);
@@ -1131,10 +1131,10 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = -1.0 * GetSettings().Epsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = -1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
-			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().Eta(advectionDistance, negGradDotNormal);
+			const auto advectionDistance = static_cast<double>(GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v]);
+			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
 
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*innerSurface, v);
@@ -1273,7 +1273,7 @@ float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarge
 	for (const auto& sphere : spheres)
 	{
 		// keep the same vertex density for inner spheres
-		const auto innerSubdiv = static_cast<unsigned int>(static_cast<pmp::Scalar>(GetSettings().LevelOfDetail) * sphere.Radius / outerSphereRadius) + 1;
+		const auto innerSubdiv = static_cast<unsigned int>(static_cast<pmp::Scalar>(GetSettings().LevelOfDetail) * (sphere.Radius * SPHERE_RADIUS_FACTOR) / outerSphereRadius);
 		Geometry::IcoSphereBuilder innerIcoBuilder({ 
 			innerSubdiv,
 			sphere.Radius * SPHERE_RADIUS_FACTOR
@@ -1295,7 +1295,7 @@ float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarge
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_2D = 1.0f / 2.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_2D = 5.0f;
+constexpr float INV_SHRINK_FACTOR_2D = 10.0f;
 
 void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, float stabilizationFactor)
 {

@@ -70,8 +70,12 @@ struct ManifoldEvolutionSettings
     bool UseStabilizationViaScaling{ true }; //>! whether to scale all evolving geometries to match with the time step.
 
     bool UseLinearGridInterpolation{ true }; //>! whether to use d-linear interpolation for scalar and vector fields where d is the grid dimension.
-    CurvatureCtrlFunction Epsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term.
-    AdvectionCtrlFunction Eta{ TRIVIAL_ETA }; //>! control function for the advection term.
+
+	CurvatureCtrlFunction OuterManifoldEpsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the outer manifold.
+    AdvectionCtrlFunction OuterManifoldEta{ TRIVIAL_ETA }; //>! control function for the advection term of the outer manifold.
+
+    CurvatureCtrlFunction InnerManifoldEpsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the inner manifolds.
+    AdvectionCtrlFunction InnerManifoldEta{ TRIVIAL_ETA }; //>! control function for the advection term of the inner manifolds.
 
     bool AdvectionInteractWithOtherManifolds{ false }; //>! whether to use the minimum from the distances to all manifolds including target data.
 
@@ -101,6 +105,9 @@ struct GlobalManifoldEvolutionSettings
 
     bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 };
+
+/// \brief Stabilization weight param from [0, 1]
+constexpr float STABILIZATION_FACTOR{ 1.0f };
 
 //
 // ===============================================================================================
@@ -170,18 +177,6 @@ public:
 
 protected:
 
-    /// \brief A getter for the curvature term control function (epsilon).
-    CurvatureCtrlFunction& GetCurvatureTermControlFunction()
-    {
-        return m_Settings.Epsilon;
-    }
-
-    /// \brief A getter for the advection control function (eta).
-    AdvectionCtrlFunction& GetAdvectionCtrlFunction()
-    {
-        return m_Settings.Eta;
-    }
-
     /// \brief A getter for the stabilization scaling factor.
     pmp::Scalar& GetScalingFactor()
     {
@@ -191,7 +186,7 @@ protected:
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] outerRadius   radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    virtual void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) = 0;
+    virtual void StabilizeGeometries(float outerRadius, float stabilizationFactor = STABILIZATION_FACTOR) = 0;
 
     /// \brief Prepares the property arrays for all evolving manifolds.
     virtual void PrepareManifoldProperties() = 0;
@@ -378,7 +373,7 @@ protected:
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) override;
+    void StabilizeGeometries(float outerRadius, float stabilizationFactor = STABILIZATION_FACTOR) override;
 
     /// \brief A getter for the scalar grid interpolator function.
     ScalarGridInterpolationFunction2D& GetScalarInterpolate()
@@ -475,7 +470,7 @@ private:
 	/// \param[in] minLength               the minimum length of a 1D co-volume within the custom curves.
 	/// \param[in] maxLength               the maximum length of a 1D co-volume within the custom curves.
 	/// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor = 1.0f);
+    void StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor = STABILIZATION_FACTOR);
 };
 
 /**
@@ -618,7 +613,7 @@ protected:
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(float outerRadius, float stabilizationFactor = 1.0f) override;
+    void StabilizeGeometries(float outerRadius, float stabilizationFactor = STABILIZATION_FACTOR) override;
 
     /// \brief A getter for the inverse stabilization transformation matrix.
     pmp::mat4& GetTransformToOriginal()
@@ -752,7 +747,7 @@ private:
     /// \param[in] minArea                 the minimum area of a 2D co-volume within the custom surfaces.
     /// \param[in] maxArea                 the maximum area of a 2D co-volume within the custom surfaces.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor = 1.0f);
+    void StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor = STABILIZATION_FACTOR);
 };
 
 //

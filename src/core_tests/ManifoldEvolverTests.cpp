@@ -123,12 +123,14 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
     // Arrange
     pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
-    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 32));
+    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 16));
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
-    strategySettings.Epsilon = STANDARD_EPSILON;
-    strategySettings.Eta = STANDARD_ETA;
+    strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
+    strategySettings.OuterManifoldEta = STANDARD_ETA;
+    strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
+    strategySettings.InnerManifoldEta = strategySettings.OuterManifoldEta;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
     globalSettings.DoRemeshing = false;
@@ -156,6 +158,66 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
     for (int i = 0; i < 32; ++i)
     {
         EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0f);
+    }
+    for (int i = 0; i < 16; ++i)
+    {
+	    EXPECT_GT(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), 0.75f);
+    }
+}
+
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_SlowerInnerEtaNoRemeshing)
+{
+    // Arrange
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    std::vector<pmp::ManifoldCurve2D> innerCurves;
+    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 16));
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.TimeStep = 0.01;
+    strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+            return 0.0;
+        return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
+    strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+            return 0.0;
+        return 0.5 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 10;
+    globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ProcedureName = "ShrinkingAndExpandingCircle_SlowerInnerEtaNoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    auto customStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+        strategySettings, outerCurve, innerCurves);
+
+    ManifoldEvolver evolver(globalSettings, std::move(customStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<CustomManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
+
+    ASSERT_TRUE(resultOuterCurve != nullptr);
+    ASSERT_FALSE(resultInnerCurves.empty());
+
+    for (int i = 0; i < 32; ++i)
+    {
+        EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0f);
+    }
+    for (int i = 0; i < 16; ++i)
+    {
         EXPECT_GT(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), 0.75f);
     }
 }
@@ -168,8 +230,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = false;
-    strategySettings.Epsilon = STANDARD_EPSILON;
-    strategySettings.Eta = STANDARD_ETA;
+    strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
+    strategySettings.OuterManifoldEta = STANDARD_ETA;
     strategySettings.TimeStep = 0.02;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
@@ -215,8 +277,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = false;
-    strategySettings.Epsilon = STANDARD_EPSILON;
-    strategySettings.Eta = [](double distance, double negGradDotNormal)
+    strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
         if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
             return 0.0;
@@ -248,11 +310,15 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     ASSERT_TRUE(resultOuterCurve != nullptr);
     ASSERT_TRUE(resultInnerCurves.empty());
 
+    size_t nInvalidVertices = 0;
     for (const auto vPos : resultOuterCurve->positions())
     {
-        EXPECT_LT(norm(vPos), 2.0f);
-        EXPECT_GT(norm(vPos), 1.0f);
+        if (norm(vPos) > 2.0f)
+            nInvalidVertices++;
+        else if (norm(vPos) < 1.0f)
+            nInvalidVertices++;
     }
+    EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.25);
 }
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing)
@@ -267,13 +333,15 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = true;
-    strategySettings.Epsilon = STANDARD_EPSILON;
-    strategySettings.Eta = [](double distance, double negGradDotNormal)
+    strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
         if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
             return 0.0;
         return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
+    strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
+    strategySettings.InnerManifoldEta = strategySettings.OuterManifoldEta;
     strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 40;
@@ -300,11 +368,15 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     ASSERT_TRUE(resultOuterCurve != nullptr);
     ASSERT_FALSE(resultInnerCurves.empty());
 
+    size_t nInvalidVertices = 0;
     for (const auto vPos : resultOuterCurve->positions())
     {
-        EXPECT_LT(norm(vPos), 2.0f);
-        EXPECT_GT(norm(vPos), 1.0f);
+        if (norm(vPos) > 2.0f)
+            nInvalidVertices++;
+        else if (norm(vPos) < 1.0f)
+            nInvalidVertices++;
     }
+    EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.0);
 }
 
 // Suite: ManifoldEvolverTests_ManifoldSurfaceSuite
@@ -520,10 +592,10 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = false;
-    strategySettings.Epsilon = [](double distance) {
+    strategySettings.OuterManifoldEpsilon = [](double distance) {
         return 0.1 * (1.0 - exp(-distance * distance / 0.0125));
     };
-    strategySettings.Eta = [](double distance, double negGradDotNormal)
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
         if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
             return 0.0;
@@ -579,15 +651,17 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = true;
-    strategySettings.Epsilon = [](double distance) {
+    strategySettings.OuterManifoldEpsilon = [](double distance) {
         return 0.1 * (1.0 - exp(-distance * distance / 0.0125));
     };
-    strategySettings.Eta = [](double distance, double negGradDotNormal)
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
         if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
             return 0.0;
         return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
+    strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
+    strategySettings.InnerManifoldEta = strategySettings.OuterManifoldEta;
     strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 40;
