@@ -1259,7 +1259,35 @@ float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarge
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
 		return outerSphereRadius;
 
-	// TODO: implement 3D version
+	// TODO: This is hardcoded, implement 3D version of ParticleSwarmDistanceFieldInscribedSphereCalculator
+	//const InscribedSphereInputData calcData{
+	//	*m_TargetPointCloud,
+	//	std::make_shared<Geometry::ScalarGrid>(*m_DistanceField) // clone
+	//};	
+	//ParticleSwarmDistanceFieldInscribedSphereCalculator inscribedSphereCalculator;
+	//const auto spheres = inscribedSphereCalculator.Calculate(calcData);
+	const auto spheres = { Sphere3D{pmp::Point(0, 0, 0), 0.7f} };
+
+	m_InnerSurfaces.reserve(spheres.size());
+
+	for (const auto& sphere : spheres)
+	{
+		// keep the same vertex density for inner spheres
+		const auto innerSubdiv = static_cast<unsigned int>(static_cast<pmp::Scalar>(GetSettings().LevelOfDetail) * sphere.Radius / outerSphereRadius) + 1;
+		Geometry::IcoSphereBuilder innerIcoBuilder({ 
+			innerSubdiv,
+			sphere.Radius * SPHERE_RADIUS_FACTOR
+		});
+		innerIcoBuilder.BuildBaseData();
+		innerIcoBuilder.BuildPMPSurfaceMesh();
+		auto mesh = innerIcoBuilder.GetPMPSurfaceMeshResult();
+		if (sphere.Center != pmp::Point(0, 0, 0))
+		{
+			const auto translationMatrix = translation_matrix(sphere.Center);
+			mesh *= translationMatrix;
+		}		
+		m_InnerSurfaces.push_back(std::make_shared<pmp::SurfaceMesh>(mesh));
+	}
 
 	return outerSphereRadius;
 }

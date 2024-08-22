@@ -82,3 +82,17 @@ inline [[nodiscard]] pmp::ManifoldCurve2D ConstructCircle(const Circle2D& circle
 {
 	return pmp::CurveFactory::circle(circle.Center, circle.Radius, nSegments);
 }
+
+/// \brief A wrapper for input data for the construction of an inscribed sphere
+struct InscribedSphereInputData
+{
+	std::vector<pmp::Point> Points{}; //>! the evaluated point cloud.
+	std::shared_ptr<Geometry::ScalarGrid> DistanceField{ nullptr }; //>! a pointer to a pre-computed distance field to Points. 
+};
+
+/// \brief Parameters of a 3D sphere.
+struct Sphere3D
+{
+	pmp::Point Center{};
+	pmp::Scalar Radius{ 1.0f };
+};
