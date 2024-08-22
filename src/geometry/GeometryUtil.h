@@ -141,4 +141,14 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool CircleIntersectsCircle2D(const pmp::Point2& center1, const pmp::Scalar& radius1, const pmp::Point2& center2, const pmp::Scalar& radius2);
 
+	/**
+	 * \brief Verifies whether two spheres intersect.
+	 * \param center1       center of the first sphere.
+	 * \param radius1       radius of the first sphere.
+	 * \param center2       center of the second sphere.
+	 * \param radius2       radius of the second sphere.
+	 * \return true if spheres intersect.
+	 */
+	[[nodiscard]] bool SphereIntersectsSphere3D(const pmp::Point& center1, const pmp::Scalar& radius1, const pmp::Point& center2, const pmp::Scalar& radius2);
+
 } // namespace Geometry

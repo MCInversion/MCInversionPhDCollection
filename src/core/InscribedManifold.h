@@ -1,10 +1,13 @@
 #pragma once
 
 #include "pmp/Types.h"
+#include "pmp/MatVec.h"
 #include "pmp/ManifoldCurve2D.h"
+#include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/CurveFactory.h"
 
 #include "geometry/Grid.h"
+#include "geometry/IcoSphereBuilder.h"
 
 /// \brief A wrapper for input data for the InscribedCircleBuilder
 struct InscribedCircleInputData
@@ -83,6 +86,10 @@ inline [[nodiscard]] pmp::ManifoldCurve2D ConstructCircle(const Circle2D& circle
 	return pmp::CurveFactory::circle(circle.Center, circle.Radius, nSegments);
 }
 
+// =====================================================================================
+//                                  3D Utils
+// -------------------------------------------------------------------------------------
+
 /// \brief A wrapper for input data for the construction of an inscribed sphere
 struct InscribedSphereInputData
 {
@@ -96,3 +103,75 @@ struct Sphere3D
 	pmp::Point Center{};
 	pmp::Scalar Radius{ 1.0f };
 };
+
+/// \brief A base utility to calculate the centers and radii of spheres inscribed to a point cloud.
+class InscribedSphereCalculator
+{
+public:
+	virtual ~InscribedSphereCalculator() = default;
+
+	/**
+	 * \brief Estimates inscribed spheres to a point cloud.
+	 * \param data        input point cloud data.
+	 * \return a vector of spheres.
+	 */
+	virtual [[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) = 0;
+};
+
+/// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the naive approach:
+/// Use the center of the bounding box of the input point cloud, and the distance to the closest point as radius.
+class NaiveInscribedSphereCalculator : public InscribedSphereCalculator
+{
+public:
+	/// \copydoc InscribedSphereCalculator::Calculate
+	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+};
+
+/// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the distance-field-based approach:
+/// Find the approximate locations of local maxima of the point cloud distance field which will serve as centers, and the distance to the closest point as radii.
+class DistanceFieldInscribedSphereCalculator : public InscribedSphereCalculator
+{
+public:
+	/// \copydoc InscribedSphereCalculator::Calculate
+	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+};
+
+/// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the distance-field-based approach:
+/// Find the approximate locations of local maxima of the point cloud distance field which will serve as centers, and the distance to the closest point as radii.
+/// In this calculator, we use a octree-based approach instead of analyzing all grid points
+class HierarchicalDistanceFieldInscribedSphereCalculator : public InscribedSphereCalculator
+{
+public:
+	/// \copydoc InscribedSphereCalculator::Calculate
+	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+};
+
+/// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the distance-field-based approach:
+/// Find the approximate locations of local maxima of the point cloud distance field which will serve as centers, and the distance to the closest point as radii.
+/// In this calculator, we use a particle-based approach: simulating the movement of points across the grid towards the local maxima.
+class ParticleSwarmDistanceFieldInscribedSphereCalculator : public InscribedSphereCalculator
+{
+public:
+	/// \copydoc InscribedSphereCalculator::Calculate
+	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+};
+
+/**
+ * \brief Tessellates the resulting curve from the computed radius and center.
+ * \param sphere        A parametric sphere to be reconstructed.
+ * \param subdiv        the level of subdivision used for construction
+ * \return The tessellation of the resulting Sphere (must be called after CalculateInnerSphereRadiusAndCenter).
+ */
+inline [[nodiscard]] pmp::SurfaceMesh ConstructSphere(const Sphere3D& sphere, unsigned int subdiv = 2)
+{
+	Geometry::IcoSphereBuilder icoBuilder({ subdiv, sphere.Radius });
+	icoBuilder.BuildBaseData();
+	icoBuilder.BuildPMPSurfaceMesh();
+	if (sphere.Center == pmp::Point(0, 0, 0))
+		return icoBuilder.GetPMPSurfaceMeshResult();
+
+	auto mesh = icoBuilder.GetPMPSurfaceMeshResult();
+	const auto translationMatrix = translation_matrix(sphere.Center);
+	mesh *= translationMatrix;
+	return mesh;
+}

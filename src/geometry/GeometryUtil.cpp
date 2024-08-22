@@ -1147,6 +1147,15 @@ namespace Geometry
 		return distance < (radius1 + radius2);
 	}
 
+	bool SphereIntersectsSphere3D(const pmp::Point& center1, const pmp::Scalar& radius1, const pmp::Point& center2, const pmp::Scalar& radius2)
+	{
+		// Calculate the distance between the centers of the two spheres
+		const pmp::Scalar distance = norm(center1 - center2);
+
+		// Check if the spheres intersect
+		return distance < (radius1 + radius2);
+	}
+
 	// =====================================================================================
 
 

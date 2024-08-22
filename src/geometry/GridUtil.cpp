@@ -2020,4 +2020,180 @@ namespace Geometry
 		return std::abs(avgDivergence) > divergenceThreshold;
 	}
 
+	std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+	{
+		using namespace Eigen;
+
+		const auto& values = grid.Values();
+		const auto Nx = static_cast<unsigned int>(grid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(grid.Dimensions().Ny);
+		const auto Nz = static_cast<unsigned int>(grid.Dimensions().Nz);
+		assert(ix < Nx);
+		assert(iy < Ny);
+		assert(iz < Nz);
+		const auto cellSize = grid.CellSize();
+		const auto& orig = grid.Box().min();
+
+		// Collect the values in the 3x3x3 neighborhood
+		std::array<pmp::Scalar, 27> neighborhood_values;
+		int idx = 0;
+		const auto r = static_cast<int>(radius);
+		for (int di = -r; di <= r; di += r)
+		{
+			for (int dj = -r; dj <= r; dj += r)
+			{
+				for (int dk = -r; dk <= r; dk += r)
+				{
+					const int adjusted_ix = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
+					const int adjusted_iy = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
+					const int adjusted_iz = std::clamp(static_cast<int>(iz) + dk, 0, static_cast<int>(Nz) - 1);
+
+					neighborhood_values[idx++] = values[Nx * Ny * adjusted_iz + Nx * adjusted_iy + adjusted_ix];
+				}
+			}
+		}
+
+		// Fit a quadratic function f(x, y, z) = a000 + a100*x + a010*y + a001*z + a200*x^2 + a110*x*y + a101*x*z + a011*y*z + a020*y^2 + a002*z^2
+		Matrix<float, 27, 10> A;
+		Vector<float, 27> b;
+
+		// normalized cell coordinates
+		A << 1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
+			1, 0, -1, -1, 0, 0, 0, 1, 0, 1,
+			1, 1, -1, -1, 1, -1, -1, 1, 1, 1,
+			1, -1, 0, -1, 0, 0, 0, 0, 1, 0,
+			1, 0, 0, -1, 0, 0, 0, 0, 0, 1,
+			1, 1, 0, -1, 1, 0, -1, 0, 1, 0,
+			1, -1, 1, -1, 1, -1, -1, 1, 1, 1,
+			1, 0, 1, -1, 0, 0, 0, 1, 0, 1,
+			1, 1, 1, -1, 1, -1, -1, 1, 1, 1,
+			1, -1, -1, 0, 0, 0, 0, 0, 0, 0,
+			1, 0, -1, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, -1, 0, 0, 0, 0, 0, 0, 0,
+			1, -1, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, -1, 1, 0, 1, 0, 0, 0, 0, 0,
+			1, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 1, 0, 1, 0, 0, 0, 0, 0,
+			1, -1, -1, 1, 1, 1, 1, 1, 1, 1,
+			1, 0, -1, 1, 0, 0, 0, 1, 0, 1,
+			1, 1, -1, 1, 1, -1, 1, 1, 1, 1,
+			1, -1, 0, 1, 0, 0, 0, 0, 1, 0,
+			1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
+			1, 1, 0, 1, 1, 0, 1, 0, 1, 0,
+			1, -1, 1, 1, 1, -1, 1, 1, 1, 1,
+			1, 0, 1, 1, 0, 0, 0, 1, 0, 1,
+			1, 1, 1, 1, 1, -1, 1, 1, 1, 1;
+
+		for (int i = 0; i < 27; ++i)
+		{
+			b[i] = neighborhood_values[i];
+		}
+
+		const Vector<float, 10> coeffs = A.colPivHouseholderQr().solve(b);
+		const float a100 = coeffs[1];
+		const float a010 = coeffs[2];
+		const float a001 = coeffs[3];
+		const float a200 = coeffs[4];
+		const float a110 = coeffs[5];
+		const float a101 = coeffs[6];
+		const float a011 = coeffs[7];
+		const float a020 = coeffs[8];
+		const float a002 = coeffs[9];
+
+		// Solve for the critical point by finding the gradient and Hessian
+		Matrix3f H;
+		H << 2 * a200, a110, a101,
+			a110, 2 * a020, a011,
+			a101, a011, 2 * a002;
+
+		Vector3f grad;
+		grad << a100, a010, a001;
+
+		SelfAdjointEigenSolver<Matrix3f> solver(H);
+		if (solver.eigenvalues()(0) > FLT_EPSILON || solver.eigenvalues()(1) > FLT_EPSILON || solver.eigenvalues()(2) > FLT_EPSILON)
+		{
+			return {}; // Hessian is not negative definite
+		}
+
+		Vector3f critical_point = -H.inverse() * grad;
+
+		if (critical_point[0] < -1 || critical_point[0] > 1 || critical_point[1] < -1 || critical_point[1] > 1 || critical_point[2] < -1 || critical_point[2] > 1)
+		{
+			return {}; // Critical point outside the 27 grid cells
+		}
+
+		return orig + pmp::Point(
+			(ix + radius * critical_point[0]) * cellSize,
+			(iy + radius * critical_point[1]) * cellSize,
+			(iz + radius * critical_point[2]) * cellSize);
+	}
+
+	bool IsConvergentOrDivergentNearCell(const VectorGrid& vecGrid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+	{
+		const auto Nx = static_cast<unsigned int>(vecGrid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(vecGrid.Dimensions().Ny);
+		const auto Nz = static_cast<unsigned int>(vecGrid.Dimensions().Nz);
+
+		const auto& valuesX = vecGrid.ValuesX();
+		const auto& valuesY = vecGrid.ValuesY();
+		const auto& valuesZ = vecGrid.ValuesZ();
+
+		float divergenceSum = 0.0f;
+		const int r = static_cast<int>(radius);
+
+		// Iterate over the 6 key points in the neighborhood of the cell (ix, iy, iz)
+		const std::array<std::tuple<int, int, int>, 6> keyPoints = { {
+			{ -r, 0, 0 },  // left
+			{ r, 0, 0 },   // right
+			{ 0, -r, 0 },  // bottom
+			{ 0, r, 0 },   // top
+			{ 0, 0, -r },  // front
+			{ 0, 0, r }    // back
+		} };
+
+		for (const auto& [di, dj, dk] : keyPoints)
+		{
+			// Ensure we don't go out of bounds
+			const int ni = std::clamp(static_cast<int>(ix) + di, 1, static_cast<int>(Nx) - 2);
+			const int nj = std::clamp(static_cast<int>(iy) + dj, 1, static_cast<int>(Ny) - 2);
+			const int nk = std::clamp(static_cast<int>(iz) + dk, 1, static_cast<int>(Nz) - 2);
+
+			// Approximate divergence: calculating partial derivatives of vector components with respect to x, y, and z
+			float divX = 0.0f;
+			float divY = 0.0f;
+			float divZ = 0.0f;
+
+			// Compute divergence for X component (partial derivative with respect to x)
+			if (ni > 0 && ni < Nx - 1)
+			{
+				divX = (valuesX[Nx * Ny * nk + Nx * nj + (ni + 1)] - valuesX[Nx * Ny * nk + Nx * nj + (ni - 1)]) / 2.0f;
+			}
+
+			// Compute divergence for Y component (partial derivative with respect to y)
+			if (nj > 0 && nj < Ny - 1)
+			{
+				divY = (valuesY[Nx * Ny * nk + Nx * (nj + 1) + ni] - valuesY[Nx * Ny * nk + Nx * (nj - 1) + ni]) / 2.0f;
+			}
+
+			// Compute divergence for Z component (partial derivative with respect to z)
+			if (nk > 0 && nk < Nz - 1)
+			{
+				divZ = (valuesZ[Nx * Ny * (nk + 1) + Nx * nj + ni] - valuesZ[Nx * Ny * (nk - 1) + Nx * nj + ni]) / 2.0f;
+			}
+
+			// Sum up the divergence for the selected points
+			divergenceSum += divX + divY + divZ;
+		}
+
+		// Average divergence over the neighborhood
+		const float avgDivergence = divergenceSum / 9.0f;
+
+		// We consider this point convergent or divergent if the average divergence is significantly non-zero
+		constexpr float divergenceThreshold = 1e-3f;
+		return std::abs(avgDivergence) > divergenceThreshold;
+	}
+
+
 } // namespace Geometry

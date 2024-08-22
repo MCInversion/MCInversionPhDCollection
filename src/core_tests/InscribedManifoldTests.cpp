@@ -50,6 +50,8 @@ namespace
         return std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings));
     }
 
+    // --------------------------------------------------------------
+
     class NaiveInscribedCircleCalculatorTests : public ::testing::Test 
     {
     protected:
@@ -72,6 +74,32 @@ namespace
     {
     protected:
         ParticleSwarmDistanceFieldInscribedCircleCalculator calculator;
+    };
+
+    // --------------------------------------------------------------
+
+    class NaiveInscribedSphereCalculatorTests : public ::testing::Test
+    {
+    protected:
+        NaiveInscribedSphereCalculator calculator;
+    };
+
+    class DistanceFieldInscribedSphereCalculatorTests : public ::testing::Test
+    {
+    protected:
+        DistanceFieldInscribedSphereCalculator calculator;
+    };
+
+    class HierarchicalDistanceFieldInscribedSphereCalculatorTests : public ::testing::Test
+    {
+    protected:
+        HierarchicalDistanceFieldInscribedSphereCalculator calculator;
+    };
+
+    class ParticleSwarmDistanceFieldInscribedSphereCalculatorTests : public ::testing::Test
+    {
+    protected:
+        ParticleSwarmDistanceFieldInscribedSphereCalculator calculator;
     };
 
 } // anonymous namespace
@@ -304,11 +332,6 @@ TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, EllipseSampling
     }
 }
 
-// set up root directory
-const std::filesystem::path fsRootPath = DROOT_DIR;
-const auto fsDataOutPath = fsRootPath / "output\\core_tests\\";
-const std::string dataOutPath = fsDataOutPath.string();
-
 TEST(ParticleSwarmDistanceFieldInscribedCircleCalculator_Tests, ProblematicIncompleteCircle)
 {
     // Arrange
@@ -321,15 +344,341 @@ TEST(ParticleSwarmDistanceFieldInscribedCircleCalculator_Tests, ProblematicIncom
     inputData.Points = targetPts;
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
 
-    //ExportScalarGrid2DToPNG(dataOutPath + "ProblematicIncompleteCircle_DF.png", *inputData.DistanceField, Geometry::BilinearInterpolateScalarValue,
-    //    10, 10, RAINBOW_TO_WHITE_MAP);
-
     // Act
     ParticleSwarmDistanceFieldInscribedCircleCalculator calculator;
     const auto circles = calculator.Calculate(inputData);
 
     // Assert
     ASSERT_EQ(circles.size(), 1);
+}
+
+// =======================================================================================================================================
+
+namespace
+{
+    [[nodiscard]] pmp::SurfaceMesh ConstructIcoSphere(const pmp::Point& center, const pmp::Scalar& radius, const unsigned int& subdiv)
+    {
+        Geometry::IcoSphereBuilder icoBuilder({ subdiv, radius });
+        icoBuilder.BuildBaseData();
+        icoBuilder.BuildPMPSurfaceMesh();
+        if (center == pmp::Point(0, 0, 0))
+            return icoBuilder.GetPMPSurfaceMeshResult();
+
+        auto mesh = icoBuilder.GetPMPSurfaceMeshResult();
+        const auto translationMatrix = translation_matrix(center);
+        mesh *= translationMatrix;
+        return mesh;
+    }
+
+    [[nodiscard]] InscribedSphereInputData CreateUnitCubeVerticesData()
+    {
+        InscribedSphereInputData data;
+        data.Points = {
+            pmp::Point(0, 0, 0),
+            pmp::Point(1, 0, 0),
+            pmp::Point(0, 1, 0),
+            pmp::Point(0, 0, 1),
+            pmp::Point(1, 1, 0),
+            pmp::Point(1, 0, 1),
+            pmp::Point(0, 1, 1),
+            pmp::Point(1, 1, 1)
+        };
+        return data;
+    }
+
+    [[nodiscard]] InscribedSphereInputData CreateUniformSphereSamplingData()
+    {
+        pmp::SurfaceMesh sphereMesh = ConstructIcoSphere(pmp::Point(0, 0, 0), 1.0f, 2);
+        InscribedSphereInputData data;
+        data.Points = sphereMesh.positions();
+        return data;
+    }
+
+    [[nodiscard]] InscribedSphereInputData CreateEllipsoidSamplingData()
+    {
+        pmp::SurfaceMesh sphereMesh = ConstructIcoSphere(pmp::Point(0, 0, 0), 1.0f, 2);
+        constexpr float a = 1.0f;
+        constexpr float b = 1.5f;
+        constexpr float c = 2.0f;
+        const auto scalingMat = scaling_matrix(pmp::vec3{a, b, c});
+        sphereMesh *= scalingMat;
+        InscribedSphereInputData data;
+        data.Points = sphereMesh.positions();
+        return data;
+    }
+
+    [[nodiscard]] std::shared_ptr<Geometry::ScalarGrid> GenerateDistanceField(const std::vector<pmp::Point>& points, float truncationFactor = 10.0f)
+    {
+        const auto pointBBox = pmp::BoundingBox(points);
+        const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+        const float minSize = std::min({pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2]});
+        const float cellSize = minSize / 20.0f;
+
+        const SDF::PointCloudDistanceFieldSettings sdfSettings{
+            cellSize,
+            1.0f,
+        DBL_MAX
+        };
+        return std::make_shared<Geometry::ScalarGrid>(SDF::PointCloudDistanceFieldGenerator::Generate(points, sdfSettings));
+    }
+
+} // anonymous namespace
+
+
+TEST_F(NaiveInscribedSphereCalculatorTests, UnitCubeVertices)
+{
+    // Arrange
+    const auto inputData = CreateUnitCubeVerticesData();
+
+    // Act
+    auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.5f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.5f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.5f);
+    EXPECT_FLOAT_EQ(spheres[0].Radius, std::sqrt(3) / 2);  // Inscribed sphere in a unit cube
+}
+
+TEST_F(NaiveInscribedSphereCalculatorTests, UniformSphereSampling)
+{
+    // Arrange
+    const auto inputData = CreateUniformSphereSamplingData();
+
+    // Act
+    auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Radius, 1.0f);
+}
+
+TEST_F(NaiveInscribedSphereCalculatorTests, EllipsoidSampling)
+{
+    // Arrange
+    const auto inputData = CreateEllipsoidSamplingData();
+
+    // Act
+    auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Radius, 1.0f);
+}
+
+TEST_F(DistanceFieldInscribedSphereCalculatorTests, UnitCubeVertices)
+{
+    // Arrange
+    auto inputData = CreateUnitCubeVerticesData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Center[0], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Radius, std::sqrt(3) / 2, epsilon);
+    }
+}
+
+TEST_F(DistanceFieldInscribedSphereCalculatorTests, UniformSphereSampling)
+{
+    // Arrange
+    auto inputData = CreateUniformSphereSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Center[0], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST_F(DistanceFieldInscribedSphereCalculatorTests, EllipsoidSampling)
+{
+    // Arrange
+    auto inputData = CreateEllipsoidSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, UnitCubeVertices)
+{
+    // Arrange
+    auto inputData = CreateUnitCubeVerticesData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Center[0], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Radius, std::sqrt(3) / 2, epsilon);
+    }
+}
+
+TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, UniformSphereSampling)
+{
+    // Arrange
+    auto inputData = CreateUniformSphereSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Center[0], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, EllipsoidSampling)
+{
+    // Arrange
+    auto inputData = CreateEllipsoidSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST_F(ParticleSwarmDistanceFieldInscribedSphereCalculatorTests, UnitCubeVertices)
+{
+    // Arrange
+    auto inputData = CreateUnitCubeVerticesData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Center[0], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Radius, std::sqrt(3) / 2, epsilon);
+    }
+}
+
+TEST_F(ParticleSwarmDistanceFieldInscribedSphereCalculatorTests, UniformSphereSampling)
+{
+    // Arrange
+    auto inputData = CreateUniformSphereSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Center[0], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.0f, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST_F(ParticleSwarmDistanceFieldInscribedSphereCalculatorTests, EllipsoidSampling)
+{
+    // Arrange
+    auto inputData = CreateEllipsoidSamplingData();
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+    EXPECT_TRUE(inputData.DistanceField != nullptr);
+    const auto epsilon = 1.5 * inputData.DistanceField->CellSize();
+
+    // Act
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
+    for (const auto& sphere : spheres)
+    {
+        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+    }
+}
+
+TEST(ParticleSwarmDistanceFieldInscribedSphereCalculator_Tests, ProblematicIncompleteSphere)
+{
+    // Arrange
+    pmp::SurfaceMesh targetSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 1);
+    auto targetPts = targetSurface.positions();
+    // Remove a few points to simulate incompleteness
+    targetPts.erase(targetPts.begin(), targetPts.begin() + 3);
+    InscribedSphereInputData inputData;
+    inputData.Points = targetPts;
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+
+    // Act
+    ParticleSwarmDistanceFieldInscribedSphereCalculator calculator;
+    const auto spheres = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(spheres.size(), 1);
 }
 
 

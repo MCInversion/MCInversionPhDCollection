@@ -1736,7 +1736,7 @@ namespace Geometry
 	{
 		if (kdTree.size_ == 0)
 		{
-			std::cerr << "GetDistanceToClosestPoint2D: kdTree contains no points!\n";
+			std::cerr << "GetDistanceToClosestPoint2DSquared: kdTree contains no points!\n";
 			return {};
 		}
 
@@ -1750,7 +1750,32 @@ namespace Geometry
 
 		if (resultSet.size() == 0)
 		{
-			std::cerr << "GetDistanceToClosestPoint2D: resultSet contains no points!\n";
+			std::cerr << "GetDistanceToClosestPoint2DSquared: resultSet contains no points!\n";
+			return {};
+		}
+
+		return out_dist_sqr;
+	}
+
+	std::optional<pmp::Scalar> GetDistanceToClosestPoint3DSquared(const PointCloud3DTree& kdTree, const pmp::Point& sampledPoint)
+	{
+		if (kdTree.size_ == 0)
+		{
+			std::cerr << "GetDistanceToClosestPoint3DSquared: kdTree contains no points!\n";
+			return {};
+		}
+
+		// Find the nearest neighbor distance using KD-tree
+		const float query_pt[3] = { sampledPoint[0], sampledPoint[1], sampledPoint[2] };
+		size_t nearest_index;
+		float out_dist_sqr;
+		nanoflann::KNNResultSet<float> resultSet(1);
+		resultSet.init(&nearest_index, &out_dist_sqr);
+		kdTree.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters(10));
+
+		if (resultSet.size() == 0)
+		{
+			std::cerr << "GetDistanceToClosestPoint3DSquared: resultSet contains no points!\n";
 			return {};
 		}
 
@@ -1760,6 +1785,7 @@ namespace Geometry
 	//
 	// =======================================================================================================================
 	//
+
 
 	std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance)
 	{

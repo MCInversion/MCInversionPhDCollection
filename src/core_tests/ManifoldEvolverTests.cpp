@@ -332,6 +332,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     targetPts.erase(targetPts.begin());
 
     ManifoldEvolutionSettings strategySettings;
+    strategySettings.LevelOfDetail = 4;
     strategySettings.UseInnerManifolds = true;
     strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
     strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
@@ -376,6 +377,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
         else if (norm(vPos) < 1.0f)
             nInvalidVertices++;
     }
+    std::cout << "resultOuterCurve->n_vertices() = " << resultOuterCurve->n_vertices() << "\n";
     EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.0);
 }
 

@@ -198,3 +198,74 @@ TEST(GridInterpolationTest, GetNearestNeighborVectorValue2D_case)
     EXPECT_NEAR(result[0], 2.0, 1e-6);
     EXPECT_NEAR(result[1], 4.0, 1e-6);
 }
+
+// Local maxima
+
+TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithUnitRadius)
+{
+    // Arrange
+    ScalarGrid grid(1.0f, BoundingBox(Point(-1, -1, -1), Point(1, 1, 1)));
+    grid.Values() = {
+        1, 2, 1,
+        2, 3, 2,
+        1, 2, 1,
+
+        2, 3, 2,
+        3, 5, 3,  // Maximum at center (0, 0, 0)
+        2, 3, 2,
+
+        1, 2, 1,
+        2, 3, 2,
+        1, 2, 1
+    };
+    const unsigned int ix = 1, iy = 1, iz = 1;
+
+    // Act
+    const auto localMax = FindLocalMaximumNearScalarGridCell(grid, ix, iy, iz, 1);
+
+    // Assert
+    ASSERT_TRUE(localMax.has_value());
+    EXPECT_NEAR((*localMax)[0], 0.0f, 1e-5f);
+    EXPECT_NEAR((*localMax)[1], 0.0f, 1e-5f);
+    EXPECT_NEAR((*localMax)[2], 0.0f, 1e-5f);
+}
+
+
+
+TEST(ScalarGridLocalMaximumTests3D, MaximumOutsideOfCellPointsWithUnitRadius)
+{
+    // Arrange
+    ScalarGrid grid(1.0f, BoundingBox(pmp::Point(-1, -1, -1), Point(1, 1, 1)));
+    grid.Values() = {
+        1, 2, 1,
+        2, 3, 2,
+        1, 2, 1,
+
+        2, 3, 2,
+        3, 4, 3,
+        2, 3, 2,
+
+        2, 3, 2,
+        3, 5, 3,
+        2, 3, 2
+    };
+    const unsigned int ix = 1, iy = 1, iz = 1;
+
+    // Act
+    const auto localMax = FindLocalMaximumNearScalarGridCell(grid, ix, iy, iz, 1);
+
+    // Assert
+    ASSERT_FALSE(localMax.has_value());
+}
+
+// TODO: tests with larger data
+//TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithRadius3)
+//{
+//
+//}
+//
+//
+//TEST(ScalarGridLocalMaximumTests3D, MaximumOutsideOfCellPointsWithRadius3)
+//{
+//
+//}

@@ -401,4 +401,13 @@ namespace Geometry
 	/// \brief Verifies whether the vector field has a non-zero divergence at position (ix, iy) within a given radius.
 	[[nodiscard]] bool IsConvergentOrDivergentNearCell(const VectorGrid2D& vecGrid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
 
+	/**
+	 * \brief Searches the cell (ix, iy, iz) and its neighbors for a local maximum of a 3D quadratic polynomial.
+	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
+	 */
+	[[nodiscard]] std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius = 1);
+
+	/// \brief Verifies whether the vector field has a non-zero divergence at position (ix, iy, iz) within a given radius.
+	[[nodiscard]] bool IsConvergentOrDivergentNearCell(const VectorGrid& vecGrid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius = 1);
+
 } // namespace Geometry
