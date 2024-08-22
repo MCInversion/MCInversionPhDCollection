@@ -203,7 +203,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
     }
 }
 
-TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_NoRemeshing)
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing)
 {
     // Arrange
     pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
@@ -222,7 +222,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
     globalSettings.DoRemeshing = false;
     globalSettings.ExportPerTimeStep = true;
     globalSettings.ExportTargetDistanceFieldAsImage = true;
-    globalSettings.ProcedureName = "ShrinkWrappingACirclePointCloud_NoRemeshing";
+    globalSettings.ProcedureName = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing";
     globalSettings.OutputPath = dataOutPath + "core_tests\\";
     globalSettings.ExportResult = false;
 
@@ -240,7 +240,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
     auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
 
     ASSERT_TRUE(resultOuterCurve != nullptr);
-    ASSERT_TRUE(resultInnerCurves.empty());
+    ASSERT_FALSE(resultInnerCurves.empty());
 
     for (const auto vPos : resultOuterCurve->positions())
     {

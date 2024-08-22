@@ -2,7 +2,13 @@
 
 #include "sdf/SDF.h"
 
+#include "geometry/GridUtil.h"
+
 #include "core/InscribedManifold.h"
+#include "core/ConversionUtils.h"
+
+#include <filesystem>
+
 
 namespace
 {
@@ -297,4 +303,33 @@ TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, EllipseSampling
         EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
     }
 }
+
+// set up root directory
+const std::filesystem::path fsRootPath = DROOT_DIR;
+const auto fsDataOutPath = fsRootPath / "output\\core_tests\\";
+const std::string dataOutPath = fsDataOutPath.string();
+
+TEST(ParticleSwarmDistanceFieldInscribedCircleCalculator_Tests, ProblematicIncompleteCircle)
+{
+    // Arrange
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    auto targetPts = targetCurve.positions();
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+    InscribedCircleInputData inputData;
+    inputData.Points = targetPts;
+    inputData.DistanceField = GenerateDistanceField(inputData.Points);
+
+    //ExportScalarGrid2DToPNG(dataOutPath + "ProblematicIncompleteCircle_DF.png", *inputData.DistanceField, Geometry::BilinearInterpolateScalarValue,
+    //    10, 10, RAINBOW_TO_WHITE_MAP);
+
+    // Act
+    ParticleSwarmDistanceFieldInscribedCircleCalculator calculator;
+    const auto circles = calculator.Calculate(inputData);
+
+    // Assert
+    ASSERT_EQ(circles.size(), 1);
+}
+
 

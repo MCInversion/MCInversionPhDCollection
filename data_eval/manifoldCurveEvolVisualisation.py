@@ -6,7 +6,7 @@ import imageio.v2 as imageio  # Use imageio.v2 to avoid the deprecation warning
 from collections import defaultdict
 
 # Define the procedure name and the path to your directory containing the files
-procedure_name = "ShrinkingAndExpandingCircle_NoRemeshing"
+procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing"
 directory = "../output/core_tests/"  # Adjust this path accordingly
 
 # Load the background image (distance field PNG) if it exists

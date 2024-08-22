@@ -300,6 +300,8 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
             if (processedGridPts.contains(iy * Nx + ix))
                 continue;
 
+            processedGridPts.insert(iy * Nx + ix);  // Mark this position as covered
+
             // Get the gradient at the particle's position
             const pmp::Scalar gradientX = gridGradient.ValuesX()[Nx * iy + ix];
             const pmp::Scalar gradientY = gridGradient.ValuesY()[Nx * iy + ix];
@@ -333,7 +335,6 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
                 if (nearestPointDistanceSq.has_value())
                 {
                     circles.push_back({ *localMaxPt, sqrt(*nearestPointDistanceSq) });
-                    processedGridPts.insert(iy * Nx + ix);  // Mark this position as covered
                 }
                 continue; // Particle stops if it finds a local maximum
             }
