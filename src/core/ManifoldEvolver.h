@@ -27,6 +27,8 @@ using AdvectionCtrlFunction = std::function<double(double /* distance */, double
 const AdvectionCtrlFunction TRIVIAL_ETA = [](double /* distance */, double /* negGradDotNormal */) { return 0.0; };
 const AdvectionCtrlFunction STANDARD_ETA = [](double distance, double negGradDotNormal)
 {
+    if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+        return 0.0;
     return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 };
 
@@ -70,6 +72,8 @@ struct ManifoldEvolutionSettings
     bool UseLinearGridInterpolation{ true }; //>! whether to use d-linear interpolation for scalar and vector fields where d is the grid dimension.
     CurvatureCtrlFunction Epsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term.
     AdvectionCtrlFunction Eta{ TRIVIAL_ETA }; //>! control function for the advection term.
+
+    bool AdvectionInteractWithOtherManifolds{ false }; //>! whether to use the minimum from the distances to all manifolds including target data.
 
     AmbientFieldSettings FieldSettings{}; //>! the settings for the construction of the ambient fields.
 

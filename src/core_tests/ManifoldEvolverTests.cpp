@@ -218,6 +218,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     strategySettings.Epsilon = STANDARD_EPSILON;
     strategySettings.Eta = [](double distance, double negGradDotNormal)
     {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+            return 0.0;
         return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
     strategySettings.TimeStep = 0.01;
@@ -268,6 +270,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     strategySettings.Epsilon = STANDARD_EPSILON;
     strategySettings.Eta = [](double distance, double negGradDotNormal)
     {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+            return 0.0;
         return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
     strategySettings.TimeStep = 0.01;

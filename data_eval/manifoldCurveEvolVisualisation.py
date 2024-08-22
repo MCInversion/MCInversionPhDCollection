@@ -6,8 +6,8 @@ import imageio.v2 as imageio  # Use imageio.v2 to avoid the deprecation warning
 from collections import defaultdict
 
 # Define the procedure name and the path to your directory containing the files
-procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing"
-# procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing"
+#procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing"
+procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing"
 directory = "../output/core_tests/"  # Adjust this path accordingly
 
 # Helper function to read the grid dimensions from the *.gdim2d file
