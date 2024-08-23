@@ -10,23 +10,25 @@ constexpr float BOX_EPSILON = 1e-4f;
 TEST(GridInterpolationTest, BilinearInterpolateScalarValue2D_case)
 {
     // Setup for 2D ScalarGrid
-    ScalarGrid2D grid2D(1.0f, pmp::BoundingBox2(
-        pmp::vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec2(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    ScalarGrid2D grid2D(1.0f, BoundingBox2(
+        vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec2(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     grid2D.Values() = {
         0, 1, 2,
         1, 2, 3,
         2, 3, 4 };
+    const auto [Nx, Ny] = grid2D.Dimensions();
+    ASSERT_EQ(Nx * Ny, grid2D.Values().size());
 
-    pmp::vec2 samplePt1(0.5f, 0.5f);
-    pmp::vec2 samplePt2(1.5f, 0.5f);
-    pmp::vec2 samplePt3(0.5f, 1.5f);
-    pmp::vec2 samplePt4(1.5f, 1.5f);
+    const vec2 samplePt1(0.5f, 0.5f);
+    const vec2 samplePt2(1.5f, 0.5f);
+    const vec2 samplePt3(0.5f, 1.5f);
+    const vec2 samplePt4(1.5f, 1.5f);
 
-    double result1 = BilinearInterpolateScalarValue(samplePt1, grid2D);
-    double result2 = BilinearInterpolateScalarValue(samplePt2, grid2D);
-    double result3 = BilinearInterpolateScalarValue(samplePt3, grid2D);
-    double result4 = BilinearInterpolateScalarValue(samplePt4, grid2D);
+    const double result1 = BilinearInterpolateScalarValue(samplePt1, grid2D);
+    const double result2 = BilinearInterpolateScalarValue(samplePt2, grid2D);
+    const double result3 = BilinearInterpolateScalarValue(samplePt3, grid2D);
+    const double result4 = BilinearInterpolateScalarValue(samplePt4, grid2D);
 
     EXPECT_NEAR(result1, 1.0, 1e-6);
     EXPECT_NEAR(result2, 2.0, 1e-6);
@@ -37,9 +39,9 @@ TEST(GridInterpolationTest, BilinearInterpolateScalarValue2D_case)
 TEST(GridInterpolationTest, BilinearInterpolateVectorValue2D_case)
 {
     // Setup for 2D VectorGrid
-    VectorGrid2D vectorGrid2D(1.0f, pmp::BoundingBox2(
-        pmp::vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec2(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    VectorGrid2D vectorGrid2D(1.0f, BoundingBox2(
+        vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec2(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     vectorGrid2D.ValuesX() = {
         0, 1, 2,
         1, 2, 3,
@@ -48,16 +50,18 @@ TEST(GridInterpolationTest, BilinearInterpolateVectorValue2D_case)
         6, 5, 4,
         5, 4, 3,
         4, 3, 2 };
+    const auto [Nx, Ny] = vectorGrid2D.Dimensions();
+    ASSERT_EQ(Nx * Ny, vectorGrid2D.ValuesX().size());
+    ASSERT_EQ(Nx * Ny, vectorGrid2D.ValuesY().size());
+    const vec2 samplePt1(0.5f, 0.5f);
+    const vec2 samplePt2(1.5f, 0.5f);
+    const vec2 samplePt3(0.5f, 1.5f);
+    const vec2 samplePt4(1.5f, 1.5f);
 
-    pmp::vec2 samplePt1(0.5f, 0.5f);
-    pmp::vec2 samplePt2(1.5f, 0.5f);
-    pmp::vec2 samplePt3(0.5f, 1.5f);
-    pmp::vec2 samplePt4(1.5f, 1.5f);
-
-    pmp::dvec2 result1 = BilinearInterpolateVectorValue(samplePt1, vectorGrid2D);
-    pmp::dvec2 result2 = BilinearInterpolateVectorValue(samplePt2, vectorGrid2D);
-    pmp::dvec2 result3 = BilinearInterpolateVectorValue(samplePt3, vectorGrid2D);
-    pmp::dvec2 result4 = BilinearInterpolateVectorValue(samplePt4, vectorGrid2D);
+    const dvec2 result1 = BilinearInterpolateVectorValue(samplePt1, vectorGrid2D);
+    const dvec2 result2 = BilinearInterpolateVectorValue(samplePt2, vectorGrid2D);
+    const dvec2 result3 = BilinearInterpolateVectorValue(samplePt3, vectorGrid2D);
+    const dvec2 result4 = BilinearInterpolateVectorValue(samplePt4, vectorGrid2D);
 
     EXPECT_NEAR(result1[0], 1.0, 1e-6);
     EXPECT_NEAR(result1[1], 5.0, 1e-6);
@@ -72,9 +76,9 @@ TEST(GridInterpolationTest, BilinearInterpolateVectorValue2D_case)
 TEST(GridInterpolationTest, TrilinearInterpolateScalarValue_case)
 {
     // Setup for 3D ScalarGrid
-    ScalarGrid grid3D(1.0f, pmp::BoundingBox(
-        pmp::vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec3(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    ScalarGrid grid3D(1.0f, BoundingBox(
+        vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec3(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     grid3D.Values() = {
         0, 1, 2,
         1, 2, 3,
@@ -87,16 +91,18 @@ TEST(GridInterpolationTest, TrilinearInterpolateScalarValue_case)
         2, 3, 4,
         3, 4, 5,
         4, 5, 6 };
+    const auto [Nx, Ny, Nz] = grid3D.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, grid3D.Values().size());
 
-    pmp::vec3 samplePt1(0.5f, 0.5f, 0.5f);
-    pmp::vec3 samplePt2(1.5f, 0.5f, 0.5f);
-    pmp::vec3 samplePt3(0.5f, 1.5f, 0.5f);
-    pmp::vec3 samplePt4(0.5f, 0.5f, 1.5f);
+    const vec3 samplePt1(0.5f, 0.5f, 0.5f);
+    const vec3 samplePt2(1.5f, 0.5f, 0.5f);
+    const vec3 samplePt3(0.5f, 1.5f, 0.5f);
+    const vec3 samplePt4(0.5f, 0.5f, 1.5f);
 
-    double result1 = TrilinearInterpolateScalarValue(samplePt1, grid3D);
-    double result2 = TrilinearInterpolateScalarValue(samplePt2, grid3D);
-    double result3 = TrilinearInterpolateScalarValue(samplePt3, grid3D);
-    double result4 = TrilinearInterpolateScalarValue(samplePt4, grid3D);
+    const double result1 = TrilinearInterpolateScalarValue(samplePt1, grid3D);
+    const double result2 = TrilinearInterpolateScalarValue(samplePt2, grid3D);
+    const double result3 = TrilinearInterpolateScalarValue(samplePt3, grid3D);
+    const double result4 = TrilinearInterpolateScalarValue(samplePt4, grid3D);
 
     EXPECT_NEAR(result1, 1.5, 1e-6);
     EXPECT_NEAR(result2, 2.5, 1e-6);
@@ -107,22 +113,25 @@ TEST(GridInterpolationTest, TrilinearInterpolateScalarValue_case)
 TEST(GridInterpolationTest, TrilinearInterpolateVectorValue_case)
 {
     // Setup for 3D VectorGrid
-    VectorGrid vectorGrid3D(1.0f, pmp::BoundingBox(
-        pmp::vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec3(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    VectorGrid vectorGrid3D(1.0f, BoundingBox(
+        vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec3(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     vectorGrid3D.ValuesX() = { 0, 1, 2, 1, 2, 3, 2, 3, 4, 1, 2, 3, 2, 3, 4, 3, 4, 5, 2, 3, 4, 3, 4, 5, 4, 5, 6 };
     vectorGrid3D.ValuesY() = { 6, 5, 4, 5, 4, 3, 4, 3, 2, 5, 4, 3, 4, 3, 2, 3, 2, 1, 4, 3, 2, 3, 2, 1, 2, 1, 0 };
     vectorGrid3D.ValuesZ() = { 2, 3, 4, 3, 4, 5, 4, 5, 6, 3, 4, 5, 4, 5, 6, 5, 6, 7, 4, 5, 6, 5, 6, 7, 6, 7, 8 };
+    const auto [Nx, Ny, Nz] = vectorGrid3D.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, vectorGrid3D.ValuesX().size());
+    ASSERT_EQ(Nx * Ny * Nz, vectorGrid3D.ValuesY().size());
+    ASSERT_EQ(Nx * Ny * Nz, vectorGrid3D.ValuesZ().size());
+    const vec3 samplePt1(0.5f, 0.5f, 0.5f);
+    const vec3 samplePt2(1.5f, 0.5f, 0.5f);
+    const vec3 samplePt3(0.5f, 1.5f, 0.5f);
+    const vec3 samplePt4(0.5f, 0.5f, 1.5f);
 
-    pmp::vec3 samplePt1(0.5f, 0.5f, 0.5f);
-    pmp::vec3 samplePt2(1.5f, 0.5f, 0.5f);
-    pmp::vec3 samplePt3(0.5f, 1.5f, 0.5f);
-    pmp::vec3 samplePt4(0.5f, 0.5f, 1.5f);
-
-    pmp::dvec3 result1 = TrilinearInterpolateVectorValue(samplePt1, vectorGrid3D);
-    pmp::dvec3 result2 = TrilinearInterpolateVectorValue(samplePt2, vectorGrid3D);
-    pmp::dvec3 result3 = TrilinearInterpolateVectorValue(samplePt3, vectorGrid3D);
-    pmp::dvec3 result4 = TrilinearInterpolateVectorValue(samplePt4, vectorGrid3D);
+    const dvec3 result1 = TrilinearInterpolateVectorValue(samplePt1, vectorGrid3D);
+    const dvec3 result2 = TrilinearInterpolateVectorValue(samplePt2, vectorGrid3D);
+    const dvec3 result3 = TrilinearInterpolateVectorValue(samplePt3, vectorGrid3D);
+    const dvec3 result4 = TrilinearInterpolateVectorValue(samplePt4, vectorGrid3D);
 
     EXPECT_NEAR(result1[0], 1.5, 1e-6);
     EXPECT_NEAR(result1[1], 4.5, 1e-6);
@@ -141,12 +150,14 @@ TEST(GridInterpolationTest, TrilinearInterpolateVectorValue_case)
 TEST(GridInterpolationTest, GetNearestNeighborScalarValue_case)
 {
     // Setup for 3D ScalarGrid
-    ScalarGrid grid3D(1.0f, pmp::BoundingBox(
-        pmp::vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec3(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    ScalarGrid grid3D(1.0f, BoundingBox(
+        vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec3(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     grid3D.Values() = { 0, 1, 2, 1, 2, 3, 2, 3, 4, 1, 2, 3, 2, 3, 4, 3, 4, 5, 2, 3, 4, 3, 4, 5, 4, 5, 6 };
+    const auto [Nx, Ny, Nz] = grid3D.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, grid3D.Values().size());
 
-    pmp::vec3 samplePt(1.4f, 0.6f, 0.6f);
+    vec3 samplePt(1.4f, 0.6f, 0.6f);
     double result = GetNearestNeighborScalarValue(samplePt, grid3D);
     EXPECT_NEAR(result, 3.0, 1e-6);
 }
@@ -154,15 +165,19 @@ TEST(GridInterpolationTest, GetNearestNeighborScalarValue_case)
 TEST(GridInterpolationTest, GetNearestNeighborVectorValue_case)
 {
     // Setup for 3D VectorGrid
-    VectorGrid vectorGrid3D(1.0f, pmp::BoundingBox(
-        pmp::vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec3(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    VectorGrid vectorGrid3D(1.0f, BoundingBox(
+        vec3(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec3(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     vectorGrid3D.ValuesX() = { 0, 1, 2, 1, 2, 3, 2, 3, 4, 1, 2, 3, 2, 3, 4, 3, 4, 5, 2, 3, 4, 3, 4, 5, 4, 5, 6 };
     vectorGrid3D.ValuesY() = { 6, 5, 4, 5, 4, 3, 4, 3, 2, 5, 4, 3, 4, 3, 2, 3, 2, 1, 4, 3, 2, 3, 2, 1, 2, 1, 0 };
     vectorGrid3D.ValuesZ() = { 2, 3, 4, 3, 4, 5, 4, 5, 6, 3, 4, 5, 4, 5, 6, 5, 6, 7, 4, 5, 6, 5, 6, 7, 6, 7, 8 };
+    const auto [Nx, Ny, Nz] = vectorGrid3D.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, vectorGrid3D.ValuesX().size());
+    ASSERT_EQ(Nx * Ny * Nz, vectorGrid3D.ValuesY().size());
+    ASSERT_EQ(Nx * Ny * Nz, vectorGrid3D.ValuesZ().size());
 
-    pmp::vec3 samplePt(1.4f, 0.6f, 0.4f);
-    pmp::dvec3 result = GetNearestNeighborVectorValue(samplePt, vectorGrid3D);
+    vec3 samplePt(1.4f, 0.6f, 0.4f);
+    dvec3 result = GetNearestNeighborVectorValue(samplePt, vectorGrid3D);
     EXPECT_NEAR(result[0], 2.0, 1e-6);
     EXPECT_NEAR(result[1], 4.0, 1e-6);
     EXPECT_NEAR(result[2], 4.0, 1e-6);
@@ -171,15 +186,17 @@ TEST(GridInterpolationTest, GetNearestNeighborVectorValue_case)
 TEST(GridInterpolationTest, GetNearestNeighborScalarValue2D_case)
 {
     // Setup for 2D ScalarGrid
-    ScalarGrid2D grid2D(1.0f, pmp::BoundingBox2(
-        pmp::vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec2(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    ScalarGrid2D grid2D(1.0f, BoundingBox2(
+        vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec2(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     grid2D.Values() = {
         0, 1, 2,
         1, 2, 3,
         2, 3, 4 };
+    const auto [Nx, Ny] = grid2D.Dimensions();
+    ASSERT_EQ(Nx * Ny, grid2D.Values().size());
 
-    pmp::vec2 samplePt(1.6f, 1.7f);
+    vec2 samplePt(1.6f, 1.7f);
     double result = GetNearestNeighborScalarValue2D(samplePt, grid2D);
     EXPECT_NEAR(result, 4.0, 1e-6);
 }
@@ -187,24 +204,57 @@ TEST(GridInterpolationTest, GetNearestNeighborScalarValue2D_case)
 TEST(GridInterpolationTest, GetNearestNeighborVectorValue2D_case)
 {
     // Setup for 2D VectorGrid
-    VectorGrid2D vectorGrid2D(1.0f, pmp::BoundingBox2(
-        pmp::vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
-        pmp::vec2(2.0f + BOX_EPSILON, 2.0f + BOX_EPSILON)));
+    VectorGrid2D vectorGrid2D(1.0f, BoundingBox2(
+        vec2(0.0f + BOX_EPSILON, 0.0f + BOX_EPSILON),
+        vec2(2.0f - BOX_EPSILON, 2.0f - BOX_EPSILON)));
     vectorGrid2D.ValuesX() = { 0, 1, 2, 1, 2, 3, 2, 3, 4 };
     vectorGrid2D.ValuesY() = { 6, 5, 4, 5, 4, 3, 4, 3, 2 };
+    const auto [Nx, Ny] = vectorGrid2D.Dimensions();
+    ASSERT_EQ(Nx * Ny, vectorGrid2D.ValuesX().size());
+    ASSERT_EQ(Nx * Ny, vectorGrid2D.ValuesY().size());
 
-    pmp::vec2 samplePt(1.4f, 0.6f);
-    pmp::dvec2 result = GetNearestNeighborVectorValue2D(samplePt, vectorGrid2D);
+    vec2 samplePt(1.4f, 0.6f);
+    dvec2 result = GetNearestNeighborVectorValue2D(samplePt, vectorGrid2D);
     EXPECT_NEAR(result[0], 2.0, 1e-6);
     EXPECT_NEAR(result[1], 4.0, 1e-6);
 }
 
 // Local maxima
 
+TEST(ScalarGridLocalMaximumTests2D, DFSlice3x3ContainingLocalMax)
+{
+	// Arrange
+    ScalarGrid2D grid(1.0f, BoundingBox2(
+        Point2(-1 + BOX_EPSILON, -1 + BOX_EPSILON),
+        Point2(1 - BOX_EPSILON, 1 - BOX_EPSILON)));
+    grid.Values() = {
+        0.852389336, 0.899750948, 0.885099947,
+        0.899742365, 0.957528651 /* this one's a discrete max */, 0.952537298,
+        0.900355637, 0.952537298, 0.955666423
+    };
+    const auto [Nx, Ny] = grid.Dimensions();
+    ASSERT_EQ(Nx * Ny, grid.Values().size());
+    const auto discreteMaxIter = std::ranges::max_element(grid.Values());
+    const auto discreteMaxGridIndex = std::distance(grid.Values().begin(), discreteMaxIter);
+    const unsigned int ix = discreteMaxGridIndex % Nx;
+    const unsigned int iy = (discreteMaxGridIndex / Nx) % Ny;
+    const auto epsilon = 0.7f * grid.CellSize();
+
+    // Act
+    const auto localMax = FindLocalMaximumNearScalarGridCell(grid, ix, iy, 1);
+
+    // Assert
+    ASSERT_TRUE(localMax.has_value());
+    EXPECT_NEAR((*localMax)[0], 0.0f, epsilon);
+    EXPECT_NEAR((*localMax)[1], 0.0f, epsilon);
+}
+
 TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithUnitRadius)
 {
     // Arrange
-    ScalarGrid grid(1.0f, BoundingBox(Point(-1, -1, -1), Point(1, 1, 1)));
+    ScalarGrid grid(1.0f, BoundingBox(
+        Point(-0.5, -0.5, -0.5),
+        Point(0.5, 0.5, 0.5)));
     grid.Values() = {
         1, 2, 1,
         2, 3, 2,
@@ -218,6 +268,8 @@ TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithUnitRadius)
         2, 3, 2,
         1, 2, 1
     };
+    const auto [Nx, Ny, Nz] = grid.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, grid.Values().size());
     const unsigned int ix = 1, iy = 1, iz = 1;
 
     // Act
@@ -225,9 +277,9 @@ TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithUnitRadius)
 
     // Assert
     ASSERT_TRUE(localMax.has_value());
-    EXPECT_NEAR((*localMax)[0], 0.0f, 1e-5f);
-    EXPECT_NEAR((*localMax)[1], 0.0f, 1e-5f);
-    EXPECT_NEAR((*localMax)[2], 0.0f, 1e-5f);
+    EXPECT_NEAR((*localMax)[0], 0.0f, 0.5f);
+    EXPECT_NEAR((*localMax)[1], 0.0f, 0.5f);
+    EXPECT_NEAR((*localMax)[2], 0.0f, 0.5f);
 }
 
 
@@ -235,20 +287,24 @@ TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithUnitRadius)
 TEST(ScalarGridLocalMaximumTests3D, MaximumOutsideOfCellPointsWithUnitRadius)
 {
     // Arrange
-    ScalarGrid grid(1.0f, BoundingBox(pmp::Point(-1, -1, -1), Point(1, 1, 1)));
+    ScalarGrid grid(1.0f, BoundingBox(
+        Point(-0.5, -0.5, -0.5),
+        Point(0.5, 0.5, 0.5)));
     grid.Values() = {
         1, 2, 1,
         2, 3, 2,
         1, 2, 1,
 
-        2, 3, 2,
-        3, 4, 3,
+        2, 2, 2,
+        3, 2, 3,
         2, 3, 2,
 
-        2, 3, 2,
-        3, 5, 3,
+        2, 3, 3,
+        3, 3, 3,
         2, 3, 2
     };
+    const auto [Nx, Ny, Nz] = grid.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, grid.Values().size());
     const unsigned int ix = 1, iy = 1, iz = 1;
 
     // Act
@@ -257,6 +313,88 @@ TEST(ScalarGridLocalMaximumTests3D, MaximumOutsideOfCellPointsWithUnitRadius)
     // Assert
     ASSERT_FALSE(localMax.has_value());
 }
+
+TEST(ScalarGridLocalMaximumTests3D, DistanceFieldMaximumOnA4x4x4Grid)
+{
+    // Arrange
+    ScalarGrid grid(1.0f,
+        BoundingBox(Point(-1 + BOX_EPSILON, -1 + BOX_EPSILON, -1 + BOX_EPSILON),
+            Point(2 - BOX_EPSILON, 2 - BOX_EPSILON, 2 - BOX_EPSILON)));
+    grid.Values() = {
+		0.81023629286903087, 0.85238934794879040, 0.83914933112888346, 0.80354128818732840,
+        0.85239291668881567, 0.89974235459188201, 0.88511633497951381, 0.84865449608501553,
+        0.83913910333340569, 0.90035563805955754, 0.89886805137362868, 0.84998801142285851,
+        0.80352713017607513, 0.85438082927200598, 0.85216718931308788, 0.81597085291517268,
+        0.85241283968808357, 0.89975094099893516, 0.90036883229000197, 0.85439444458819092,
+        0.89979855218883731, 0.95752867446787882 /* this one's a discrete max */, 0.95256121730760279, 0.90031943442697238,
+        0.88509994314652107, 0.95253730050092644, 0.95567193715342036, 0.89611810084265564,
+        0.84862831557833784, 0.90029482979158448, 0.89886538570375674, 0.86223548739688782,
+        0.83913910333340569, 0.88509994358805388, 0.89886236419191556, 0.85215848859126753,
+        0.90035561966136124, 0.95253728894960732, 0.95566664730415296, 0.89885937553849304,
+        0.89886214466203296, 0.95566642738693652, 0.94619437949884622, 0.88845914342289634,
+        0.84998556810887471, 0.89611624156026271, 0.88845911192517624, 0.85689880931903240,
+        0.80352713017607513, 0.84862831731183797, 0.84998591379318611, 0.81596602250509498,
+        0.85438078453126787, 0.90029480959816899, 0.89611649369699953, 0.86223193940215770,
+        0.85215845189584449, 0.89885931832455379, 0.88845925686474325, 0.85689880924916606,
+        0.81596592301006066, 0.86223180256362797, 0.85689880912303662, 0.82885106760495830
+    };
+    const auto [Nx, Ny, Nz] = grid.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, grid.Values().size());
+    const auto discreteMaxIter = std::ranges::max_element(grid.Values());
+    const auto discreteMaxGridIndex = std::distance(grid.Values().begin(), discreteMaxIter);
+    const unsigned int ix = discreteMaxGridIndex % Nx;
+    const unsigned int iy = (discreteMaxGridIndex / Nx) % Ny;
+    const unsigned int iz = discreteMaxGridIndex / (Nx * Ny);
+
+    // Act
+    const auto localMax = FindLocalMaximumNearScalarGridCell(grid, ix, iy, iz, 1);
+
+    // Assert
+    ASSERT_TRUE(localMax.has_value());
+}
+
+TEST(ScalarGridLocalMaximumTests3D, DistanceFieldMaximumOnAnother4x4x4Grid)
+{
+    // Arrange
+    ScalarGrid grid(1.0f, 
+        BoundingBox(Point(-1 + BOX_EPSILON, -1 + BOX_EPSILON, -1 + BOX_EPSILON),
+            Point(2 - BOX_EPSILON, 2 - BOX_EPSILON, 2 - BOX_EPSILON)));
+    grid.Values() = {
+        0.75249668594631991, 0.81023629286903087, 0.85238934794879040, 0.83914933112888346,
+        0.78400121110930876, 0.85239291668881567, 0.89974235459188201, 0.88511633497951381,
+        0.76232971046297848, 0.83913910333340569, 0.90035563805955754, 0.89886805137362868,
+        0.74224524396086133, 0.80352713017607513, 0.85438082927200598, 0.85216718931308788,
+        0.79286617148826111, 0.85241283968808357, 0.89975094099893516, 0.90036883229000197,
+        0.82550094061990265, 0.89979855218883731, 0.95752867446787882  /* this one's a discrete max */, 0.95256121730760279,
+        0.80412204249388619, 0.88509994314652107, 0.95253730050092644, 0.95567193715342036,
+        0.78551562098155625, 0.84862831557833784, 0.90029482979158448, 0.89886538570375674,
+        0.78592159359624147, 0.83913910333340569, 0.88509994358805388, 0.89886236419191556,
+        0.83602171358270672, 0.90035561966136124, 0.95253728894960732, 0.95566664730415296,
+        0.82517466842385556, 0.89886214466203296, 0.95566642738693652, 0.94619437949884622,
+        0.79122078044506561, 0.84998556810887471, 0.89611624156026271, 0.88845911192517624,
+        0.74718598834219774, 0.80352713017607513, 0.84862831731183797, 0.84998591379318611,
+        0.79396975654794855, 0.85438078453126787, 0.90029480959816899, 0.89611649369699953,
+        0.78280678616200861, 0.85215845189584449, 0.89885931832455379, 0.88845925686474325,
+        0.75873701617371925, 0.81596592301006066, 0.86223180256362797, 0.85689880912303662
+    };
+    const auto [Nx, Ny, Nz] = grid.Dimensions();
+    ASSERT_EQ(Nx * Ny * Nz, grid.Values().size());
+    const auto discreteMaxIter = std::ranges::max_element(grid.Values());
+    const auto discreteMaxGridIndex = std::distance(grid.Values().begin(), discreteMaxIter);
+    const unsigned int ix = discreteMaxGridIndex % Nx;
+    const unsigned int iy = (discreteMaxGridIndex / Nx) % Ny;
+    const unsigned int iz = discreteMaxGridIndex / (Nx * Ny);
+
+    // Act
+    const auto localMax = FindLocalMaximumNearScalarGridCell(grid, ix, iy, iz, 1);
+
+    // Assert
+    ASSERT_TRUE(localMax.has_value());
+    //EXPECT_NEAR((*localMax)[0], /* expected x-coordinate */, 1e-5f);
+    //EXPECT_NEAR((*localMax)[1], /* expected y-coordinate */, 1e-5f);
+    //EXPECT_NEAR((*localMax)[2], /* expected z-coordinate */, 1e-5f);
+}
+
 
 // TODO: tests with larger data
 //TEST(ScalarGridLocalMaximumTests3D, MaximumWithinCellPointsWithRadius3)

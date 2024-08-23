@@ -477,6 +477,7 @@ std::vector<Sphere3D> DistanceFieldInscribedSphereCalculator::Calculate(const In
 
     std::vector<Sphere3D> spheres;
     auto& grid = *data.DistanceField;
+    //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);
 
     const auto& dim = grid.Dimensions();
@@ -541,6 +542,7 @@ std::vector<Sphere3D> HierarchicalDistanceFieldInscribedSphereCalculator::Calcul
 
     std::vector<Sphere3D> spheres;
     auto& grid = *data.DistanceField;
+    //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);
     const auto gridGradient = ComputeGradient(grid);
 
@@ -598,6 +600,7 @@ std::vector<Sphere3D> ParticleSwarmDistanceFieldInscribedSphereCalculator::Calcu
 
     std::vector<Sphere3D> spheres;
     auto& grid = *data.DistanceField;
+    //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);
     const auto gridGradient = ComputeGradient(grid);
     constexpr float GRAD_EPSILON = 1e-5f;

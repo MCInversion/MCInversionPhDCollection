@@ -9,6 +9,12 @@
 
 #include <filesystem>
 
+// set up root directory
+const std::filesystem::path fsRootPath = DROOT_DIR;
+const auto fsDataDirPath = fsRootPath / "data\\";
+const auto fsDataOutPath = fsRootPath / "output\\";
+const std::string dataDirPath = fsDataDirPath.string();
+const std::string dataOutPath = fsDataOutPath.string();
 
 namespace
 {
@@ -503,6 +509,10 @@ TEST_F(DistanceFieldInscribedSphereCalculatorTests, UniformSphereSampling)
     EXPECT_TRUE(inputData.DistanceField != nullptr);
     const auto epsilon = inputData.DistanceField->CellSize();
 
+    //const auto subDF = Geometry::ExtractSubGrid(*inputData.DistanceField, 28, 28, 28, 31, 31, 31);
+    //const auto subDF = Geometry::ExtractSubGrid(*inputData.DistanceField, 27, 28, 28, 30, 31, 31);
+    //ExportToVTI(dataOutPath + "\\core_tests\\UniformSphereSampling_subDF", subDF);
+
     // Act
     const auto spheres = calculator.Calculate(inputData);
 
@@ -524,6 +534,8 @@ TEST_F(DistanceFieldInscribedSphereCalculatorTests, EllipsoidSampling)
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
     EXPECT_TRUE(inputData.DistanceField != nullptr);
     const auto epsilon = inputData.DistanceField->CellSize();
+
+    ExportToVTI(dataOutPath + "\\core_tests\\EllipsoidSampling_SDF", *inputData.DistanceField);
 
     // Act
     const auto spheres = calculator.Calculate(inputData);
@@ -565,6 +577,8 @@ TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, UniformSphereSam
     inputData.DistanceField = GenerateDistanceField(inputData.Points);
     EXPECT_TRUE(inputData.DistanceField != nullptr);
     const auto epsilon = inputData.DistanceField->CellSize();
+
+    //ExportToVTI(dataOutPath + "\\core_tests\\UniformSphereSampling_SDF", *inputData.DistanceField);
 
     // Act
     const auto spheres = calculator.Calculate(inputData);

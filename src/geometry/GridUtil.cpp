@@ -74,7 +74,7 @@ namespace Geometry
 					for (int k = -rad; k <= rad; k++)
 					{
 						// =========== x-indices =====================
-						int iKernX = nKernelCellsAxis + i, iGridX = ix + i;
+						int iKernX = rad + i, iGridX = ix + i;
 						// ...... x-index bounds adjustment .....
 						if (iGridX < 0)
 						{
@@ -86,7 +86,7 @@ namespace Geometry
 						}
 
 						// =========== y-indices =====================
-						int iKernY = nKernelCellsAxis + j, iGridY = iy + j;
+						int iKernY = rad + j, iGridY = iy + j;
 						// ...... y-index bounds adjustment .....
 						if (iGridY < 0)
 						{
@@ -98,7 +98,7 @@ namespace Geometry
 						}
 
 						// =========== z-indices =====================
-						int iKernZ = nKernelCellsAxis + k, iGridZ = iz + k;
+						int iKernZ = rad + k, iGridZ = iz + k;
 						// ...... y-index bounds adjustment .....
 						if (iGridZ < 0)
 						{
@@ -130,6 +130,8 @@ namespace Geometry
 				}
 			}
 		}
+
+		grid.Values() = resultFieldValues;
 	}
 
 	/**
@@ -1937,6 +1939,7 @@ namespace Geometry
 		}
 
 		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
+
 		const float a10 = coeffs[1];
 		const float a01 = coeffs[2];
 		const float a20 = coeffs[3];
@@ -2020,7 +2023,7 @@ namespace Geometry
 		return std::abs(avgDivergence) > divergenceThreshold;
 	}
 
-	std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+	std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell_EXPERIMENTAL(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
 	{
 		using namespace Eigen;
 
@@ -2054,8 +2057,8 @@ namespace Geometry
 		}
 
 		// Fit a quadratic function f(x, y, z) = a000 + a100*x + a010*y + a001*z + a200*x^2 + a110*x*y + a101*x*z + a011*y*z + a020*y^2 + a002*z^2
-		Matrix<float, 27, 10> A;
-		Vector<float, 27> b;
+		Eigen::MatrixXf A(27, 10);
+		Eigen::VectorXf b(27);
 
 		// normalized cell coordinates
 		A << 1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
@@ -2130,6 +2133,160 @@ namespace Geometry
 			(iz + radius * critical_point[2]) * cellSize);
 	}
 
+	namespace
+	{
+		[[nodiscard]] ScalarGrid2D ExtractSubGridXY(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+		{
+			const auto [Nx, Ny, Nz] = grid.Dimensions();
+			const int minX = static_cast<int>(ix) - static_cast<int>(radius);
+			const int maxX = static_cast<int>(ix) + static_cast<int>(radius);
+			const int minY = static_cast<int>(iy) - static_cast<int>(radius);
+			const int maxY = static_cast<int>(iy) + static_cast<int>(radius);
+
+			const unsigned int subNx = maxX - minX + 1;
+			const unsigned int subNy = maxY - minY + 1;
+
+			const auto& orig = grid.Box().min();
+			const float cellSize = grid.CellSize();
+			pmp::BoundingBox2 subBox(
+				pmp::vec2(orig[0] + (minX + 0.5f) * cellSize, orig[1] + (minY + 0.5f) * cellSize),
+				pmp::vec2(orig[0] + (maxX - 0.5f) * cellSize, orig[1] + (maxY - 0.5f) * cellSize)
+			);
+
+			ScalarGrid2D subGrid(cellSize, subBox);
+			if (subNx * subNy != subGrid.Values().size())
+			{
+				throw std::out_of_range("ExtractSubGridXY: subNx * subNy != subGrid.Values().size()!\n");
+			}
+
+			const auto& values = grid.Values();
+			for (unsigned int y = 0; y < subNy; ++y)
+			{
+				for (unsigned int x = 0; x < subNx; ++x)
+				{
+					const unsigned int srcIndex = Nx * Ny * iz + (minY + y) * Nx + (minX + x);
+					const unsigned int dstIndex = y * subNx + x;
+					subGrid.Values()[dstIndex] = values[srcIndex];
+				}
+			}
+
+			return subGrid;
+		}
+
+		[[nodiscard]] ScalarGrid2D ExtractSubGridYZ(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+		{
+			const auto [Nx, Ny, Nz] = grid.Dimensions();
+			const int minY = static_cast<int>(iy) - static_cast<int>(radius);
+			const int maxY = static_cast<int>(iy) + static_cast<int>(radius);
+			const int minZ = static_cast<int>(iz) - static_cast<int>(radius);
+			const int maxZ = static_cast<int>(iz) + static_cast<int>(radius);
+
+			const unsigned int subNy = maxY - minY + 1;
+			const unsigned int subNz = maxZ - minZ + 1;
+
+			const auto& orig = grid.Box().min();
+			const float cellSize = grid.CellSize();
+			pmp::BoundingBox2 subBox(
+				pmp::vec2(orig[1] + (minY + 0.5f) * cellSize, orig[2] + (minZ + 0.5f) * cellSize),
+				pmp::vec2(orig[1] + (maxY - 0.5f) * cellSize, orig[2] + (maxZ - 0.5f) * cellSize)
+			);
+
+			ScalarGrid2D subGrid(cellSize, subBox);
+			if (subNy * subNz != subGrid.Values().size())
+			{
+				throw std::out_of_range("ExtractSubGridYZ: subNy * subNz != subGrid.Values().size()!");
+			}
+
+			const auto& values = grid.Values();
+			for (unsigned int z = 0; z < subNz; ++z)
+			{
+				for (unsigned int y = 0; y < subNy; ++y)
+				{
+					const unsigned int srcIndex = Nx * Ny * (minZ + z) + Ny * (minY + y) + ix;
+					const unsigned int dstIndex = z * subNy + y;
+					subGrid.Values()[dstIndex] = values[srcIndex];
+				}
+			}
+
+			return subGrid;
+		}
+
+		[[nodiscard]] ScalarGrid2D ExtractSubGridXZ(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+		{
+			const auto [Nx, Ny, Nz] = grid.Dimensions();
+			const int minX = static_cast<int>(ix) - static_cast<int>(radius);
+			const int maxX = static_cast<int>(ix) + static_cast<int>(radius);
+			const int minZ = static_cast<int>(iz) - static_cast<int>(radius);
+			const int maxZ = static_cast<int>(iz) + static_cast<int>(radius);
+
+			const unsigned int subNx = maxX - minX + 1;
+			const unsigned int subNz = maxZ - minZ + 1;
+
+			const auto& orig = grid.Box().min();
+			const float cellSize = grid.CellSize();
+			pmp::BoundingBox2 subBox(
+				pmp::vec2(orig[0] + (minX + 0.5f) * cellSize, orig[2] + (minZ + 0.5f) * cellSize),
+				pmp::vec2(orig[0] + (maxX - 0.5f) * cellSize, orig[2] + (maxZ - 0.5f) * cellSize)
+			);
+
+			ScalarGrid2D subGrid(cellSize, subBox);
+			if (subNx * subNz != subGrid.Values().size())
+			{
+				throw std::out_of_range("ExtractSubGridXZ: subNx * subNz != subGrid.Values().size()!");
+			}
+
+			const auto& values = grid.Values();
+			for (unsigned int z = 0; z < subNz; ++z)
+			{
+				for (unsigned int x = 0; x < subNx; ++x)
+				{
+					const unsigned int srcIndex = Nx * Ny * (minZ + z) + Ny * iy + (minX + x);
+					const unsigned int dstIndex = z * subNx + x;
+					subGrid.Values()[dstIndex] = values[srcIndex];
+				}
+			}
+
+			return subGrid;
+		}
+
+	} // anonymous namespace
+
+	std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
+	{
+		const auto [Nx, Ny, Nz] = grid.Dimensions();
+
+		// Ensure we are not near the grid boundary
+		if (ix < radius || ix >= Nx - radius || iy < radius ||
+			iy >= Ny - radius || iz < radius || iz >= Nz - radius)
+			return {};
+
+		// Extract the three planar slices
+		auto sliceXY = ExtractSubGridXY(grid, ix, iy, iz, radius);
+		auto sliceYZ = ExtractSubGridYZ(grid, ix, iy, iz, radius);
+		auto sliceXZ = ExtractSubGridXZ(grid, ix, iy, iz, radius);
+
+		// Use the 2D version of FindLocalMaximumNearScalarGridCell on each slice
+		auto localMaxXY = FindLocalMaximumNearScalarGridCell(sliceXY, radius, radius, 1);
+		auto localMaxYZ = FindLocalMaximumNearScalarGridCell(sliceYZ, radius, radius, 1);
+		auto localMaxXZ = FindLocalMaximumNearScalarGridCell(sliceXZ, radius, radius, 1);
+
+		// Check if all slices confirm the local maximum at the center
+		if (!localMaxXY.has_value() || !localMaxYZ.has_value() || !localMaxXZ.has_value())
+			return {};
+		
+		// calculate average position of the local max
+		const float avgX = ((*localMaxXY)[0] + (*localMaxYZ)[0] + (*localMaxXZ)[0]) / 3.0f;
+		const float avgY = ((*localMaxXY)[1] + (*localMaxYZ)[1] + (*localMaxXZ)[1]) / 3.0f;
+		const float avgZ = ((*localMaxXZ)[1] + (*localMaxYZ)[0] + (*localMaxXY)[1]) / 3.0f;
+
+		return pmp::Point(
+			avgX,
+			avgY,
+			avgZ
+		);
+	}
+
+
 	bool IsConvergentOrDivergentNearCell(const VectorGrid& vecGrid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius)
 	{
 		const auto Nx = static_cast<unsigned int>(vecGrid.Dimensions().Nx);
@@ -2194,6 +2351,97 @@ namespace Geometry
 		constexpr float divergenceThreshold = 1e-3f;
 		return std::abs(avgDivergence) > divergenceThreshold;
 	}
+
+	ScalarGrid2D ExtractSubGrid2D(const ScalarGrid2D& grid, unsigned int ix0, unsigned int iy0, unsigned int ix1, unsigned int iy1)
+	{
+		// Validate the provided indices
+		const auto& dims = grid.Dimensions();
+		if (ix0 >= ix1 || iy0 >= iy1 || ix1 > dims.Nx || iy1 > dims.Ny)
+		{
+			throw std::out_of_range("ExtractSubGrid2D: Invalid index range.");
+		}
+
+		// Calculate the new grid dimensions
+		const unsigned int subNx = ix1 - ix0 + 1;
+		const unsigned int subNy = iy1 - iy0 + 1;
+
+		// Calculate the bounding box for the subgrid
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+		pmp::BoundingBox2 subBox(
+			pmp::vec2(orig[0] + ix0 * cellSize + FLT_EPSILON, orig[1] + iy0 * cellSize + FLT_EPSILON),
+			pmp::vec2(orig[0] + (ix1 - 0.5f) * cellSize, orig[1] + (iy1 - 0.5f) * cellSize)
+		);
+
+		// Create the subgrid
+		ScalarGrid2D subGrid(cellSize, subBox);
+		if (subNx * subNy != subGrid.Values().size())
+		{
+			throw std::out_of_range("ExtractSubGrid2D: subNx * subNy != subGrid.Values().size()!\n");
+		}
+
+		// Copy the values from the original grid to the subgrid
+		const auto& values = grid.Values();
+		for (unsigned int iy = 0; iy < subNy; ++iy)
+		{
+			for (unsigned int ix = 0; ix < subNx; ++ix)
+			{
+				const unsigned int srcIndex = (iy + iy0) * dims.Nx + (ix + ix0);
+				const unsigned int dstIndex = iy * subNx + ix;
+				subGrid.Values()[dstIndex] = values[srcIndex];
+			}
+		}
+
+		return subGrid;
+	}
+
+	ScalarGrid ExtractSubGrid(const ScalarGrid& grid, unsigned int ix0, unsigned int iy0, unsigned int iz0, unsigned int ix1, unsigned int iy1, unsigned int iz1)
+	{
+		// Validate the provided indices
+		const auto& dims = grid.Dimensions();
+		if (ix0 >= ix1 || iy0 >= iy1 || iz0 >= iz1 || ix1 > dims.Nx || iy1 > dims.Ny || iz1 > dims.Nz)
+		{
+			throw std::out_of_range("ExtractSubGrid: Invalid index range.");
+		}
+
+		// Calculate the new grid dimensions
+		const unsigned int subNx = ix1 - ix0 + 1;
+		const unsigned int subNy = iy1 - iy0 + 1;
+		const unsigned int subNz = iz1 - iz0 + 1;
+
+		// Calculate the bounding box for the subgrid
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+		pmp::BoundingBox subBox(
+			pmp::vec3(orig[0] + ix0 * cellSize + FLT_EPSILON, orig[1] + iy0 * cellSize + FLT_EPSILON, orig[2] + iz0 * cellSize + FLT_EPSILON),
+			pmp::vec3(orig[0] + (ix1 - 0.5f) * cellSize, orig[1] + (iy1 - 0.5f) * cellSize, orig[2] + (iz1 - 0.5f) * cellSize)
+		);
+
+		// Create the subgrid
+		ScalarGrid subGrid(cellSize, subBox);
+		if (subNx * subNy * subNz != subGrid.Values().size())
+		{
+			throw std::invalid_argument("ExtractSubGrid: subNx * subNy * subNz != subGrid.Values().size()!\n");
+		}
+
+		// Copy the values from the original grid to the subgrid
+		const auto& values = grid.Values();
+		for (unsigned int iz = 0; iz < subNz; ++iz)
+		{
+			for (unsigned int iy = 0; iy < subNy; ++iy)
+			{
+				for (unsigned int ix = 0; ix < subNx; ++ix)
+				{
+					const unsigned int srcIndex = (iz + iz0) * dims.Nx * dims.Ny + (iy + iy0) * dims.Nx + (ix + ix0);
+					const unsigned int dstIndex = iz * subNx * subNy + iy * subNx + ix;
+					subGrid.Values()[dstIndex] = values[srcIndex];
+				}
+			}
+		}
+
+		return subGrid;
+	}
+
 
 
 } // namespace Geometry

@@ -405,9 +405,27 @@ namespace Geometry
 	 * \brief Searches the cell (ix, iy, iz) and its neighbors for a local maximum of a 3D quadratic polynomial.
 	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
 	 */
+	[[nodiscard]] std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell_EXPERIMENTAL(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius = 1);
+
+	/**
+	 * \brief Searches the cell (ix, iy, iz) and its neighbors for a local maximum of a 2D quadratic polynomial for each z-slice, and then averaging them.
+	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
+	 */
 	[[nodiscard]] std::optional<pmp::Point> FindLocalMaximumNearScalarGridCell(const ScalarGrid& grid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius = 1);
 
 	/// \brief Verifies whether the vector field has a non-zero divergence at position (ix, iy, iz) within a given radius.
 	[[nodiscard]] bool IsConvergentOrDivergentNearCell(const VectorGrid& vecGrid, unsigned int ix, unsigned int iy, unsigned int iz, unsigned int radius = 1);
+
+	/// \brief Extracts a sub-grid from given indices
+	[[nodiscard]] ScalarGrid2D ExtractSubGrid2D(const ScalarGrid2D& grid,
+		unsigned int ix0, unsigned int iy0,
+		unsigned int ix1, unsigned int iy1
+	);
+
+	/// \brief Extracts a sub-grid from given indices
+	[[nodiscard]] ScalarGrid ExtractSubGrid(const ScalarGrid& grid,
+		unsigned int ix0, unsigned int iy0, unsigned int iz0,
+		unsigned int ix1, unsigned int iy1, unsigned int iz1
+	);
 
 } // namespace Geometry

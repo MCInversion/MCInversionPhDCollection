@@ -3,6 +3,8 @@ Project(Geometry)
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
+#add_compile_options(/bigobj) # for some Eigen solvers
+
 file(GLOB Geometry_Src CONFIGURE_DEPENDS "*.h" "*.cpp")
 add_library(${PROJECT_NAME} ${Geometry_Src})
 

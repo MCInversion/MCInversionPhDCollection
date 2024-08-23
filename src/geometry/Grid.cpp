@@ -21,9 +21,9 @@ namespace Geometry
 		m_Box = pmp::BoundingBox(minVec, maxVec);
 
 		m_Dimensions = GridDimensions{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus),
-			static_cast<size_t>(nZPlus - nZMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1,
+			static_cast<size_t>(nZPlus - nZMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny * m_Dimensions.Nz;
@@ -50,9 +50,9 @@ namespace Geometry
 		m_Box = pmp::BoundingBox(minVec, maxVec);
 
 		m_Dimensions = GridDimensions{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus),
-			static_cast<size_t>(nZPlus - nZMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1,
+			static_cast<size_t>(nZPlus - nZMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny * m_Dimensions.Nz;
@@ -272,9 +272,9 @@ namespace Geometry
 		m_Box = pmp::BoundingBox(minVec, maxVec);
 
 		m_Dimensions = GridDimensions{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus),
-			static_cast<size_t>(nZPlus - nZMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1,
+			static_cast<size_t>(nZPlus - nZMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny * m_Dimensions.Nz;
@@ -303,9 +303,9 @@ namespace Geometry
 		m_Box = pmp::BoundingBox(minVec, maxVec);
 
 		m_Dimensions = GridDimensions{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus),
-			static_cast<size_t>(nZPlus - nZMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1,
+			static_cast<size_t>(nZPlus - nZMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny * m_Dimensions.Nz;
@@ -561,8 +561,8 @@ namespace Geometry
 		m_Box = pmp::BoundingBox2(minVec, maxVec);
 
 		m_Dimensions = GridDimensions2D{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny;
@@ -586,8 +586,8 @@ namespace Geometry
 		m_Box = pmp::BoundingBox2(minVec, maxVec);
 
 		m_Dimensions = GridDimensions2D{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny;
@@ -803,8 +803,8 @@ namespace Geometry
 		m_Box = pmp::BoundingBox2(minVec, maxVec);
 
 		m_Dimensions = GridDimensions2D{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny;
@@ -829,8 +829,8 @@ namespace Geometry
 		m_Box = pmp::BoundingBox2(minVec, maxVec);
 
 		m_Dimensions = GridDimensions2D{
-			static_cast<size_t>(nXPlus - nXMinus),
-			static_cast<size_t>(nYPlus - nYMinus)
+			static_cast<size_t>(nXPlus - nXMinus) + 1,
+			static_cast<size_t>(nYPlus - nYMinus) + 1
 		};
 
 		const size_t nValues = m_Dimensions.Nx * m_Dimensions.Ny;
