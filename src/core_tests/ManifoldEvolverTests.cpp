@@ -653,17 +653,25 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 
     ManifoldEvolutionSettings strategySettings;
     strategySettings.UseInnerManifolds = true;
+    constexpr double criticalDistance = 0.15;
     strategySettings.OuterManifoldEpsilon = [](double distance) {
-        return 0.1 * (1.0 - exp(-distance * distance / 0.0125));
+        const auto mcfWeight = 0.2 * (1.0 - exp(-distance * distance / 0.0125));
+        const auto repulsion = 0.05 * (1.0 / (criticalDistance + 0.1 * criticalDistance) - 1.0 / (distance + 0.1 * criticalDistance));
+        return mcfWeight + repulsion;
     };
     strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
-        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
             return 0.0;
         return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
     strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
-    strategySettings.InnerManifoldEta = strategySettings.OuterManifoldEta;
+    strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 2.0 * distance * (negGradDotNormal + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
     strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 40;
@@ -757,4 +765,186 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
         countInSphere++;
     }
     EXPECT_LT(static_cast<double>(countInSphere) / resultInnerSurfaces[0]->n_vertices(), 0.0);
+}
+
+TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNoAdvectionNoRemeshing)
+{
+    // Arrange
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetPts = targetIcoSphere.positions();
+    targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
+        [](const pmp::Point& p) {
+            // Filter points in the x > 0 && y > 0 && z > 0 octant
+            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+        }),
+        targetPts.end());
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.UseInnerManifolds = true;
+    strategySettings.UseOuterManifolds = false;
+    strategySettings.InnerManifoldEpsilon = [](double distance) {
+        return 0.1 * (1.0 - exp(-distance * distance / 0.0125));
+    };
+    strategySettings.InnerManifoldEta = TRIVIAL_ETA; // zero everywhere
+    strategySettings.TimeStep = 0.01;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 40;
+    globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ExportTargetDistanceFieldAsImage = true;
+    globalSettings.ProcedureName = "ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNoAdvectionNoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    // Set up the evolution strategy
+    auto surfaceStrategy = std::make_shared<ManifoldSurfaceEvolutionStrategy>(
+        strategySettings, MeshLaplacian::Barycentric,
+        std::make_shared<std::vector<pmp::Point>>(targetPts));
+    ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<ManifoldSurfaceEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterSurface = strategy->GetOuterSurfaceInOrigScale();
+    auto resultInnerSurfaces = strategy->GetInnerSurfacesInOrigScale();
+    ASSERT_TRUE(resultOuterSurface == nullptr);
+    ASSERT_FALSE(resultInnerSurfaces.empty());
+    size_t countInSphere = 0;
+    for (const auto& vPos : resultInnerSurfaces[0]->positions())
+    {
+        if (norm(vPos) < 0.4f)
+            continue;
+        countInSphere++;
+    }
+    EXPECT_LT(static_cast<double>(countInSphere) / resultInnerSurfaces[0]->n_vertices(), 0.0);
+}
+
+TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNegSineAdvectionNoRemeshing)
+{
+    // Arrange
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetPts = targetIcoSphere.positions();
+    targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
+        [](const pmp::Point& p) {
+            // Filter points in the x > 0 && y > 0 && z > 0 octant
+            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+        }),
+        targetPts.end());
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.UseInnerManifolds = true;
+    strategySettings.UseOuterManifolds = false;
+    strategySettings.InnerManifoldEpsilon = [](double distance) {
+        return 0.1 * (1.0 - exp(-distance * distance / 0.0125));
+    };
+    strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+            return 0.0;
+        return 2.0 * distance * (negGradDotNormal + 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.TimeStep = 0.01;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 40;
+    globalSettings.DoRemeshing = false;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ExportTargetDistanceFieldAsImage = true;
+    globalSettings.ProcedureName = "ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNegSineAdvectionNoRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    // Set up the evolution strategy
+    auto surfaceStrategy = std::make_shared<ManifoldSurfaceEvolutionStrategy>(
+        strategySettings, MeshLaplacian::Barycentric,
+        std::make_shared<std::vector<pmp::Point>>(targetPts));
+    ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<ManifoldSurfaceEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterSurface = strategy->GetOuterSurfaceInOrigScale();
+    auto resultInnerSurfaces = strategy->GetInnerSurfacesInOrigScale();
+    ASSERT_TRUE(resultOuterSurface == nullptr);
+    ASSERT_FALSE(resultInnerSurfaces.empty());
+    size_t countInSphere = 0;
+    for (const auto& vPos : resultInnerSurfaces[0]->positions())
+    {
+        if (norm(vPos) < 0.4f)
+            continue;
+        countInSphere++;
+    }
+    EXPECT_LT(static_cast<double>(countInSphere) / resultInnerSurfaces[0]->n_vertices(), 0.0);
+}
+
+TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, InnerOuterLSWOfAnIncompleteSpherePointCloud_WithRemeshing)
+{
+    // Arrange
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetPts = targetIcoSphere.positions();
+    targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
+        [](const pmp::Point& p) {
+            // Filter points in the x > 0 && y > 0 && z > 0 octant
+            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+        }),
+        targetPts.end());
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.UseInnerManifolds = true;
+    constexpr double criticalDistance = 0.15;
+    strategySettings.OuterManifoldEpsilon = [](double distance) {
+        const auto mcfWeight = 0.2 * (1.0 - exp(-distance * distance / 0.0125));
+        const auto repulsion = 0.05 * (1.0 / (criticalDistance + 0.1 * criticalDistance) - 1.0 / (distance + 0.1 * criticalDistance));
+        return mcfWeight + repulsion;
+    };
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
+    strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 2.0 * distance * (negGradDotNormal + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.TimeStep = 0.01;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 40;
+    globalSettings.DoRemeshing = true;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ExportTargetDistanceFieldAsImage = true;
+    globalSettings.ProcedureName = "InnerOuterLSWOfAnIncompleteSpherePointCloud_WithRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    // Set up the evolution strategy
+    auto surfaceStrategy = std::make_shared<ManifoldSurfaceEvolutionStrategy>(
+        strategySettings, MeshLaplacian::Barycentric,
+        std::make_shared<std::vector<pmp::Point>>(targetPts));
+    ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<ManifoldSurfaceEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterSurface = strategy->GetOuterSurfaceInOrigScale();
+    auto resultInnerSurfaces = strategy->GetInnerSurfacesInOrigScale();
+    ASSERT_TRUE(resultOuterSurface != nullptr);
+    ASSERT_FALSE(resultInnerSurfaces.empty());
+    size_t countInSphere = 0;
+    for (const auto v : resultOuterSurface->vertices())
+    {
+        const auto& pos = resultOuterSurface->position(v);
+        if (norm(pos) > 0.75f)
+            continue;
+        countInSphere++;
+    }
+    EXPECT_LT(static_cast<double>(countInSphere) / resultOuterSurface->n_vertices(), 0.0);
 }

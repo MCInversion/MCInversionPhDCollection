@@ -13,3 +13,6 @@
 [submodule "external/vcglib"]
 	path = external/vcglib
 	url = https://github.com/cnr-isti-vclab/vcglib
+[submodule "external/spectra"]
+	path = external/spectra
+	url = https://github.com/yixuan/spectra

@@ -157,6 +157,9 @@ struct MeshTopologySettings
 /// \brief Evaluates whether remeshing is necessary from the condition number metric for equilateral triangles that do not have a feature vertex.
 [[nodiscard]] bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh);
 
+/// \brief Evaluates whether remeshing is necessary from the system matrix spectral radius
+[[nodiscard]] bool IsRemeshingNecessary(const SparseMatrix& lswMatrix);
+
 /// \brief A (one-time) evaluation whether the distance to target reaches a lower bound.
 ///	\param distancePerVertexValues    a vector of distance values on the evolving surface.
 ///	\return true if the conditions for feature detection are satisfied.

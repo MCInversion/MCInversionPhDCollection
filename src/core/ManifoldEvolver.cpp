@@ -1019,23 +1019,6 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				continue;
 			}
 
-			// TODO: Remove this debug if-statement
-			// Find points which are in the middle of the positive & negative octant patches
-			//const float currentPosRadius = norm(vPosToUpdate);
-			//const float maxGeodesicRadius = 0.7f * currentPosRadius * acos(1.0f / sqrt(3.0f));
-			//const auto positiveOctantCenter = (currentPosRadius / sqrt(3.0)) * pmp::Point{ 1.0f, 1.0f, 1.0f };
-			//const float geodesicDistanceToPositiveOctantCenter = currentPosRadius * acos(dot(positiveOctantCenter, vPosToUpdate) / (currentPosRadius * currentPosRadius));
-			//if (geodesicDistanceToPositiveOctantCenter < maxGeodesicRadius)
-			//{
-			//	std::cout << "innerSurface vertex " << v.idx() << ": (" << vPosToUpdate << ")\n";
-			//}
-			//const auto negativeOctantCenter = (currentPosRadius / sqrt(3.0)) * pmp::Point{ -1.0f, -1.0f, -1.0f };
-			//const float geodesicDistanceToNegativeOctantCenter = currentPosRadius * acos(dot(negativeOctantCenter, vPosToUpdate) / (currentPosRadius * currentPosRadius));
-			//if (geodesicDistanceToNegativeOctantCenter < maxGeodesicRadius)
-			//{
-			//	std::cout << "innerSurface vertex " << v.idx() << ": (" << vPosToUpdate << ")\n";
-			//}
-
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 

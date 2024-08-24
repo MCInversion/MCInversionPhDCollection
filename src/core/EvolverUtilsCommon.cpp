@@ -4,6 +4,10 @@
 #include "pmp/ManifoldCurve2D.h"
 #include "geometry/IcoSphereBuilder.h"
 
+#include <Spectra/SymEigsSolver.h>
+#include <Spectra/MatOp/SparseSymMatProd.h>
+#include <Eigen/SparseCore>
+
 CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
 {
 	// vertex property for co-volume measures.
@@ -142,6 +146,44 @@ bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh)
 	return !((minVal > JACOBIAN_COND_MIN && minVal < JACOBIAN_COND_MAX) &&
 		(maxVal > JACOBIAN_COND_MIN && maxVal < JACOBIAN_COND_MAX));
 }
+
+// ------------------------------------------------------------------------------------
+
+namespace
+{
+	[[nodiscard]] double ComputeSpectralRadius(const SparseMatrix& mat)
+	{
+		// Define the operation for Spectra (for symmetric matrices)
+		Spectra::SparseSymMatProd<double> op(mat);
+
+		// Construct the eigen solver object, requesting the largest magnitude eigenvalue
+		Spectra::SymEigsSolver solver(op, 1, 6);
+
+		// Initialize and compute using the correct sorting rule
+		solver.init();
+		int nconv = solver.compute(Spectra::SortRule::LargestAlge);
+
+		// Check if the computation was successful
+		if (solver.info() != Spectra::CompInfo::Successful)
+		{
+			throw std::runtime_error("Spectra solver did not converge!");
+		}
+
+		// Retrieve the eigenvalues
+		Eigen::VectorXd eigenvalues = solver.eigenvalues();
+
+		// Return the largest absolute eigenvalue (spectral radius)
+		return std::abs(eigenvalues[0]);
+	}
+	
+} // anonymous namespace
+
+bool IsRemeshingNecessary(const SparseMatrix& lswMatrix)
+{
+	return ComputeSpectralRadius(lswMatrix) < 1.0;
+}
+
+// ------------------------------------------------------------------------------------
 
 bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues)
 {
