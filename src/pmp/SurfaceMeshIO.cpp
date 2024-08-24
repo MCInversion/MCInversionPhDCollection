@@ -428,15 +428,13 @@ void SurfaceMeshIO::write_obj(const SurfaceMesh& mesh) const
     return result;
 }
 
-/// \brief A simple verification whether the vertex property contains NaN or Inf values
+constexpr Scalar MAX_ALLOWED_SCALAR_VAL{ 1e+10f };
+
+/// \brief A simple verification whether the vertex property contains values larger than MAX_ALLOWED_SCALAR_VAL
 [[nodiscard]] bool HasInvalidValues(const VertexProperty<Scalar>& scalarVProp)
 {
-	for (const auto val : scalarVProp.vector())
-	{
-        if (std::isnan(val) || std::isinf(val))
-            return true;
-	}
-    return false;
+    return std::ranges::any_of(scalarVProp.vector(),
+        [](const auto val) { return val > MAX_ALLOWED_SCALAR_VAL; });
 }
 
 //!> \brief Header string for VTK polydata file.
