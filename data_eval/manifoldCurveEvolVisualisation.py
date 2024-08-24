@@ -72,6 +72,7 @@ def read_ply(file_path):
 
 # Gather all the PLY files for inner and outer curves in sorted order
 inner_ply_files = defaultdict(dict)  # Use a dictionary of dictionaries
+time_ids = []  # To store the time_id values
 
 for f in sorted(os.listdir(directory)):
     if f.startswith(f"{procedure_name}_Inner") and f.endswith(".ply"):
@@ -80,6 +81,8 @@ for f in sorted(os.listdir(directory)):
         curve_id = parts[2].replace('Inner', '')  # Extract curve ID (e.g., "0" from "Inner0")
         time_id = int(parts[-1].replace('Evol', '').replace('.ply', ''))  # Extract time ID (e.g., "1" from "Evol1")
         inner_ply_files[curve_id][time_id] = os.path.join(directory, f)
+        if time_id not in time_ids:
+            time_ids.append(time_id)  # Collect time_id if not already added
 
 outer_ply_files = defaultdict(str)  # Use a dictionary for outer files indexed by time_id
 
@@ -88,6 +91,8 @@ for f in sorted(os.listdir(directory)):
         # Extract the time ID from the filename
         time_id = int(f.split('_')[-1].replace('Evol', '').replace('.ply', ''))  # Extract time ID
         outer_ply_files[time_id] = os.path.join(directory, f)
+        if time_id not in time_ids:
+            time_ids.append(time_id)  # Collect time_id if not already added
 
 # Sort inner files by time_id within each curve_id
 for curve_id in inner_ply_files:
@@ -95,6 +100,9 @@ for curve_id in inner_ply_files:
 
 # Sort outer files by time_id
 outer_ply_files = dict(sorted(outer_ply_files.items()))
+
+# Sort the time_ids
+time_ids = sorted(time_ids)
 
 # Read all vertex positions from the PLY files for inner and outer curves
 inner_curves = {curve_id: [read_ply(ply_file) for ply_file in files.values()]
@@ -150,15 +158,18 @@ def update(frame):
         if inner_curve_group[frame].size > 0:
             x_inner, y_inner = inner_curve_group[frame].T
             inner_lines.set_data(x_inner, y_inner)
+    
+    # Update the title with the current time step using time_id
+    ax.set_title(f"Time Step: {time_ids[frame]}", fontsize=14)
 
     return [outer_line] + inner_line_handles
 
 # Create the animation
-ani = FuncAnimation(fig, update, frames=len(outer_curves), init_func=init, blit=True, repeat=True)
+ani = FuncAnimation(fig, update, frames=len(outer_curves), init_func=init, blit=False, repeat=True)
 
 # Save the animation as a GIF
 output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-ani.save(output_gif_path, writer='pillow', fps=2)
+ani.save(output_gif_path, writer='pillow', fps=4)
 
 # Show the animation
 plt.show()

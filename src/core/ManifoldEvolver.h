@@ -63,7 +63,9 @@ struct AmbientFieldSettings
 struct ManifoldEvolutionSettings
 {
     bool UseInnerManifolds{ true }; //>! whether to construct outward-evolving inner manifolds.
-    bool UseSemiImplicit{ true }; //>! whether to use a more numerically stable, but computationally costly numerical scheme (has to solve a linear system for each coord for each time step).
+    bool UseOuterManifolds{ true }; //>! whether to construct inward-evolving outer manifolds.
+
+	bool UseSemiImplicit{ true }; //>! whether to use a more numerically stable, but computationally costly numerical scheme (has to solve a linear system for each coord for each time step).
     unsigned int LevelOfDetail{ 3 }; //>! Level of detail. Reflected in the number of vertices used during discretization. Standardized for circles and icospheres, e.g.: the base circle is a regular pentagon, and the sphere an icosahedron.
 
     double TimeStep{ 0.01 };     //>! time step size.

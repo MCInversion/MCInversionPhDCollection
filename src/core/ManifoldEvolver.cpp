@@ -79,10 +79,14 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 void ManifoldCurveEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
 {
 	const std::string connectingName = "_Evol_" + std::to_string(step);
-	auto exportedOuterCurve = *m_OuterCurve;
-	exportedOuterCurve *= m_TransformToOriginal;
-	if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
-		std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+
+	if (m_OuterCurve)
+	{
+		auto exportedOuterCurve = *m_OuterCurve;
+		exportedOuterCurve *= m_TransformToOriginal;
+		if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
+			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+	}
 
 	for (size_t i = 0; const auto & innerCurve : m_InnerCurves)
 	{
@@ -96,10 +100,14 @@ void ManifoldCurveEvolutionStrategy::ExportCurrentState(unsigned int step, const
 void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOutputFilename)
 {
 	const std::string connectingName = "_Evol_Result";
-	auto exportedOuterCurve = *m_OuterCurve;
-	exportedOuterCurve *= m_TransformToOriginal;
-	if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
-		std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+
+	if (m_OuterCurve)
+	{
+		auto exportedOuterCurve = *m_OuterCurve;
+		exportedOuterCurve *= m_TransformToOriginal;
+		if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
+			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+	}
 
 	for (size_t i = 0; const auto & innerCurve : m_InnerCurves)
 	{
@@ -156,6 +164,7 @@ std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrateg
 void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
 	// ================================== Handle m_OuterCurve ==========================================================
+	if (m_OuterCurve)
 	{
 		const auto NVertices = static_cast<unsigned int>(m_OuterCurve->n_vertices());
 		SparseMatrix sysMat(NVertices, NVertices);
@@ -348,6 +357,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 {
 	// ================================== Handle m_OuterCurve ==========================================================
+	if (m_OuterCurve)
 	{
 		const auto tStep = GetSettings().TimeStep;
 		auto vDistanceToTarget = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
@@ -469,11 +479,14 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 
 void ManifoldCurveEvolutionStrategy::PrepareManifoldProperties()
 {
-	// distance to m_TargetPointCloud
-	m_OuterCurve->add_vertex_property<pmp::Scalar>("v:distance_to_target", FLT_MAX);
+	if (m_OuterCurve)
+	{
+		// distance to m_TargetPointCloud
+		m_OuterCurve->add_vertex_property<pmp::Scalar>("v:distance_to_target", FLT_MAX);
 
-	// the minimum from the distances to m_TargetPointCloud and all m_InnerCurves
-	m_OuterCurve->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);
+		// the minimum from the distances to m_TargetPointCloud and all m_InnerCurves
+		m_OuterCurve->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);		
+	}
 
 	for (const auto& innerCurve : m_InnerCurves)
 	{
@@ -528,6 +541,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 		SDF::SignComputation2D::None,
 		SDF::PreprocessingType2D::Quadtree
 	};
+
 	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(*m_OuterCurve));
 	m_OuterCurveDistanceField = std::make_shared<Geometry::ScalarGrid2D>(
 		SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));
@@ -545,11 +559,19 @@ constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
 
 float ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
 {
+	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
+	{
+		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::ConstructInitialManifolds: Current setting is: UseInnerManifolds == false && UseOuterManifolds == false. This means there's nothing to evolve!\n");
+	}
+
 	const float outerCircleRadius = 0.5f * SPHERE_RADIUS_FACTOR *
 		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
-
 	const auto nSegments = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
-	m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(targetBoundsCenter, outerCircleRadius, nSegments));
+
+	if (GetSettings().UseOuterManifolds)
+	{
+		m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(targetBoundsCenter, outerCircleRadius, nSegments));		
+	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
 		return outerCircleRadius;
@@ -596,7 +618,10 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, floa
 	m_TransformToOriginal = inverse(transfMatrixGeomScale);
 
 	// transform geometries
-	(*m_OuterCurve) *= transfMatrixGeomScale;
+	if (m_OuterCurve)
+	{
+		(*m_OuterCurve) *= transfMatrixGeomScale;
+	}
 	for (const auto& innerCurve : m_InnerCurves)
 	{
 		(*innerCurve) *= transfMatrixGeomScale;
@@ -624,7 +649,7 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, floa
 bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 {
 	// check self-intersections
-	if (Geometry::PMPManifoldCurve2DHasSelfIntersections(*GetOuterCurve()))
+	if (GetOuterCurve() && Geometry::PMPManifoldCurve2DHasSelfIntersections(*GetOuterCurve()))
 		return false;
 
 	const auto& outerCurve = *GetOuterCurve();
@@ -781,9 +806,13 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
 {
 	const std::string connectingName = "_Evol_" + std::to_string(step);
-	auto exportedOuterSurface = *m_OuterSurface;
-	exportedOuterSurface *= m_TransformToOriginal;
-	exportedOuterSurface.write(baseOutputFilename + "_Outer" + connectingName + ".vtk");
+
+	if (m_OuterSurface)
+	{
+		auto exportedOuterSurface = *m_OuterSurface;
+		exportedOuterSurface *= m_TransformToOriginal;
+		exportedOuterSurface.write(baseOutputFilename + "_Outer" + connectingName + ".vtk");		
+	}
 
 	for (size_t i = 0; const auto& innerSurface : m_InnerSurfaces)
 	{
@@ -796,9 +825,13 @@ void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step, con
 void ManifoldSurfaceEvolutionStrategy::ExportFinalResult(const std::string& baseOutputFilename)
 {
 	const std::string connectingName = "_Evol_Result";
-	auto exportedOuterSurface = *m_OuterSurface;
-	exportedOuterSurface *= m_TransformToOriginal;
-	exportedOuterSurface.write(baseOutputFilename + "_Outer" + connectingName + ".vtk");
+
+	if (m_OuterSurface)
+	{
+		auto exportedOuterSurface = *m_OuterSurface;
+		exportedOuterSurface *= m_TransformToOriginal;
+		exportedOuterSurface.write(baseOutputFilename + "_Outer" + connectingName + ".vtk");
+	}
 
 	for (size_t i = 0; const auto & innerSurface : m_InnerSurfaces)
 	{
@@ -853,6 +886,7 @@ std::vector<std::shared_ptr<pmp::SurfaceMesh>> ManifoldSurfaceEvolutionStrategy:
 void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
 {
 	// ================================== Handle m_OuterSurface ==========================================================
+	if (m_OuterSurface)
 	{
 		const auto NVertices = static_cast<unsigned int>(m_OuterSurface->n_vertices());
 		SparseMatrix sysMat(NVertices, NVertices);
@@ -960,7 +994,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		pmp::Normals::compute_vertex_normals(*innerSurface);
 		auto vNormalsProp = innerSurface->get_vertex_property<pmp::vec3>("v:normal");
 
-		// prepare matrix & rhs for m_OuterSurface:
+		// prepare matrix & rhs for m_InnerSurface:
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 6);  // Assuming an average of 6 entries per vertex
 
@@ -984,6 +1018,23 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
 				continue;
 			}
+
+			// TODO: Remove this debug if-statement
+			// Find points which are in the middle of the positive & negative octant patches
+			//const float currentPosRadius = norm(vPosToUpdate);
+			//const float maxGeodesicRadius = 0.7f * currentPosRadius * acos(1.0f / sqrt(3.0f));
+			//const auto positiveOctantCenter = (currentPosRadius / sqrt(3.0)) * pmp::Point{ 1.0f, 1.0f, 1.0f };
+			//const float geodesicDistanceToPositiveOctantCenter = currentPosRadius * acos(dot(positiveOctantCenter, vPosToUpdate) / (currentPosRadius * currentPosRadius));
+			//if (geodesicDistanceToPositiveOctantCenter < maxGeodesicRadius)
+			//{
+			//	std::cout << "innerSurface vertex " << v.idx() << ": (" << vPosToUpdate << ")\n";
+			//}
+			//const auto negativeOctantCenter = (currentPosRadius / sqrt(3.0)) * pmp::Point{ -1.0f, -1.0f, -1.0f };
+			//const float geodesicDistanceToNegativeOctantCenter = currentPosRadius * acos(dot(negativeOctantCenter, vPosToUpdate) / (currentPosRadius * currentPosRadius));
+			//if (geodesicDistanceToNegativeOctantCenter < maxGeodesicRadius)
+			//{
+			//	std::cout << "innerSurface vertex " << v.idx() << ": (" << vPosToUpdate << ")\n";
+			//}
 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
@@ -1045,6 +1096,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 {
 	// ================================== Handle m_OuterSurface ==========================================================
+	if (m_OuterSurface)
 	{
 		const auto tStep = GetSettings().TimeStep;
 		auto vDistanceToTarget = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:distance_to_target");
@@ -1221,11 +1273,14 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 
 void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 {
-	// distance to m_TargetPointCloud
-	m_OuterSurface->add_vertex_property<pmp::Scalar>("v:distance_to_target", FLT_MAX);
+	if (m_OuterSurface)
+	{
+		// distance to m_TargetPointCloud
+		m_OuterSurface->add_vertex_property<pmp::Scalar>("v:distance_to_target", FLT_MAX);
 
-	// the minimum from the distances to m_TargetPointCloud and all m_InnerSurfaces
-	m_OuterSurface->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);
+		// the minimum from the distances to m_TargetPointCloud and all m_InnerSurfaces
+		m_OuterSurface->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);		
+	}
 
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
@@ -1241,23 +1296,31 @@ void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 
 float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
 {
-	const float outerSphereRadius = 0.5f * SPHERE_RADIUS_FACTOR *
-		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
+	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
+	{
+		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds: Current setting is: UseInnerManifolds == false && UseOuterManifolds == false. This means there's nothing to evolve!\n");
+	}
 
-	Geometry::IcoSphereBuilder icoBuilder({ GetSettings().LevelOfDetail, outerSphereRadius });
-	icoBuilder.BuildBaseData();
-	icoBuilder.BuildPMPSurfaceMesh();
-	m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
 	const pmp::mat4 transfMatrixGeomMove{
 		1.0f, 0.0f, 0.0f, -targetBoundsCenter[0],
 		0.0f, 1.0f, 0.0f, -targetBoundsCenter[1],
 		0.0f, 0.0f, 1.0f, -targetBoundsCenter[2],
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
+	const float outerSphereRadius = 0.5f * SPHERE_RADIUS_FACTOR *
+		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
+
+	if (GetSettings().UseOuterManifolds)
+	{
+		Geometry::IcoSphereBuilder icoBuilder({ GetSettings().LevelOfDetail, outerSphereRadius });
+		icoBuilder.BuildBaseData();
+		icoBuilder.BuildPMPSurfaceMesh();
+		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
+		(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
+	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
-		return outerSphereRadius;
+		return outerSphereRadius;		
 
 	// TODO: This is hardcoded, implement 3D version of ParticleSwarmDistanceFieldInscribedSphereCalculator
 	//const InscribedSphereInputData calcData{
@@ -1313,7 +1376,10 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, fl
 	m_TransformToOriginal = inverse(transfMatrixGeomScale);
 
 	// transform geometries
-	(*m_OuterSurface) *= transfMatrixGeomScale;
+	if (m_OuterSurface)
+	{
+		(*m_OuterSurface) *= transfMatrixGeomScale;		
+	}
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
 		(*innerSurface) *= transfMatrixGeomScale;
@@ -1341,7 +1407,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, fl
 bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
 {
 	// check self-intersections
-	if (Geometry::PMPSurfaceMeshHasSelfIntersections(*GetOuterSurface()))
+	if (GetOuterSurface() && Geometry::PMPSurfaceMeshHasSelfIntersections(*GetOuterSurface()))
 		return false;
 
 	const auto& outerSurface = *GetOuterSurface();
