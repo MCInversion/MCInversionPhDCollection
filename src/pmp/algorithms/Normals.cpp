@@ -188,14 +188,14 @@ void Normals::compute_face_normals(SurfaceMesh& mesh)
 // =============== 2D Manifold curve ====================
 //
 
-void Normals::compute_vertex_normals(ManifoldCurve2D& curve)
+void Normals2::compute_vertex_normals(ManifoldCurve2D& curve)
 {
     auto vnormal = curve.vertex_property<Normal2>("v:normal");
     for (auto v : curve.vertices())
         vnormal[v] = compute_vertex_normal(curve, v);
 }
 
-Normal2 Normals::compute_vertex_normal(const ManifoldCurve2D& curve, Vertex v)
+Normal2 Normals2::compute_vertex_normal(const ManifoldCurve2D& curve, Vertex v)
 {
     std::vector<Normal2> edge_normals;
 
@@ -226,7 +226,7 @@ Normal2 Normals::compute_vertex_normal(const ManifoldCurve2D& curve, Vertex v)
     return vertex_normal;
 }
 
-Normal2 Normals::compute_edge_normal(const ManifoldCurve2D& curve, Edge e)
+Normal2 Normals2::compute_edge_normal(const ManifoldCurve2D& curve, Edge e)
 {
     // Get the start and end vertices of the edge
     Vertex v0 = curve.from_vertex(e);

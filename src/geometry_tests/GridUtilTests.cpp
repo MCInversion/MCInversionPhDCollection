@@ -1,4 +1,6 @@
+
 #include "gtest/gtest.h"
+
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
 
@@ -405,5 +407,76 @@ TEST(ScalarGridLocalMaximumTests3D, DistanceFieldMaximumOnAnother4x4x4Grid)
 //
 //TEST(ScalarGridLocalMaximumTests3D, MaximumOutsideOfCellPointsWithRadius3)
 //{
+//
+//}
+
+//#include <fstream>
+//
+//namespace
+//{
+//    void ExportToVTI_TODO_REMOVE(const std::string& filename, const Geometry::ScalarGrid& scalarGrid)
+//    {
+//        if (!scalarGrid.IsValid())
+//            throw std::invalid_argument("ExportToVTI: scalarGrid to be exported is invalid!\n");
+//        if (filename.empty())
+//            throw std::invalid_argument("ExportToVTI: filename cannot be empty!\n");
+//
+//        std::fstream vti(filename + ".vti", std::fstream::out);
+//
+//        const auto& dims = scalarGrid.Dimensions();
+//        const auto nx = static_cast<unsigned int>(dims.Nx);
+//        const auto ny = static_cast<unsigned int>(dims.Ny);
+//        const auto nz = static_cast<unsigned int>(dims.Nz);
+//        const float dx = scalarGrid.CellSize();
+//
+//        const pmp::vec3 min = scalarGrid.Box().min();
+//        //const pmp::vec3 max = min + pmp::vec3(static_cast<float>(nx), static_cast<float>(ny),static_cast<float>(nz)) * dx;
+//        const pmp::vec3 max = scalarGrid.Box().max();
+//
+//        vti << "<VTKFile type=\"ImageData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+//        vti << "	<ImageData WholeExtent=\"0 " << nx - 1 << " 0 " << ny - 1 << " 0 " << nz - 1 << "\" Origin=\"" << min[0] + 0.5f * dx << " " << min[1] + 0.5f * dx << " " << min[2] + 0.5f * dx << "\" Spacing=\"" << dx << " " << dx << " " << dx << "\">\n";
+//        vti << "		<Piece Extent=\"0 " << nx - 1 << " 0 " << ny - 1 << " 0 " << nz - 1 << "\">\n";
+//        vti << "			<PointData Scalars=\"Scalars_\">\n";
+//        vti << "				<DataArray type=\"Float32\" Name=\"Scalars_\" format=\"ascii\" RangeMin=\"" << min << "\" RangeMax=\"" << max << "\">\n";
+//
+//        for (const auto& val : scalarGrid.Values()) {
+//            vti << static_cast<float>(val) << "\n";
+//        }
+//
+//        vti << "				</DataArray>\n";
+//        vti << "			</PointData>\n";
+//        vti << "		<CellData>\n";
+//        vti << "		</CellData>\n";
+//        vti << "	</Piece>\n";
+//        vti << "	</ImageData>\n";
+//        vti << "</VTKFile>\n";
+//
+//        vti.close();
+//    }
+//}
+//
+//TEST(ScalarGridApplyPrimitivesTests, ApplyHyperboloidDistanceField)
+//{
+//	// Arrange
+//    constexpr float roiHalfDim = 5.0f;
+//    constexpr float roiDim = 2.0f * roiHalfDim;
+//    const auto box = BoundingBox{ vec3{0.0f, 0.0f, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
+//    constexpr float cellSize = 0.1f;
+//    constexpr double initVal = DEFAULT_SCALAR_GRID_INIT_VAL;
+//    ScalarGrid result(cellSize, box, initVal);
+//
+//    const HyperboloidParams params{
+//        box.center(),
+//        1.0f / roiHalfDim, 1.5f / roiHalfDim, 2.0f / roiHalfDim,
+//        vec3{1, 1, 1} * (roiHalfDim / 4.0f),
+//        DistanceUnion
+//    };
+//
+//    // Act
+//    ApplyHyperboloidDistanceFieldToGrid(result, params);
+//
+//    ExportToVTI_TODO_REMOVE("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\HyperboloidDF", result);
+//
+//    // Assert
 //
 //}

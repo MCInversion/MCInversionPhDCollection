@@ -948,7 +948,7 @@ CurveRemeshing::CurveRemeshing(ManifoldCurve2D& curve)
 
     points_ = curve_.vertex_property<Point2>("v:point");
 
-    Normals::compute_vertex_normals(curve_);
+    Normals2::compute_vertex_normals(curve_);
     vnormal_ = curve_.vertex_property<Point2>("v:normal");
 
     has_feature_vertices_ = curve_.has_vertex_property("v:feature");
@@ -966,7 +966,7 @@ void CurveRemeshing::uniform_remeshing(Scalar edge_length, unsigned int iteratio
     {
         split_long_edges();
 
-        Normals::compute_vertex_normals(curve_);
+        Normals2::compute_vertex_normals(curve_);
 
         collapse_short_edges();
 
@@ -990,7 +990,7 @@ void CurveRemeshing::adaptive_remeshing(const AdaptiveRemeshingSettings& setting
     {
         split_long_edges();
 
-        Normals::compute_vertex_normals(curve_);
+        Normals2::compute_vertex_normals(curve_);
 
         collapse_short_edges();
 
@@ -1161,7 +1161,7 @@ void CurveRemeshing::preprocessing()
         // build reference curve
         refcurve_ = std::make_shared<ManifoldCurve2D>();
         refcurve_->assign(curve_);
-        Normals::compute_vertex_normals(*refcurve_);
+        Normals2::compute_vertex_normals(*refcurve_);
         refpoints_ = refcurve_->vertex_property<Point2>("v:point");
         refnormals_ = refcurve_->vertex_property<Normal2>("v:normal");
 
@@ -1212,7 +1212,7 @@ void CurveRemeshing::split_long_edges(unsigned int nIterations)
                 vnew = curve_.split_edge_with_vertex(e, (p0 + p1) * 0.5f);
 
                 // need normal or sizing for adaptive refinement
-                vnormal_[vnew] = Normals::compute_vertex_normal(curve_, vnew);
+                vnormal_[vnew] = Normals2::compute_vertex_normal(curve_, vnew);
                 vsizing_[vnew] = 0.5f * (vsizing_[v0] + vsizing_[v1]);
 
                 // Check if either vertex is a feature vertex
@@ -1385,7 +1385,7 @@ void CurveRemeshing::tangential_smoothing(unsigned int iterations)
         }
 
         // update normal vectors (if not done so through projection)
-        Normals::compute_vertex_normals(curve_);
+        Normals2::compute_vertex_normals(curve_);
     }
 
     // project at the end

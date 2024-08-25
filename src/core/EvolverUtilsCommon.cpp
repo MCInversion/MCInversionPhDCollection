@@ -298,17 +298,17 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromMesh(const std::share
 		totalEdgeLength += edgeLength;
 	}
 
-	// Calculate the maximum ellipsoidal approximation error across all vertices
+	// Calculate the maximum quadric approximation error across all vertices
 	float maxDeviation = -FLT_MAX;
 	for (const auto v : mesh->vertices())
 	{
-		float deviation = Geometry::CalculateEllipsoidalApproximationErrorAtVertex(*mesh, v);
+		float deviation = Geometry::CalculateQuadricApproximationErrorAtVertex(*mesh, v);
 		maxDeviation = std::max(maxDeviation, deviation);
 	}
 
 	settings.MinEdgeLength = minEdgeLength;
 	settings.MaxEdgeLength = maxEdgeLength;
-	settings.ApproxError = maxDeviation;  // Use the maximum ellipsoidal approximation error as the approximation error
+	settings.ApproxError = maxDeviation;  // Use the maximum quadric approximation error as the approximation error
 	settings.NRemeshingIterations = 10;
 	settings.NTangentialSmoothingIters = 6;
 	settings.UseProjection = true;

@@ -481,5 +481,4 @@ Scalar vertex_curvature(const ManifoldCurve2D& curve, Vertex v)
 
     return curvature;
 }
-
 } // namespace pmp

@@ -106,8 +106,8 @@ namespace Geometry
 	/// \brief A ray-casting verification whether a given 3D point is inside a SurfaceMesh. The mesh is already converted to a kd-tree.
 	[[nodiscard]] bool IsPointInsidePMPSurfaceMesh(const pmp::Point& point, const std::shared_ptr<CollisionKdTree>& meshKdTree);
 
-	/// \brief Uses ellipsoidal approximation for determining the deviations of triangle faces adjacent to vertex v.
-	[[nodiscard]] pmp::Scalar CalculateEllipsoidalApproximationErrorAtVertex(const pmp::SurfaceMesh& mesh, pmp::Vertex v);
+	/// \brief Uses an approximation via a tangent quadric (ellipsoid/hyperboloid) for determining the deviations of triangle faces adjacent to vertex v.
+	[[nodiscard]] pmp::Scalar CalculateQuadricApproximationErrorAtVertex(const pmp::SurfaceMesh& mesh, pmp::Vertex v);
 
 	/// \brief Uses circular approximation for determining the deviations of edges adjacent to vertex v.
 	[[nodiscard]] pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v);

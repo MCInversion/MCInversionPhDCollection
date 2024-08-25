@@ -369,6 +369,34 @@ namespace Geometry
 	 */
 	void ApplyTorusDistanceFieldToGrid(ScalarGrid& grid, const TorusParams& params);
 
+	/**
+	 * \brief A parameter container for the single-sheet quadric generator for ScalarGrid.
+	 * \struct QuadricParams
+	 */
+	struct QuadricParams
+	{
+		pmp::vec3 Center{}; //! base position of the single-sheet hyperboloid object
+		float a{ 1.0f };
+		float b{ 1.0f };
+		float c{ 1.0f };
+		pmp::vec3 HalfSize{ 0.5f, 0.5f, 0.5f }; //! the half-size of the infinite hyperboloid's ROI.
+		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a torus object.
+	};
+
+	/**
+	 * \brief Applies a single-sheet hyperboloid object with given QuadricParams to a ScalarGrid.
+	 * \param grid      grid, where hyperboloid values are to be applied.
+	 * \param params    parameters of the applied torus object.
+	 */
+	void ApplyHyperboloidDistanceFieldToGrid(ScalarGrid& grid, const QuadricParams& params);
+
+	/**
+	 * \brief Applies a single-sheet ellipsoid object with given QuadricParams to a ScalarGrid.
+	 * \param grid      grid, where ellipsoid values are to be applied.
+	 * \param params    parameters of the applied torus object.
+	 */
+	void ApplyEllipsoidDistanceFieldToGrid(ScalarGrid& grid, const QuadricParams& params);
+
 	// ==================================================================================================================
 
 	/**

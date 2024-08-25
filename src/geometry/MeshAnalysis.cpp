@@ -14,7 +14,6 @@
 #include <set>
 #include <unordered_set>
 #include <ranges>
-#include <limits>
 #include <iomanip> // for std::setprecision
 
 namespace Geometry
@@ -1058,18 +1057,12 @@ namespace Geometry
 
 		[[nodiscard]] pmp::Scalar DistanceToTangentHyperboloid(const pmp::Point& point, const TangentQuadricParams& params)
 		{
-			// Translate point relative to the hyperboloid center
-			pmp::vec3 P(point[0] - eParams.center[0], point[1] - eParams.center[1], point[2] - eParams.center[2]);
-
-			// Calculate the hyperboloid function value at the point
-			const float hyperboloidValue = (P[0] / eParams.a) * (P[0] / eParams.a) +
-				(P[1] / eParams.b) * (P[1] / eParams.b) -
-				(P[2] / eParams.c) * (P[2] / eParams.c) - 1.0f;
-
-			// Calculate the distance to the hyperboloid surface
-			const float distance = std::sqrt(hyperboloidValue * hyperboloidValue);
-
-			return distance;
+			pmp::vec3 P(point[0] - params.center[0], point[1] - params.center[1], point[2] - params.center[2]);
+			// Calculate the one-sheet hyperboloid function value at the point
+			const float hyperboloidValue = (P[0] / params.a) * (P[0] / params.a) +
+				(P[1] / params.b) * (P[1] / params.b) -
+				(P[2] / params.c) * (P[2] / params.c) - 1.0f;
+			return std::sqrt(std::abs(hyperboloidValue)); // need to make the distance positive
 		}
 
 		struct TangentCircleParams
@@ -1087,52 +1080,70 @@ namespace Geometry
 
 	} // anonymous namespace
 
-	constexpr pmp::Scalar CURVATURE_LIMIT{ 1e-6f };
+	constexpr pmp::Scalar CURVATURE_EPSILON{ 1e-6f };
 
-	pmp::Scalar CalculateEllipsoidalApproximationErrorAtVertex(const pmp::SurfaceMesh& mesh, pmp::Vertex v)
+	pmp::Scalar CalculateQuadricApproximationErrorAtVertex(const pmp::SurfaceMesh& mesh, pmp::Vertex v)
 	{
 		const auto curvature = vertex_curvature(mesh, v);
 
-		if (std::fabs(curvature.gauss) < CURVATURE_LIMIT) // curvature.gauss = curvature.min * curvature.max			
+		if (std::fabs(curvature.gauss) < CURVATURE_EPSILON) // curvature.gauss = curvature.min * curvature.max			
 		{
-			// no ellipsoid of reasonable size can be fitted to the mesh vertex surroundings because the surface is flat.
+			// no quadric of reasonable size can be fitted to the mesh vertex surroundings because the surface is flat.
 			return 0.0f;
 		}
 
-		TangentQuadricParams eParams;
+		TangentQuadricParams qParams;
 
-		// Estimate ellipsoid parameters (a, b, c) from the curvature
-		eParams.a = 1.0f / std::sqrt(std::max(curvature.max, std::numeric_limits<pmp::Scalar>::epsilon()));
-		eParams.b = 1.0f / std::sqrt(std::max(curvature.mean, std::numeric_limits<pmp::Scalar>::epsilon()));
-		eParams.c = 1.0f / std::sqrt(std::max(curvature.min, std::numeric_limits<pmp::Scalar>::epsilon()));
+		if (curvature.gauss > 0)
+		{
+			// Estimate tangent ellipsoid parameters (a, b, c) from the curvature
+			qParams.a = 1.0f / std::sqrt(std::max(curvature.max, CURVATURE_EPSILON));
+			qParams.b = 1.0f / std::sqrt(std::max(curvature.mean, CURVATURE_EPSILON));
+			qParams.c = 1.0f / std::sqrt(std::max(curvature.min, CURVATURE_EPSILON));
+		}
+		else
+		{
+			// Estimate tangent single-sheet hyperboloid parameters (a, b, c) from the curvature
+			qParams.a = 1.0f / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON));
+			qParams.b = 1.0f / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON));
+			qParams.c = 1.0f / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON));
+		}
+
+		const auto distanceFromQuadric	= (curvature.gauss > 0) ? DistanceToTangentEllipsoid : DistanceToTangentHyperboloid;
 
 		// Use the vertex position as the ellipsoid center approximation
 		const auto normal = pmp::Normals::compute_vertex_normal(mesh, v);
-		eParams.center = mesh.position(v) - normal * curvature.mean;
+		const auto standardNormal = pmp::vec3{ 0, 0, 1 };
+		const auto reorientToStandardNormal = rotation_matrix(normal, standardNormal);
+		const auto translateToCurrentPosition = translation_matrix(-mesh.position(v));
+		const auto affineTransformToCurrentPos = translateToCurrentPosition * reorientToStandardNormal;
+		qParams.center = standardNormal * curvature.mean;
 
-		pmp::Scalar meanDeviation = 0.0;
+		pmp::Scalar maxDeviation = 0.0;
 		for (const auto f : mesh.faces(v))
 		{
-			pmp::Point faceCentroid = centroid(mesh, f);
-			meanDeviation += DistanceToTangentEllipsoid(faceCentroid, eParams);
+			pmp::Point faceCentroid = affine_transform(affineTransformToCurrentPos, centroid(mesh, f));
+			const auto deviation = distanceFromQuadric(faceCentroid, qParams);
+			maxDeviation = std::max(maxDeviation, deviation);
 		}
 
-		return meanDeviation;
+		return maxDeviation;
 	}
 
 	pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v)
 	{
 		const auto curvature = vertex_curvature(curve, v);
 
-		if (curvature < CURVATURE_LIMIT)
+		if (curvature < CURVATURE_EPSILON)
 		{
 			// no circle of reasonable size can be fitted to the curve vertex surroundings because the curve is flat.
 			return 0.0;
 		}
 
 		TangentCircleParams cParams;
-		cParams.r = 1.0f / 
+		cParams.r = 1.0f / std::sqrt(std::max(curvature, CURVATURE_EPSILON));
 
+		const auto normal = pmp::Normals2::compute_vertex_normal(curve, v);
 
 		return pmp::Scalar();
 	}

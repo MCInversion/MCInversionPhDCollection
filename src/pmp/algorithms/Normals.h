@@ -52,7 +52,11 @@ public:
     //! of the face normal. \p crease_angle is in radians, not degrees.
     static Normal compute_corner_normal(const SurfaceMesh& mesh, Halfedge h,
                                         Scalar crease_angle);
+};
 
+class Normals2
+{
+public:
     //! \brief Compute vertex normals for the whole \p curve.
     //! \details Calls compute_vertex_normal() for each vertex and adds a new
     //! vertex property of type Normal named "v:normal".
@@ -62,7 +66,7 @@ public:
     static Normal2 compute_vertex_normal(const ManifoldCurve2D& curve, Vertex v);
 
     //! \brief Compute the normal vector of edge \p e.
-    static Normal2 compute_edge_normal(const ManifoldCurve2D& curve, Edge e);
+    static Normal2 compute_edge_normal(const ManifoldCurve2D& curve, Edge e);	
 };
 
 } // namespace pmp

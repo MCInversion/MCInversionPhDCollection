@@ -181,7 +181,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		auto vMinDistance = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
 		const auto tStep = GetSettings().TimeStep;
 
-		pmp::Normals::compute_vertex_normals(*m_OuterCurve);
+		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
 		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
 
 		// prepare matrix & rhs for m_OuterCurve:
@@ -278,7 +278,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		auto vMinDistance = innerCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
 		const auto tStep = GetSettings().TimeStep;
 
-		pmp::Normals::compute_vertex_normals(*innerCurve);
+		pmp::Normals2::compute_vertex_normals(*innerCurve);
 		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
 
 		// prepare matrix & rhs for m_OuterCurve:
@@ -374,7 +374,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		auto vDistanceToTarget = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
 
-		pmp::Normals::compute_vertex_normals(*m_OuterCurve);
+		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
 		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
 
 		for (const auto v : m_OuterCurve->vertices())
@@ -434,7 +434,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		auto vDistanceToTarget = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = innerCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
 
-		pmp::Normals::compute_vertex_normals(*innerCurve);
+		pmp::Normals2::compute_vertex_normals(*innerCurve);
 		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
 
 		for (const auto v : innerCurve->vertices())

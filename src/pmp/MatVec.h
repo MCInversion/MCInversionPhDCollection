@@ -785,13 +785,13 @@ Mat4<Scalar> rotation_matrix_x(Scalar angle)
     Scalar ca = cos(angle * Scalar(M_PI / 180.0));
     Scalar sa = sin(angle * Scalar(M_PI / 180.0));
 
-    Mat4<Scalar> m(0.0);
-    m(0, 0) = 1.0;
-    m(1, 1) = ca;
-    m(1, 2) = -sa;
-    m(2, 2) = ca;
-    m(2, 1) = sa;
-    m(3, 3) = 1.0;
+    Mat4<Scalar> m(0.0);  // Initialize all elements to 0
+    m(0, 0) = 1.0;        // No rotation on the x-axis
+    m(1, 1) = ca;         // cos(theta) for y-axis
+    m(2, 1) = -sa;        // -sin(theta) for z-axis
+    m(1, 2) = sa;         // sin(theta) for y-axis
+    m(2, 2) = ca;         // cos(theta) for z-axis
+    m(3, 3) = 1.0;        // Homogeneous coordinate
 
     return m;
 }
@@ -803,13 +803,13 @@ Mat4<Scalar> rotation_matrix_y(Scalar angle)
     Scalar ca = cos(angle * Scalar(M_PI / 180.0));
     Scalar sa = sin(angle * Scalar(M_PI / 180.0));
 
-    Mat4<Scalar> m(0.0);
-    m(0, 0) = ca;
-    m(0, 2) = sa;
-    m(1, 1) = 1.0;
-    m(2, 0) = -sa;
-    m(2, 2) = ca;
-    m(3, 3) = 1.0;
+    Mat4<Scalar> m(0.0);  // Initialize all elements to 0
+    m(0, 0) = ca;         // cos(theta) for x-axis
+    m(2, 0) = sa;         // sin(theta) for z-axis
+    m(1, 1) = 1.0;        // No rotation on the y-axis
+    m(0, 2) = -sa;        // -sin(theta) for x-axis
+    m(2, 2) = ca;         // cos(theta) for z-axis
+    m(3, 3) = 1.0;        // Homogeneous coordinate
 
     return m;
 }
@@ -821,13 +821,13 @@ Mat4<Scalar> rotation_matrix_z(Scalar angle)
     Scalar ca = cos(angle * Scalar(M_PI / 180.0));
     Scalar sa = sin(angle * Scalar(M_PI / 180.0));
 
-    Mat4<Scalar> m(0.0);
-    m(0, 0) = ca;
-    m(0, 1) = -sa;
-    m(1, 0) = sa;
-    m(1, 1) = ca;
-    m(2, 2) = 1.0;
-    m(3, 3) = 1.0;
+    Mat4<Scalar> m(0.0);  // Initialize all elements to 0
+    m(0, 0) = ca;         // cos(theta) for x-axis
+    m(1, 0) = -sa;        // -sin(theta) for y-axis
+    m(0, 1) = sa;         // sin(theta) for x-axis
+    m(1, 1) = ca;         // cos(theta) for y-axis
+    m(2, 2) = 1.0;        // No rotation on the z-axis
+    m(3, 3) = 1.0;        // Homogeneous coordinate
 
     return m;
 }
@@ -869,20 +869,54 @@ Mat4<Scalar> rotation_matrix(const Vector<Scalar, 4>& quat)
     Scalar s2(2);
 
     m(0, 0) = s1 - s2 * quat[1] * quat[1] - s2 * quat[2] * quat[2];
-    m(1, 0) = s2 * quat[0] * quat[1] + s2 * quat[3] * quat[2];
-    m(2, 0) = s2 * quat[0] * quat[2] - s2 * quat[3] * quat[1];
+    m(1, 0) = s2 * quat[0] * quat[1] - s2 * quat[3] * quat[2];
+    m(2, 0) = s2 * quat[0] * quat[2] + s2 * quat[3] * quat[1];
 
-    m(0, 1) = s2 * quat[0] * quat[1] - s2 * quat[3] * quat[2];
+    m(0, 1) = s2 * quat[0] * quat[1] + s2 * quat[3] * quat[2];
     m(1, 1) = s1 - s2 * quat[0] * quat[0] - s2 * quat[2] * quat[2];
-    m(2, 1) = s2 * quat[1] * quat[2] + s2 * quat[3] * quat[0];
+    m(2, 1) = s2 * quat[1] * quat[2] - s2 * quat[3] * quat[0];
 
-    m(0, 2) = s2 * quat[0] * quat[2] + s2 * quat[3] * quat[1];
-    m(1, 2) = s2 * quat[1] * quat[2] - s2 * quat[3] * quat[0];
+    m(0, 2) = s2 * quat[0] * quat[2] - s2 * quat[3] * quat[1];
+    m(1, 2) = s2 * quat[1] * quat[2] + s2 * quat[3] * quat[0];
     m(2, 2) = s1 - s2 * quat[0] * quat[0] - s2 * quat[1] * quat[1];
 
     m(3, 3) = 1.0f;
 
     return m;
+}
+
+template <typename Scalar>
+Mat4<Scalar> rotation_matrix(const Vector<Scalar, 3>& from, const Vector<Scalar, 3>& to)
+{
+	// assuming rotation around the origin
+    // Calculate the axis of rotation directly as the cross product of `from` and `to`
+    auto axis = cross(from, to);
+    if (norm(axis) < 1e-6)
+    {
+        // `from` and `to` are nearly collinear; handle this special case:
+        if (dot(from, to) > 0) 
+        {
+            // Vectors are aligned, no rotation needed
+            return Mat4<Scalar>::identity();
+        }
+
+        // Vectors are opposite, 180-degree rotation around any perpendicular axis
+        // Assume a simple perpendicular axis, e.g., (1, 0, 0) unless `from` is aligned with it
+        Vector<Scalar, 3> perpAxis = (fabs(from[0]) < 1e-6) ? Vector<Scalar, 3>{1, 0, 0} : Vector<Scalar, 3>{ 0, 1, 0 };
+        return rotation_matrix(quat_from_axis_angle<Scalar>(normalize(cross(from, perpAxis)), M_PI));
+    }
+
+    // Normalize the axis
+    axis = normalize(axis);
+
+    // Compute the angle between `from` and `to`
+    auto angle = atan2(norm(axis), dot(from, to));
+
+    // Compute the quaternion
+    auto quat = quat_from_axis_angle<Scalar>(axis, angle);
+
+    // Convert quaternion to rotation matrix
+    return rotation_matrix(quat);
 }
 
 //! return upper 3x3 matrix from given 4x4 matrix, corresponding to the

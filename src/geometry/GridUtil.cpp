@@ -1711,6 +1711,154 @@ namespace Geometry
 		}
 	}
 
+	//
+	// ======================================================================================
+	//
+
+	void ApplyHyperboloidDistanceFieldToGrid(ScalarGrid& grid, const QuadricParams& params)
+	{
+		// parameter check
+		if (params.a < FLT_EPSILON) {
+			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.a <= 0.0f!\n";
+			return;
+		}
+		if (params.b < FLT_EPSILON) {
+			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.b <= 0.0f!\n";
+			return;
+		}
+		if (params.c < FLT_EPSILON) {
+			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.c <= 0.0f!\n";
+			return;
+		}
+
+		// grid
+		auto& values = grid.Values();
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		// torus ROI (region of influence (box))
+		const auto& halfSize = params.HalfSize;
+		const auto& center = params.Center;
+
+		const auto roi = pmp::BoundingBox{
+			pmp::Point{center[0] - halfSize[0], center[1] - halfSize[1], center[2] - halfSize[2]},
+			pmp::Point{center[0] + halfSize[0], center[1] + halfSize[1], center[2] + halfSize[2]}
+		};
+
+		if (!grid.Box().Intersects(roi)) {
+			return; // nothing happens
+		}
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		for (unsigned int iz = 0; iz < Nz; iz++)
+		{
+			for (unsigned int iy = 0; iy < Ny; iy++)
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++) 
+				{
+					const auto gridPt = pmp::Point{
+						orig[0] + static_cast<float>(ix) * cellSize,
+						orig[1] + static_cast<float>(iy) * cellSize,
+						orig[2] + static_cast<float>(iz) * cellSize
+					};
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					if (!roi.Contains(gridPt))
+					{
+						values[gridPos] = params.BoolOpFunction(values[gridPos], 10.0);
+						continue;
+					}
+
+					const auto posVect = gridPt - center;
+
+					// Calculate distance from grid point to the hyperboloid aligned with the x-axis
+					const float hyperboloidValue =
+						(posVect[0] / params.a) * (posVect[0] / params.a) -
+						(posVect[1] / params.b) * (posVect[1] / params.b) -
+						(posVect[2] / params.c) * (posVect[2] / params.c) + 1.0f;
+					const auto dist = static_cast<double>(sqrt(std::abs(hyperboloidValue)));
+
+					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
+				}
+			}
+		}
+	}
+
+	void ApplyEllipsoidDistanceFieldToGrid(ScalarGrid& grid, const QuadricParams& params)
+	{
+		// parameter check
+		if (params.a < FLT_EPSILON) {
+			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.a <= 0.0f!\n";
+			return;
+		}
+		if (params.b < FLT_EPSILON) {
+			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.b <= 0.0f!\n";
+			return;
+		}
+		if (params.c < FLT_EPSILON) {
+			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.c <= 0.0f!\n";
+			return;
+		}
+
+		// grid
+		auto& values = grid.Values();
+		const auto& dim = grid.Dimensions();
+		const auto& orig = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		// torus ROI (region of influence (box))
+		const auto& halfSize = params.HalfSize;
+		const auto& center = params.Center;
+
+		const auto roi = pmp::BoundingBox{
+			pmp::Point{center[0] - halfSize[0], center[1] - halfSize[1], center[2] - halfSize[2]},
+			pmp::Point{center[0] + halfSize[0], center[1] + halfSize[1], center[2] + halfSize[2]}
+		};
+
+		if (!grid.Box().Intersects(roi)) {
+			return; // nothing happens
+		}
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+		const auto Nz = static_cast<unsigned int>(dim.Nz);
+
+		for (unsigned int iz = 0; iz < Nz; iz++)
+		{
+			for (unsigned int iy = 0; iy < Ny; iy++)
+			{
+				for (unsigned int ix = 0; ix < Nx; ix++)
+				{
+					const auto gridPt = pmp::Point{
+						orig[0] + static_cast<float>(ix) * cellSize,
+						orig[1] + static_cast<float>(iy) * cellSize,
+						orig[2] + static_cast<float>(iz) * cellSize
+					};
+					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
+					if (!roi.Contains(gridPt))
+					{
+						values[gridPos] = params.BoolOpFunction(values[gridPos], 10.0);
+						continue;
+					}
+
+					const auto posVect = gridPt - center;
+
+					// Calculate distance from grid point to the ellipsoid aligned with the x-axis
+					const float hyperboloidValue =
+						(posVect[0] / params.a) * (posVect[0] / params.a) +
+						(posVect[1] / params.b) * (posVect[1] / params.b) +
+						(posVect[2] / params.c) * (posVect[2] / params.c) - 1.0f;
+					const auto dist = static_cast<double>(sqrt(std::abs(hyperboloidValue)));
+
+					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
+				}
+			}
+		}
+	}
+
 	ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid)
 	{
 		if (std::abs(newCellSize - origGrid.CellSize()) < FLT_EPSILON)
