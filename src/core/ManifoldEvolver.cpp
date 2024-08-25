@@ -33,6 +33,9 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	{
 		StabilizeGeometries(outerRadius);
 	}
+	//GetRemeshingSettings() = m_OuterCurve :
+	//    CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, outerRadius, targetCenter) :
+	//    CollectRemeshingSettingsFromCircleCurve(m_InnerCurves[0], outerRadius, targetCenter);
 	PrepareManifoldProperties();
 }
 
@@ -59,6 +62,9 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		const auto [minLength, maxLength] = CalculateCoVolumeRange();
 		StabilizeCustomGeometries(minLength, maxLength);
 	}
+	//GetRemeshingSettings() = GetOuterCurve() :
+	//    CollectRemeshingSettingsCurve(GetOuterCurve()) :
+	//    CollectRemeshingSettingsCurve(GetOuterCurves()[0]);
 	PrepareManifoldProperties();
 }
 
@@ -67,13 +73,14 @@ void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 	GetIntegrate()(stepId);
 }
 
-bool ManifoldCurveEvolutionStrategy::ShouldRemesh()
-{
-	return false;
-}
-
 void ManifoldCurveEvolutionStrategy::Remesh()
 {
+	for (auto* curveToRemesh : m_RemeshTracker.GetManifoldsToRemesh())
+	{
+		pmp::CurveRemeshing remesher(*curveToRemesh);
+		remesher.adaptive_remeshing(GetRemeshingSettings());
+	}
+	m_RemeshTracker.Reset();
 }
 
 void ManifoldCurveEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
@@ -231,6 +238,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+		if (IsRemeshingNecessary(sysMat))
+			m_RemeshTracker.AddManifold(m_OuterCurve.get());
 
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
@@ -326,6 +335,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+		if (IsRemeshingNecessary(sysMat))
+			m_RemeshTracker.AddManifold(innerCurve.get());
 
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
@@ -794,13 +805,14 @@ void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 	GetIntegrate()(stepId);
 }
 
-bool ManifoldSurfaceEvolutionStrategy::ShouldRemesh()
-{
-	return false;
-}
-
 void ManifoldSurfaceEvolutionStrategy::Remesh()
 {
+	for (auto* surfaceToRemesh : m_RemeshTracker.GetManifoldsToRemesh())
+	{
+		pmp::Remeshing remesher(*surfaceToRemesh);
+		remesher.adaptive_remeshing(GetRemeshingSettings());
+	}
+	m_RemeshTracker.Reset();
 }
 
 void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
@@ -953,6 +965,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+		if (IsRemeshingNecessary(sysMat))
+			m_RemeshTracker.AddManifold(m_OuterSurface.get());
 
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
@@ -1048,6 +1062,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
+		if (IsRemeshingNecessary(sysMat))
+			m_RemeshTracker.AddManifold(innerSurface.get());
 
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);

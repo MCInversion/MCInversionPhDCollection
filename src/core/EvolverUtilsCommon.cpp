@@ -2,11 +2,16 @@
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
+#include "pmp/algorithms/Remeshing.h"
+#include "pmp/algorithms/DifferentialGeometry.h"
 #include "geometry/IcoSphereBuilder.h"
 
 #include <Spectra/SymEigsSolver.h>
 #include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Eigen/SparseCore>
+
+#include "geometry/MeshAnalysis.h"
+
 
 CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
 {
@@ -220,4 +225,103 @@ void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, floa
 	minEdgeLength *= decayFactor;
 	maxEdgeLength *= decayFactor;
 	approxError = 0.1f * (minEdgeLength + maxEdgeLength);
+}
+
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::shared_ptr<pmp::SurfaceMesh>& icosphere, float radius, const pmp::Point& center)
+{
+	if (!icosphere)
+	{
+		throw std::invalid_argument("CollectRemeshingSettingsFromIcoSphere: icosphere == nullptr!\n");
+	}
+
+	if (radius < FLT_EPSILON)
+	{
+		throw std::invalid_argument("CollectRemeshingSettingsFromIcoSphere: radius < FLT_EPSILON!\n");
+	}
+
+	pmp::AdaptiveRemeshingSettings settings;
+
+	float minEdgeLength = std::numeric_limits<float>::max();
+	float maxEdgeLength = std::numeric_limits<float>::lowest();
+	float totalEdgeLength = 0.0f;
+	float maxDeviation = 0.0f;
+
+	// Calculate edge lengths
+	for (const auto e : icosphere->edges())
+	{
+		float edgeLength = icosphere->edge_length(e);
+		minEdgeLength = std::min(minEdgeLength, edgeLength);
+		maxEdgeLength = std::max(maxEdgeLength, edgeLength);
+		totalEdgeLength += edgeLength;
+	}
+
+	// Calculate the maximum deviation using the centroids of the faces
+	for (const auto f : icosphere->faces())
+	{
+		const pmp::Point faceCentroid = centroid(*icosphere, f);
+		const float distanceToCenter = norm(faceCentroid - center);
+
+		// Calculate the deviation from the ideal spherical radius
+		float deviation = std::abs(distanceToCenter - radius);
+		maxDeviation = std::max(maxDeviation, deviation);
+	}
+
+	settings.MinEdgeLength = minEdgeLength;
+	settings.MaxEdgeLength = maxEdgeLength;
+	settings.ApproxError = maxDeviation;  // Use the maximum deviation as the approximation error
+	settings.NRemeshingIterations = 10;
+	settings.NTangentialSmoothingIters = 6;
+	settings.UseProjection = true;
+
+	return settings;
+}
+
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromMesh(const std::shared_ptr<pmp::SurfaceMesh>& mesh)
+{
+	if (!mesh)
+	{
+		throw std::invalid_argument("CollectRemeshingSettingsFromMesh: mesh == nullptr!\n");
+	}
+
+	pmp::AdaptiveRemeshingSettings settings;
+
+	float minEdgeLength = std::numeric_limits<float>::max();
+	float maxEdgeLength = std::numeric_limits<float>::lowest();
+	float totalEdgeLength = 0.0f;
+
+	// Calculate edge lengths
+	for (const auto e : mesh->edges())
+	{
+		float edgeLength = mesh->edge_length(e);
+		minEdgeLength = std::min(minEdgeLength, edgeLength);
+		maxEdgeLength = std::max(maxEdgeLength, edgeLength);
+		totalEdgeLength += edgeLength;
+	}
+
+	// Calculate the maximum ellipsoidal approximation error across all vertices
+	float maxDeviation = -FLT_MAX;
+	for (const auto v : mesh->vertices())
+	{
+		float deviation = Geometry::CalculateEllipsoidalApproximationErrorAtVertex(*mesh, v);
+		maxDeviation = std::max(maxDeviation, deviation);
+	}
+
+	settings.MinEdgeLength = minEdgeLength;
+	settings.MaxEdgeLength = maxEdgeLength;
+	settings.ApproxError = maxDeviation;  // Use the maximum ellipsoidal approximation error as the approximation error
+	settings.NRemeshingIterations = 10;
+	settings.NTangentialSmoothingIters = 6;
+	settings.UseProjection = true;
+
+	return settings;
+}
+
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& circlePolyline, float radius, const pmp::Point2& center)
+{
+	return pmp::AdaptiveRemeshingSettings();
+}
+
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& curve)
+{
+	return pmp::AdaptiveRemeshingSettings();
 }

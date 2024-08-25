@@ -450,4 +450,36 @@ VertexCurvature vertex_curvature(const SurfaceMesh& mesh, Vertex v)
     return c;
 }
 
+Scalar vertex_curvature(const ManifoldCurve2D& curve, Vertex v)
+{
+    if (curve.is_isolated(v) || curve.is_boundary(v))
+        return 0.0;
+
+    const auto [eTo, eFrom] = curve.edges(v);
+    const auto l0 = curve.edge_length(eTo);
+    const auto l1 = curve.edge_length(eFrom);
+
+    const auto [vPrev, vNext] = curve.vertices(v);
+    const auto p = curve.position(v);
+    const auto pPrev = curve.position(vPrev);
+    const auto pNext = curve.position(vNext);
+
+    // Calculate the area of triangle (pPrev, p, pNext) using the determinant method
+    const Scalar area = std::fabs((pPrev[0] * (p[1] - pNext[1]) +
+        p[0] * (pNext[1] - pPrev[1]) +
+        pNext[0] * (pPrev[1] - p[1])) * 0.5f);
+
+    const Scalar l2 = norm(pNext - pPrev); // triangle hypotenuse
+
+    Scalar curvature = 0.0;
+    if (l0 > 0 && l1 > 0 && l2 > 0 && area > 0.0)
+    {
+		// Calculate circumradius
+        const Scalar R = (l0 * l1 * l2) / (4.0 * area);
+        curvature = 1.0 / R;
+    }
+
+    return curvature;
+}
+
 } // namespace pmp

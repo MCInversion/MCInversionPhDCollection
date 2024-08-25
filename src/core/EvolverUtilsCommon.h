@@ -1,17 +1,19 @@
 #pragma once
 
-#include "pmp/MatVec.h"
+#include "pmp/Types.h"
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <functional>
 #include <unordered_set>
 
+
 namespace pmp
 {
 	class SurfaceMesh;
 	class ManifoldCurve2D;
 	class Vertex;
+	struct AdaptiveRemeshingSettings;
 }
 
 /// \brief a stats wrapper for co-volume measures affecting the stability of the finite volume method.
@@ -183,3 +185,65 @@ void SetRemeshingAdjustmentTimeIndices(const std::unordered_set<unsigned int>& v
 ///	\param approxError      approximation error to be adjusted.
 ///
 void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, float& maxEdgeLength, float& approxError);
+
+/**
+ * \brief Logs manifolds which need remeshing.
+ * \tparam ManifoldType  either pmp::ManifoldCurve2D or pmp::SurfaceMesh.
+ */
+template<typename ManifoldType>
+class ManifoldsToRemeshTracker
+{
+public:
+	/// \brief Add a manifold that requires remeshing
+	void AddManifold(ManifoldType* manifoldPtr)
+	{
+		if (!manifoldPtr)
+		{
+			std::cerr << "ManifoldsToRemeshTracker::AddManifold: attempting to log a null manifold!\n";
+			return;
+		}
+		m_Manifolds.push_back(manifoldPtr);
+	}
+
+	/// \brief Get all manifolds that need remeshing
+	[[nodiscard]] std::vector<ManifoldType*> GetManifoldsToRemesh() const
+	{
+		return m_Manifolds;
+	}
+
+	/// \brief Clear all stored manifolds (reset for a new time step)
+	void Reset()
+	{
+		m_Manifolds.clear();
+	}
+
+private:
+	// TODO: use something like: bool m_IsReset{ true };
+	std::vector<ManifoldType*> m_Manifolds;
+};
+
+/**
+ * \brief A utility for computing the edge sizing and error limits from an icosphere mesh.
+ * \param icosphere      the input icosphere surface.
+ * \param radius         the radius of the smooth sphere which the icosphere's supposed to approximate.
+ * \param center         the center of the smooth sphere which the icosphere's supposed to approximate.
+ * \return the result AdaptiveRemeshingSettings.
+ */
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(
+	const std::shared_ptr<pmp::SurfaceMesh>& icosphere,	float radius, const pmp::Point& center);
+
+/// \brief  A utility for computing the edge sizing and error limits from an arbitrary mesh.
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromMesh(const std::shared_ptr<pmp::SurfaceMesh>& mesh);
+
+/**
+ * \brief A utility for computing the edge sizing and error limits from an icosphere mesh.
+ * \param circlePolyline    the input circle polyline curve.
+ * \param radius            the radius of the smooth circle which the circlePolyline's supposed to approximate.
+ * \param center            the center of the smooth circle which the circlePolyline's supposed to approximate.
+ * \return the result AdaptiveRemeshingSettings.
+ */
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(
+	const std::shared_ptr<pmp::ManifoldCurve2D>& circlePolyline, float radius, const pmp::Point2& center);
+
+/// \brief  A utility for computing the edge sizing and error limits from an arbitrary manifold curve.
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& curve);

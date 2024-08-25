@@ -1037,4 +1037,104 @@ namespace Geometry
 		return meshKdTree->IsRayStartPointInsideTriangleMesh(ray);
 	}
 
+	namespace
+	{
+		struct TangentQuadricParams
+		{
+			pmp::Scalar a{ 1.0f }, b{ 1.0f }, c{ 1.0f };
+			pmp::Point center{};
+		};
+
+		[[nodiscard]] pmp::Scalar DistanceToTangentEllipsoid(const pmp::Point& point, const TangentQuadricParams& params)
+		{
+			pmp::vec3 P(point[0] - params.center[0], point[1] - params.center[1], point[2] - params.center[2]);
+
+			const float k0 = std::sqrt((P[0] / params.a) * (P[0] / params.a) + (P[1] / params.b) * (P[1] / params.b) + (P[2] / params.c) * (P[2] / params.c));
+			const float k1 = std::sqrt((P[0] / (params.a * params.a)) * (P[0] / (params.a * params.a)) +
+				(P[1] / (params.b * params.b)) * (P[1] / (params.b * params.b)) +
+				(P[2] / (params.c * params.c)) * (P[2] / (params.c * params.c)));
+			return std::max(k0 * (k0 - 1.f) / k1, 0.f);
+		}
+
+		[[nodiscard]] pmp::Scalar DistanceToTangentHyperboloid(const pmp::Point& point, const TangentQuadricParams& params)
+		{
+			// Translate point relative to the hyperboloid center
+			pmp::vec3 P(point[0] - eParams.center[0], point[1] - eParams.center[1], point[2] - eParams.center[2]);
+
+			// Calculate the hyperboloid function value at the point
+			const float hyperboloidValue = (P[0] / eParams.a) * (P[0] / eParams.a) +
+				(P[1] / eParams.b) * (P[1] / eParams.b) -
+				(P[2] / eParams.c) * (P[2] / eParams.c) - 1.0f;
+
+			// Calculate the distance to the hyperboloid surface
+			const float distance = std::sqrt(hyperboloidValue * hyperboloidValue);
+
+			return distance;
+		}
+
+		struct TangentCircleParams
+		{
+			pmp::Scalar r{ 1.0f };
+			pmp::Point2 center{};
+		};
+
+		[[nodiscard]] pmp::Scalar DistanceToTangentCircle(const pmp::Point2& point, const TangentCircleParams& cParams)
+		{
+			const pmp::Scalar distanceToCenter = std::sqrt((point[0] - cParams.center[0]) * (point[0] - cParams.center[0]) +
+				(point[1] - cParams.center[1]) * (point[1] - cParams.center[1]));
+			return std::abs(distanceToCenter - cParams.r);
+		}
+
+	} // anonymous namespace
+
+	constexpr pmp::Scalar CURVATURE_LIMIT{ 1e-6f };
+
+	pmp::Scalar CalculateEllipsoidalApproximationErrorAtVertex(const pmp::SurfaceMesh& mesh, pmp::Vertex v)
+	{
+		const auto curvature = vertex_curvature(mesh, v);
+
+		if (std::fabs(curvature.gauss) < CURVATURE_LIMIT) // curvature.gauss = curvature.min * curvature.max			
+		{
+			// no ellipsoid of reasonable size can be fitted to the mesh vertex surroundings because the surface is flat.
+			return 0.0f;
+		}
+
+		TangentQuadricParams eParams;
+
+		// Estimate ellipsoid parameters (a, b, c) from the curvature
+		eParams.a = 1.0f / std::sqrt(std::max(curvature.max, std::numeric_limits<pmp::Scalar>::epsilon()));
+		eParams.b = 1.0f / std::sqrt(std::max(curvature.mean, std::numeric_limits<pmp::Scalar>::epsilon()));
+		eParams.c = 1.0f / std::sqrt(std::max(curvature.min, std::numeric_limits<pmp::Scalar>::epsilon()));
+
+		// Use the vertex position as the ellipsoid center approximation
+		const auto normal = pmp::Normals::compute_vertex_normal(mesh, v);
+		eParams.center = mesh.position(v) - normal * curvature.mean;
+
+		pmp::Scalar meanDeviation = 0.0;
+		for (const auto f : mesh.faces(v))
+		{
+			pmp::Point faceCentroid = centroid(mesh, f);
+			meanDeviation += DistanceToTangentEllipsoid(faceCentroid, eParams);
+		}
+
+		return meanDeviation;
+	}
+
+	pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v)
+	{
+		const auto curvature = vertex_curvature(curve, v);
+
+		if (curvature < CURVATURE_LIMIT)
+		{
+			// no circle of reasonable size can be fitted to the curve vertex surroundings because the curve is flat.
+			return 0.0;
+		}
+
+		TangentCircleParams cParams;
+		cParams.r = 1.0f / 
+
+
+		return pmp::Scalar();
+	}
+
 } // namespace Geometry

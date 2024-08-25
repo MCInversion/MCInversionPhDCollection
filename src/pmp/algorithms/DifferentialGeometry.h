@@ -131,6 +131,9 @@ struct VertexCurvature
 //! give reliable values for boundary vertices.
 VertexCurvature vertex_curvature(const SurfaceMesh& mesh, Vertex v);
 
+//! compute curvature at manifold curve vertex v.
+Scalar vertex_curvature(const ManifoldCurve2D& curve, Vertex v);
+
 //! @}
 
 } // namespace pmp

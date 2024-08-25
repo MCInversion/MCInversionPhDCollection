@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pmp/algorithms/DifferentialGeometry.h"
+#include "pmp/algorithms/Remeshing.h"
 #include "pmp/MatVec.h"
 
 #include "geometry/GeometryAdapters.h"
@@ -144,11 +145,6 @@ public:
     virtual void PerformEvolutionStep(unsigned int stepId) = 0;
 
     /**
-     * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
-     */
-    virtual [[nodiscard]] bool ShouldRemesh() = 0;
-
-    /**
      * \brief Perform remeshing on the evolving manifold(s).
      */
     virtual void Remesh() = 0;
@@ -176,6 +172,12 @@ public:
 
     /// \brief Calculate the distance fields to evolving manifolds if there should be an interaction between these manifolds.
     virtual void ComputeVariableDistanceFields() = 0;
+
+    /// \brief Remeshing settings getter.
+    pmp::AdaptiveRemeshingSettings& GetRemeshingSettings()
+    {
+        return m_RemeshingSettings;
+    }
 
 protected:
 
@@ -218,6 +220,8 @@ private:
 
     pmp::Scalar m_ScalingFactor{ 1.0f }; //>! the computed scaling factor for numerical stabilization.
     pmp::Scalar m_FieldCellSize{ 0.1f }; //>! standardized cell size for the variable distance fields.
+
+    pmp::AdaptiveRemeshingSettings m_RemeshingSettings{};
 };
 
 /**
@@ -275,12 +279,7 @@ public:
     void PerformEvolutionStep(unsigned int stepId) override;
 
     /**
-     * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
-     */
-    [[nodiscard]] bool ShouldRemesh() override;
-
-    /**
-     * \brief Perform remeshing on the evolving manifold(s).
+     * \brief Perform remeshing on the evolving manifold(s) logged in the m_RemeshTracker.
      */
     void Remesh() override;
 
@@ -427,6 +426,8 @@ private:
     VectorGridInterpolationFunction2D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
 
     pmp::BoundingBox2 m_EvolBox{}; //>! the test box for numerical validity of the evolution.
+
+    ManifoldsToRemeshTracker<pmp::ManifoldCurve2D> m_RemeshTracker{}; //>! a utility which logs curves that need remeshing.
 };
 
 /**
@@ -533,12 +534,7 @@ public:
     void PerformEvolutionStep(unsigned int stepId) override;
 
     /**
-     * \brief Verifies whether the tessellation quality of evolving manifold(s) deteriorated so much that remeshing is necessary.
-     */
-    [[nodiscard]] bool ShouldRemesh() override;
-
-    /**
-     * \brief Perform remeshing on the evolving manifold(s).
+     * \brief Perform remeshing on the evolving manifold(s) logged in the m_RemeshTracker.
      */
     void Remesh() override;
 
@@ -702,6 +698,8 @@ private:
     std::function<pmp::Point(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ExplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
 
     pmp::BoundingBox m_EvolBox{}; //>! the test box for numerical validity of the evolution.
+
+    ManifoldsToRemeshTracker<pmp::SurfaceMesh> m_RemeshTracker{}; //>! a utility which logs surfaces that need remeshing.
 };
 
 /**
@@ -791,7 +789,7 @@ public:
         {
             m_Strategy->PerformEvolutionStep(step);
 
-            if (m_Settings.DoRemeshing && m_Strategy->ShouldRemesh())
+            if (m_Settings.DoRemeshing)
             {
                 m_Strategy->Remesh();
             }
