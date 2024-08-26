@@ -82,7 +82,7 @@ set(VCG_SRC_DIR "external/vcglib")
 include_directories(${VCG_SRC_DIR})
 
 # setup Spectra
-add_subdirectory(external/spectra)
+# add_subdirectory(external/spectra)
 
 include(AddFileDependencies)
 include_directories(${PROJECT_SOURCE_DIR}/src/)

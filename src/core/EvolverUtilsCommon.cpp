@@ -8,8 +8,8 @@
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "geometry/IcoSphereBuilder.h"
 
-#include <Spectra/SymEigsSolver.h>
-#include <Spectra/MatOp/SparseSymMatProd.h>
+//#include <Spectra/SymEigsSolver.h>
+//#include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Eigen/SparseCore>
 
 #include "geometry/MeshAnalysis.h"
@@ -160,27 +160,28 @@ namespace
 {
 	[[nodiscard]] double ComputeSpectralRadius(const SparseMatrix& mat)
 	{
-		// Define the operation for Spectra (for symmetric matrices)
-		Spectra::SparseSymMatProd<double> op(mat);
+		//// Define the operation for Spectra (for symmetric matrices)
+		//Spectra::SparseSymMatProd<double> op(mat);
 
-		// Construct the eigen solver object, requesting the largest magnitude eigenvalue
-		Spectra::SymEigsSolver solver(op, 1, 6);
+		//// Construct the eigen solver object, requesting the largest magnitude eigenvalue
+		//Spectra::SymEigsSolver solver(op, 1, 6);
 
-		// Initialize and compute using the correct sorting rule
-		solver.init();
-		int nconv = solver.compute(Spectra::SortRule::LargestAlge);
+		//// Initialize and compute using the correct sorting rule
+		//solver.init();
+		//int nconv = solver.compute(Spectra::SortRule::LargestAlge);
 
-		// Check if the computation was successful
-		if (solver.info() != Spectra::CompInfo::Successful)
-		{
-			throw std::runtime_error("Spectra solver did not converge!");
-		}
+		//// Check if the computation was successful
+		//if (solver.info() != Spectra::CompInfo::Successful)
+		//{
+		//	throw std::runtime_error("Spectra solver did not converge!");
+		//}
 
-		// Retrieve the eigenvalues
-		Eigen::VectorXd eigenvalues = solver.eigenvalues();
+		//// Retrieve the eigenvalues
+		//Eigen::VectorXd eigenvalues = solver.eigenvalues();
 
-		// Return the largest absolute eigenvalue (spectral radius)
-		return std::abs(eigenvalues[0]);
+		//// Return the largest absolute eigenvalue (spectral radius)
+		//return std::abs(eigenvalues[0]);
+		return 1.0;
 	}
 	
 } // anonymous namespace
