@@ -71,6 +71,9 @@ Scalar volume(const SurfaceMesh& mesh);
 //! barycenter/centroid of a face
 Point centroid(const SurfaceMesh& mesh, Face f);
 
+//! barycenter/centroid of an edge
+Point2 centroid(const ManifoldCurve2D& curve, Edge e);
+
 //! barycenter/centroid of mesh, computed as area-weighted mean of vertices.
 //! assumes triangular faces.
 Point centroid(const SurfaceMesh& mesh);

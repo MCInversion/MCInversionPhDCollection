@@ -24,7 +24,7 @@ constexpr float SPHERE_RADIUS_FACTOR = 0.6f;
 void ManifoldCurveEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
-	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
+	const auto [outerRadius, innerCircle] = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
 	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
@@ -33,9 +33,9 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	{
 		StabilizeGeometries(outerRadius);
 	}
-	//GetRemeshingSettings() = m_OuterCurve :
-	//    CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, outerRadius, targetCenter) :
-	//    CollectRemeshingSettingsFromCircleCurve(m_InnerCurves[0], outerRadius, targetCenter);
+	GetRemeshingSettings() = m_OuterCurve ?
+	    CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, outerRadius, targetCenter) :
+	    CollectRemeshingSettingsFromCircleCurve(m_InnerCurves[0], innerCircle.Radius, innerCircle.Center);
 	PrepareManifoldProperties();
 }
 
@@ -62,9 +62,9 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		const auto [minLength, maxLength] = CalculateCoVolumeRange();
 		StabilizeCustomGeometries(minLength, maxLength);
 	}
-	//GetRemeshingSettings() = GetOuterCurve() :
-	//    CollectRemeshingSettingsCurve(GetOuterCurve()) :
-	//    CollectRemeshingSettingsCurve(GetOuterCurves()[0]);
+	GetRemeshingSettings() = GetOuterCurve() ?
+		CollectRemeshingSettingsFromCurve(GetOuterCurve()) :
+		CollectRemeshingSettingsFromCurve(GetInnerCurves()[0]);
 	PrepareManifoldProperties();
 }
 
@@ -238,7 +238,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(sysMat))
+		if (IsRemeshingNecessary(*m_OuterCurve, GetRemeshingSettings()))
 			m_RemeshTracker.AddManifold(m_OuterCurve.get());
 
 		// solve
@@ -335,7 +335,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(sysMat))
+		if (IsRemeshingNecessary(*innerCurve, GetRemeshingSettings()))
 			m_RemeshTracker.AddManifold(innerCurve.get());
 
 		// solve
@@ -568,7 +568,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 /// \brief the smallest allowed number of vertices in a manifold curve.
 constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
 
-float ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
+std::pair<float, Circle2D> ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
 	{
@@ -585,7 +585,7 @@ float ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetS
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
-		return outerCircleRadius;
+		return { outerCircleRadius, Circle2D{} };
 
 	const InscribedCircleInputData calcData{
 		*m_TargetPointCloud,
@@ -605,8 +605,7 @@ float ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetS
 			nInnerSegments
 		)));
 	}
-
-	return outerCircleRadius;
+	return { outerCircleRadius, circles[0] };
 }
 
 /// \brief The power of the stabilizing scale factor.
@@ -762,7 +761,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 void ManifoldSurfaceEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
-	const auto outerRadius = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
+	const auto [outerRadius, innerSphere ] = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
 	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
@@ -772,6 +771,9 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 		StabilizeGeometries(outerRadius);
 	}
 	PrepareManifoldProperties();
+	GetRemeshingSettings() = m_OuterSurface ?
+		CollectRemeshingSettingsFromIcoSphere(m_OuterSurface, outerRadius, targetCenter) :
+		CollectRemeshingSettingsFromIcoSphere(m_InnerSurfaces[0], innerSphere.Radius, innerSphere.Center);
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
@@ -1293,7 +1295,7 @@ void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 	// v:normal will be added during normal computation: pmp::Normals::compute_vertex_normals
 }
 
-float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
+std::pair<float, Sphere3D> ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
 	{
@@ -1319,7 +1321,7 @@ float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarge
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
-		return outerSphereRadius;		
+		return { outerSphereRadius, Sphere3D{} };
 
 	// TODO: This is hardcoded, implement 3D version of ParticleSwarmDistanceFieldInscribedSphereCalculator
 	//const InscribedSphereInputData calcData{
@@ -1328,7 +1330,7 @@ float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarge
 	//};	
 	//ParticleSwarmDistanceFieldInscribedSphereCalculator inscribedSphereCalculator;
 	//const auto spheres = inscribedSphereCalculator.Calculate(calcData);
-	const auto spheres = { Sphere3D{pmp::Point(0, 0, 0), 0.7f} };
+	const std::vector spheres = {Sphere3D{pmp::Point(0, 0, 0), 0.7f}};
 
 	m_InnerSurfaces.reserve(spheres.size());
 
@@ -1351,7 +1353,7 @@ float ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarge
 		m_InnerSurfaces.push_back(std::make_shared<pmp::SurfaceMesh>(mesh));
 	}
 
-	return outerSphereRadius;
+	return { outerSphereRadius, spheres[0] };
 }
 
 /// \brief The power of the stabilizing scale factor.

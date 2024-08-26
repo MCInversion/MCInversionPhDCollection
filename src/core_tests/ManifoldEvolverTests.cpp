@@ -381,6 +381,75 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.0);
 }
 
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing)
+{
+    // Arrange
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    auto targetPts = targetCurve.positions();
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+    targetPts.erase(targetPts.begin());
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.LevelOfDetail = 3;
+	constexpr double criticalDistance = 0.1;
+    strategySettings.OuterManifoldEpsilon = [](double distance) {
+        return 0.2 * (1.0 - exp(-distance * distance / 0.0125));
+    };
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 2.0 * distance * (negGradDotNormal - 1.6 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.InnerManifoldEpsilon = [](double distance) {
+        return 0.3 * (1.0 - exp(-distance * distance / 0.0125));
+    };
+    strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 2.2 * distance * (negGradDotNormal + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.TimeStep = 0.01;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 40;
+    globalSettings.DoRemeshing = true;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ExportTargetDistanceFieldAsImage = true;
+    globalSettings.ProcedureName = "ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
+        strategySettings, std::make_shared<std::vector<pmp::Point2>>(targetPts));
+
+    ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<ManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
+
+    ASSERT_TRUE(resultOuterCurve != nullptr);
+    ASSERT_FALSE(resultInnerCurves.empty());
+
+    size_t nInvalidVertices = 0;
+    for (const auto vPos : resultOuterCurve->positions())
+    {
+        if (norm(vPos) > 2.0f)
+            nInvalidVertices++;
+        else if (norm(vPos) < 1.0f)
+            nInvalidVertices++;
+    }
+    std::cout << "resultOuterCurve->n_vertices() = " << resultOuterCurve->n_vertices() << "\n";
+    EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.0);
+}
+
 // Suite: ManifoldEvolverTests_ManifoldSurfaceSuite
 
 namespace
@@ -638,6 +707,9 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
     }
     EXPECT_LT(static_cast<double>(countInSphere) / resultOuterSurface->n_vertices(), 0.25);
 }
+
+#if _DEBUG
+#else
 
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoRemeshing)
 {
@@ -897,21 +969,21 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, InnerOuterLSWOfAnIncompleteSpher
     constexpr double criticalDistance = 0.15;
     strategySettings.OuterManifoldEpsilon = [](double distance) {
         const auto mcfWeight = 0.2 * (1.0 - exp(-distance * distance / 0.0125));
-        const auto repulsion = 0.05 * (1.0 / (criticalDistance + 0.1 * criticalDistance) - 1.0 / (distance + 0.1 * criticalDistance));
-        return mcfWeight + repulsion;
+        //const auto repulsion = 0.05 * (1.0 / (criticalDistance + 0.1 * criticalDistance) - 1.0 / (distance + 0.1 * criticalDistance));
+        return mcfWeight; // + repulsion;
     };
     strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
         if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
             return 0.0;
-        return 2.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+        return 2.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
     strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
     strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
     {
         if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
             return 0.0;
-        return 2.0 * distance * (negGradDotNormal + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+        return 2.0 * distance * (negGradDotNormal + 0.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
     };
     strategySettings.TimeStep = 0.01;
     GlobalManifoldEvolutionSettings globalSettings;
@@ -948,3 +1020,5 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, InnerOuterLSWOfAnIncompleteSpher
     }
     EXPECT_LT(static_cast<double>(countInSphere) / resultOuterSurface->n_vertices(), 0.0);
 }
+
+#endif

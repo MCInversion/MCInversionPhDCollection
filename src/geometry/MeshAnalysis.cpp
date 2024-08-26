@@ -1144,8 +1144,16 @@ namespace Geometry
 		cParams.r = 1.0f / std::sqrt(std::max(curvature, CURVATURE_EPSILON));
 
 		const auto normal = pmp::Normals2::compute_vertex_normal(curve, v);
+		cParams.center = curve.position(v) - cParams.r * normal;
 
-		return pmp::Scalar();
+		const auto [vPrev, vNext] = curve.vertices(v);
+		const auto centroid0 = 0.5f * (curve.position(vPrev) + curve.position(v));
+		const auto centroid1 = 0.5f * (curve.position(v) + curve.position(vNext));
+
+		return std::max(
+			DistanceToTangentCircle(centroid0, cParams),
+			DistanceToTangentCircle(centroid1, cParams)
+		);
 	}
 
 } // namespace Geometry

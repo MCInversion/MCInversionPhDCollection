@@ -10,6 +10,10 @@
 
 #include "EvolverUtilsCommon.h"
 
+// forward declarations
+struct Circle2D;
+struct Sphere3D;
+
 //
 // ===============================================================================================
 //                                     Evolver functions
@@ -368,8 +372,8 @@ protected:
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
-    /// \return radius of outer sphere.
-    [[nodiscard]] float ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
+    /// \return pair { radius of outer circle, info of the first inner circle }
+    [[nodiscard]] std::pair<float, Circle2D> ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
@@ -605,8 +609,8 @@ protected:
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
-    /// \return radius of outer sphere.
-    [[nodiscard]] float ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
+    /// \return pair { radius of outer sphere, info of the first inner sphere }
+    [[nodiscard]] std::pair<float, Sphere3D> ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.

@@ -20,7 +20,7 @@ struct InscribedCircleInputData
 struct Circle2D
 {
 	pmp::Point2 Center{};
-	pmp::Scalar Radius{ 1.0f };
+	pmp::Scalar Radius{ -1.0f };
 };
 
 /// \brief A base utility to calculate the centers and radii of circles inscribed to a point cloud.
@@ -101,7 +101,7 @@ struct InscribedSphereInputData
 struct Sphere3D
 {
 	pmp::Point Center{};
-	pmp::Scalar Radius{ 1.0f };
+	pmp::Scalar Radius{ -1.0f };
 };
 
 /// \brief A base utility to calculate the centers and radii of spheres inscribed to a point cloud.

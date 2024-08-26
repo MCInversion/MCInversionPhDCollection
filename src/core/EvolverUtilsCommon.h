@@ -7,6 +7,8 @@
 #include <functional>
 #include <unordered_set>
 
+#include "pmp/ManifoldCurve2D.h"
+
 
 namespace pmp
 {
@@ -161,6 +163,12 @@ struct MeshTopologySettings
 
 /// \brief Evaluates whether remeshing is necessary from the system matrix spectral radius
 [[nodiscard]] bool IsRemeshingNecessary(const SparseMatrix& lswMatrix);
+
+/// \brief Evaluates whether remeshing is necessary for a manifold curve.
+[[nodiscard]] bool IsRemeshingNecessary(const pmp::ManifoldCurve2D& curve, const pmp::AdaptiveRemeshingSettings& remeshingSettings);
+
+/// \brief Evaluates whether remeshing is necessary for a surface mesh.
+[[nodiscard]] bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings);
 
 /// \brief A (one-time) evaluation whether the distance to target reaches a lower bound.
 ///	\param distancePerVertexValues    a vector of distance values on the evolving surface.

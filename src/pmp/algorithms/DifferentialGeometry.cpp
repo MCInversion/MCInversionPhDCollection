@@ -73,6 +73,12 @@ Point centroid(const SurfaceMesh& mesh, Face f)
     return c;
 }
 
+Point2 centroid(const ManifoldCurve2D& curve, Edge e)
+{
+    const auto [v0, v1] = curve.vertices(e);
+    return 0.5f * (curve.position(v0) + curve.position(v1));
+}
+
 Point centroid(const SurfaceMesh& mesh)
 {
     Point center(0, 0, 0), c;
