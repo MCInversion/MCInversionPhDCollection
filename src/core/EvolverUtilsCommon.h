@@ -255,3 +255,87 @@ private:
 
 /// \brief  A utility for computing the edge sizing and error limits from an arbitrary manifold curve.
 [[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& curve);
+
+
+/**
+ * \brief Logs settings for manifold remeshing.
+ * \tparam ManifoldType  either pmp::ManifoldCurve2D or pmp::SurfaceMesh.
+ */
+template<typename ManifoldType>
+class ManifoldRemeshingSettingsWrapper
+{
+public:
+	/// \brief Overload the [] operator for assigning and retrieving map values
+	pmp::AdaptiveRemeshingSettings& operator[](ManifoldType* manifold)
+	{
+		return m_ManifoldSettings[manifold];
+	}
+
+	/// \brief Overload the [] operator for constant access (read-only)
+	const pmp::AdaptiveRemeshingSettings& operator[](const ManifoldType* manifold) const
+	{
+		return m_ManifoldSettings.at(manifold);
+	}
+
+private:
+	std::map<ManifoldType*, pmp::AdaptiveRemeshingSettings> m_ManifoldSettings{};
+};
+
+/**
+ * \brief Logs initial sphere manifold settings.
+ * \tparam ManifoldType  either pmp::ManifoldCurve2D or pmp::SurfaceMesh.
+ * \tparam SphereType    either Sphere2D or Sphere3D.
+ */
+template<typename ManifoldType, typename SphereType>
+class InitialSphereSettingsWrapper
+{
+public:
+	/// \brief Overload the [] operator for assigning and retrieving map values
+	SphereType& operator[](ManifoldType* manifold)
+	{
+		return m_ManifoldSettings[manifold];
+	}
+
+	/// \brief Overload the [] operator for constant access (read-only)
+	SphereType& operator[](const ManifoldType* manifold) const
+	{
+		return m_ManifoldSettings.at(manifold);
+	}
+
+	/// \brief Find the maximum radius among all stored SphereType objects
+	[[nodiscard]] pmp::Scalar MaxRadius() const
+	{
+		if (m_ManifoldSettings.empty())
+		{
+			return -1.0f; // Return a default value if the map is empty
+		}
+
+		// Use std::max_element to find the SphereType with the maximum radius
+		auto maxIt = std::max_element(m_ManifoldSettings.begin(), m_ManifoldSettings.end(),
+			[](const auto& lhs, const auto& rhs) {
+				return lhs.second.Radius < rhs.second.Radius;
+			});
+
+		return maxIt->second.Radius;
+	}
+
+	/// \brief Find the minimum radius among all stored SphereType objects
+	[[nodiscard]] pmp::Scalar MinRadius() const
+	{
+		if (m_ManifoldSettings.empty())
+		{
+			return -1.0f; // Return a default value if the map is empty
+		}
+
+		// Use std::max_element to find the SphereType with the maximum radius
+		auto maxIt = std::min_element(m_ManifoldSettings.begin(), m_ManifoldSettings.end(),
+			[](const auto& lhs, const auto& rhs) {
+				return lhs.second.Radius < rhs.second.Radius;
+			});
+
+		return maxIt->second.Radius;
+	}
+
+private:
+	std::map<ManifoldType*, SphereType> m_ManifoldSettings{};
+};

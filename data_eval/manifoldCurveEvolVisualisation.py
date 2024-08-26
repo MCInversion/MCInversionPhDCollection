@@ -10,7 +10,8 @@ from collections import defaultdict
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing"
 #procedure_name = "ShrinkingAndExpandingCircle_NoRemeshing"
 #procedure_name = "ShrinkingAndExpandingCircle_SlowerInnerEtaNoRemeshing"
-procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing"
+#procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing"
+procedure_name = "ShrinkWrappingAnIncompleteDeformedCirclePointCloud_WithRemeshing"
 directory = "../output/core_tests/"  # Adjust this path accordingly
 
 # Helper function to read the grid dimensions from the *.gdim2d file

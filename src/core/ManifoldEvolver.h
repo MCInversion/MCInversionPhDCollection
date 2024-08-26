@@ -8,11 +8,8 @@
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
 
+#include "InscribedManifold.h"
 #include "EvolverUtilsCommon.h"
-
-// forward declarations
-struct Circle2D;
-struct Sphere3D;
 
 //
 // ===============================================================================================
@@ -36,6 +33,11 @@ const AdvectionCtrlFunction STANDARD_ETA = [](double distance, double negGradDot
         return 0.0;
     return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 };
+
+/// \brief Repulsion function governing the interaction between evolving manifolds
+using RepulsionFunction = std::function<double(double /* distance */)>;
+
+const RepulsionFunction TRIVIAL_REPULSION = [](double /* distance */) { return 0.0; };
 
 /// \brief Numerical integration function specific to the scheme and dimension.
 using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
@@ -80,9 +82,11 @@ struct ManifoldEvolutionSettings
 
 	CurvatureCtrlFunction OuterManifoldEpsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the outer manifold.
     AdvectionCtrlFunction OuterManifoldEta{ TRIVIAL_ETA }; //>! control function for the advection term of the outer manifold.
+    RepulsionFunction     OuterManifoldRepulsion{ TRIVIAL_REPULSION }; //>! repulsion control function for the outer manifold.
 
     CurvatureCtrlFunction InnerManifoldEpsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the inner manifolds.
     AdvectionCtrlFunction InnerManifoldEta{ TRIVIAL_ETA }; //>! control function for the advection term of the inner manifolds.
+    RepulsionFunction     InnerManifoldRepulsion{ TRIVIAL_REPULSION }; //>! repulsion control function for the inner manifolds.
 
     bool AdvectionInteractWithOtherManifolds{ false }; //>! whether to use the minimum from the distances to all manifolds including target data.
 
@@ -177,12 +181,6 @@ public:
     /// \brief Calculate the distance fields to evolving manifolds if there should be an interaction between these manifolds.
     virtual void ComputeVariableDistanceFields() = 0;
 
-    /// \brief Remeshing settings getter.
-    pmp::AdaptiveRemeshingSettings& GetRemeshingSettings()
-    {
-        return m_RemeshingSettings;
-    }
-
 protected:
 
     /// \brief A getter for the stabilization scaling factor.
@@ -192,12 +190,14 @@ protected:
     }
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-    /// \param[in] outerRadius   radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    virtual void StabilizeGeometries(float outerRadius, float stabilizationFactor = STABILIZATION_FACTOR) = 0;
+    virtual void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) = 0;
 
     /// \brief Prepares the property arrays for all evolving manifolds.
     virtual void PrepareManifoldProperties() = 0;
+
+    /// \brief Resets the property arrays for all evolving manifolds.
+    virtual void ResetManifoldProperties() = 0;
 
     /// \brief A getter for the numerical integration step function.
     NumericalStepIntegrateFunction& GetIntegrate()
@@ -217,6 +217,9 @@ protected:
         return m_FieldCellSize;
     }
 
+    /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
+    virtual void AssignRemeshingSettingsToEvolvingManifolds() = 0;
+
 private:
 
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
@@ -224,8 +227,6 @@ private:
 
     pmp::Scalar m_ScalingFactor{ 1.0f }; //>! the computed scaling factor for numerical stabilization.
     pmp::Scalar m_FieldCellSize{ 0.1f }; //>! standardized cell size for the variable distance fields.
-
-    pmp::AdaptiveRemeshingSettings m_RemeshingSettings{};
 };
 
 /**
@@ -322,6 +323,9 @@ protected:
     /// \brief Prepares the property arrays for all evolving manifolds.
     void PrepareManifoldProperties() override;
 
+    /// \brief Resets the property arrays for all evolving manifolds.
+    void ResetManifoldProperties() override;
+
     /// \brief A getter for the outer curve
     std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
 	{
@@ -372,13 +376,11 @@ protected:
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
-    /// \return pair { radius of outer circle, info of the first inner circle }
-    [[nodiscard]] std::pair<float, Circle2D> ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
+    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-    /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(float outerRadius, float stabilizationFactor = STABILIZATION_FACTOR) override;
+    void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) override;
 
     /// \brief A getter for the scalar grid interpolator function.
     ScalarGridInterpolationFunction2D& GetScalarInterpolate()
@@ -410,6 +412,15 @@ protected:
         return m_InnerCurvesDistanceFields;
     }
 
+    /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
+    void AssignRemeshingSettingsToEvolvingManifolds() override;
+
+    /// \brief A getter for the remeshing settings wrapper
+    ManifoldRemeshingSettingsWrapper<pmp::ManifoldCurve2D>& GetRemeshingSettings()
+    {
+        return m_RemeshingSettings;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point2>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -432,6 +443,8 @@ private:
     pmp::BoundingBox2 m_EvolBox{}; //>! the test box for numerical validity of the evolution.
 
     ManifoldsToRemeshTracker<pmp::ManifoldCurve2D> m_RemeshTracker{}; //>! a utility which logs curves that need remeshing.
+    ManifoldRemeshingSettingsWrapper<pmp::ManifoldCurve2D> m_RemeshingSettings{}; //>! a wrapper with remeshing settings assigned to evolving manifolds
+    InitialSphereSettingsWrapper<pmp::ManifoldCurve2D, Circle2D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
 };
 
 /**
@@ -466,6 +479,9 @@ public:
     void Preprocess() override;
 
 private:
+
+    /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
+    void AssignRemeshingSettingsToEvolvingManifolds() override;
 
     /// \brief Verifies whether all custom inner curves are contained within the custom outer curve if not, throw std::invalid_argument
     [[nodiscard]] bool HasValidInnerOuterManifolds() const;
@@ -577,6 +593,9 @@ protected:
     /// \brief Prepares the property arrays for all evolving manifolds.
     void PrepareManifoldProperties() override;
 
+    /// \brief Resets the property arrays for all evolving manifolds.
+    void ResetManifoldProperties() override;
+
     /// \brief A getter for the outer surface
     std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface()
     {
@@ -609,13 +628,11 @@ protected:
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
-    /// \return pair { radius of outer sphere, info of the first inner sphere }
-    [[nodiscard]] std::pair<float, Sphere3D> ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
+    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
-    /// \param[in] outerRadius             radius of outer sphere to calculate the approx co-volume measure.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(float outerRadius, float stabilizationFactor = STABILIZATION_FACTOR) override;
+    void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) override;
 
     /// \brief A getter for the inverse stabilization transformation matrix.
     pmp::mat4& GetTransformToOriginal()
@@ -677,6 +694,15 @@ protected:
         return m_InnerSurfacesDistanceFields;
     }
 
+    /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
+    void AssignRemeshingSettingsToEvolvingManifolds() override;
+
+    /// \brief A getter for the remeshing settings wrapper
+    ManifoldRemeshingSettingsWrapper<pmp::SurfaceMesh>& GetRemeshingSettings()
+    {
+        return m_RemeshingSettings;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -704,6 +730,8 @@ private:
     pmp::BoundingBox m_EvolBox{}; //>! the test box for numerical validity of the evolution.
 
     ManifoldsToRemeshTracker<pmp::SurfaceMesh> m_RemeshTracker{}; //>! a utility which logs surfaces that need remeshing.
+    ManifoldRemeshingSettingsWrapper<pmp::SurfaceMesh> m_RemeshingSettings{}; //>! a wrapper with remeshing settings assigned to evolving manifolds
+    InitialSphereSettingsWrapper<pmp::SurfaceMesh, Sphere3D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
 };
 
 /**
@@ -740,6 +768,9 @@ public:
     void Preprocess() override;
 
 private:
+
+    /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
+    void AssignRemeshingSettingsToEvolvingManifolds() override;
 
     /// \brief Verifies whether all custom inner surfaces are contained within the custom outer surface if not, throw std::invalid_argument
     [[nodiscard]] bool HasValidInnerOuterManifolds() const;

@@ -10,7 +10,6 @@
 #include "sdf/SDF.h"
 
 #include "ConversionUtils.h"
-#include "InscribedManifold.h"
 
 /// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
 constexpr float SPHERE_RADIUS_FACTOR = 0.6f;
@@ -24,18 +23,16 @@ constexpr float SPHERE_RADIUS_FACTOR = 0.6f;
 void ManifoldCurveEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
-	const auto [outerRadius, innerCircle] = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
+	ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
 	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
 
 	if (GetSettings().UseStabilizationViaScaling)
 	{
-		StabilizeGeometries(outerRadius);
+		StabilizeGeometries();
 	}
-	GetRemeshingSettings() = m_OuterCurve ?
-	    CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, outerRadius, targetCenter) :
-	    CollectRemeshingSettingsFromCircleCurve(m_InnerCurves[0], innerCircle.Radius, innerCircle.Center);
+	AssignRemeshingSettingsToEvolvingManifolds();
 	PrepareManifoldProperties();
 }
 
@@ -62,14 +59,14 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		const auto [minLength, maxLength] = CalculateCoVolumeRange();
 		StabilizeCustomGeometries(minLength, maxLength);
 	}
-	GetRemeshingSettings() = GetOuterCurve() ?
-		CollectRemeshingSettingsFromCurve(GetOuterCurve()) :
-		CollectRemeshingSettingsFromCurve(GetInnerCurves()[0]);
+	AssignRemeshingSettingsToEvolvingManifolds();
 	PrepareManifoldProperties();
 }
 
 void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
+	if (stepId > 1)
+		ResetManifoldProperties();
 	GetIntegrate()(stepId);
 }
 
@@ -78,7 +75,7 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 	for (auto* curveToRemesh : m_RemeshTracker.GetManifoldsToRemesh())
 	{
 		pmp::CurveRemeshing remesher(*curveToRemesh);
-		remesher.adaptive_remeshing(GetRemeshingSettings());
+		remesher.adaptive_remeshing(m_RemeshingSettings[curveToRemesh]);
 	}
 	m_RemeshTracker.Reset();
 }
@@ -238,7 +235,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(*m_OuterCurve, GetRemeshingSettings()))
+		if (IsRemeshingNecessary(*m_OuterCurve, m_RemeshingSettings[m_OuterCurve.get()]))
 			m_RemeshTracker.AddManifold(m_OuterCurve.get());
 
 		// solve
@@ -335,7 +332,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(*innerCurve, GetRemeshingSettings()))
+		if (IsRemeshingNecessary(*innerCurve, m_RemeshingSettings[innerCurve.get()]))
 			m_RemeshTracker.AddManifold(innerCurve.get());
 
 		// solve
@@ -373,6 +370,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		const auto tStep = GetSettings().TimeStep;
 		auto vDistanceToTarget = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vMinDistanceToInner = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance_to_inner");
 
 		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
 		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
@@ -387,6 +385,8 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerSurfaceDf));
 				if (innerDfAtVPos < vMinDistance[v])
 					vMinDistance[v] = innerDfAtVPos;
+				if (innerDfAtVPos < vMinDistanceToInner[v])
+					vMinDistanceToInner[v] = innerDfAtVPos;
 			}
 
 			if (m_OuterCurve->is_boundary(v))
@@ -395,7 +395,9 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = 
+				GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
@@ -433,6 +435,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		const auto tStep = GetSettings().TimeStep;
 		auto vDistanceToTarget = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = innerCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vDistanceToOuter = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_outer");
 
 		pmp::Normals2::compute_vertex_normals(*innerCurve);
 		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
@@ -444,9 +447,9 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterCurveDistanceField)
 			{
-				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField));
-				if (outerDfAtVPos < vMinDistance[v])
-					vMinDistance[v] = outerDfAtVPos;
+				vDistanceToOuter[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField));
+				if (vDistanceToOuter[v] < vMinDistance[v])
+					vMinDistance[v] = vDistanceToOuter[v];
 			}
 
 			if (innerCurve->is_boundary(v))
@@ -455,7 +458,9 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = - 1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = 
+				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
@@ -496,7 +501,10 @@ void ManifoldCurveEvolutionStrategy::PrepareManifoldProperties()
 		m_OuterCurve->add_vertex_property<pmp::Scalar>("v:distance_to_target", FLT_MAX);
 
 		// the minimum from the distances to m_TargetPointCloud and all m_InnerCurves
-		m_OuterCurve->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);		
+		m_OuterCurve->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);
+
+		// the minimum from the distances to m_InnerCurves.
+		m_OuterCurve->add_vertex_property<pmp::Scalar>("v:min_distance_to_inner", FLT_MAX);
 	}
 
 	for (const auto& innerCurve : m_InnerCurves)
@@ -506,9 +514,44 @@ void ManifoldCurveEvolutionStrategy::PrepareManifoldProperties()
 
 		// the minimum from the distances to m_TargetPointCloud and m_OuterCurve
 		innerCurve->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);
+
+		// distance to m_OuterCurve
+		innerCurve->add_vertex_property<pmp::Scalar>("v:distance_to_outer", FLT_MAX);
 	}
 
 	// v:normal will be added during normal computation: pmp::Normals2::compute_vertex_normals
+}
+
+void ManifoldCurveEvolutionStrategy::ResetManifoldProperties()
+{
+	// TODO: find a better way to reset prop values globally, perhaps implement a new property method
+	if (m_OuterCurve)
+	{
+		auto vDistanceToTarget = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
+		auto vMinDistance = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vMinDistanceToInner = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance_to_inner");
+
+		for (const auto v : m_OuterCurve->vertices())
+		{
+			vDistanceToTarget[v] = FLT_MAX;
+			vMinDistance[v] = FLT_MAX;
+			vMinDistanceToInner[v] = FLT_MAX;
+		}
+	}
+
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		auto vDistanceToTarget = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
+		auto vMinDistance = innerCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vDistanceToOuter = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_outer");
+
+		for (const auto v : innerCurve->vertices())
+		{
+			vDistanceToTarget[v] = FLT_MAX;
+			vMinDistance[v] = FLT_MAX;
+			vDistanceToOuter[v] = FLT_MAX;
+		}
+	}
 }
 
 std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
@@ -568,7 +611,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 /// \brief the smallest allowed number of vertices in a manifold curve.
 constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
 
-std::pair<float, Circle2D> ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
+void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
 	{
@@ -582,10 +625,11 @@ std::pair<float, Circle2D> ManifoldCurveEvolutionStrategy::ConstructInitialManif
 	if (GetSettings().UseOuterManifolds)
 	{
 		m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(targetBoundsCenter, outerCircleRadius, nSegments));		
+		m_InitialSphereSettings[m_OuterCurve.get()] = Circle2D{ targetBoundsCenter, outerCircleRadius };
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
-		return { outerCircleRadius, Circle2D{} };
+		return;
 
 	const InscribedCircleInputData calcData{
 		*m_TargetPointCloud,
@@ -598,25 +642,30 @@ std::pair<float, Circle2D> ManifoldCurveEvolutionStrategy::ConstructInitialManif
 	for (const auto& circle : circles)
 	{
 		// keep the same vertex density for inner circles
-		const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * (circle.Radius * SPHERE_RADIUS_FACTOR) / outerCircleRadius);
+		const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * (circle.Radius) / outerCircleRadius);
 		m_InnerCurves.emplace_back(std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(
 			circle.Center,
 			circle.Radius * SPHERE_RADIUS_FACTOR, 
 			nInnerSegments
 		)));
+		m_InitialSphereSettings[m_InnerCurves.back().get()] = circle;
 	}
-	return { outerCircleRadius, circles[0] };
 }
 
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 10.0f;
+constexpr float INV_SHRINK_FACTOR_1D = 30.0f;
 
-void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, float stabilizationFactor)
+void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {
+	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0f - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
+	if (radius <= 0.0f)
+	{
+		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::StabilizeGeometries: m_InitialSphereSettings empty!\n");
+	}
 	const auto expectedVertexCount = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
-	const auto expectedMeanCoVolLength = stabilizationFactor * (2.0f * static_cast<float>(M_PI) * outerRadius / static_cast<float>(expectedVertexCount));
+	const auto expectedMeanCoVolLength = (2.0f * static_cast<float>(M_PI) * radius / static_cast<float>(expectedVertexCount));
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 
@@ -654,6 +703,38 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float outerRadius, floa
 	(*m_DistanceField) *= transfMatrixGeomScale;
 	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+}
+
+void ManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()
+{
+	if (m_OuterCurve)
+	{
+		const Circle2D& circleSettings = m_InitialSphereSettings[m_OuterCurve.get()];
+		m_RemeshingSettings[m_OuterCurve.get()] = CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, 
+			circleSettings.Radius * GetScalingFactor(), 
+			circleSettings.Center);
+	}
+
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		const Circle2D& circleSettings = m_InitialSphereSettings[innerCurve.get()];
+		m_RemeshingSettings[innerCurve.get()] = CollectRemeshingSettingsFromCircleCurve(innerCurve, 
+			circleSettings.Radius * GetScalingFactor(),
+			circleSettings.Center);
+	}
+}
+
+void CustomManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()
+{
+	if (GetOuterCurve())
+	{
+		GetRemeshingSettings()[GetOuterCurve().get()] = CollectRemeshingSettingsFromCurve(GetOuterCurve());
+	}
+
+	for (const auto& innerCurve : GetInnerCurves())
+	{
+		GetRemeshingSettings()[innerCurve.get()] = CollectRemeshingSettingsFromCurve(innerCurve);
+	}
 }
 
 bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
@@ -761,19 +842,17 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 void ManifoldSurfaceEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
-	const auto [outerRadius, innerSphere ] = ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
+	ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
 	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
 
 	if (GetSettings().UseStabilizationViaScaling)
 	{
-		StabilizeGeometries(outerRadius);
+		StabilizeGeometries();
 	}
+	AssignRemeshingSettingsToEvolvingManifolds();
 	PrepareManifoldProperties();
-	GetRemeshingSettings() = m_OuterSurface ?
-		CollectRemeshingSettingsFromIcoSphere(m_OuterSurface, outerRadius, targetCenter) :
-		CollectRemeshingSettingsFromIcoSphere(m_InnerSurfaces[0], innerSphere.Radius, innerSphere.Center);
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
@@ -799,11 +878,14 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		const auto [minArea, maxArea] = CalculateCoVolumeRange();
 		StabilizeCustomGeometries(minArea, maxArea);
 	}
+	AssignRemeshingSettingsToEvolvingManifolds();
 	PrepareManifoldProperties();
 }
 
 void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
+	if (stepId > 1)
+		ResetManifoldProperties();
 	GetIntegrate()(stepId);
 }
 
@@ -812,7 +894,7 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 	for (auto* surfaceToRemesh : m_RemeshTracker.GetManifoldsToRemesh())
 	{
 		pmp::Remeshing remesher(*surfaceToRemesh);
-		remesher.adaptive_remeshing(GetRemeshingSettings());
+		remesher.adaptive_remeshing(m_RemeshingSettings[surfaceToRemesh]);
 	}
 	m_RemeshTracker.Reset();
 }
@@ -908,6 +990,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		auto vDistanceToTarget = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vMinDistanceToInner = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:min_distance_to_inner");
 		const auto tStep = GetSettings().TimeStep;
 
 		pmp::Normals::compute_vertex_normals(*m_OuterSurface);
@@ -927,6 +1010,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerSurfaceDf));
 				if (innerDfAtVPos < vMinDistance[v])
 					vMinDistance[v] = innerDfAtVPos;
+				if (innerDfAtVPos < vMinDistanceToInner[v])
+					vMinDistanceToInner[v] = innerDfAtVPos;
 			}
 
 			if (m_OuterSurface->is_boundary(v))
@@ -941,7 +1026,9 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = 
+				GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
@@ -1005,6 +1092,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		auto vDistanceToTarget = innerSurface->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = innerSurface->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vDistanceToOuter = innerSurface->get_vertex_property<pmp::Scalar>("v:distance_to_outer");
 		const auto tStep = GetSettings().TimeStep;
 
 		pmp::Normals::compute_vertex_normals(*innerSurface);
@@ -1021,9 +1109,9 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterSurfaceDistanceField)
 			{
-				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField));
-				if (outerDfAtVPos < vMinDistance[v])
-					vMinDistance[v] = outerDfAtVPos;
+				vDistanceToOuter[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField));
+				if (vDistanceToOuter[v] < vMinDistance[v])
+					vMinDistance[v] = vDistanceToOuter[v];
 			}
 
 			if (innerSurface->is_boundary(v))
@@ -1038,7 +1126,9 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = -1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = 
+				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
@@ -1280,7 +1370,10 @@ void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 		m_OuterSurface->add_vertex_property<pmp::Scalar>("v:distance_to_target", FLT_MAX);
 
 		// the minimum from the distances to m_TargetPointCloud and all m_InnerSurfaces
-		m_OuterSurface->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);		
+		m_OuterSurface->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);
+
+		// the minimum from the distances to m_InnerSurfaces.
+		m_OuterSurface->add_vertex_property<pmp::Scalar>("v:min_distance_to_inner", FLT_MAX);
 	}
 
 	for (const auto& innerSurface : m_InnerSurfaces)
@@ -1290,12 +1383,47 @@ void ManifoldSurfaceEvolutionStrategy::PrepareManifoldProperties()
 
 		// the minimum from the distances to m_TargetPointCloud and m_OuterSurface
 		innerSurface->add_vertex_property<pmp::Scalar>("v:min_distance", FLT_MAX);
+
+		// distance to m_OuterSurface
+		innerSurface->add_vertex_property<pmp::Scalar>("v:distance_to_outer", FLT_MAX);
 	}
 
 	// v:normal will be added during normal computation: pmp::Normals::compute_vertex_normals
 }
 
-std::pair<float, Sphere3D> ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
+void ManifoldSurfaceEvolutionStrategy::ResetManifoldProperties()
+{
+	// TODO: find a better way to reset prop values globally, perhaps implement a new property method
+	if (m_OuterSurface)
+	{
+		auto vDistanceToTarget = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:distance_to_target");
+		auto vMinDistance = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vMinDistanceToInner = m_OuterSurface->get_vertex_property<pmp::Scalar>("v:min_distance_to_inner");
+
+		for (const auto v : m_OuterSurface->vertices())
+		{
+			vDistanceToTarget[v] = FLT_MAX;
+			vMinDistance[v] = FLT_MAX;
+			vMinDistanceToInner[v] = FLT_MAX;
+		}
+	}
+
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		auto vDistanceToTarget = innerSurface->get_vertex_property<pmp::Scalar>("v:distance_to_target");
+		auto vMinDistance = innerSurface->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vDistanceToOuter = innerSurface->get_vertex_property<pmp::Scalar>("v:distance_to_outer");
+
+		for (const auto v : innerSurface->vertices())
+		{
+			vDistanceToTarget[v] = FLT_MAX;
+			vMinDistance[v] = FLT_MAX;
+			vDistanceToOuter[v] = FLT_MAX;
+		}
+	}
+}
+
+void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
 	{
@@ -1318,10 +1446,11 @@ std::pair<float, Sphere3D> ManifoldSurfaceEvolutionStrategy::ConstructInitialMan
 		icoBuilder.BuildPMPSurfaceMesh();
 		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
 		(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
+		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
-		return { outerSphereRadius, Sphere3D{} };
+		return;
 
 	// TODO: This is hardcoded, implement 3D version of ParticleSwarmDistanceFieldInscribedSphereCalculator
 	//const InscribedSphereInputData calcData{
@@ -1351,20 +1480,24 @@ std::pair<float, Sphere3D> ManifoldSurfaceEvolutionStrategy::ConstructInitialMan
 			mesh *= translationMatrix;
 		}		
 		m_InnerSurfaces.push_back(std::make_shared<pmp::SurfaceMesh>(mesh));
+		m_InitialSphereSettings[m_InnerSurfaces.back().get()] = sphere;
 	}
-
-	return { outerSphereRadius, spheres[0] };
 }
 
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_2D = 1.0f / 2.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_2D = 10.0f;
+constexpr float INV_SHRINK_FACTOR_2D = 20.0f;
 
-void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, float stabilizationFactor)
+void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {
+	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0f - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
+	if (radius <= 0.0f)
+	{
+		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::StabilizeGeometries: m_InitialSphereSettings empty!\n");
+	}
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, GetSettings().LevelOfDetail) - 1) + 3 * N_ICO_VERTS_0) / 3;
-	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * outerRadius * outerRadius / static_cast<float>(expectedVertexCount));
+	const float expectedMeanCoVolArea = (4.0f * static_cast<float>(M_PI) * radius * radius / static_cast<float>(expectedVertexCount));
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
 
@@ -1403,6 +1536,38 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float outerRadius, fl
 	(*m_DistanceField) *= transfMatrixGeomScale;
 	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
+}
+
+void ManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()
+{
+	if (m_OuterSurface)
+	{
+		const Sphere3D& sphereSettings = m_InitialSphereSettings[m_OuterSurface.get()];
+		m_RemeshingSettings[m_OuterSurface.get()] = CollectRemeshingSettingsFromIcoSphere(m_OuterSurface,
+			sphereSettings.Radius * GetScalingFactor(), 
+			sphereSettings.Center);
+	}
+
+	for (const auto& innerSurface : m_InnerSurfaces)
+	{
+		const Sphere3D& sphereSettings = m_InitialSphereSettings[innerSurface.get()];
+		m_RemeshingSettings[innerSurface.get()] = CollectRemeshingSettingsFromIcoSphere(innerSurface, 
+			sphereSettings.Radius * GetScalingFactor(),
+			sphereSettings.Center);
+	}
+}
+
+void CustomManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()
+{
+	if (GetOuterSurface())
+	{
+		GetRemeshingSettings()[GetOuterSurface().get()] = CollectRemeshingSettingsFromMesh(GetOuterSurface());
+	}
+
+	for (const auto& innerSurface : GetInnerSurfaces())
+	{
+		GetRemeshingSettings()[innerSurface.get()] = CollectRemeshingSettingsFromMesh(innerSurface);
+	}
 }
 
 bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const

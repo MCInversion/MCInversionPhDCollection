@@ -3,8 +3,23 @@
 
 #include "CurveFactory.h"
 
+
 namespace pmp
 {
+	namespace
+	{
+	    void DeformCircleWithSineWave(ManifoldCurve2D& curve, float amplitude, float freq)
+	    {
+	        for (const auto v : curve.vertices())
+	        {
+	            Point2 p = curve.position(v) - Point2(0, 0);
+	            const float angle = atan2(p[1], p[0]);
+	            vec2 direction = normalize(p);
+	            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0f);
+	        }
+	    }
+	} // anonymous namespace
+
 	ManifoldCurve2D CurveFactory::circle(
 		const Point2& center, 
 		Scalar radius, 
@@ -50,4 +65,11 @@ namespace pmp
 
         return curve;
 	}
+
+    ManifoldCurve2D CurveFactory::sine_deformed_circle(const Point2& center, Scalar radius, size_t nSegments, float amplitude, float freq, Scalar startAngle, Scalar endAngle)
+    {
+        auto result = circle(center, radius, nSegments, startAngle, endAngle);
+        DeformCircleWithSineWave(result, amplitude, freq);
+        return result;
+    }
 } // namespace pmp

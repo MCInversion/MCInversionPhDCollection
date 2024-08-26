@@ -21,5 +21,15 @@ namespace pmp {
             size_t nSegments = 6,
             Scalar startAngle = 0.0f, 
             Scalar endAngle = 2.0f * M_PI);
+        //! Generate a circular arc centered at \p center with radius \p radius, and with \p nSegments segments, start angle \p startAngle, and end angle \p endAngle deformed with a sine wave with \p amplitude and \p freq.
+        static ManifoldCurve2D sine_deformed_circle(
+            const Point2& center = Point2{ 0.0f, 0.0f },
+            Scalar radius = 1.0f,
+            size_t nSegments = 6,
+            float amplitude = 1.0f,
+            float freq = 4,
+            Scalar startAngle = 0.0f,
+            Scalar endAngle = 2.0f * M_PI
+        );
     };
 } // namespace pmp
