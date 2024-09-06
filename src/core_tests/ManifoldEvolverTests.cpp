@@ -600,9 +600,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, InnerOuterLSWOfImportedMeshPtCloud
     };
     strategySettings.OuterManifoldRepulsion = [](double distance)
     {
-        if (distance >= criticalDistance || distance < 0.5 * criticalDistance)
+        //if (distance >= criticalDistance || distance < 0.5 * criticalDistance)
             return 0.0;
-        return 1.0 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
+        //return 1.0 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
     };
     strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
     {
@@ -623,9 +623,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, InnerOuterLSWOfImportedMeshPtCloud
     };
     strategySettings.InnerManifoldRepulsion = [](double distance)
     {
-        if (distance >= criticalDistance || distance < 0.5 * criticalDistance)
+        //if (distance >= criticalDistance || distance < 0.5 * criticalDistance)
             return 0.0;
-        return 1.0 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
+        //return 1.0 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
     };
     strategySettings.AdvectionInteractWithOtherManifolds = false;
     strategySettings.TimeStep = 0.01;
@@ -654,6 +654,8 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, InnerOuterLSWOfImportedMeshPtCloud
     ASSERT_TRUE(resultOuterCurve != nullptr);
     ASSERT_FALSE(resultInnerCurves.empty());
 }
+
+// TODO: target data without gaps!
 
 // Suite: ManifoldEvolverTests_ManifoldSurfaceSuite
 

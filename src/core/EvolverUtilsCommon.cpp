@@ -289,6 +289,7 @@ bool IsRemeshingNecessary(const pmp::ManifoldCurve2D& curve, const pmp::Adaptive
 bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings)
 {
 	// TODO: fill in
+	return false;
 }
 
 // ------------------------------------------------------------------------------------
