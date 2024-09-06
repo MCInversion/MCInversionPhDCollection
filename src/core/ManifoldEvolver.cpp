@@ -12,7 +12,7 @@
 #include "ConversionUtils.h"
 
 /// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
-constexpr float SPHERE_RADIUS_FACTOR = 0.6f;
+constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
 
 //
 // ======================================================================================

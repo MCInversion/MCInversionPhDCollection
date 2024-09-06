@@ -197,6 +197,7 @@ namespace
 {
 	[[nodiscard]] std::map<pmp::Vertex, float> ComputeLocalDensities(const pmp::ManifoldCurve2D& curve, float edgeLength)
 	{
+		// TODO: debug this! Perhaps we should use the actual co-volumes
 		std::map<pmp::Vertex, float> densities;
 
 		for (auto v : curve.vertices())
@@ -287,7 +288,7 @@ bool IsRemeshingNecessary(const pmp::ManifoldCurve2D& curve, const pmp::Adaptive
 
 bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings)
 {
-	return false;
+	// TODO: fill in
 }
 
 // ------------------------------------------------------------------------------------

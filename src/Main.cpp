@@ -34,6 +34,7 @@
 #include <map>
 
 #include "pmp/algorithms/CurveFactory.h"
+#include <core/ManifoldEvolver.h>
 
 
 // set up root directory
@@ -103,6 +104,7 @@ constexpr bool performManifoldCurve2DTests = false;
 constexpr bool performPairedCurveEvolverTests = true;
 // constexpr bool performPairedSurfaceEvolverTests = true;
 constexpr bool performPropertyPerformanceTests = false;
+constexpr bool performOldVsNewLSWTests = true;
 
 int main()
 {
@@ -110,7 +112,7 @@ int main()
 	const std::vector<std::string> meshNames{
 		//"BentChair",
 			//"blub",
-			//"bunny",
+			"bunny",
 			//"maxPlanck",
 			//"nefertiti",
 			//"ogre",
@@ -2368,6 +2370,7 @@ int main()
 		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
 		SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+		//SetRemeshingAdjustmentTimeIndices({ 3, 10, 20, 50, 100, 120, 140, 145 });
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -2499,6 +2502,7 @@ int main()
 		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
 		SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+		//SetRemeshingAdjustmentTimeIndices({ 3, 7, 11, 15, 20, 50, 100 });
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -2547,6 +2551,8 @@ int main()
 			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
 			MeshTopologySettings topoParams;
+			topoParams.MinEdgeMultiplier = 0.14f;
+			topoParams.UseBackProjection = false;
 			topoParams.EdgeLengthDecayFactor = 0.7f;
 			topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 
@@ -3645,5 +3651,230 @@ int main()
 				se.Evolve();
 			}, true);
 		}
-	}
+	} // endif performPropertyPerformanceTests
+
+	if (performOldVsNewLSWTests)
+	{
+		const std::vector<std::string> meshForPtCloudNames{
+			//"armadillo",
+			//"blub",
+			"bunny",
+			//"maxPlanck",
+			//"nefertiti",
+			//"ogre",
+			//"spot"
+		};
+		const std::map<std::string, double> timeStepSizesForPtClouds{
+			{"armadillo", 0.05 },
+			{ "blub", 0.05 },
+			{ "bunny", 0.05 },
+			{ "maxPlanck", 0.05 },
+			{ "nefertiti", 0.05 },
+			{ "ogre", 0.05 },
+			{ "spot", 0.05 }
+		};
+		const std::map<std::string, double> isoLevelOffsetFactors{
+			{"armadillo", 0.5 },
+			{ "blub", 0.5 },
+			{ "bunny", 0.5 },
+			{ "maxPlanck", 0.5 },
+			{ "nefertiti", 0.5 },
+			{ "ogre", 0.5 },
+			{ "spot", 0.5 }
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+		SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+		//SetRemeshingAdjustmentTimeIndices({ 3, 10, 20/*, 50 , 100, 120, 140, 145*/ });
+
+		constexpr unsigned int NTimeSteps = 80;
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			// Export sampled vertices to PLY
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+
+			const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+			constexpr float volExpansionFactor = 1.0f;
+			const SDF::PointCloudDistanceFieldSettings dfSettings{
+				cellSize,
+					volExpansionFactor,
+					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+					SDF::BlurPostprocessingType::None
+			};
+
+			//std::cout << "==================================================================\n";
+			//std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << nVoxelsPerMinDimension << "voxPerMinDim.vti\n";
+			//std::cout << "------------------------------------------------------------------\n";
+
+			//const auto startSDF = std::chrono::high_resolution_clock::now();
+			//auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
+			//const auto endSDF = std::chrono::high_resolution_clock::now();
+			//SDF::ReportOutput(sdf, std::cout);
+			//const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+			//std::cout << "DF Time: " << timeDiff.count() << " s\n";
+			//std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+
+			std::cout << "Setting up SurfaceEvolutionSettings.\n";
+
+			const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+			//MeshTopologySettings topoParams;
+			//topoParams.FixSelfIntersections = true;
+			//topoParams.MinEdgeMultiplier = 0.14f;
+			//topoParams.UseBackProjection = false;
+			//topoParams.PrincipalCurvatureFactor = 3.2f;
+			//topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			//topoParams.EdgeLengthDecayFactor = 0.7f;
+			//topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
+			//topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+
+			//AdvectionDiffusionParameters adParams{
+			//	1.0, 1.0,
+			//	1.0, 1.0
+			//};
+
+			//SurfaceEvolutionSettings seSettings{
+			//	ptCloudName,
+			//	NTimeSteps,
+			//	tau,
+			//	fieldIsoLevel,
+			//	3, // IcoSphereSubdivisionLevel
+			//	adParams,
+			//	topoParams,
+			//	minSize, maxSize,
+			//	ptCloudBBox.center(),
+			//	true, false,
+			//	dataOutPath,
+			//	MeshLaplacian::Voronoi,
+			//	{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+			//	0.05f,
+			//	true,
+			//	false
+			//};
+			//ReportInput(seSettings, std::cout);
+
+			//std::cout << "Setting up SurfaceEvolver.\n";
+
+			//SurfaceEvolver oldEvolver(sdf, volExpansionFactor, seSettings);
+
+			//std::cout << "ManifoldEvolver::Evolve ... ";
+
+			//try
+			//{
+			//	oldEvolver.Evolve();
+			//}
+			//catch (...)
+			//{
+			//	std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			//}
+
+			//std::cout << "done.\n";
+
+			// ==========================================================================
+			// - - - - - - - - - -     New Manifold Evolver   - - - - - - - - - - - -
+			// ==========================================================================
+
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = false;
+			strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
+			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				//if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
+				//	return 0.0;
+				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.TimeStep = tau;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = false;
+			globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			std::cout << "Setting up ManifoldSurfaceEvolutionStrategy.\n";
+
+			// Set up the evolution strategy
+			auto surfaceStrategy = std::make_shared<ManifoldSurfaceEvolutionStrategy>(
+				strategySettings, MeshLaplacian::Voronoi,
+				std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+			ManifoldEvolver newEvolver(globalSettings, std::move(surfaceStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			try
+			{
+				newEvolver.Evolve();				
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+
+			std::cout << "done.\n";
+		}
+		
+	} // endif performOldVsNewLSWTests
 }
