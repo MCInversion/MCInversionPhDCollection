@@ -544,6 +544,117 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteDeformed
     EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.0);
 }
 
+namespace 
+{
+    [[nodisard]] std::vector<pmp::Point2> GetImportedPlanarPointCloud(const std::string& fileName)
+    {
+        const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(fileName, true);
+        if (!ptCloudOpt.has_value())
+        {
+            std::cerr << "ptCloudOpt == nullopt!\n";
+            return {};
+        }
+        // Calculate the bounding box of the 3D points
+        pmp::BoundingBox bbox(*ptCloudOpt);
+
+        // Calculate the center and the scale factor for normalization
+        const auto center = bbox.center();
+        const auto boxSize = bbox.max() - bbox.min();
+        const auto scale = 6.0f / std::max(boxSize[0], boxSize[1]); // Scale to fit [-3, 3] range
+
+        // Transform, center, and normalize the point cloud in one step
+        std::vector<pmp::Point2> planarPtCloud;
+        planarPtCloud.reserve(ptCloudOpt->size());
+
+        std::ranges::transform(*ptCloudOpt, std::back_inserter(planarPtCloud), [&](const auto& pt) {
+            return pmp::Point2{
+                (pt[0] - center[0]) * scale,  // Normalize and center the x-coordinate
+                (pt[1] - center[1]) * scale   // Normalize and center the y-coordinate
+            };
+            });
+        const auto cutCircleCenter = pmp::Point2{ 2.0f, 2.0f };
+        constexpr auto cutCircleRadius = 2.0f;
+        planarPtCloud.erase(std::remove_if(planarPtCloud.begin(), planarPtCloud.end(),
+            [&cutCircleCenter, &cutCircleRadius](const auto& pt)
+            {
+                return norm(pt - cutCircleCenter) < cutCircleRadius;
+            }), planarPtCloud.end());
+        planarPtCloud.shrink_to_fit();
+        return planarPtCloud;
+    }
+	
+} // anonymous namespace
+
+TEST(ManifoldEvolverTests_ManifoldCurveSuite, InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing)
+{
+    // Arrange
+    const auto targetPts = GetImportedPlanarPointCloud(dataDirPath + "maxPlanck_Pts_2D.ply");
+
+    ManifoldEvolutionSettings strategySettings;
+    strategySettings.LevelOfDetail = 4;
+    constexpr double criticalDistance = 0.15;
+    strategySettings.OuterManifoldEpsilon = [](double distance) {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return (criticalDistance * 5) * (1.0 - exp(-distance * distance / (16 * criticalDistance * criticalDistance)));
+    };
+    strategySettings.OuterManifoldRepulsion = [](double distance)
+    {
+        if (distance >= criticalDistance || distance < 0.5 * criticalDistance)
+            return 0.0;
+        return 1.0 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
+    };
+    strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.InnerManifoldEpsilon = [](double distance) {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return (criticalDistance * 5) * (1.0 - exp(-distance * distance / (16 * criticalDistance * criticalDistance)));
+    };
+    strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+    {
+        if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL || distance < criticalDistance)
+            return 0.0;
+        return 1.0 * distance * (negGradDotNormal + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+    };
+    strategySettings.InnerManifoldRepulsion = [](double distance)
+    {
+        if (distance >= criticalDistance || distance < 0.5 * criticalDistance)
+            return 0.0;
+        return 1.0 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
+    };
+    strategySettings.AdvectionInteractWithOtherManifolds = false;
+    strategySettings.TimeStep = 0.01;
+    GlobalManifoldEvolutionSettings globalSettings;
+    globalSettings.NSteps = 100;
+    globalSettings.DoRemeshing = true;
+    globalSettings.ExportPerTimeStep = true;
+    globalSettings.ExportTargetDistanceFieldAsImage = true;
+    globalSettings.ProcedureName = "InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing";
+    globalSettings.OutputPath = dataOutPath + "core_tests\\";
+    globalSettings.ExportResult = false;
+
+    auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
+        strategySettings, std::make_shared<std::vector<pmp::Point2>>(targetPts));
+
+    ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+    // Act
+    evolver.Evolve();
+
+    // Assert
+    auto strategy = dynamic_cast<ManifoldCurveEvolutionStrategy*>(evolver.GetStrategy().get());
+    auto resultOuterCurve = strategy->GetOuterCurveInOrigScale();
+    auto resultInnerCurves = strategy->GetInnerCurvesInOrigScale();
+
+    ASSERT_TRUE(resultOuterCurve != nullptr);
+    ASSERT_FALSE(resultInnerCurves.empty());
+}
+
 // Suite: ManifoldEvolverTests_ManifoldSurfaceSuite
 
 namespace

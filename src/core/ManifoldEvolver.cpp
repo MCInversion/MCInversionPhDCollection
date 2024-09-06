@@ -631,12 +631,14 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
 		return;
 
-	const InscribedCircleInputData calcData{
-		*m_TargetPointCloud,
-		std::make_shared<Geometry::ScalarGrid2D>(*m_DistanceField) // clone
-	};
-	ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
-	const auto circles = inscribedCircleCalculator.Calculate(calcData);
+	//const InscribedCircleInputData calcData{
+	//	*m_TargetPointCloud,
+	//	std::make_shared<Geometry::ScalarGrid2D>(*m_DistanceField) // clone
+	//};
+	//ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
+	//const auto circles = inscribedCircleCalculator.Calculate(calcData);
+	// Hardcoded inner curves:
+	const auto circles = std::vector{ Circle2D{pmp::Point2{0.0f, 0.0f}, 1.85f} };
 	m_InnerCurves.reserve(circles.size());
 
 	for (const auto& circle : circles)
@@ -655,7 +657,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 30.0f;
+constexpr float INV_SHRINK_FACTOR_1D = 20.0f;
 
 void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {

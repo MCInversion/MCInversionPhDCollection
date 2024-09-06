@@ -45,7 +45,7 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 // test flags. The actual execution is just wrapped inside an if-statement.
 constexpr bool performSDFTests = false;
-constexpr bool performSphereTest = true;
+constexpr bool performSphereTest = false;
 constexpr bool performEvolverTests = false;
 constexpr bool performOldArmadilloLSWTest = false;
 constexpr bool performIsosurfaceEvolverTests = false;
@@ -100,7 +100,7 @@ constexpr bool perfromTerrainTriangulationTest = false;
 constexpr bool performDistanceFieldHashTest = false;
 constexpr bool performDistanceField2DHashTest = false;
 constexpr bool performManifoldCurve2DTests = false;
-constexpr bool performPairedCurveEvolverTests = false;
+constexpr bool performPairedCurveEvolverTests = true;
 // constexpr bool performPairedSurfaceEvolverTests = true;
 constexpr bool performPropertyPerformanceTests = false;
 
@@ -3431,7 +3431,7 @@ int main()
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
-			constexpr size_t samplingLevel = 3;
+			constexpr size_t samplingLevel = 2;
 			constexpr size_t nSamplings = 10;
 			constexpr size_t minVerts = 9; // Minimum number of vertices to sample
 

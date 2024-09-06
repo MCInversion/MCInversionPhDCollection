@@ -11,7 +11,8 @@ from collections import defaultdict
 #procedure_name = "ShrinkingAndExpandingCircle_NoRemeshing"
 #procedure_name = "ShrinkingAndExpandingCircle_SlowerInnerEtaNoRemeshing"
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing"
-procedure_name = "ShrinkWrappingAnIncompleteDeformedCirclePointCloud_WithRemeshing"
+#procedure_name = "ShrinkWrappingAnIncompleteDeformedCirclePointCloud_WithRemeshing"
+procedure_name = "InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing"
 directory = "../output/core_tests/"  # Adjust this path accordingly
 
 # Helper function to read the grid dimensions from the *.gdim2d file
@@ -171,7 +172,7 @@ ani = FuncAnimation(fig, update, frames=len(outer_curves), init_func=init, blit=
 
 # Save the animation as a GIF
 output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-ani.save(output_gif_path, writer='pillow', fps=4)
+ani.save(output_gif_path, writer='pillow', fps=30)
 
 # Show the animation
 plt.show()
