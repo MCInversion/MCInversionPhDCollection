@@ -1056,7 +1056,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(sysMat))
+		if (IsRemeshingNecessary(*m_OuterSurface, m_RemeshingSettings[m_OuterSurface.get()]))
 			m_RemeshTracker.AddManifold(m_OuterSurface.get());
 
 		// solve
@@ -1156,7 +1156,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(sysMat))
+		if (IsRemeshingNecessary(*innerSurface, m_RemeshingSettings[innerSurface.get()]))
 			m_RemeshTracker.AddManifold(innerSurface.get());
 
 		// solve
@@ -1432,12 +1432,12 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds: Current setting is: UseInnerManifolds == false && UseOuterManifolds == false. This means there's nothing to evolve!\n");
 	}
 
-	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -targetBoundsCenter[0],
-		0.0f, 1.0f, 0.0f, -targetBoundsCenter[1],
-		0.0f, 0.0f, 1.0f, -targetBoundsCenter[2],
-		0.0f, 0.0f, 0.0f, 1.0f
-	};
+	//const pmp::mat4 transfMatrixGeomMove{
+	//	1.0f, 0.0f, 0.0f, -targetBoundsCenter[0],
+	//	0.0f, 1.0f, 0.0f, -targetBoundsCenter[1],
+	//	0.0f, 0.0f, 1.0f, -targetBoundsCenter[2],
+	//	0.0f, 0.0f, 0.0f, 1.0f
+	//};
 	const float outerSphereRadius = 0.5f * SPHERE_RADIUS_FACTOR *
 		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
 
@@ -1447,7 +1447,7 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		icoBuilder.BuildBaseData();
 		icoBuilder.BuildPMPSurfaceMesh();
 		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
-		(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
+		//(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
 		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
 	}
 
@@ -1509,7 +1509,16 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 		0.0f, 0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	m_TransformToOriginal = inverse(transfMatrixGeomScale);
+	const pmp::Point origin = m_OuterSurface ? m_InitialSphereSettings[m_OuterSurface.get()].Center :
+		(!m_InnerSurfaces.empty() ? m_InitialSphereSettings[m_InnerSurfaces[0].get()].Center : pmp::Point{});
+	const pmp::mat4 transfMatrixGeomMove{
+		1.0f, 0.0f, 0.0f, -origin[0],
+		0.0f, 1.0f, 0.0f, -origin[1],
+		0.0f, 0.0f, 1.0f, -origin[2],
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	m_TransformToOriginal = inverse(transfMatrixFull);
 
 	// transform geometries
 	if (m_OuterSurface)
@@ -1523,20 +1532,20 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 
 	if (m_OuterSurfaceDistanceField)
 	{
-		(*m_OuterSurfaceDistanceField) *= transfMatrixGeomScale;
+		(*m_OuterSurfaceDistanceField) *= transfMatrixFull;
 		(*m_OuterSurfaceDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDF : m_InnerSurfacesDistanceFields)
 	{
-		(*innerSurfaceDF) *= transfMatrixGeomScale;
+		(*innerSurfaceDF) *= transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 
 	if (!m_DistanceField || !m_DFNegNormalizedGradient)
 		return; // nothing to scale
 
-	(*m_DistanceField) *= transfMatrixGeomScale;
-	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
+	(*m_DistanceField) *= transfMatrixFull;
+	(*m_DFNegNormalizedGradient) *= transfMatrixFull;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 }
 
