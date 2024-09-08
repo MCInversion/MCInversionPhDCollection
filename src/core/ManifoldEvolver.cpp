@@ -575,7 +575,6 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid2D>(
 		SDF::PlanarPointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_DistanceField));
-	m_EvolBox = m_DistanceField->Box(); // test box used for validation
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
@@ -703,6 +702,7 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 		return; // nothing to scale
 
 	(*m_DistanceField) *= transfMatrixGeomScale;
+	m_EvolBox = m_DistanceField->Box(); // test box for geometry validation.
 	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 }
@@ -1337,7 +1337,6 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid>(
 		SDF::PointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid>(ComputeNormalizedNegativeGradient(*m_DistanceField));
-	m_EvolBox = m_DistanceField->Box();
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
@@ -1536,6 +1535,12 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 		(*innerSurface) *= transfMatrixGeomScale;
 	}
 
+	// test box for geometry validation
+	const float evolBoxFactor = 1.2f * scalingFactor;
+	m_EvolBox = pmp::BoundingBox(
+		pmp::Point{ -radius, -radius, -radius } * evolBoxFactor,
+		pmp::Point{ radius, radius, radius } * evolBoxFactor);
+
 	if (m_OuterSurfaceDistanceField)
 	{
 		(*m_OuterSurfaceDistanceField) *= transfMatrixFull;
@@ -1681,6 +1686,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 		return; // nothing to scale
 
 	(*GetDistanceField()) *= transfMatrixGeomScale;
+	GetEvolBox() = GetDistanceField()->Box(); // test box for geometry validation
 	(*GetDFNegNormalizedGradient()) *= transfMatrixGeomScale;
 	(*GetDistanceField()) *= static_cast<double>(scalingFactor); // Scale the distance values
 }

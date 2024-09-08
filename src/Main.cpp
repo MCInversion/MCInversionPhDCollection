@@ -3846,7 +3846,7 @@ int main()
 			globalSettings.NSteps = NTimeSteps;
 			globalSettings.DoRemeshing = true;
 			globalSettings.ExportPerTimeStep = true;
-			globalSettings.ExportTargetDistanceFieldAsImage = false;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
 			globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
