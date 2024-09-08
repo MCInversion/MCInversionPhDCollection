@@ -41,7 +41,6 @@ namespace Geometry
 	/// \brief verifies whether a metric with a given name is registered.
 	[[nodiscard]] bool IsMetricRegistered(const std::string& name);
 
-
 	/// \brief triangle metric computation function.
 	using TriMetricFunction = std::function<bool(pmp::SurfaceMesh&)>;
 
@@ -111,5 +110,20 @@ namespace Geometry
 
 	/// \brief Uses circular approximation for determining the deviations of edges adjacent to vertex v.
 	[[nodiscard]] pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v);
+
+	/// \brief face quality metric computation function.
+	using FaceQualityFunction = std::function<float(const pmp::SurfaceMesh&, pmp::Face)>;
+
+	/// \brief A simple wrapper for the range of values for FaceQualityFunction.
+	struct FaceQualityRange
+	{
+		pmp::Scalar Min{ 0.0f };
+		pmp::Scalar Max{ 1.0f };
+
+		bool operator() (const float& val) const
+		{
+			return val > Min && val < Max;
+		}
+	};
 
 } // namespace Geometry

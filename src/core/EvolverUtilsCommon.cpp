@@ -1,6 +1,7 @@
 #include "EvolverUtilsCommon.h"
 
 #include <numeric>
+#include <ranges>
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
@@ -195,101 +196,82 @@ bool IsRemeshingNecessary(const SparseMatrix& lswMatrix)
 
 namespace
 {
-	[[nodiscard]] std::map<pmp::Vertex, float> ComputeLocalDensities(const pmp::ManifoldCurve2D& curve, float edgeLength)
-	{
-		// TODO: debug this! Perhaps we should use the actual co-volumes
-		std::map<pmp::Vertex, float> densities;
-
-		for (auto v : curve.vertices())
-		{
-			float localDensity = 0.0f;
-			int count = 0;
-
-			// Get the outgoing and incoming edges
-			auto [e_out, e_in] = curve.edges(v);
-
-			// Sum the lengths of adjacent edges
-			if (e_out.is_valid())
-			{
-				localDensity += curve.edge_length(e_out);
-				count++;
-			}
-
-			if (e_in.is_valid())
-			{
-				localDensity += curve.edge_length(e_in);
-				count++;
-			}
-
-			// If there are adjacent edges, compute the local density
-			if (count > 0)
-			{
-				localDensity /= count;
-				densities[v] = 1.0f / localDensity; // Local density is the inverse of average edge length
-			}
-			else
-			{
-				densities[v] = 1.0f / edgeLength; // Default to edgeLength for isolated vertices
-			}
-		}
-
-		return densities;
-	}
-
 	[[nodiscard]] float ComputeMeanDensity(const std::map<pmp::Vertex, float>& densities)
 	{
 		const float totalDensity = std::accumulate(densities.begin(), densities.end(), 0.0f,
 			[](float sum, const std::pair<pmp::Vertex, float>& p) { return sum + p.second; });
 
-		return totalDensity / densities.size();
+		return totalDensity / static_cast<float>(densities.size());
 	}
 
 	[[nodiscard]] float ComputeDensityVariance(const std::map<pmp::Vertex, float>& densities, float meanDensity)
 	{
 		float variance = 0.0f;
-		for (const auto& [v, density] : densities)
+		for (const auto& density : densities | std::views::values)
 		{
 			variance += (density - meanDensity) * (density - meanDensity);
 		}
-
-		return variance / densities.size();
+		return variance / static_cast<float>(densities.size());
 	}
 }
 
 bool IsRemeshingNecessary(const pmp::ManifoldCurve2D& curve, const pmp::AdaptiveRemeshingSettings& remeshingSettings)
-{
-	// Step 1: Compute local densities
-	const auto densities = ComputeLocalDensities(curve, (remeshingSettings.MinEdgeLength + remeshingSettings.MaxEdgeLength) / 2.0f);
+{	
+	std::map<pmp::Vertex, float> vertexDensities;
+	for (const auto v : curve.vertices())
+	{
+		const float coVolMeasure = midpoint_covolume_length(curve, v);
+		vertexDensities[v] = 1.0f / coVolMeasure;
+	}
 
-	// Step 2: Compute mean density and its variance
-	const float meanDensity = ComputeMeanDensity(densities);
-	const float densityVariance = ComputeDensityVariance(densities, meanDensity);
+	const float meanDensity = ComputeMeanDensity(vertexDensities);
+	const float densityStdDev = sqrtf(ComputeDensityVariance(vertexDensities, meanDensity));
 
-	// Step 3: Check if density variance is within the acceptable range
-	if (densityVariance > remeshingSettings.ApproxError)
+	if (densityStdDev > remeshingSettings.ApproxError)
 	{
 		return true;
 	}
 
-	// Step 4: Check if any edge lengths are outside the allowed range
-	for (const auto& [vertex, density] : densities)
-	{
-		const float edgeLength = 1.0f / density;
-		if (edgeLength < remeshingSettings.MinEdgeLength || edgeLength > remeshingSettings.MaxEdgeLength)
+	return std::ranges::any_of(vertexDensities, [&remeshingSettings](const auto& item)
 		{
-			return true;
-		}
-	}
-
-	// If the variance and edge lengths are within the acceptable range, remeshing is not necessary
-	return false;
+			const float edgeLength = 1.0f / item.second;
+			return (edgeLength < remeshingSettings.MinEdgeLength || edgeLength > remeshingSettings.MaxEdgeLength);
+		});
 }
 
-
-bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings)
+bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings, const AreaFunction& areaFunc)
 {
-	// TODO: fill in
-	return false;
+	std::map<pmp::Vertex, float> vertexDensities;
+	for (const auto v : mesh.vertices())
+	{
+		const float coVolMeasure = areaFunc(mesh, v);
+		vertexDensities[v] = 1.0f / coVolMeasure;
+	}
+
+	const float meanDensity = ComputeMeanDensity(vertexDensities);
+	const float densityStdDev = sqrtf(ComputeDensityVariance(vertexDensities, meanDensity));
+
+	if (densityStdDev > remeshingSettings.ApproxError)
+	{
+		return true;
+	}
+
+	return std::ranges::any_of(vertexDensities, [&remeshingSettings](const auto& item)
+		{
+			const float edgeLength = 1.0f / item.second;
+			return (edgeLength < remeshingSettings.MinEdgeLength || edgeLength > remeshingSettings.MaxEdgeLength);
+		});
+}
+
+// ------------------------------------------------------------------------------------
+
+bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const Geometry::FaceQualityFunction& qualityFunc, const Geometry::FaceQualityRange& qualityRange)
+{	
+	return std::ranges::any_of(mesh.faces(), [&](const auto& f)
+		{
+			const auto qualityVal = qualityFunc(mesh, f);
+			return !qualityRange(qualityVal);
+		});
 }
 
 // ------------------------------------------------------------------------------------
@@ -331,6 +313,28 @@ void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, floa
 	approxError = 0.1f * (minEdgeLength + maxEdgeLength);
 }
 
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, float minEdgeMultiplier)
+{
+	if (radius < FLT_EPSILON)
+	{
+		throw std::invalid_argument("CollectRemeshingSettingsFromIcoSphere_OLD: radius < FLT_EPSILON!\n");
+	}
+
+	pmp::AdaptiveRemeshingSettings settings;
+
+	constexpr float baseIcoHalfAngle = 2.0f * static_cast<float>(M_PI) / 10.0f;
+	settings.MinEdgeLength = minEdgeMultiplier * 2.0f * radius * 
+		sin(baseIcoHalfAngle * pow(2.0f, -1.0f * static_cast<float>(subdiv))); // from icosahedron edge length
+	settings.MaxEdgeLength = 4.0f * settings.MinEdgeLength;
+	settings.ApproxError = 0.25f * (settings.MinEdgeLength + settings.MaxEdgeLength);
+
+	settings.NRemeshingIterations = 10;
+	settings.NTangentialSmoothingIters = 6;
+	settings.UseProjection = true;
+
+	return settings;
+}
+
 pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::shared_ptr<pmp::SurfaceMesh>& icosphere, float radius, const pmp::Point& center)
 {
 	if (!icosphere)
@@ -342,6 +346,8 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::
 	{
 		throw std::invalid_argument("CollectRemeshingSettingsFromIcoSphere: radius < FLT_EPSILON!\n");
 	}
+
+	// TODO: debug this experimental implementation
 
 	pmp::AdaptiveRemeshingSettings settings;
 

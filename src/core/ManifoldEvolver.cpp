@@ -712,17 +712,23 @@ void ManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds(
 	if (m_OuterCurve)
 	{
 		const Circle2D& circleSettings = m_InitialSphereSettings[m_OuterCurve.get()];
-		m_RemeshingSettings[m_OuterCurve.get()] = CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, 
-			circleSettings.Radius * GetScalingFactor(), 
-			circleSettings.Center);
+		//m_RemeshingSettings[m_OuterCurve.get()] = CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, 
+		//	circleSettings.Radius * GetScalingFactor(), 
+		//	circleSettings.Center);
+		m_RemeshingSettings[m_OuterCurve.get()] = CollectRemeshingSettingsFromIcoSphere_OLD(
+			GetSettings().LevelOfDetail,
+			circleSettings.Radius * GetScalingFactor());
 	}
 
 	for (const auto& innerCurve : m_InnerCurves)
 	{
 		const Circle2D& circleSettings = m_InitialSphereSettings[innerCurve.get()];
-		m_RemeshingSettings[innerCurve.get()] = CollectRemeshingSettingsFromCircleCurve(innerCurve, 
-			circleSettings.Radius * GetScalingFactor(),
-			circleSettings.Center);
+		//m_RemeshingSettings[innerCurve.get()] = CollectRemeshingSettingsFromCircleCurve(innerCurve, 
+		//	circleSettings.Radius * GetScalingFactor(),
+		//	circleSettings.Center);
+		m_RemeshingSettings[innerCurve.get()] = CollectRemeshingSettingsFromIcoSphere_OLD(
+			GetSettings().LevelOfDetail,
+			circleSettings.Radius * GetScalingFactor());
 	}
 }
 
@@ -1056,7 +1062,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(*m_OuterSurface, m_RemeshingSettings[m_OuterSurface.get()]))
+		if (IsRemeshingNecessary(*m_OuterSurface, m_RemeshingSettings[m_OuterSurface.get()], m_LaplacianAreaFunction))
 			m_RemeshTracker.AddManifold(m_OuterSurface.get());
 
 		// solve
@@ -1156,7 +1162,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(*innerSurface, m_RemeshingSettings[innerSurface.get()]))
+		if (IsRemeshingNecessary(*innerSurface, m_RemeshingSettings[innerSurface.get()], m_LaplacianAreaFunction))
 			m_RemeshTracker.AddManifold(innerSurface.get());
 
 		// solve
@@ -1448,7 +1454,7 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		icoBuilder.BuildPMPSurfaceMesh();
 		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
 		//(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
-		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
+		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ {} /*targetBoundsCenter*/, outerSphereRadius };
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
@@ -1489,7 +1495,7 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_2D = 1.0f / 2.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_2D = 20.0f;
+constexpr float INV_SHRINK_FACTOR_2D = 5.0f;
 
 void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {
@@ -1554,17 +1560,17 @@ void ManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifold
 	if (m_OuterSurface)
 	{
 		const Sphere3D& sphereSettings = m_InitialSphereSettings[m_OuterSurface.get()];
-		m_RemeshingSettings[m_OuterSurface.get()] = CollectRemeshingSettingsFromIcoSphere(m_OuterSurface,
-			sphereSettings.Radius * GetScalingFactor(), 
-			sphereSettings.Center);
+		m_RemeshingSettings[m_OuterSurface.get()] = CollectRemeshingSettingsFromIcoSphere_OLD(
+			GetSettings().LevelOfDetail,
+			sphereSettings.Radius * GetScalingFactor());
 	}
 
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
 		const Sphere3D& sphereSettings = m_InitialSphereSettings[innerSurface.get()];
-		m_RemeshingSettings[innerSurface.get()] = CollectRemeshingSettingsFromIcoSphere(innerSurface, 
-			sphereSettings.Radius * GetScalingFactor(),
-			sphereSettings.Center);
+		m_RemeshingSettings[innerSurface.get()] = CollectRemeshingSettingsFromIcoSphere_OLD(
+			GetSettings().LevelOfDetail,
+			sphereSettings.Radius * GetScalingFactor());
 	}
 }
 

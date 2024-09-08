@@ -268,6 +268,17 @@ double barycentric_area(const SurfaceMesh& mesh, Vertex v)
     return area;
 }
 
+double midpoint_covolume_length(const ManifoldCurve2D& curve, Vertex v)
+{
+    if (curve.is_isolated(v) || curve.is_boundary(v))
+        return 0.0;
+
+    const auto [eTo, eFrom] = curve.edges(v);
+    const double l0 = curve.edge_length(eTo);    // Length from v_prev to v
+    const double l1 = curve.edge_length(eFrom);  // Length from v to v_next
+    return 0.5 * (l0 + l1);
+}
+
 Point laplace_voronoi(const SurfaceMesh& mesh, Vertex v)
 {
     Point laplace(0.0, 0.0, 0.0);

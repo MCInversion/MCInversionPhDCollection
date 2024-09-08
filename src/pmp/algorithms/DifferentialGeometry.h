@@ -91,6 +91,9 @@ double voronoi_area(const SurfaceMesh& mesh, Vertex v);
 //! compute barycentric Voronoi area of vertex v
 double barycentric_area(const SurfaceMesh& mesh, Vertex v);
 
+//! compute the effective length of the midpoint control volume around vertex v.
+double midpoint_covolume_length(const ManifoldCurve2D& curve, Vertex v);
+
 //! compute Laplace vector for vertex v (normalized by Voronoi area)
 Point laplace_voronoi(const SurfaceMesh& mesh, Vertex v);
 

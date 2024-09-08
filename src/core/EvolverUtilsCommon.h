@@ -7,6 +7,7 @@
 #include <functional>
 #include <unordered_set>
 
+#include "geometry/MeshAnalysis.h"
 #include "pmp/ManifoldCurve2D.h"
 
 
@@ -165,10 +166,18 @@ struct MeshTopologySettings
 [[nodiscard]] bool IsRemeshingNecessary(const SparseMatrix& lswMatrix);
 
 /// \brief Evaluates whether remeshing is necessary for a manifold curve.
+///	Uses midpoint co-volumes around each vertex.
 [[nodiscard]] bool IsRemeshingNecessary(const pmp::ManifoldCurve2D& curve, const pmp::AdaptiveRemeshingSettings& remeshingSettings);
 
+/// \brief Evaluates whether remeshing is necessary for a surface mesh based on vertex density.
+///	\param[in] mesh                  input mesh.
+///	\param[in] remeshingSettings     settings to be used.
+///	\param[in] areaFunc              control volume measure evaluation.
+///	\return true if remeshing is necessary.
+[[nodiscard]] bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings, const AreaFunction& areaFunc);
+
 /// \brief Evaluates whether remeshing is necessary for a surface mesh.
-[[nodiscard]] bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const pmp::AdaptiveRemeshingSettings& remeshingSettings);
+[[nodiscard]] bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const Geometry::FaceQualityFunction& qualityFunc, const Geometry::FaceQualityRange& qualityRange);
 
 /// \brief A (one-time) evaluation whether the distance to target reaches a lower bound.
 ///	\param distancePerVertexValues    a vector of distance values on the evolving surface.
@@ -229,6 +238,9 @@ private:
 	// TODO: use something like: bool m_IsReset{ true };
 	std::vector<ManifoldType*> m_Manifolds;
 };
+
+
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, float minEdgeMultiplier = 0.14f);
 
 /**
  * \brief A utility for computing the edge sizing and error limits from an icosphere mesh.
