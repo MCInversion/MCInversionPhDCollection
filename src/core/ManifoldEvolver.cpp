@@ -637,7 +637,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	//ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
 	//const auto circles = inscribedCircleCalculator.Calculate(calcData);
 	// Hardcoded inner curves:
-	const auto circles = std::vector{ Circle2D{pmp::Point2{0.0f, 0.0f}, 1.85f} };
+	const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85f} };
 	m_InnerCurves.reserve(circles.size());
 
 	for (const auto& circle : circles)
@@ -1438,9 +1438,9 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 	}
 
 	//const pmp::mat4 transfMatrixGeomMove{
-	//	1.0f, 0.0f, 0.0f, -targetBoundsCenter[0],
-	//	0.0f, 1.0f, 0.0f, -targetBoundsCenter[1],
-	//	0.0f, 0.0f, 1.0f, -targetBoundsCenter[2],
+	//	1.0f, 0.0f, 0.0f, targetBoundsCenter[0],
+	//	0.0f, 1.0f, 0.0f, targetBoundsCenter[1],
+	//	0.0f, 0.0f, 1.0f, targetBoundsCenter[2],
 	//	0.0f, 0.0f, 0.0f, 1.0f
 	//};
 	const float outerSphereRadius = 0.5f * SPHERE_RADIUS_FACTOR *
@@ -1453,7 +1453,7 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		icoBuilder.BuildPMPSurfaceMesh();
 		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
 		//(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
-		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ {} /*targetBoundsCenter*/, outerSphereRadius };
+		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
@@ -1515,7 +1515,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
 	const pmp::Point origin = m_OuterSurface ? m_InitialSphereSettings[m_OuterSurface.get()].Center :
-		(!m_InnerSurfaces.empty() ? m_InitialSphereSettings[m_InnerSurfaces[0].get()].Center : pmp::Point{});
+		(!m_InnerSurfaces.empty() ? m_InitialSphereSettings[m_InnerSurfaces[0].get()].Center : pmp::Point{0, 0, 0});
 	const pmp::mat4 transfMatrixGeomMove{
 		1.0f, 0.0f, 0.0f, -origin[0],
 		0.0f, 1.0f, 0.0f, -origin[1],
