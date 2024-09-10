@@ -10,6 +10,7 @@
 #include "geometry/MeshAnalysis.h"
 #include "pmp/ManifoldCurve2D.h"
 
+#include <ranges>
 
 namespace pmp
 {
@@ -287,6 +288,18 @@ public:
 	const pmp::AdaptiveRemeshingSettings& operator[](const ManifoldType* manifold) const
 	{
 		return m_ManifoldSettings.at(manifold);
+	}
+
+	/// \brief Adjust all remeshing settings using a provided resize factor
+	void AdjustAllRemeshingLengths(float resizeFactor)
+	{
+		for (auto& remeshingSettings : m_ManifoldSettings | std::views::values)
+		{
+			AdjustRemeshingLengths(resizeFactor,
+				remeshingSettings.MinEdgeLength,
+				remeshingSettings.MaxEdgeLength,
+				remeshingSettings.ApproxError);
+		}
 	}
 
 private:

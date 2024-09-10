@@ -1,6 +1,7 @@
 #include "ManifoldEvolver.h"
 
 #include "pmp/algorithms/CurveFactory.h"
+#include "pmp/algorithms/Features.h"
 #include "pmp/algorithms/Normals.h"
 
 #include "geometry/GridUtil.h"
@@ -78,6 +79,16 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 		remesher.adaptive_remeshing(m_RemeshingSettings[curveToRemesh]);
 	}
 	m_RemeshTracker.Reset();
+}
+
+void ManifoldCurveEvolutionStrategy::ResizeRemeshingSettings(float resizeFactor)
+{
+	m_RemeshingSettings.AdjustAllRemeshingLengths(resizeFactor);
+}
+
+void ManifoldCurveEvolutionStrategy::DetectFeatures()
+{
+
 }
 
 void ManifoldCurveEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
@@ -189,6 +200,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			for (const auto& innerCurveDf : m_InnerCurvesDistanceFields)
 			{
@@ -286,6 +298,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		{
 			const auto vPosToUpdate = innerCurve->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterCurveDistanceField)
 			{
@@ -379,6 +392,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			for (const auto& innerSurfaceDf : m_InnerCurvesDistanceFields)
 			{
@@ -444,6 +458,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 		{
 			const auto vPosToUpdate = innerCurve->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterCurveDistanceField)
 			{
@@ -669,6 +684,7 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	const auto expectedMeanCoVolLength = (2.0f * static_cast<float>(M_PI) * radius / static_cast<float>(expectedVertexCount));
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
+	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f,
@@ -907,6 +923,22 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 	m_RemeshTracker.Reset();
 }
 
+void ManifoldSurfaceEvolutionStrategy::ResizeRemeshingSettings(float resizeFactor)
+{
+	m_RemeshingSettings.AdjustAllRemeshingLengths(resizeFactor);
+}
+
+void ManifoldSurfaceEvolutionStrategy::DetectFeatures()
+{
+	for (auto* surfaceToRemesh : m_RemeshTracker.GetManifoldsToRemesh())
+	{
+		pmp::Features featuresDetector(*surfaceToRemesh);
+		const auto curvatureAngle = GetSettings().FeatureSettings.CriticalMeanCurvatureAngle;
+		const auto curvatureFactor = GetSettings().FeatureSettings.PrincipalCurvatureFactor;
+		const auto nFeature = featuresDetector.detect_vertices_with_high_curvature(curvatureAngle, curvatureFactor, true);
+	}
+}
+
 void ManifoldSurfaceEvolutionStrategy::ExportCurrentState(unsigned int step, const std::string& baseOutputFilename)
 {
 	const std::string connectingName = "_Evol_" + std::to_string(step);
@@ -1012,6 +1044,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		{
 			const auto vPosToUpdate = m_OuterSurface->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
 			{
@@ -1114,6 +1147,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		{
 			const auto vPosToUpdate = innerSurface->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterSurfaceDistanceField)
 			{
@@ -1208,6 +1242,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		{
 			const auto vPosToUpdate = m_OuterSurface->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			for (const auto& innerSurfaceDf : m_InnerSurfacesDistanceFields)
 			{
@@ -1268,6 +1303,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		{
 			const auto vPosToUpdate = innerSurface->position(v);
 			vDistanceToTarget[v] = m_DistanceField ? static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_DistanceField)) : FLT_MAX;
+			vDistanceToTarget[v] -= GetSettings().FieldSettings.FieldIsoLevel;
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterSurfaceDistanceField)
 			{
@@ -1507,6 +1543,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	const float expectedMeanCoVolArea = (4.0f * static_cast<float>(M_PI) * radius * radius / static_cast<float>(expectedVertexCount));
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
+	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,

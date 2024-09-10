@@ -3840,6 +3840,11 @@ int main()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
 			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
 			GlobalManifoldEvolutionSettings globalSettings;
@@ -3850,6 +3855,9 @@ int main()
 			globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeTimeIds = {};
 
 			std::cout << "Setting up ManifoldSurfaceEvolutionStrategy.\n";
 

@@ -546,7 +546,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteDeformed
 
 namespace 
 {
-    [[nodisard]] std::vector<pmp::Point2> GetImportedPlanarPointCloud(const std::string& fileName)
+    [[nodiscard]] std::vector<pmp::Point2> GetImportedPlanarPointCloud(const std::string& fileName)
     {
         const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(fileName, true);
         if (!ptCloudOpt.has_value())

@@ -4,7 +4,6 @@
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/MatVec.h"
 
-#include "geometry/GeometryAdapters.h"
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
 
@@ -61,6 +60,13 @@ struct AmbientFieldSettings
 {
     float FieldExpansionFactor{ 1.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
     unsigned int NVoxelsPerMinDimension{ 20 }; //>! the number of voxels per smallest dimension of the resulting scalar grid.
+    double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target manifold).
+};
+
+struct FeatureDetectionSettings
+{
+    float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+    float CriticalMeanCurvatureAngle{ 1.0f * static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 	
 };
 
 /**
@@ -95,6 +101,8 @@ struct ManifoldEvolutionSettings
     double TangentialVelocityWeight{ 0.05 }; //>! the weight of tangential velocity update vector for each time step.
 
     double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
+
+    FeatureDetectionSettings FeatureSettings{}; //>! settings for feature detection.
 };
 
 /**
@@ -115,6 +123,10 @@ struct GlobalManifoldEvolutionSettings
     std::string OutputPath{}; //>! path where output manifolds are to be exported.
 
     bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
+    std::unordered_set<unsigned int> RemeshingResizeTimeIds{}; //>! a list of time indices during which remeshing lengths are resized by a given factor.
+    float RemeshingResizeFactor{ 0.98f }; //>! a factor by which remeshing edge lengths are downsized when a particular time step (logged in RemeshingResizeTimeIds) is reached. DISCLAIMER: This value is not used if RemeshingResizeTimeIds is empty!
+
+    bool DetectFeatures{ true }; //>! if true, vertices with critical curvature will be marked as feature and frozen with respect to remeshing to avoid evolution past the target.
 };
 
 /// \brief Stabilization weight param from [0, 1]
@@ -156,6 +168,16 @@ public:
      * \brief Perform remeshing on the evolving manifold(s).
      */
     virtual void Remesh() = 0;
+
+    /**
+     * \brief Resizes remeshing settings the evolving manifold(s) by a given factor.
+     */
+    virtual void ResizeRemeshingSettings(float resizeFactor) = 0;
+
+    /**
+     * \brief Marks essential vertices that should not be displaced by remeshing as feature.
+     */
+    virtual void DetectFeatures() = 0;
 
     /**
      * \brief Exports the current state of evolving manifold(s).
@@ -287,6 +309,16 @@ public:
      * \brief Perform remeshing on the evolving manifold(s) logged in the m_RemeshTracker.
      */
     void Remesh() override;
+
+    /**
+	 * \brief Resizes remeshing settings the evolving manifold(s) by a given factor.
+	 */
+    void ResizeRemeshingSettings(float resizeFactor) override;
+
+    /**
+	 * \brief Marks essential vertices that should not be displaced by remeshing as feature.
+	 */
+    void DetectFeatures() override;
 
     /**
      * \brief Exports the current state of evolving manifold(s).
@@ -559,6 +591,16 @@ public:
     void Remesh() override;
 
     /**
+	 * \brief Resizes remeshing settings the evolving manifold(s) by a given factor.
+	 */
+    void ResizeRemeshingSettings(float resizeFactor) override;
+
+    /**
+	 * \brief Marks essential vertices that should not be displaced by remeshing as feature.
+	 */
+    void DetectFeatures() override;
+
+    /**
      * \brief Exports the current state of evolving manifold(s).
      */
     void ExportCurrentState(unsigned int step, const std::string& baseOutputFilename) override;
@@ -824,8 +866,17 @@ public:
         {
             m_Strategy->PerformEvolutionStep(step);
 
+            if (m_Settings.DetectFeatures)
+            {
+                m_Strategy->DetectFeatures();
+            }
+
             if (m_Settings.DoRemeshing)
             {
+                if (m_Settings.RemeshingResizeTimeIds.contains(step))
+                {
+	                m_Strategy->ResizeRemeshingSettings(m_Settings.RemeshingResizeFactor);
+                }
                 m_Strategy->Remesh();
             }
 
