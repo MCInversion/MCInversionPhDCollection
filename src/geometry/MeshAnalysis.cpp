@@ -157,9 +157,7 @@ namespace Geometry
 		return jNorm1 * jInvNorm1;
 	}
 
-	/// \brief Computes the condition number of a equilateral Jacobian of this triangle.
-	///        Note: The Jacobian corresponds to the planar transformation from triangle (-0.5, 0), (0.5, 0), (0, 1) to the evaluated triangle.
-	[[nodiscard]] float GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	float GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
 	{
 		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
 		if (nVerts != 3)

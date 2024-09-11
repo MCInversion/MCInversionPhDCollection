@@ -119,9 +119,6 @@ bool IsRemeshingNecessary(const CoVolumeStats& stats, const double& tStep)
 	return stats.Max > 1.2 * tStep;
 }
 
-constexpr float JACOBIAN_COND_MIN = 1.0f;
-constexpr float JACOBIAN_COND_MAX = 1.5f;
-
 bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianConditionNumbers)
 {
 	float minVal = FLT_MAX;
@@ -131,8 +128,8 @@ bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianCondition
 		if (val < minVal) minVal = val;
 		if (val > maxVal) maxVal = val;
 	}
-	return !((minVal > JACOBIAN_COND_MIN && minVal < JACOBIAN_COND_MAX) &&
-		     (maxVal > JACOBIAN_COND_MIN && maxVal < JACOBIAN_COND_MAX));
+	return !((minVal > Geometry::JACOBIAN_COND_MIN && minVal < Geometry::JACOBIAN_COND_MAX) &&
+		     (maxVal > Geometry::JACOBIAN_COND_MIN && maxVal < Geometry::JACOBIAN_COND_MAX));
 }
 
 bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh)
@@ -151,8 +148,8 @@ bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh)
 		if (val < minVal) minVal = val;
 		if (val > maxVal) maxVal = val;
 	}
-	return !((minVal > JACOBIAN_COND_MIN && minVal < JACOBIAN_COND_MAX) &&
-		(maxVal > JACOBIAN_COND_MIN && maxVal < JACOBIAN_COND_MAX));
+	return !((minVal > Geometry::JACOBIAN_COND_MIN && minVal < Geometry::JACOBIAN_COND_MAX) &&
+		(maxVal > Geometry::JACOBIAN_COND_MIN && maxVal < Geometry::JACOBIAN_COND_MAX));
 }
 
 // ------------------------------------------------------------------------------------
@@ -313,7 +310,7 @@ void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, floa
 	approxError = 0.1f * (minEdgeLength + maxEdgeLength);
 }
 
-pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, float minEdgeMultiplier)
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, const ManifoldAdaptiveRemeshingParams& remeshingParams)
 {
 	if (radius < FLT_EPSILON)
 	{
@@ -323,14 +320,14 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigne
 	pmp::AdaptiveRemeshingSettings settings;
 
 	constexpr float baseIcoHalfAngle = 2.0f * static_cast<float>(M_PI) / 10.0f;
-	settings.MinEdgeLength = minEdgeMultiplier * 2.0f * radius * 
+	settings.MinEdgeLength = remeshingParams.MinEdgeMultiplier * 2.0f * radius * 
 		sin(baseIcoHalfAngle * pow(2.0f, -1.0f * static_cast<float>(subdiv))); // from icosahedron edge length
 	settings.MaxEdgeLength = 4.0f * settings.MinEdgeLength;
 	settings.ApproxError = 0.25f * (settings.MinEdgeLength + settings.MaxEdgeLength);
 
-	settings.NRemeshingIterations = 10;
-	settings.NTangentialSmoothingIters = 6;
-	settings.UseProjection = true;
+	settings.NRemeshingIterations = remeshingParams.NRemeshingIters;
+	settings.NTangentialSmoothingIters = remeshingParams.NTanSmoothingIters;
+	settings.UseProjection = remeshingParams.UseBackProjection;
 
 	return settings;
 }

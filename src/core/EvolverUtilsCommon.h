@@ -240,8 +240,26 @@ private:
 	std::vector<ManifoldType*> m_Manifolds;
 };
 
+/**
+ * \brief Input parameters for adaptive remeshing within manifold evolution strategy.
+ * \struct ManifoldAdaptiveRemeshingParams
+ */
+struct ManifoldAdaptiveRemeshingParams
+{
+	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
+	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
+	bool UseBackProjection{ true }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
+};
 
-[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, float minEdgeMultiplier = 0.14f);
+/**
+ * \brief A utility for estimating the edge sizing, error bound and other parameters for adaptive remeshing.
+ * \param subdiv                 subdivision level of the initial icosphere (affects initial sizing).
+ * \param radius                 radius of the initial icosphere (affects initial sizing).
+ * \param remeshingParams        input parameters for manifold adaptive remeshing.
+ * \return the result AdaptiveRemeshingSettings.
+ */
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, const ManifoldAdaptiveRemeshingParams& remeshingParams);
 
 /**
  * \brief A utility for computing the edge sizing and error limits from an icosphere mesh.

@@ -56,17 +56,35 @@ using VectorGridInterpolationFunction3D = std::function<pmp::dvec3(const pmp::Po
 // -----------------------------------------------------------------------------------------------
 //
 
+/**
+ * \brief Input settings for constructing and using distance fields for advection forces in manifold flow.
+ * \struct AmbientFieldSettings
+ */
 struct AmbientFieldSettings
 {
     float FieldExpansionFactor{ 1.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
     unsigned int NVoxelsPerMinDimension{ 20 }; //>! the number of voxels per smallest dimension of the resulting scalar grid.
-    double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target manifold).
+    float FieldIsoLevel{ 0.0f }; //>! target level of the scalar field (e.g. zero distance to target manifold).
 };
 
+/**
+ * \brief Input parameters for curvature-based feature detection within manifold evolution strategy.
+ * \struct FeatureDetectionSettings
+ */
 struct FeatureDetectionSettings
 {
     float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
     float CriticalMeanCurvatureAngle{ 1.0f * static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 	
+};
+
+/**
+ * \brief Settings for evaluating quality of triangle faces for evolving manifold mesh surfaces (type pmp::SurfaceMesh).
+ * \struct FaceQualitySettings
+ */
+struct FaceQualitySettings
+{
+    Geometry::FaceQualityFunction FaceQualityFunc{ Geometry::GetConditionNumberOfEquilateralTriangleJacobian }; //>! function used to evaluate face quality for determining whether remeshing is necessary.
+    Geometry::FaceQualityRange Range{ Geometry::JACOBIAN_COND_MIN, Geometry::JACOBIAN_COND_MAX }; //>! the range of PREFERRED values for the FaceQualityFunc.
 };
 
 /**
@@ -102,6 +120,8 @@ struct ManifoldEvolutionSettings
 
     double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
 
+    FaceQualitySettings QualitySettings{}; //>! settings for mesh quality evaluation
+    ManifoldAdaptiveRemeshingParams RemeshingSettings{}; //>! settings for pmp::Remeshing.
     FeatureDetectionSettings FeatureSettings{}; //>! settings for feature detection.
 };
 

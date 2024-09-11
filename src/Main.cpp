@@ -3698,8 +3698,14 @@ int main()
 
 		constexpr unsigned int NTimeSteps = 80;
 
+		constexpr bool executeOldEvolver = false;
+
 		for (const auto& meshName : meshForPtCloudNames)
 		{
+			// =======================================================================
+			//   - - - - - - - - - - - - -   Data   Prep   - - - - - - - - - - - -
+			// -----------------------------------------------------------------------
+
 			std::cout << "==================================================================\n";
 			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
 			std::cout << "------------------------------------------------------------------\n";
@@ -3717,7 +3723,6 @@ int main()
 
 			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
 
-			// Export sampled vertices to PLY
 			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
 			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
 			{
@@ -3742,81 +3747,87 @@ int main()
 			constexpr float volExpansionFactor = 1.0f;
 			const SDF::PointCloudDistanceFieldSettings dfSettings{
 				cellSize,
-					volExpansionFactor,
-					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
-					SDF::BlurPostprocessingType::None
+				volExpansionFactor,
+				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+				SDF::BlurPostprocessingType::None
 			};
-
-			//std::cout << "==================================================================\n";
-			//std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << nVoxelsPerMinDimension << "voxPerMinDim.vti\n";
-			//std::cout << "------------------------------------------------------------------\n";
-
-			//const auto startSDF = std::chrono::high_resolution_clock::now();
-			//auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
-			//const auto endSDF = std::chrono::high_resolution_clock::now();
-			//SDF::ReportOutput(sdf, std::cout);
-			//const std::chrono::duration<double> timeDiff = endSDF - startSDF;
-			//std::cout << "DF Time: " << timeDiff.count() << " s\n";
-			//std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-
-			std::cout << "Setting up SurfaceEvolutionSettings.\n";
 
 			const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
 			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 
 			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
-			//MeshTopologySettings topoParams;
-			//topoParams.FixSelfIntersections = true;
-			//topoParams.MinEdgeMultiplier = 0.14f;
-			//topoParams.UseBackProjection = false;
-			//topoParams.PrincipalCurvatureFactor = 3.2f;
-			//topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
-			//topoParams.EdgeLengthDecayFactor = 0.7f;
-			//topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
-			//topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
+			// ==========================================================================
+			// - - - - - - - - - - -    old SurfaceEvolver   - - - - - - - - - - - -
+			// ==========================================================================
 
-			//AdvectionDiffusionParameters adParams{
-			//	1.0, 1.0,
-			//	1.0, 1.0
-			//};
+			if (executeOldEvolver)
+			{
+				std::cout << "==================================================================\n";
+				std::cout << "Pt Cloud to DF: " << ptCloudName << ".ply -> " << ptCloudName << "_DF_" << nVoxelsPerMinDimension << "voxPerMinDim.vti\n";
+				std::cout << "------------------------------------------------------------------\n";
 
-			//SurfaceEvolutionSettings seSettings{
-			//	ptCloudName,
-			//	NTimeSteps,
-			//	tau,
-			//	fieldIsoLevel,
-			//	3, // IcoSphereSubdivisionLevel
-			//	adParams,
-			//	topoParams,
-			//	minSize, maxSize,
-			//	ptCloudBBox.center(),
-			//	true, false,
-			//	dataOutPath,
-			//	MeshLaplacian::Voronoi,
-			//	{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			//	0.05f,
-			//	true,
-			//	false
-			//};
-			//ReportInput(seSettings, std::cout);
+				const auto startSDF = std::chrono::high_resolution_clock::now();
+				auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
+				const auto endSDF = std::chrono::high_resolution_clock::now();
+				SDF::ReportOutput(sdf, std::cout);
+				const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+				std::cout << "DF Time: " << timeDiff.count() << " s\n";
+				std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
-			//std::cout << "Setting up SurfaceEvolver.\n";
+				std::cout << "Setting up SurfaceEvolutionSettings.\n";
 
-			//SurfaceEvolver oldEvolver(sdf, volExpansionFactor, seSettings);
+				MeshTopologySettings topoParams;
+				topoParams.MinEdgeMultiplier = 0.14f;
+				topoParams.UseBackProjection = false;
+				topoParams.PrincipalCurvatureFactor = 3.2f;
+				topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+				topoParams.EdgeLengthDecayFactor = 0.7f;
+				topoParams.ExcludeEdgesWithoutBothFeaturePts = true; // this one is internally set to true for ManifoldEvolver by default
+				topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
-			//std::cout << "ManifoldEvolver::Evolve ... ";
+				AdvectionDiffusionParameters adParams{
+					1.0, 1.0,
+					1.0, 1.0
+				};
 
-			//try
-			//{
-			//	oldEvolver.Evolve();
-			//}
-			//catch (...)
-			//{
-			//	std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			//}
+				SurfaceEvolutionSettings seSettings{
+					ptCloudName,
+					NTimeSteps,
+					tau,
+					fieldIsoLevel,
+					3, // IcoSphereSubdivisionLevel
+					adParams,
+					topoParams,
+					minSize, maxSize,
+					ptCloudBBox.center(),
+					true, false,
+					dataOutPath,
+					MeshLaplacian::Voronoi,
+					{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+					0.05f,
+					true,
+					false
+				};
+				ReportInput(seSettings, std::cout);
 
-			//std::cout << "done.\n";
+				std::cout << "Setting up SurfaceEvolver.\n";
+
+				SurfaceEvolver oldEvolver(sdf, volExpansionFactor, seSettings);
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					oldEvolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+
+				std::cout << "done.\n";				
+			}
 
 			// ==========================================================================
 			// - - - - - - - - - -     New Manifold Evolver   - - - - - - - - - - - -
@@ -3840,9 +3851,12 @@ int main()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
 
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
 
 			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
@@ -3850,6 +3864,7 @@ int main()
 			GlobalManifoldEvolutionSettings globalSettings;
 			globalSettings.NSteps = NTimeSteps;
 			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
 			globalSettings.ExportPerTimeStep = true;
 			globalSettings.ExportTargetDistanceFieldAsImage = true;
 			globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);

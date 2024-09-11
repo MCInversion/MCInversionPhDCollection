@@ -439,7 +439,7 @@ void SurfaceEvolver::Evolve()
 			std::cout << tStep << ".\n";
 			std::cout << "AdvectionMultiplier adjustment: " << m_EvolSettings.ADParams.AdvectionMultiplier << " -> ";
 #endif
-			m_EvolSettings.ADParams.AdvectionMultiplier /= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
+			//m_EvolSettings.ADParams.AdvectionMultiplier /= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
 			//m_EvolSettings.ADParams.AdvectionSineMultiplier /= m_EvolSettings.TopoParams.EdgeLengthDecayFactor;
 #if REPORT_EVOL_STEPS
 			std::cout << m_EvolSettings.ADParams.AdvectionMultiplier << "\n";

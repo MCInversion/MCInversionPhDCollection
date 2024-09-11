@@ -38,6 +38,20 @@ namespace Geometry
 	///        & stores the values as vertex scalar data.
 	[[nodiscard]] bool ComputeStiffnessMatrixConditioningVertexValues(pmp::SurfaceMesh& mesh);
 
+	// ============================================================================================================
+	//                                      Exposed quality functions
+	// ------------------------------------------------------------------------------------------------------------
+
+	/// \brief Computes the condition number of a equilateral Jacobian of this triangle.
+	///        Note: The Jacobian corresponds to the planar transformation from triangle (-0.5, 0), (0.5, 0), (0, 1) to the evaluated triangle.
+	[[nodiscard]] float GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face);
+
+	/// \brief Preferred min and max values for the equilateral Jacobian condition number.
+	constexpr float JACOBIAN_COND_MIN = 1.0f;
+	constexpr float JACOBIAN_COND_MAX = 1.5f;
+
+	// ============================================================================================================
+
 	/// \brief verifies whether a metric with a given name is registered.
 	[[nodiscard]] bool IsMetricRegistered(const std::string& name);
 
@@ -112,7 +126,7 @@ namespace Geometry
 	[[nodiscard]] pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v);
 
 	/// \brief face quality metric computation function.
-	using FaceQualityFunction = std::function<float(const pmp::SurfaceMesh&, pmp::Face)>;
+	using FaceQualityFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
 
 	/// \brief A simple wrapper for the range of values for FaceQualityFunction.
 	struct FaceQualityRange
