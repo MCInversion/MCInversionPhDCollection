@@ -3683,6 +3683,20 @@ int main()
 			{ "spot", 0.5 }
 		};
 
+		const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+			{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
+			{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
+			{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
+			{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		};
+
+		const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+			{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
+			{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
+			{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
+			{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		};
+
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
 		constexpr double defaultOffsetFactor = 1.5;
@@ -3699,6 +3713,7 @@ int main()
 		constexpr unsigned int NTimeSteps = 80;
 
 		constexpr bool executeOldEvolver = false;
+		constexpr bool executeNewEvolver = false;
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -3740,6 +3755,7 @@ int main()
 
 			const auto& ptCloud = ptCloudOpt.value();
 			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto center = ptCloudBBox.center();
 			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
 			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
 			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
@@ -3830,73 +3846,157 @@ int main()
 			}
 
 			// ==========================================================================
-			// - - - - - - - - - -     New Manifold Evolver   - - - - - - - - - - - -
+			// - - - - - - - - -  New Manifold Evolver (Surface)   - - - - - - - - - - - 
 			// ==========================================================================
 
-			std::cout << "Setting up ManifoldEvolutionSettings.\n";
-
-			ManifoldEvolutionSettings strategySettings;
-			strategySettings.UseInnerManifolds = false;
-			strategySettings.OuterManifoldEpsilon = [](double distance)
+			if (executeNewEvolver)
 			{
-				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
-			};
-			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
-			{
-				//if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
-				//	return 0.0;
-				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-			};
-			strategySettings.TimeStep = tau;
-			strategySettings.LevelOfDetail = 3;
-			strategySettings.TangentialVelocityWeight = 0.05;
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
-			strategySettings.RemeshingSettings.UseBackProjection = false;
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = false;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+				strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
-			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
 
-			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
 
-			GlobalManifoldEvolutionSettings globalSettings;
-			globalSettings.NSteps = NTimeSteps;
-			globalSettings.DoRemeshing = true;
-			globalSettings.DetectFeatures = false;
-			globalSettings.ExportPerTimeStep = true;
-			globalSettings.ExportTargetDistanceFieldAsImage = true;
-			globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
-			globalSettings.OutputPath = dataOutPath;
-			globalSettings.ExportResult = false;
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
-			globalSettings.RemeshingResizeTimeIds = {};
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
 
-			std::cout << "Setting up ManifoldSurfaceEvolutionStrategy.\n";
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = {};
 
-			// Set up the evolution strategy
-			auto surfaceStrategy = std::make_shared<ManifoldSurfaceEvolutionStrategy>(
-				strategySettings, MeshLaplacian::Voronoi,
-				std::make_shared<std::vector<pmp::Point>>(ptCloud));
+				std::cout << "Setting up ManifoldSurfaceEvolutionStrategy.\n";
 
-			std::cout << "Setting up ManifoldEvolver.\n";
+				// Set up the evolution strategy
+				auto surfaceStrategy = std::make_shared<ManifoldSurfaceEvolutionStrategy>(
+					strategySettings, MeshLaplacian::Voronoi,
+					std::make_shared<std::vector<pmp::Point>>(ptCloud));
 
-			ManifoldEvolver newEvolver(globalSettings, std::move(surfaceStrategy));
+				std::cout << "Setting up ManifoldEvolver.\n";
 
-			std::cout << "ManifoldEvolver::Evolve ... ";
+				ManifoldEvolver newEvolver(globalSettings, std::move(surfaceStrategy));
 
-			try
-			{
-				newEvolver.Evolve();				
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					newEvolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+
+				std::cout << "done.\n";
 			}
-			catch (...)
+
+			// ==========================================================================
+			// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
+			// ==========================================================================
+
+			const float distTolerance = 0.01f * minSize;
+			const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
+			const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+			const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
+			if (pts2D.empty())
 			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
+				continue;
 			}
 
-			std::cout << "done.\n";
+			if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+			{
+				std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+				continue;
+			}
+
+			// -----------------------
+
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = false;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts2D" + std::to_string(samplingLevel);
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = {};
+
+				auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
+					strategySettings, std::make_shared<std::vector<pmp::Point2>>(pts2D));
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+
+				std::cout << "done.\n";
+			}
 		}
 		
 	} // endif performOldVsNewLSWTests
