@@ -652,8 +652,10 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	//};
 	//ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
 	//const auto circles = inscribedCircleCalculator.Calculate(calcData);
+
 	// Hardcoded inner curves:
 	const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85f} };
+
 	m_InnerCurves.reserve(circles.size());
 
 	for (const auto& circle : circles)
@@ -672,7 +674,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 20.0f;
+constexpr float INV_SHRINK_FACTOR_1D = 5.0f;
 
 void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {
@@ -692,7 +694,15 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 		0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 1.0f
 	};
-	m_TransformToOriginal = inverse(transfMatrixGeomScale);
+	const pmp::Point2 origin = m_OuterCurve ? m_InitialSphereSettings[m_OuterCurve.get()].Center :
+		(!m_InnerCurves.empty() ? m_InitialSphereSettings[m_InnerCurves[0].get()].Center : pmp::Point2{ 0, 0 });
+	const pmp::mat3 transfMatrixGeomMove{
+		1.0f, 0.0f, -origin[0],
+		0.0f, 1.0f, -origin[1],
+		0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	m_TransformToOriginal = inverse(transfMatrixFull);
 
 	// transform geometries
 	if (m_OuterCurve)
@@ -704,23 +714,28 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 		(*innerCurve) *= transfMatrixGeomScale;
 	}
 
+	// test box for geometry validation
+	const float evolBoxFactor = 1.2f * scalingFactor;
+	m_EvolBox = pmp::BoundingBox2(
+		pmp::Point2{ -radius, -radius } * evolBoxFactor,
+		pmp::Point2{ radius, radius } * evolBoxFactor);
+
 	if (m_OuterCurveDistanceField)
 	{
-		(*m_OuterCurveDistanceField) *= transfMatrixGeomScale;
+		(*m_OuterCurveDistanceField) *= transfMatrixFull;
 		(*m_OuterCurveDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerCurveDF : m_InnerCurvesDistanceFields)
 	{
-		(*innerCurveDF) *= transfMatrixGeomScale;
+		(*innerCurveDF) *= transfMatrixFull;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 
 	if (!m_DistanceField || !m_DFNegNormalizedGradient)
 		return; // nothing to scale
 
-	(*m_DistanceField) *= transfMatrixGeomScale;
-	m_EvolBox = m_DistanceField->Box(); // test box for geometry validation.
-	(*m_DFNegNormalizedGradient) *= transfMatrixGeomScale;
+	(*m_DistanceField) *= transfMatrixFull;
+	(*m_DFNegNormalizedGradient) *= transfMatrixFull;
 	(*m_DistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 }
 
