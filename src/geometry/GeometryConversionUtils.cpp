@@ -1798,16 +1798,16 @@ namespace Geometry
 		std::vector<pmp::Point2> slicedPoints;
 
 		// Find two orthogonal vectors in the plane
-		pmp::vec3 axis1;
+		pmp::vec3 axis2;
 		if (std::abs(planeNormal[0]) > std::abs(planeNormal[1]))
 		{
-			axis1 = normalize(pmp::vec3(-planeNormal[2], 0, planeNormal[0]));
+			axis2 = normalize(pmp::vec3(-planeNormal[2], 0, planeNormal[0]));
 		}
 		else
 		{
-			axis1 = normalize(pmp::vec3(0, planeNormal[2], -planeNormal[1]));
+			axis2 = normalize(pmp::vec3(0, planeNormal[2], -planeNormal[1]));
 		}
-		const pmp::vec3 axis2 = normalize(cross(planeNormal, axis1));
+		const pmp::vec3 axis1 = normalize(cross(planeNormal, -axis2));
 
 		for (const auto& point : points)
 		{
@@ -1824,7 +1824,7 @@ namespace Geometry
 				pmp::Point projectedPoint = point - signedDistanceToPlane * planeNormal;
 
 				// Convert the projected point to 2D by using the plane axes
-				pmp::Point2 point2D(dot(projectedPoint - planePt, axis1), dot(projectedPoint - planePt, axis2));
+				pmp::Point2 point2D(dot(projectedPoint, axis1), dot(projectedPoint, axis2));
 
 				// Add the 2D point to the result
 				slicedPoints.push_back(point2D);

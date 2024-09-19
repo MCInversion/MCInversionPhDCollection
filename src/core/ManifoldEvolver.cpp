@@ -639,7 +639,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 
 	if (GetSettings().UseOuterManifolds)
 	{
-		m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(targetBoundsCenter, outerCircleRadius, nSegments));		
+		m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(pmp::Point2{}, outerCircleRadius, nSegments));
 		m_InitialSphereSettings[m_OuterCurve.get()] = Circle2D{ targetBoundsCenter, outerCircleRadius };
 	}
 

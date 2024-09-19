@@ -46,7 +46,7 @@ gdim2d_path = os.path.join(directory, f"{procedure_name}_TargetDF.gdim2d")
 if os.path.exists(background_image_path) and os.path.exists(gdim2d_path):
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(gdim2d_path)
     background_img = imageio.imread(background_image_path)
-    extent = [bbox_min[0], bbox_max[0], bbox_min[1], bbox_max[1]]
+    extent = [bbox_min[0], bbox_max[0], bbox_max[1], bbox_min[1]]
 else:
     background_img = None
 
@@ -130,6 +130,7 @@ if background_img is not None:
     ax.imshow(background_img, extent=extent)
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])
+    ax.invert_yaxis()  # Reverse the direction of the y-axis
 else:
     print("missing background_img. Resizing automatically according to curves.")
     # Automatically adjust the plot limits based on the curves if no background image
@@ -137,6 +138,7 @@ else:
                                 [curve for curves in inner_curves.values() for curve in curves])
     ax.set_xlim(np.min(all_points[:, 0]), np.max(all_points[:, 0]))
     ax.set_ylim(np.min(all_points[:, 1]), np.max(all_points[:, 1]))
+    ax.invert_yaxis()  # Reverse the direction of the y-axis
 
 ax.set_aspect('equal')
 
