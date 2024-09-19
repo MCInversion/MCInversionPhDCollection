@@ -386,7 +386,7 @@ ImplicitLaplaceInfo laplace_implicit_1D(const ManifoldCurve2D& curve, Vertex v)
     const auto vNext = curve.to_vertex(eFrom);     // Next vertex (v+1)
     const auto vPrev = curve.from_vertex(eTo);     // Previous vertex (v-1)
 
-    const Scalar h = l0 + l1;  // Effective length of the control volume
+    const Scalar h = l0 + l1;  // Effective double length of the control volume
 
     result.vertexWeights[vPrev] = 2.0f / (h * l0);
     result.vertexWeights[vNext] = 2.0f / (h * l1);
@@ -408,7 +408,7 @@ Point2 laplace_1D(const ManifoldCurve2D& curve, Vertex v)
     const auto vNext = curve.to_vertex(eFrom);     // Next vertex (v+1)
     const auto vPrev = curve.from_vertex(eTo);     // Previous vertex (v-1)
 
-    const Scalar h = l0 + l1;  // Effective length of the control volume
+    const Scalar h = l0 + l1;  // Effective double length of the control volume
 
     laplace += (2.0f / h) * ((curve.position(vNext) - curve.position(v)) / l1 - (curve.position(v) - curve.position(vPrev)) / l0);
 

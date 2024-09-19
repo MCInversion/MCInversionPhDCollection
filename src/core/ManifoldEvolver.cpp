@@ -248,7 +248,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		if (IsRemeshingNecessary(*m_OuterCurve, m_RemeshingSettings[m_OuterCurve.get()]))
+		// if (IsRemeshingNecessary(*m_OuterCurve, m_RemeshingSettings[m_OuterCurve.get()]))
 			m_RemeshTracker.AddManifold(m_OuterCurve.get());
 
 		// solve
@@ -674,7 +674,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 5.0f;
+constexpr float INV_SHRINK_FACTOR_1D = 20.0f;
 
 void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {
