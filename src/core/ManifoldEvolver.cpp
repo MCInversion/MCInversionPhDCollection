@@ -144,7 +144,9 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	exportedField /= static_cast<double>(GetScalingFactor());
 
 	ExportScalarGrid2DToPNG(baseOutputFilename + "_TargetDF.png", exportedField, m_ScalarInterpolate, 
-		10, 10, RAINBOW_TO_WHITE_MAP);
+		10, 10, RAINBOW_TO_WHITE_MAP * 0.5);
+	const auto [dfMin, dfMax] = std::ranges::minmax_element(m_DistanceField->Values());
+	ExportColorScaleToPNG(baseOutputFilename + "_TargetDF_Scale.png", *dfMin, *dfMax, RAINBOW_TO_WHITE_MAP * 0.5, true, 600, 100);
 	ExportScalarGridDimInfo2D(baseOutputFilename + "_TargetDF.gdim2d", exportedField);
 }
 

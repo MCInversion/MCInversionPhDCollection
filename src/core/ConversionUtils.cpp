@@ -740,3 +740,184 @@ void ExportScalarGridDimInfo2D(const std::string& fileName, const Geometry::Scal
 		throw std::runtime_error("ExportScalarGridDimInfo2D: Error occurred while writing to file.");
 	}
 }
+
+RGBColorScheme operator*(const RGBColorScheme& scheme, double factor)
+{
+	RGBColorScheme result;
+
+	bool is_first = true;
+	for (const auto& [key, color] : scheme) {
+		if (is_first) {
+			// Keep the first key (0.0) intact
+			result[key] = color;
+			is_first = false;
+		}
+		else {
+			// Scale the rest of the keys by the factor
+			result[key * factor] = color;
+		}
+	}
+
+	return result;
+}
+
+//
+// ===================================================================
+//
+
+constexpr unsigned int BORDER_SIZE{ 4 };
+constexpr unsigned int TICK_WIDTH{ 3 };
+constexpr unsigned int N_TICKS{ 4 };
+constexpr double PADDING_FRACTION{ 0.3 };  // Padding as a fraction of the smaller dimension
+constexpr double TICK_LENGTH_FRACTION{ 0.1 }; // Tick length as a fraction of the smaller dimension
+constexpr unsigned int FONT_SIZE{ 16 };  // Placeholder for font size
+
+static [[nodiscard]] RGBColor BlendColor(double value, const RGBColorScheme& colorMap)
+{
+	// Handle the case where the value is less than the lowest key
+	if (value <= colorMap.begin()->first) {
+		return colorMap.begin()->second;
+	}
+
+	// Handle the case where the value is greater than the highest key
+	if (value >= colorMap.rbegin()->first) {
+		return colorMap.rbegin()->second;
+	}
+
+	// At this point, we know that the value is within the range of the color map keys
+	const auto upper = colorMap.upper_bound(value);
+	const auto lower = std::prev(upper);
+
+	const double range = upper->first - lower->first;
+	const double factor = (value - lower->first) / range;
+
+	// Linear interpolation between lower and upper colors
+	RGBColor interpolated;
+	interpolated.r = lower->second.r + factor * (upper->second.r - lower->second.r);
+	interpolated.g = lower->second.g + factor * (upper->second.g - lower->second.g);
+	interpolated.b = lower->second.b + factor * (upper->second.b - lower->second.b);
+
+	return interpolated;
+}
+
+
+void ExportColorScaleToPNG(const std::string& filename, const double& minValue, const double& maxValue, const RGBColorScheme& colorMap, const bool& isVertical, const unsigned int& imageHeight, const unsigned int& imageWidth)
+{
+	if (minValue > maxValue)
+	{
+		throw std::invalid_argument("ExportColorScaleToPNG: minValue > maxValue!\n");
+	}
+	if (imageHeight == 0 || imageWidth == 0)
+	{
+		throw std::invalid_argument("ExportColorScaleToPNG: imageHeight == 0 || imageWidth == 0!\n");
+	}
+	if (filename.empty())
+	{
+		throw std::invalid_argument("ExportColorScaleToPNG: filename cannot be empty!\n");
+	}
+	if (colorMap.size() < 2)
+	{
+		throw std::invalid_argument("ExportColorScaleToPNG: color scheme must contain at least 2 colors!\n");
+	}
+
+	// Determine the padding and tick length as fractions of the smallest image dimension
+	const unsigned int smallestDim = isVertical ? imageWidth : imageHeight;
+	const unsigned int largestDim = isVertical ? imageHeight : imageWidth;
+	const auto padding = static_cast<unsigned int>(PADDING_FRACTION * smallestDim);
+	const unsigned int scalePxStartOffset = padding + BORDER_SIZE;
+	const unsigned int scalePxLength = largestDim - 2 * (BORDER_SIZE + padding);
+
+	// Allocate image buffer (RGB, so 3 channels)
+	std::vector<unsigned char> image(imageWidth * imageHeight * 3, 255); // White background by default
+
+	// Fill the color scale
+	for (unsigned int i = scalePxStartOffset; i < scalePxStartOffset + scalePxLength; ++i)
+	{
+		const double ratio = (i - scalePxStartOffset) / static_cast<double>(scalePxLength);
+		const double value = minValue + ratio * (maxValue - minValue);
+		const RGBColor color = BlendColor(value, colorMap);
+
+		if (isVertical)
+		{
+			for (unsigned int x = BORDER_SIZE + padding; x < imageWidth - BORDER_SIZE - padding; ++x)
+			{
+				image[(i * imageWidth + x) * 3 + 0] = static_cast<unsigned char>(color.r * 255);
+				image[(i * imageWidth + x) * 3 + 1] = static_cast<unsigned char>(color.g * 255);
+				image[(i * imageWidth + x) * 3 + 2] = static_cast<unsigned char>(color.b * 255);
+			}
+		}
+		else
+		{
+			for (unsigned int y = BORDER_SIZE + padding; y < imageHeight - BORDER_SIZE - padding; ++y)
+			{
+				image[(y * imageWidth + i) * 3 + 0] = static_cast<unsigned char>(color.r * 255);
+				image[(y * imageWidth + i) * 3 + 1] = static_cast<unsigned char>(color.g * 255);
+				image[(y * imageWidth + i) * 3 + 2] = static_cast<unsigned char>(color.b * 255);
+			}
+		}
+	}
+
+	// Draw the black outline
+	for (unsigned int i = padding; i < padding + BORDER_SIZE; ++i)
+	{
+		// Top and bottom borders (horizontal)
+		for (unsigned int x = padding; x < padding + scalePxLength; ++x)
+		{
+			image[(i * imageWidth + x) * 3 + 0] = 0;
+			image[(i * imageWidth + x) * 3 + 1] = 0;
+			image[(i * imageWidth + x) * 3 + 2] = 0;
+			image[((imageHeight - 1 - i) * imageWidth + x) * 3 + 0] = 0;
+			image[((imageHeight - 1 - i) * imageWidth + x) * 3 + 1] = 0;
+			image[((imageHeight - 1 - i) * imageWidth + x) * 3 + 2] = 0;
+		}
+		// Left and right borders (vertical)
+		for (unsigned int y = padding; y < padding + scalePxLength; ++y)
+		{
+			image[(y * imageWidth + i) * 3 + 0] = 0;
+			image[(y * imageWidth + i) * 3 + 1] = 0;
+			image[(y * imageWidth + i) * 3 + 2] = 0;
+			image[(y * imageWidth + (imageWidth - 1 - i)) * 3 + 0] = 0;
+			image[(y * imageWidth + (imageWidth - 1 - i)) * 3 + 1] = 0;
+			image[(y * imageWidth + (imageWidth - 1 - i)) * 3 + 2] = 0;
+		}
+	}
+
+	//// Drawing tick marks
+	//const unsigned int tickLength = static_cast<unsigned int>(TICK_LENGTH_FRACTION * smallestDim);
+	//const unsigned int tickSpacing = (isVertical ? imageHeight : imageWidth) / (N_TICKS + 1);
+	//for (unsigned int t = 1; t <= N_TICKS; ++t)
+	//{
+	//	const unsigned int tickPos = t * tickSpacing;
+
+	//	if (isVertical)
+	//	{
+	//		for (unsigned int x = 0; x < TICK_WIDTH; ++x)
+	//		{
+	//			for (unsigned int y = 0; y < tickLength; ++y)
+	//			{
+	//				image[((tickPos + y) * imageWidth + (BORDER_SIZE + x)) * 3 + 0] = 0;
+	//				image[((tickPos + y) * imageWidth + (BORDER_SIZE + x)) * 3 + 1] = 0;
+	//				image[((tickPos + y) * imageWidth + (BORDER_SIZE + x)) * 3 + 2] = 0;
+	//			}
+	//		}
+	//	}
+	//	else
+	//	{
+	//		for (unsigned int y = 0; y < TICK_WIDTH; ++y)
+	//		{
+	//			for (unsigned int x = 0; x < tickLength; ++x)
+	//			{
+	//				image[((BORDER_SIZE + y) * imageWidth + (tickPos + x)) * 3 + 0] = 0;
+	//				image[((BORDER_SIZE + y) * imageWidth + (tickPos + x)) * 3 + 1] = 0;
+	//				image[((BORDER_SIZE + y) * imageWidth + (tickPos + x)) * 3 + 2] = 0;
+	//			}
+	//		}
+	//	}
+	//}
+
+	// Save the image to a file
+	if (!stbi_write_png(filename.c_str(), imageWidth, imageHeight, 3, image.data(), imageWidth * 3))
+	{
+		throw std::runtime_error("ExportColorScaleToPNG: Failed to save image to file!");
+	}
+}

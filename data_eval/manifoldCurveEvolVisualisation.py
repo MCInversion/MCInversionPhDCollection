@@ -13,7 +13,11 @@ from collections import defaultdict
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing"
 #procedure_name = "ShrinkWrappingAnIncompleteDeformedCirclePointCloud_WithRemeshing"
 #procedure_name = "InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing"
-procedure_name = "bunnynewEvol_Pts2D3"
+#procedure_name = "armadillonewEvol_Pts2D3"
+#procedure_name = "bunnynewEvol_Pts2D3"
+#procedure_name = "maxPlancknewEvol_Pts2D3"
+procedure_name = "nefertitinewEvol_Pts2D3"
+
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
 

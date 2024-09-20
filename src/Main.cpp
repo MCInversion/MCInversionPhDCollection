@@ -3656,11 +3656,11 @@ int main()
 	if (performOldVsNewLSWTests)
 	{
 		const std::vector<std::string> meshForPtCloudNames{
-			//"armadillo",
+			"armadillo",
 			//"blub",
 			"bunny",
-			//"maxPlanck",
-			//"nefertiti",
+			"maxPlanck",
+			"nefertiti",
 			//"ogre",
 			//"spot"
 		};
@@ -3707,13 +3707,14 @@ int main()
 
 		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
-		SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
-		//SetRemeshingAdjustmentTimeIndices({ 3, 10, 20/*, 50 , 100, 120, 140, 145*/ });
+		//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+		SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 20, 50 /*, 100, 120, 140, 145*/ });
 
 		constexpr unsigned int NTimeSteps = 80;
 
 		constexpr bool executeOldEvolver = false;
-		constexpr bool executeNewEvolver = false;
+		constexpr bool executeNewSurfaceEvolver = false;
+		constexpr bool executeNewCurveEvolver = true;
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -3849,7 +3850,7 @@ int main()
 			// - - - - - - - - -  New Manifold Evolver (Surface)   - - - - - - - - - - - 
 			// ==========================================================================
 
-			if (executeNewEvolver)
+			if (executeNewSurfaceEvolver)
 			{
 				std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -3936,7 +3937,7 @@ int main()
 			}
 
 			// -----------------------
-
+			if (executeNewCurveEvolver)
 			{
 				std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
