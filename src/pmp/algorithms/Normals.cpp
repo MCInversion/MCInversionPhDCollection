@@ -239,8 +239,8 @@ Normal2 Normals2::compute_edge_normal(const ManifoldCurve2D& curve, Edge e)
     // Compute the edge vector
     Point2 edge_vector = p1 - p0;
 
-    // Compute the perpendicular vector (normal)
-    Normal2 normal(-edge_vector[1], edge_vector[0]);
+    // Compute the CW perpendicular vector (normal)
+    Normal2 normal(edge_vector[1], -edge_vector[0]);
 
     // Normalize the normal
     float length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1]);

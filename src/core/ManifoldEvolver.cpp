@@ -188,6 +188,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		auto vDistanceToTarget = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vMinDistanceToInner = m_OuterCurve->get_vertex_property<pmp::Scalar>("v:min_distance_to_inner");
 		const auto tStep = GetSettings().TimeStep;
 
 		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
@@ -208,6 +209,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *innerCurveDf));
 				if (innerDfAtVPos < vMinDistance[v])
 					vMinDistance[v] = innerDfAtVPos;
+				if (innerDfAtVPos < vMinDistanceToInner[v])
+					vMinDistanceToInner[v] = innerDfAtVPos;
 			}
 
 			if (m_OuterCurve->is_boundary(v))
@@ -219,10 +222,13 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				continue;
 			}
 
+			const double epsilonCtrlWeight =
+				GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner[v]));
+
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
@@ -248,7 +254,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
-		// if (IsRemeshingNecessary(*m_OuterCurve, m_RemeshingSettings[m_OuterCurve.get()]))
+		if (IsRemeshingNecessary(*m_OuterCurve, m_RemeshingSettings[m_OuterCurve.get()]))
 			m_RemeshTracker.AddManifold(m_OuterCurve.get());
 
 		// solve
@@ -286,6 +292,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		auto vDistanceToTarget = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_target");
 		auto vMinDistance = innerCurve->get_vertex_property<pmp::Scalar>("v:min_distance");
+		auto vDistanceToOuter = innerCurve->get_vertex_property<pmp::Scalar>("v:distance_to_outer");
 		const auto tStep = GetSettings().TimeStep;
 
 		pmp::Normals2::compute_vertex_normals(*innerCurve);
@@ -306,6 +313,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField));
 				if (outerDfAtVPos < vMinDistance[v])
 					vMinDistance[v] = outerDfAtVPos;
+				if (vDistanceToOuter[v] < vMinDistance[v])
+					vMinDistance[v] = vDistanceToOuter[v];
 			}
 
 			if (innerCurve->is_boundary(v))
@@ -317,10 +326,13 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				continue;
 			}
 
+			const double epsilonCtrlWeight =
+				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
+
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = -1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
@@ -1083,12 +1095,12 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				continue;
 			}
 
-			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
-			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
-
 			const double epsilonCtrlWeight = 
 				GetSettings().OuterManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
 				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner[v]));
+
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
+			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
@@ -1171,7 +1183,9 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			vMinDistance[v] = vDistanceToTarget[v];
 			if (m_OuterSurfaceDistanceField)
 			{
-				vDistanceToOuter[v] = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField));
+				const auto outerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField));
+				if (outerDfAtVPos < vMinDistance[v])
+					vMinDistance[v] = outerDfAtVPos;
 				if (vDistanceToOuter[v] < vMinDistance[v])
 					vMinDistance[v] = vDistanceToOuter[v];
 			}
@@ -1185,12 +1199,12 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				continue;
 			}
 
-			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
-			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
-
 			const double epsilonCtrlWeight = 
 				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
+
+			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
+			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
 			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
