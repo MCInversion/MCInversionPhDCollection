@@ -53,27 +53,76 @@ else:
 # Helper function to read PLY files and extract vertices
 def read_ply(file_path):
     vertices = []
+    edges = []
     try:
         with open(file_path, 'r') as f:
             lines = f.readlines()
 
-        vertex_section = False
-        for line in lines:
-            if line.startswith('end_header'):
-                vertex_section = True
-                continue
-            if vertex_section and len(line.strip()) > 0:
-                coords = list(map(float, line.strip().split()))
-                if len(coords) == 3:
-                    vertices.append((coords[0], coords[1]))
+        num_vertices = 0
+        num_edges = 0
 
-        # Ensure the curve is closed by connecting the last vertex to the first
-        if len(vertices) > 1 and vertices[-1] != vertices[0]:
-            vertices.append(vertices[0])
+        # Parse header to get number of vertices and edges
+        for i, line in enumerate(lines):
+            if line.startswith('element vertex'):
+                num_vertices = int(line.split()[2])
+            elif line.startswith('element edge'):
+                num_edges = int(line.split()[2])
+            elif line.startswith('end_header'):
+                header_end = i
+                break
+
+        # Read vertices
+        for line in lines[header_end + 1:header_end + 1 + num_vertices]:
+            coords = list(map(float, line.strip().split()))
+            vertices.append((coords[0], coords[1]))
+
+        # Read edges
+        for line in lines[header_end + 1 + num_vertices:header_end + 1 + num_vertices + num_edges]:
+            edge = list(map(int, line.strip().split()))
+            edges.append(edge)
+
+        # Initialize polyline and visited sets
+        polyline = []
+        visited_vertices = set()
+        visited_edges = set()
+
+        # Start with the first edge
+        current_vertex = edges[0][0]
+        polyline.append(vertices[current_vertex])
+        visited_vertices.add(current_vertex)
+
+        # Build the polyline by following the edges in sequence
+        while len(visited_edges) < len(edges):
+            for i, edge in enumerate(edges):
+                if i in visited_edges:
+                    continue
+
+                v0, v1 = edge[0], edge[1]
+
+                # Follow the edge that connects to the current vertex
+                if v0 == current_vertex and v1 not in visited_vertices:
+                    polyline.append(vertices[v1])
+                    visited_vertices.add(v1)
+                    visited_edges.add(i)
+                    current_vertex = v1
+                    break
+                elif v1 == current_vertex and v0 not in visited_vertices:
+                    polyline.append(vertices[v0])
+                    visited_vertices.add(v0)
+                    visited_edges.add(i)
+                    current_vertex = v0
+                    break
+            else:
+                # If no edges were added, we've completed a loop or all vertices are visited
+                break
+
+        # Ensure the polyline is closed by adding the starting point at the end
+        if polyline[-1] != polyline[0]:
+            polyline.append(polyline[0])
 
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
-    return np.array(vertices)
+    return np.array(polyline)
 
 # Gather all the PLY files for inner and outer curves in sorted order
 inner_ply_files = defaultdict(dict)  # Use a dictionary of dictionaries
