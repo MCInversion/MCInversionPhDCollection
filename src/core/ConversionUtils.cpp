@@ -778,8 +778,8 @@ RGBColorScheme operator*(const RGBColorScheme& scheme, double factor)
 constexpr unsigned int BORDER_SIZE{ 4 };
 constexpr unsigned int TICK_WIDTH{ 3 };
 constexpr unsigned int N_TICKS{ 4 };
-constexpr double PADDING_FRACTION{ 0.3 };  // Padding as a fraction of the smaller dimension
-constexpr double TICK_LENGTH_FRACTION{ 0.1 }; // Tick length as a fraction of the smaller dimension
+constexpr double PADDING_FRACTION{ 0.12 };  // Padding as a fraction of the smaller dimension
+constexpr double TICK_LENGTH_FRACTION{ 0.2 }; // Tick length as a fraction of the smaller dimension
 
 static [[nodiscard]] RGBColor BlendColor(double ratio, const RGBColorScheme& colorMap)
 {
@@ -858,8 +858,8 @@ static [[nodiscard]] std::string FormatTickValue(double value, unsigned int deci
 {
 	std::stringstream ss;
 
-	// Case 1: value >= 100, use scientific notation with decimalPlaces + 1 digits
-	if (value >= 100.0)
+	// Case 1: value >= 1000, use scientific notation with decimalPlaces + 1 digits
+	if (value >= 1000.0)
 	{
 		ss << std::scientific << std::setprecision(decimalPlaces + 1) << value;
 	}
@@ -934,10 +934,12 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 	// Determine the padding and tick length as fractions of the smallest image dimension
 	const auto isVertical = imageHeight > imageWidth;
 	const auto [smallestDim, largestDim] = std::minmax(imageWidth, imageHeight);
-	const auto padding = static_cast<unsigned int>(PADDING_FRACTION * smallestDim);
-	const unsigned int colorBarLargestDim = largestDim - 2 * (BORDER_SIZE + padding);
-	const unsigned int colorBarSmallestDim = smallestDim - 2 * (BORDER_SIZE + padding);
-	const unsigned int scalePxStartOffset = padding + BORDER_SIZE;
+	const auto paddingY = static_cast<unsigned int>(PADDING_FRACTION * smallestDim);
+	const auto paddingX = (isVertical ? 3 : 1) * paddingY;
+	const int offsetX = isVertical ? -static_cast<int>(paddingX) / 2 : 0;
+	const int offsetY = isVertical ? 0 : -static_cast<int>(paddingY) / 2;
+	const unsigned int colorBarLargestDim = largestDim - 2 * (BORDER_SIZE + (isVertical ? paddingY : paddingX));
+	const unsigned int scalePxStartOffset = (isVertical ? paddingY + offsetY : paddingX + offsetX) + BORDER_SIZE;
 
 	// Allocate image buffer (RGB, so 3 channels)
 	std::vector<unsigned char> image(imageWidth * imageHeight * 3, 255); // White background by default
@@ -951,7 +953,7 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 		// draw isochromatic lines
 		if (isVertical)
 		{
-			for (unsigned int x = padding + BORDER_SIZE; x < imageWidth - padding - BORDER_SIZE; ++x)
+			for (unsigned int x = offsetX + paddingX + BORDER_SIZE; x < offsetX + imageWidth - paddingX - BORDER_SIZE; ++x)
 			{
 				image[(i * imageWidth + x) * 3 + 0] = static_cast<unsigned char>(color.r * 255);
 				image[(i * imageWidth + x) * 3 + 1] = static_cast<unsigned char>(color.g * 255);
@@ -960,7 +962,7 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 		}
 		else
 		{
-			for (unsigned int y = padding + BORDER_SIZE; y < imageHeight - padding - BORDER_SIZE; ++y)
+			for (unsigned int y = offsetY + paddingY + BORDER_SIZE; y < offsetY + imageHeight - paddingY - BORDER_SIZE; ++y)
 			{
 				image[(y * imageWidth + i) * 3 + 0] = static_cast<unsigned char>(color.r * 255);
 				image[(y * imageWidth + i) * 3 + 1] = static_cast<unsigned char>(color.g * 255);
@@ -970,30 +972,30 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 	}
 
 	// Draw the black outline
-	const auto maxX = padding + (isVertical ? colorBarSmallestDim : colorBarLargestDim) + 2 * BORDER_SIZE;
-	const auto maxY = padding + (isVertical ? colorBarLargestDim : colorBarSmallestDim) + 2 * BORDER_SIZE;
-	for (unsigned int i = padding; i < padding + BORDER_SIZE; ++i)
+	const auto maxX = offsetX + imageWidth - paddingX - BORDER_SIZE;
+	const auto maxY = offsetY + imageHeight - paddingY - BORDER_SIZE;
+	for (unsigned int i = 0; i < BORDER_SIZE; ++i)
 	{
 		// Top and bottom borders (horizontal)
-		for (unsigned int x = padding; x < maxX; ++x)
+		for (unsigned int x = offsetX + paddingX; x < maxX; ++x)
 		{
-			image[(i * imageWidth + x) * 3 + 0] = 0;
-			image[(i * imageWidth + x) * 3 + 1] = 0;
-			image[(i * imageWidth + x) * 3 + 2] = 0;
-			image[((imageHeight - 1 - i) * imageWidth + x) * 3 + 0] = 0;
-			image[((imageHeight - 1 - i) * imageWidth + x) * 3 + 1] = 0;
-			image[((imageHeight - 1 - i) * imageWidth + x) * 3 + 2] = 0;
+			image[((i + paddingY) * imageWidth + x) * 3 + 0] = 0;
+			image[((i + paddingY) * imageWidth + x) * 3 + 1] = 0;
+			image[((i + paddingY) * imageWidth + x) * 3 + 2] = 0;
+			image[((imageHeight - 1 - (i + paddingY)) * imageWidth + x) * 3 + 0] = 0;
+			image[((imageHeight - 1 - (i + paddingY)) * imageWidth + x) * 3 + 1] = 0;
+			image[((imageHeight - 1 - (i + paddingY)) * imageWidth + x) * 3 + 2] = 0;
 		}
 		
 		// Left and right borders (vertical)
-		for (unsigned int y = padding; y < maxY; ++y)
+		for (unsigned int y = offsetY + paddingY; y < maxY; ++y)
 		{
-			image[(y * imageWidth + i) * 3 + 0] = 0;
-			image[(y * imageWidth + i) * 3 + 1] = 0;
-			image[(y * imageWidth + i) * 3 + 2] = 0;
-			image[(y * imageWidth + (imageWidth - 1 - i)) * 3 + 0] = 0;
-			image[(y * imageWidth + (imageWidth - 1 - i)) * 3 + 1] = 0;
-			image[(y * imageWidth + (imageWidth - 1 - i)) * 3 + 2] = 0;
+			image[(y * imageWidth + i + offsetX + paddingX) * 3 + 0] = 0;
+			image[(y * imageWidth + i + offsetX + paddingX) * 3 + 1] = 0;
+			image[(y * imageWidth + i + offsetX + paddingX) * 3 + 2] = 0;
+			image[(y * imageWidth + (imageWidth - 1 - (i - offsetX + paddingX))) * 3 + 0] = 0;
+			image[(y * imageWidth + (imageWidth - 1 - (i - offsetX + paddingX))) * 3 + 1] = 0;
+			image[(y * imageWidth + (imageWidth - 1 - (i - offsetX + paddingX))) * 3 + 2] = 0;
 		}
 	}
 
@@ -1001,7 +1003,8 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 	const auto tickLength = static_cast<unsigned int>(TICK_LENGTH_FRACTION * smallestDim);
 
 	// Calculate font size dynamically based on padding
-	const float fontSize = static_cast<float>(padding * 0.9f);  // Dynamic font size, smaller than padding
+	constexpr unsigned int decimalPlaces = 2;
+	const auto fontSize = paddingX * 1.2f / static_cast<float>(decimalPlaces);  // Dynamic font size, smaller than padding
 	const FontData fontData = LoadFont(fontDirPath + "\\CENTURY.TTF", fontSize); // Load your TTF font file
 
 	for (unsigned int t = 0; t <= N_TICKS; ++t)
@@ -1011,24 +1014,37 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 		const auto tickPos = static_cast<unsigned int>(scalePxStartOffset + tickRatio * colorBarLargestDim);
 		const double tickValue = minValue + tickRatio * (maxValue - minValue);
 
-		constexpr unsigned int decimalPlaces = 2;
 		const std::string formattedTickValue = FormatTickValue(tickValue, decimalPlaces);
 
 		if (isVertical)
 		{
-			// Draw vertical ticks on the left edge
+			//// Draw vertical ticks on the left edge
+			//for (unsigned int y = 0; y < TICK_WIDTH; ++y)
+			//{
+			//	for (unsigned int x = 0; x < tickLength; ++x)
+			//	{
+			//		image[((tickPos + y) * imageWidth + (padding + x)) * 3 + 0] = 0;
+			//		image[((tickPos + y) * imageWidth + (padding + x)) * 3 + 1] = 0;
+			//		image[((tickPos + y) * imageWidth + (padding + x)) * 3 + 2] = 0;
+			//	}
+			//}
+
+			//// Render the tick value next to the tick mark
+			//DrawTextOnImage(image, imageWidth, imageHeight, fontData, formattedTickValue, 5, tickPos - fontSize / 2);
+
+			// Draw vertical ticks on the right edge
 			for (unsigned int y = 0; y < TICK_WIDTH; ++y)
 			{
-				for (unsigned int x = 0; x < tickLength; ++x)
+				for (unsigned int x = maxX - tickLength - 2; x < maxX + 2; ++x)
 				{
-					image[((tickPos + y) * imageWidth + (padding + x)) * 3 + 0] = 0;
-					image[((tickPos + y) * imageWidth + (padding + x)) * 3 + 1] = 0;
-					image[((tickPos + y) * imageWidth + (padding + x)) * 3 + 2] = 0;
+					image[((tickPos + y) * imageWidth + x) * 3 + 0] = 0;
+					image[((tickPos + y) * imageWidth + x) * 3 + 1] = 0;
+					image[((tickPos + y) * imageWidth + x) * 3 + 2] = 0;
 				}
 			}
 
 			// Render the tick value next to the tick mark
-			DrawTextOnImage(image, imageWidth, imageHeight, fontData, formattedTickValue, 5, tickPos - fontSize / 2);
+			DrawTextOnImage(image, imageWidth, imageHeight, fontData, formattedTickValue, maxX + 5, tickPos + fontSize / 4);
 		}
 		else
 		{
@@ -1037,14 +1053,14 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 			{
 				for (unsigned int y = 0; y < tickLength; ++y)
 				{
-					image[((imageHeight - padding - y) * imageWidth + (tickPos + x)) * 3 + 0] = 0;
-					image[((imageHeight - padding - y) * imageWidth + (tickPos + x)) * 3 + 1] = 0;
-					image[((imageHeight - padding - y) * imageWidth + (tickPos + x)) * 3 + 2] = 0;
+					image[((imageHeight - paddingY - y - offsetY) * imageWidth + (tickPos + x + offsetX)) * 3 + 0] = 0;
+					image[((imageHeight - paddingY - y - offsetY) * imageWidth + (tickPos + x + offsetX)) * 3 + 1] = 0;
+					image[((imageHeight - paddingY - y - offsetY) * imageWidth + (tickPos + x + offsetX)) * 3 + 2] = 0;
 				}
 			}
 
 			// Render the tick value below the tick mark
-			DrawTextOnImage(image, imageWidth, imageHeight, fontData, formattedTickValue, tickPos - fontSize / 2, imageHeight - padding / 2 + 10);
+			DrawTextOnImage(image, imageWidth, imageHeight, fontData, formattedTickValue, tickPos - fontSize / 2, imageHeight - paddingY / 2 + 10);
 		}
 	}
 

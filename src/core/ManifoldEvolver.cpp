@@ -149,13 +149,14 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	const auto [dfMin, dfMax] = std::ranges::minmax_element(m_DistanceField->Values());
 	constexpr double colorLegendScaleFactor = 2.0; // stretch color map keys (ratios) to fit the gradient to the full legend bar
 	constexpr double dfValueClampFactor = colorMapPlotScaleFactor / colorLegendScaleFactor; // value cutoff for the chosen color legend.
-	constexpr bool verticalLegend = false;
-	constexpr unsigned int resolutionFactor = 2;
-	constexpr unsigned int legendPxHeight = (verticalLegend ? 600 : 100) * resolutionFactor;
+	constexpr bool verticalLegend = true;
+	constexpr unsigned int resolutionFactor = 4;
+	constexpr unsigned int legendPxHeight = (verticalLegend ? 400 : 100) * resolutionFactor;
 	constexpr unsigned int legendPxWidth = (verticalLegend ? 100 : 600) * resolutionFactor;
 	ExportColorScaleToPNG(
 		baseOutputFilename + "_TargetDF_Scale.png",
-		*dfMin, dfValueClampFactor * (*dfMax), 
+		(*dfMin) / GetScalingFactor(),
+		dfValueClampFactor * (*dfMax) / GetScalingFactor(),
 		RAINBOW_TO_WHITE_MAP * colorLegendScaleFactor, 
 		legendPxHeight, legendPxWidth);
 	ExportScalarGridDimInfo2D(baseOutputFilename + "_TargetDF.gdim2d", exportedField);
