@@ -14,9 +14,9 @@ from collections import defaultdict
 #procedure_name = "ShrinkWrappingAnIncompleteDeformedCirclePointCloud_WithRemeshing"
 #procedure_name = "InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing"
 #procedure_name = "armadillonewEvol_Pts2D3"
-#procedure_name = "bunnynewEvol_Pts2D3"
+procedure_name = "bunnynewEvol_Pts2D3"
 #procedure_name = "maxPlancknewEvol_Pts2D3"
-procedure_name = "nefertitinewEvol_Pts2D3"
+#procedure_name = "nefertitinewEvol_Pts2D3"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
@@ -45,12 +45,20 @@ def read_gdim2d_file(filepath):
 
 # Load the background image and grid dimensions if both files exist
 background_image_path = os.path.join(directory, f"{procedure_name}_TargetDF.png")
+legend_image_path = os.path.join(directory, f"{procedure_name}_TargetDF_Scale.png")
 gdim2d_path = os.path.join(directory, f"{procedure_name}_TargetDF.gdim2d")
 
-if os.path.exists(background_image_path) and os.path.exists(gdim2d_path):
+if os.path.exists(background_image_path) and os.path.exists(gdim2d_path) and os.path.exists(legend_image_path):
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(gdim2d_path)
     background_img = imageio.imread(background_image_path)
     extent = [bbox_min[0], bbox_max[0], bbox_max[1], bbox_min[1]]
+
+    legend_img = imageio.imread(legend_image_path)
+    bbox_size = np.array(bbox_max) - np.array(bbox_min)
+    extent_legend = [bbox_min[0],
+                     bbox_max[0],
+                     bbox_max[1] - 0.125 * bbox_size[1],
+                     bbox_max[1] + 0.025 * bbox_size[1]]
 else:
     background_img = None
 
@@ -179,8 +187,9 @@ for i, outer_curve in enumerate(outer_curves):
 fig, ax = plt.subplots()
 
 # Display the background image if it was successfully loaded
-if background_img is not None:
+if background_img is not None and legend_img is not None:
     ax.imshow(background_img, extent=extent)
+    ax.imshow(legend_img, extent=extent_legend)
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])
     ax.invert_yaxis()  # Reverse the direction of the y-axis

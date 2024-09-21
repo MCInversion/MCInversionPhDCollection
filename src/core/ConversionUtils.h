@@ -89,5 +89,5 @@ RGBColorScheme operator*(const RGBColorScheme& scheme, double factor);
 /// \brief Exports an image of the used color scale matched to the given value range.
 void ExportColorScaleToPNG(const std::string& filename, 
 	const double& minValue, const double& maxValue, 
-	const RGBColorScheme& colorMap, const bool& isVertical,
+	const RGBColorScheme& colorMap,
 	const unsigned int& imageHeight, const unsigned int& imageWidth);

@@ -143,10 +143,21 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	exportedField *= m_TransformToOriginal;
 	exportedField /= static_cast<double>(GetScalingFactor());
 
+	constexpr double colorMapPlotScaleFactor = 0.5; // scale the distance field color map down to show more detail
 	ExportScalarGrid2DToPNG(baseOutputFilename + "_TargetDF.png", exportedField, m_ScalarInterpolate, 
-		10, 10, RAINBOW_TO_WHITE_MAP * 0.5);
+		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
 	const auto [dfMin, dfMax] = std::ranges::minmax_element(m_DistanceField->Values());
-	ExportColorScaleToPNG(baseOutputFilename + "_TargetDF_Scale.png", *dfMin, *dfMax, RAINBOW_TO_WHITE_MAP * 0.5, true, 600, 100);
+	constexpr double colorLegendScaleFactor = 2.0; // stretch color map keys (ratios) to fit the gradient to the full legend bar
+	constexpr double dfValueClampFactor = colorMapPlotScaleFactor / colorLegendScaleFactor; // value cutoff for the chosen color legend.
+	constexpr bool verticalLegend = false;
+	constexpr unsigned int resolutionFactor = 2;
+	constexpr unsigned int legendPxHeight = (verticalLegend ? 600 : 100) * resolutionFactor;
+	constexpr unsigned int legendPxWidth = (verticalLegend ? 100 : 600) * resolutionFactor;
+	ExportColorScaleToPNG(
+		baseOutputFilename + "_TargetDF_Scale.png",
+		*dfMin, dfValueClampFactor * (*dfMax), 
+		RAINBOW_TO_WHITE_MAP * colorLegendScaleFactor, 
+		legendPxHeight, legendPxWidth);
 	ExportScalarGridDimInfo2D(baseOutputFilename + "_TargetDF.gdim2d", exportedField);
 }
 

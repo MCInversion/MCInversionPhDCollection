@@ -13,3 +13,5 @@ target_link_libraries(${PROJECT_NAME}
 	Utils
 	#Spectra
 )
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC DSYSTEM_FONT_DIR=\"${SYSTEM_FONT_DIR}\")

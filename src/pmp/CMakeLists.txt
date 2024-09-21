@@ -44,8 +44,4 @@ if(NOT EMSCRIPTEN AND PMP_INSTALL)
 
 endif()
 
-if(PMP_BUILD_VIS)
-  add_subdirectory(visualization)
-endif()
-
 include(algorithms/CMakeLists.txt)

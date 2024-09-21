@@ -6,7 +6,6 @@ project(${MAIN_PROJECT_NAME} VERSION 1.0)
 cmake_minimum_required(VERSION 3.16.3)
 cmake_policy(SET CMP0072 NEW)
 
-option(PMP_BUILD_VIS "Build the PMP visualization tools" ON)
 option(PMP_INSTALL "Install the PMP library and headers" ON)
 option(BUILD_UNIT_TESTS "Build the unit testing projects" ON)
 
@@ -16,53 +15,6 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
-if(PMP_BUILD_VIS)
-  set(GLFW_SOURCE_DIR "external/glfw")
-  set(GLEW_SOURCE_DIR "external/glew")
-  set(IMGUI_SOURCE_DIR "external/imgui")
-  set(STBI_SOURCE_DIR "external/stb_image")
-
-  # setup STB Image (place *before* GLFW since GLFW has an old copy of
-  # stb_image_write.h)
-  include_directories(${STBI_SOURCE_DIR})
-  add_subdirectory(${STBI_SOURCE_DIR})
-
-  # Building only the GLFW lib
-  set(BUILD_SHARED_LIBS
-      OFF
-      CACHE BOOL "")
-  set(GLFW_BUILD_EXAMPLES
-      OFF
-      CACHE BOOL "")
-  set(GLFW_BUILD_TESTS
-      OFF
-      CACHE BOOL "")
-  set(GLFW_BUILD_DOCS
-      OFF
-      CACHE BOOL "")
-  set(GLFW_INSTALL
-      OFF
-      CACHE BOOL "")
-
-  # setup use of GLFW and GLEW
-  if(NOT EMSCRIPTEN)
-    add_subdirectory(${GLFW_SOURCE_DIR} ${GLEW_SOURCE_DIR})
-
-    include_directories(${GLFW_SOURCE_DIR}/include ${GLFW_SOURCE_DIR}/deps
-                        ${GLEW_SOURCE_DIR}/include)
-
-    add_definitions(-DGLEW_STATIC)
-    add_library(glew STATIC ${GLEW_SOURCE_DIR}/src/glew.c
-                            ${GLEW_SOURCE_DIR}/include)
-    set_property(TARGET glew PROPERTY POSITION_INDEPENDENT_CODE ON)
-    target_link_libraries(glew ${GLFW_LIBRARIES})
-  endif()
-
-  # setup IMGUI
-  include_directories(${IMGUI_SOURCE_DIR})
-  add_subdirectory(${IMGUI_SOURCE_DIR})
-endif(PMP_BUILD_VIS)
 
 # setup Eigen
 set(EIGEN_SOURCE_DIR "external/eigen")
@@ -201,6 +153,26 @@ endif()
 option(WITH_CLANG_TIDY "Run clang-tidy checks" OFF)
 include(clang-tidy)
 
+# ====================================================
+#         useful paths
+# ....................................................
+
+# ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
+#
+# VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
+# so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
+#
+set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(SYSTEM_FONT_DIR "C:/Windows/Fonts")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(SYSTEM_FONT_DIR "/Library/Fonts")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(SYSTEM_FONT_DIR "/usr/share/fonts")
+else()
+    message(FATAL_ERROR "Unsupported operating system")
+endif()
 
 # ====================================================
 # which directories to process
@@ -212,7 +184,7 @@ add_subdirectory(src/pmp)
 add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
-add_subdirectory(src/stb_image)
+add_subdirectory(src/stb_utils)
 add_subdirectory(src/utils)
 
 file(GLOB Main_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
@@ -224,18 +196,15 @@ target_link_libraries(${PROJECT_NAME}
     SDF
     Geometry
     Core
-    STBImage
+    STBUtils
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/src/")
-# ----- make sure CMAKE_CURRENT_SOURCE_DIR is readable in source ---------
-#
-# VS Test Explorer automatically sets working directory as CMAKE_CURRENT_BINARY_DIR,
-# so we use DROOT_DIR in source files instead of std::filesystem::::current_path()
-#
-set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-#message("ROOT_DIR: ${ROOT_DIR}")
-target_compile_definitions(${PROJECT_NAME} PUBLIC DROOT_DIR=\"${ROOT_DIR}\")
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC 
+    DROOT_DIR=\"${ROOT_DIR}\"
+    #DSYSTEM_FONT_DIR=\"${SYSTEM_FONT_DIR}\"
+)
 
 
 if (BUILD_UNIT_TESTS)
@@ -260,11 +229,6 @@ endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set_target_properties(
-    glew
-    imgui
-    pmp_vis
-    rply
-    stb_image
     pmp
 PROPERTIES FOLDER "PMP_Lib")
 
