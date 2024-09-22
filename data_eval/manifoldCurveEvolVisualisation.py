@@ -61,10 +61,20 @@ if os.path.exists(background_image_path) and os.path.exists(gdim2d_path) and os.
     legend_width = legend_img.shape[1]  # Get the image width in pixels
     clipped_width = int(legend_width * clip_factor)
     legend_img = legend_img[:, clipped_width:] # clip legend
-    extent_legend = [bbox_max[0] - 0.175 * bbox_size[1],
-                     bbox_max[0],
-                     bbox_min[1] + 0.15 * bbox_size[1],
-                     bbox_max[1] - 0.15 * bbox_size[1]]
+
+    # Get the legend's aspect ratio (width/height)
+    legend_height, legend_width = legend_img.shape[:2]
+    legend_aspect_ratio = legend_width / legend_height
+
+    # Define the height of the legend in terms of bbox size
+    legend_height_in_bbox = 0.5 * bbox_size[1]
+    legend_bbox_y_offset = (bbox_size[1] - legend_height_in_bbox) / 2.0
+    legend_width_in_bbox = legend_height_in_bbox * legend_aspect_ratio  # Preserve aspect ratio
+
+    extent_legend = [bbox_max[0],
+                     bbox_max[0] + legend_width_in_bbox,
+                     bbox_min[1] + legend_bbox_y_offset,
+                     bbox_max[1] - legend_bbox_y_offset]
 else:
     background_img = None
 
@@ -226,16 +236,28 @@ if legend_img is not None:
     legend_symbol = "./dGamma_200dpi.png"  # Path to your symbol file
     symbol_img = mpimg.imread(legend_symbol)
     
-    # Overlay the symbol in the upper portion of the same axis
-    symbol_extent = [extent_legend[0] + 0.04 * bbox_size[0], 
-                     extent_legend[1] - 0.07 * bbox_size[0], 
-                     extent_legend[3] + 0.02 * bbox_size[1],
-                     extent_legend[3] + 0.1 * bbox_size[1]
-    ]  # Adjust these values to control position
+    # Get the symbol's aspect ratio (width/height)
+    symbol_height, symbol_width = symbol_img.shape[:2]
+    symbol_aspect_ratio = symbol_width / symbol_height
+
+    # Define the height of the symbol in terms of bbox size
+    symbol_height_in_bbox = 0.05 * bbox_size[1]  # % of the bbox height
+    symbol_width_in_bbox = symbol_height_in_bbox * symbol_aspect_ratio  # Preserve aspect ratio
+    extent_legend_size_x = extent_legend[1] - extent_legend[0]
+    
+    # Overlay the symbol in the upper portion of the same axis, preserving aspect ratio
+    symbol_extent = [extent_legend[0] + 0.1 * extent_legend_size_x,  # Horizontally position the symbol
+                     extent_legend[0] + 0.1 * extent_legend_size_x + symbol_width_in_bbox,  # Set the width based on aspect ratio
+                     extent_legend[3] + 0.0 * symbol_height_in_bbox,  # Adjust vertical position (start)
+                     extent_legend[3] + 1.0 * symbol_height_in_bbox  # Adjust vertical position (end)
+                     ]
+    
+    # Display the symbol and legend with adjusted extent
     ax_legend.imshow(legend_img, extent=extent_legend, aspect='equal')
     ax_legend.imshow(symbol_img, extent=symbol_extent, aspect='equal')
+    
     ax_legend.set_xlim(extent_legend[:2])
-    ax_legend.set_ylim([extent_legend[2], extent_legend[3] + 0.1 * bbox_size[1]])
+    ax_legend.set_ylim([extent_legend[2], extent_legend[3] + 0.1 * bbox_size[1]])  # Adjust ylim for the symbol placement
 
 ax_main.set_aspect('equal')
 
