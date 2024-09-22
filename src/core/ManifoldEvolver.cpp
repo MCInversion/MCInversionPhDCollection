@@ -649,9 +649,6 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 	}
 }
 
-/// \brief the smallest allowed number of vertices in a manifold curve.
-constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
-
 void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
@@ -700,7 +697,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 /// \brief The power of the stabilizing scale factor.
 constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 20.0f;
+constexpr float INV_SHRINK_FACTOR_1D = 20.0f; // TODO: seems like an overkill. Investigate
 
 void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
 {
@@ -869,12 +866,44 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
 	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
+	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
+
 	const pmp::mat3 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f,
 		0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 1.0f
 	};
-	GetTransformToOriginal() = inverse(transfMatrixGeomScale);
+
+	// extract origin and radius for m_EvolBox from the custom geometries
+	pmp::Point2 origin{};
+	float radius = 1.0f;
+	if (GetOuterCurve())
+	{
+		const auto outerBounds = GetOuterCurve()->bounds();
+		const auto outerBoundsSize = outerBounds.max() - outerBounds.min();
+		radius = std::max(outerBoundsSize[0], outerBoundsSize[1]) * 0.5f;
+		origin = outerBounds.center();
+	}
+	else
+	{
+		for (const auto& innerCurve : GetInnerCurves())
+		{
+			const auto innerBounds = innerCurve->bounds();
+			const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
+			radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.5f, radius);
+			origin += innerBounds.center();
+		}
+		if (!GetInnerCurves().empty())
+			origin /= GetInnerCurves().size();
+	}
+
+	const pmp::mat3 transfMatrixGeomMove{
+		1.0f, 0.0f, -origin[0],
+		0.0f, 1.0f, -origin[1],
+		0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	GetTransformToOriginal() = inverse(transfMatrixFull);
 
 	// Transform the geometries
 	(*GetOuterCurve()) *= transfMatrixGeomScale;
@@ -883,21 +912,27 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 		(*innerCurve) *= transfMatrixGeomScale;
 	}
 
+	// test box for geometry validation
+	const float evolBoxFactor = 1.2f * scalingFactor;
+	GetEvolBox() = pmp::BoundingBox2(
+		pmp::Point2{ -radius, -radius } * evolBoxFactor,
+		pmp::Point2{ radius, radius } * evolBoxFactor);
+
 	if (GetOuterCurveDistanceField())
 	{
-		(*GetOuterCurveDistanceField()) *= transfMatrixGeomScale;
+		(*GetOuterCurveDistanceField()) *= transfMatrixFull;
 		(*GetOuterCurveDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerCurveDF : GetInnerCurvesDistanceFields())
 	{
-		(*innerCurveDF) *= transfMatrixGeomScale;
+		(*innerCurveDF) *= transfMatrixFull;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 
 	if (!GetDistanceField() || !GetDFNegNormalizedGradient())
 		return; // nothing to scale
-	(*GetDistanceField()) *= transfMatrixGeomScale;
-	(*GetDFNegNormalizedGradient()) *= transfMatrixGeomScale;
+	(*GetDistanceField()) *= transfMatrixFull;
+	(*GetDFNegNormalizedGradient()) *= transfMatrixFull;
 	(*GetDistanceField()) *= static_cast<double>(scalingFactor); // Scale the distance values
 }
 

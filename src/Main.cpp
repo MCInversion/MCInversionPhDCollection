@@ -3656,11 +3656,11 @@ int main()
 	if (performOldVsNewLSWTests)
 	{
 		const std::vector<std::string> meshForPtCloudNames{
-			"armadillo",
+			//"armadillo",
 			//"blub",
 			"bunny",
-			"maxPlanck",
-			"nefertiti",
+			//"maxPlanck",
+			//"nefertiti",
 			//"ogre",
 			//"spot"
 		};
@@ -3697,6 +3697,13 @@ int main()
 			{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
 		};
 
+		const std::map<std::string, Circle2D> outerCircles{
+			{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
+			{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
+			{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
+			{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		};
+
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
 		constexpr double defaultOffsetFactor = 1.5;
@@ -3715,7 +3722,7 @@ int main()
 		constexpr bool executeOldEvolver = false;
 		constexpr bool executeNewSurfaceEvolver = false;
 		constexpr bool executeNewCurveEvolver = false;
-		constexpr bool executeNewCurveInnerOuterEvolver = true;
+		constexpr bool executeNewCurveInnerOuterCustomEvolver = true;
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -4000,7 +4007,7 @@ int main()
 				std::cout << "done.\n";
 			}
 
-			if (executeNewCurveInnerOuterEvolver)
+			if (executeNewCurveInnerOuterCustomEvolver)
 			{
 				std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -4041,8 +4048,19 @@ int main()
 				globalSettings.RemeshingResizeFactor = 0.7f;
 				globalSettings.RemeshingResizeTimeIds = {};
 
-				auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
-					strategySettings, std::make_shared<std::vector<pmp::Point2>>(pts2D));
+				if (!outerCircles.contains(meshName))
+				{
+					std::cerr << "!outerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+
+				const auto outerCircle = outerCircles.at(meshName);
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+				auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
+				std::vector<pmp::ManifoldCurve2D> innerCurves;
+				auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+					strategySettings, outerCurve, innerCurves,
+					std::make_shared<std::vector<pmp::Point2>>(pts2D));
 
 				std::cout << "Setting up ManifoldEvolver.\n";
 

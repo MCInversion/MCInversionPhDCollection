@@ -50,6 +50,9 @@ using VectorGridInterpolationFunction2D = std::function<pmp::dvec2(const pmp::Po
 /// \brief Functions for interpolating 3D vector grids
 using VectorGridInterpolationFunction3D = std::function<pmp::dvec3(const pmp::Point& /* pos */, const Geometry::VectorGrid& /* vecGrid */)>;
 
+/// \brief the smallest allowed number of vertices in a manifold curve.
+constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
+
 //
 // ===============================================================================================
 //                                          Settings
