@@ -906,10 +906,10 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	GetTransformToOriginal() = inverse(transfMatrixFull);
 
 	// Transform the geometries
-	(*GetOuterCurve()) *= transfMatrixGeomScale;
+	(*GetOuterCurve()) *= transfMatrixFull;
 	for (auto& innerCurve : GetInnerCurves())
 	{
-		(*innerCurve) *= transfMatrixGeomScale;
+		(*innerCurve) *= transfMatrixFull;
 	}
 
 	// test box for geometry validation
