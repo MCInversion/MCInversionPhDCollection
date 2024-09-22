@@ -672,15 +672,15 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
 		return;
 
-	//const InscribedCircleInputData calcData{
-	//	*m_TargetPointCloud,
-	//	std::make_shared<Geometry::ScalarGrid2D>(*m_DistanceField) // clone
-	//};
-	//ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
-	//const auto circles = inscribedCircleCalculator.Calculate(calcData);
+	const InscribedCircleInputData calcData{
+		*m_TargetPointCloud,
+		std::make_shared<Geometry::ScalarGrid2D>(*m_DistanceField) // clone
+	};
+	ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
+	const auto circles = inscribedCircleCalculator.Calculate(calcData);
 
 	// Hardcoded inner curves:
-	const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85f} };
+	//const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85f} };
 
 	m_InnerCurves.reserve(circles.size());
 
