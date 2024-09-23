@@ -188,6 +188,9 @@ struct MeshTopologySettings
 /// \brief Sets a static container for time indices for a particular evolver setup.
 void SetRemeshingAdjustmentTimeIndices(const std::unordered_set<unsigned int>& valuesSet);
 
+/// \brief A getter for the global container for time indices during which remeshing sizing should be changed.
+std::unordered_set<unsigned int>& GetRemeshingAdjustmentTimeIndices();
+
 /// 
 /// \brief Evaluates whether the target edge lengths for adaptive remeshing should be decreased.
 /// \param ti               time index from 1 to NSteps.
@@ -260,6 +263,40 @@ struct ManifoldAdaptiveRemeshingParams
  * \return the result AdaptiveRemeshingSettings.
  */
 [[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, const ManifoldAdaptiveRemeshingParams& remeshingParams);
+
+/**
+ * \brief A utility for estimating the edge sizing, error bound and other parameters for adaptive remeshing.
+ * \param manifold               initial manifold (a pmp::ManifoldCurve2D or pmp::SurfaceMesh).
+ * \param remeshingParams        input parameters for manifold adaptive remeshing.
+ * \return the result AdaptiveRemeshingSettings.
+ */
+template <typename ManifoldType>
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsForManifold_EXPERIMENTAL(const std::shared_ptr<ManifoldType>& manifold, const ManifoldAdaptiveRemeshingParams& remeshingParams)
+{
+	if (!manifold)
+	{
+		throw std::invalid_argument("CollectRemeshingSettingsForManifold_EXPERIMENTAL: manifold == nullptr!\n");
+	}
+
+	pmp::AdaptiveRemeshingSettings settings;
+
+	float minEdgeLength = std::numeric_limits<float>::max();
+	for (const auto e : manifold->edges())
+	{
+		float edgeLength = manifold->edge_length(e);
+		minEdgeLength = std::min(minEdgeLength, edgeLength);
+	}
+
+	settings.MinEdgeLength = remeshingParams.MinEdgeMultiplier * minEdgeLength / 2.0f;
+	settings.MaxEdgeLength = 4.0f * settings.MinEdgeLength;
+	settings.ApproxError = 0.25f * (settings.MinEdgeLength + settings.MaxEdgeLength);
+
+	settings.NRemeshingIterations = remeshingParams.NRemeshingIters;
+	settings.NTangentialSmoothingIters = remeshingParams.NTanSmoothingIters;
+	settings.UseProjection = remeshingParams.UseBackProjection;
+
+	return settings;
+}
 
 /**
  * \brief A utility for computing the edge sizing and error limits from an icosphere mesh.

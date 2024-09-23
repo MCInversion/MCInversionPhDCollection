@@ -249,6 +249,11 @@ void SetRemeshingAdjustmentTimeIndices(const std::unordered_set<unsigned int>& v
 	ADJUSTMENT_TIME_INDICES = valuesSet;
 }
 
+std::unordered_set<unsigned int>& GetRemeshingAdjustmentTimeIndices()
+{
+	return ADJUSTMENT_TIME_INDICES;
+}
+
 bool ShouldAdjustRemeshingLengths(const unsigned int& ti /*, const unsigned int& NSteps*/)
 {
 	//const auto timePercentage = static_cast<unsigned int>(static_cast<float>(ti) / static_cast<float>(NSteps) * 100);
@@ -427,7 +432,7 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shar
 {
 	if (!curve)
 	{
-		throw std::invalid_argument("CollectRemeshingSettingsFromCurve: mesh == nullptr!\n");
+		throw std::invalid_argument("CollectRemeshingSettingsFromCurve: curve == nullptr!\n");
 	}
 
 	pmp::AdaptiveRemeshingSettings settings;
@@ -454,8 +459,8 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shar
 	settings.MinEdgeLength = minEdgeLength;
 	settings.MaxEdgeLength = maxEdgeLength;
 	settings.ApproxError = maxDeviation;  // Use the maximum circular approximation error as the approximation error
-	settings.NRemeshingIterations = 10;
-	settings.NTangentialSmoothingIters = 6;
+	settings.NRemeshingIterations = 2;
+	settings.NTangentialSmoothingIters = 5;
 	settings.UseProjection = true;
 
 	return settings;

@@ -16,8 +16,8 @@ import matplotlib.image as mpimg
 #procedure_name = "ShrinkWrappingAnIncompleteDeformedCirclePointCloud_WithRemeshing"
 #procedure_name = "InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing"
 #procedure_name = "armadillonewEvol_Pts2D3"
-procedure_name = "bunnynewEvol_Pts2D3"
-#procedure_name = "maxPlancknewEvol_Pts2D3"
+#procedure_name = "bunnynewEvol_Pts2D3"
+procedure_name = "maxPlancknewEvol_Pts2D3"
 #procedure_name = "nefertitinewEvol_Pts2D3"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly

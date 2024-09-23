@@ -3658,9 +3658,9 @@ int main()
 		const std::vector<std::string> meshForPtCloudNames{
 			//"armadillo",
 			//"blub",
-			"bunny",
+			//"bunny",
 			//"maxPlanck",
-			//"nefertiti",
+			"nefertiti",
 			//"ogre",
 			//"spot"
 		};
@@ -3704,6 +3704,13 @@ int main()
 			{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
 		};
 
+		const std::map<std::string, Sphere3D> outerSpheres{
+			{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
+			{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
+			{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
+			{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		};
+
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
 		constexpr double defaultOffsetFactor = 1.5;
@@ -3715,14 +3722,15 @@ int main()
 		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
 
 		//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
-		SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 20, 50 /*, 100, 120, 140, 145*/ });
+		SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
 
-		constexpr unsigned int NTimeSteps = 80;
+		constexpr unsigned int NTimeSteps = 180;
 
 		constexpr bool executeOldEvolver = false;
 		constexpr bool executeNewSurfaceEvolver = false;
 		constexpr bool executeNewCurveEvolver = false;
-		constexpr bool executeNewCurveInnerOuterCustomEvolver = true;
+		constexpr bool executeNewSurfaceInnerOuterCustomEvolver = true;
+		constexpr bool executeNewCurveInnerOuterCustomEvolver = false;
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -3897,7 +3905,7 @@ int main()
 				globalSettings.ExportResult = false;
 
 				globalSettings.RemeshingResizeFactor = 0.7f;
-				globalSettings.RemeshingResizeTimeIds = {};
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 				std::cout << "Setting up ManifoldSurfaceEvolutionStrategy.\n";
 
@@ -3984,7 +3992,7 @@ int main()
 				globalSettings.ExportResult = false;
 
 				globalSettings.RemeshingResizeFactor = 0.7f;
-				globalSettings.RemeshingResizeTimeIds = {};
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 				auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
 					strategySettings, std::make_shared<std::vector<pmp::Point2>>(pts2D));
@@ -3992,6 +4000,93 @@ int main()
 				std::cout << "Setting up ManifoldEvolver.\n";
 
 				ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+
+				std::cout << "done.\n";
+			}
+
+			if (executeNewSurfaceInnerOuterCustomEvolver)
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = true;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+				if (!outerSpheres.contains(meshName))
+				{
+					std::cerr << "!outerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+
+				const auto outerSphere = outerSpheres.at(meshName);
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+				
+				// construct outer ico-sphere
+				Geometry::IcoSphereBuilder icoBuilder({ strategySettings.LevelOfDetail, outerSphere.Radius });
+				icoBuilder.BuildBaseData();
+				icoBuilder.BuildPMPSurfaceMesh();
+				auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
+				const pmp::mat4 transfMatrixGeomMove{
+					1.0f, 0.0f, 0.0f, outerSphere.Center[0],
+					0.0f, 1.0f, 0.0f, outerSphere.Center[1],
+					0.0f, 0.0f, 1.0f, outerSphere.Center[2],
+					0.0f, 0.0f, 0.0f, 1.0f
+				};
+				outerSurface *= transfMatrixGeomMove;
+
+				std::vector<pmp::SurfaceMesh> innerSurfaces;
+				auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+					strategySettings, MeshLaplacian::Voronoi, 
+					outerSurface, innerSurfaces,
+					std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
 
 				std::cout << "ManifoldEvolver::Evolve ... ";
 
@@ -4046,7 +4141,7 @@ int main()
 				globalSettings.ExportResult = false;
 
 				globalSettings.RemeshingResizeFactor = 0.7f;
-				globalSettings.RemeshingResizeTimeIds = {};
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 				if (!outerCircles.contains(meshName))
 				{

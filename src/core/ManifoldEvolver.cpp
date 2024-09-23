@@ -288,8 +288,11 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) 
+					+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -392,8 +395,11 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i)
+					+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -460,8 +466,11 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			// Check if the updated position is within bounds
 			if (!m_EvolBox.Contains(updatedPosition))
 			{
-				const std::string msg = "\nManifoldCurveEvolutionStrategy::ExplicitIntegrationStep: vertex " + std::to_string(v.idx()) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::ExplicitIntegrationStep: vertex " + std::to_string(v.idx()) 
+					+ ": (" + std::to_string(updatedPosition[0]) + ", " + std::to_string(updatedPosition[1]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -524,8 +533,11 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			// Check if the updated position is within bounds
 			if (!m_EvolBox.Contains(updatedPosition))
 			{
-				const std::string msg = "\nManifoldCurveEvolutionStrategy::ExplicitIntegrationStep: innerCurve vertex " + std::to_string(v.idx()) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::ExplicitIntegrationStep: innerCurve vertex " + std::to_string(v.idx()) 
+					+ ": (" + std::to_string(updatedPosition[0]) + ", " + std::to_string(updatedPosition[1]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -793,12 +805,14 @@ void CustomManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingMani
 {
 	if (GetOuterCurve())
 	{
-		GetRemeshingSettings()[GetOuterCurve().get()] = CollectRemeshingSettingsFromCurve(GetOuterCurve());
+		GetRemeshingSettings()[GetOuterCurve().get()] = 
+			CollectRemeshingSettingsForManifold_EXPERIMENTAL(GetOuterCurve(), GetSettings().RemeshingSettings);
 	}
 
 	for (const auto& innerCurve : GetInnerCurves())
 	{
-		GetRemeshingSettings()[innerCurve.get()] = CollectRemeshingSettingsFromCurve(innerCurve);
+		GetRemeshingSettings()[innerCurve.get()] = 
+			CollectRemeshingSettingsForManifold_EXPERIMENTAL(innerCurve, GetSettings().RemeshingSettings);
 	}
 }
 
@@ -1196,8 +1210,11 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) 
+					+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ", " + std::to_string(newPos[2]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1]) + ", " + std::to_string(m_EvolBox.min()[2])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1]) + ", " + std::to_string(m_EvolBox.max()[2])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -1300,8 +1317,11 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep: innerSurface vertex " + std::to_string(i)
+					+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ", " + std::to_string(newPos[2]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1]) + ", " + std::to_string(m_EvolBox.min()[2])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1]) + ", " + std::to_string(m_EvolBox.max()[2])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -1363,8 +1383,11 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			// Check if the updated position is within bounds
 			if (!m_EvolBox.Contains(updatedPosition))
 			{
-				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep: vertex " + std::to_string(v.idx()) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep: vertex " + std::to_string(v.idx())
+					+ ": (" + std::to_string(updatedPosition[0]) + ", " + std::to_string(updatedPosition[1]) + ", " + std::to_string(updatedPosition[2]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1]) + ", " + std::to_string(m_EvolBox.min()[2])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1]) + ", " + std::to_string(m_EvolBox.max()[2])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -1424,8 +1447,11 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			// Check if the updated position is within bounds
 			if (!m_EvolBox.Contains(updatedPosition))
 			{
-				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep: innerSurface vertex " + std::to_string(v.idx()) + " outside m_EvolBox for time step id: "
-					+ std::to_string(step) + "!\n";
+				const std::string msg = "\nManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep: innerSurface vertex " + std::to_string(v.idx()) 
+					+ ": (" + std::to_string(updatedPosition[0]) + ", " + std::to_string(updatedPosition[1]) + ", " + std::to_string(updatedPosition[2]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1]) + ", " + std::to_string(m_EvolBox.min()[2])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1]) + ", " + std::to_string(m_EvolBox.max()[2])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
 				std::cerr << msg;
 				throw std::runtime_error(msg);
 			}
@@ -1706,12 +1732,14 @@ void CustomManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingMa
 {
 	if (GetOuterSurface())
 	{
-		GetRemeshingSettings()[GetOuterSurface().get()] = CollectRemeshingSettingsFromMesh(GetOuterSurface());
+		GetRemeshingSettings()[GetOuterSurface().get()] = 
+			CollectRemeshingSettingsForManifold_EXPERIMENTAL(GetOuterSurface(), GetSettings().RemeshingSettings);
 	}
 
 	for (const auto& innerSurface : GetInnerSurfaces())
 	{
-		GetRemeshingSettings()[innerSurface.get()] = CollectRemeshingSettingsFromMesh(innerSurface);
+		GetRemeshingSettings()[innerSurface.get()] = 
+			CollectRemeshingSettingsForManifold_EXPERIMENTAL(innerSurface, GetSettings().RemeshingSettings);
 	}
 }
 
@@ -1777,40 +1805,77 @@ std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolum
 void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor)
 {
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
-	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
+	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
+
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,
 		0.0f, scalingFactor, 0.0f, 0.0f,
 		0.0f, 0.0f, scalingFactor, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	GetTransformToOriginal() = inverse(transfMatrixGeomScale);
+
+	// extract origin and radius for m_EvolBox from the custom geometries
+	pmp::Point origin{};
+	float radius = 1.0f;
+	if (GetOuterSurface())
+	{
+		const auto outerBounds = GetOuterSurface()->bounds();
+		const auto outerBoundsSize = outerBounds.max() - outerBounds.min();
+		radius = std::max({ outerBoundsSize[0], outerBoundsSize[1], outerBoundsSize[2] }) * 0.5f;
+		origin = outerBounds.center();
+	}
+	else
+	{
+		for (const auto& innerSurface : GetInnerSurfaces())
+		{
+			const auto innerBounds = innerSurface->bounds();
+			const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
+			radius = std::max(std::max({ innerBoundsSize[0], innerBoundsSize[1], innerBoundsSize[2] }) * 0.5f, radius);
+			origin += innerBounds.center();
+		}
+		if (!GetInnerSurfaces().empty())
+			origin /= GetInnerSurfaces().size();
+	}
+	const pmp::mat4 transfMatrixGeomMove{
+		1.0f, 0.0f, 0.0f, -origin[0],
+		0.0f, 1.0f, 0.0f, -origin[1],
+		0.0f, 0.0f, 1.0f, -origin[2],
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
+	GetTransformToOriginal() = inverse(transfMatrixFull);
 
 	// Transform the geometries
-	(*GetOuterSurface()) *= transfMatrixGeomScale;
+	(*GetOuterSurface()) *= transfMatrixFull;
 	for (auto& innerSurface : GetInnerSurfaces())
 	{
-		(*innerSurface) *= transfMatrixGeomScale;
+		(*innerSurface) *= transfMatrixFull;
 	}
+
+	// test box for geometry validation
+	const float evolBoxFactor = 1.2f * scalingFactor;
+	GetEvolBox() = pmp::BoundingBox(
+		pmp::Point{ -radius, -radius, -radius } * evolBoxFactor,
+		pmp::Point{ radius, radius, radius } * evolBoxFactor);
 
 	if (GetOuterSurfraceDistanceField())
 	{
-		(*GetOuterSurfraceDistanceField()) *= transfMatrixGeomScale;
+		(*GetOuterSurfraceDistanceField()) *= transfMatrixFull;
 		(*GetOuterSurfraceDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDF : GetInnerSurfacesDistanceFields())
 	{
-		(*innerSurfaceDF) *= transfMatrixGeomScale;
+		(*innerSurfaceDF) *= transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 
 	if (!GetDistanceField() || !GetDFNegNormalizedGradient())
 		return; // nothing to scale
 
-	(*GetDistanceField()) *= transfMatrixGeomScale;
-	GetEvolBox() = GetDistanceField()->Box(); // test box for geometry validation
-	(*GetDFNegNormalizedGradient()) *= transfMatrixGeomScale;
+	(*GetDistanceField()) *= transfMatrixFull;
+	(*GetDFNegNormalizedGradient()) *= transfMatrixFull;
 	(*GetDistanceField()) *= static_cast<double>(scalingFactor); // Scale the distance values
 }
 
