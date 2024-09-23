@@ -1861,6 +1861,9 @@ public:
 
     //!@}
 
+    //! Flips the orientation of all half-edges
+    void negate_orientation();
+
 private:
     struct VertexConnectivity
     {

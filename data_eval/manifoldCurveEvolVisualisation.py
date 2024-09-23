@@ -6,6 +6,7 @@ import imageio.v2 as imageio  # Use imageio.v2 to avoid the deprecation warning
 from collections import defaultdict
 import matplotlib.gridspec as gridspec
 import matplotlib.image as mpimg
+import matplotlib.patches as patches
 
 # Define the procedure name and the path to your directory containing the files
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing"
@@ -17,11 +18,57 @@ import matplotlib.image as mpimg
 #procedure_name = "InnerOuterLSWOfImportedMeshPtCloudSlice_WithRemeshing"
 #procedure_name = "armadillonewEvol_Pts2D3"
 #procedure_name = "bunnynewEvol_Pts2D3"
-procedure_name = "maxPlancknewEvol_Pts2D3"
+#procedure_name = "maxPlancknewEvol_Pts2D3"
 #procedure_name = "nefertitinewEvol_Pts2D3"
+
+#procedure_name = "armadillonewEvol_Pts2D3_Repulsionless"
+#procedure_name = "bunnynewEvol_Pts2D3_Repulsionless"
+#procedure_name = "maxPlancknewEvol_Pts2D3_Repulsionless"
+#procedure_name = "nefertitinewEvol_Pts2D3_Repulsionless"
+
+#procedure_name = "armadillonewEvol_Pts2D3_WithRepulsion"
+#procedure_name = "bunnynewEvol_Pts2D3_WithRepulsion"
+#procedure_name = "maxPlancknewEvol_Pts2D3_WithRepulsion"
+#procedure_name = "nefertitinewEvol_Pts2D3_WithRepulsion"
+
+#procedure_name = "curve0_Repulsionless"
+#procedure_name = "curve1_Repulsionless"
+procedure_name = "curve2_Repulsionless"
+#procedure_name = "curve3_Repulsionless"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
+
+png_time_steps = [] # a specified time step container for png export. If empty, a gif animation will be exported
+
+# =============================================================
+#        Inscribed circle estimation
+# -------------------------------------------------------------
+
+inscribed_circle_parameters = {
+    "armadillonewEvol_Pts2D3": {
+        "center": (-3.0, 52.0),
+        "radius": 20.0
+    },
+    "bunnynewEvol_Pts2D3": {
+        "center": (-0.025, 0.08),
+        "radius": 0.025
+    },
+    "maxPlancknewEvol_Pts2D3": {
+        "center": (8.0, 85.0),
+        "radius": 50.0
+    },
+    "nefertitinewEvol_Pts2D3": {
+        #"center": (-75.0, -50.0),
+        #"radius": 25.0
+        "center": (-20.0, 90.0),
+        "radius": 55.0
+    }
+}
+
+inscribed_circle = None #inscribed_circle_parameters.get(procedure_name)
+
+# =============================================================
 
 # Helper function to read the grid dimensions from the *.gdim2d file
 def read_gdim2d_file(filepath):
@@ -49,6 +96,8 @@ def read_gdim2d_file(filepath):
 background_image_path = os.path.join(directory, f"{procedure_name}_TargetDF.png")
 legend_image_path = os.path.join(directory, f"{procedure_name}_TargetDF_Scale.png")
 gdim2d_path = os.path.join(directory, f"{procedure_name}_TargetDF.gdim2d")
+
+legend_img = None
 
 if os.path.exists(background_image_path) and os.path.exists(gdim2d_path) and os.path.exists(legend_image_path):
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(gdim2d_path)
@@ -221,12 +270,21 @@ if background_img is not None:
     ax_main.invert_yaxis()  # Reverse the direction of the y-axis
 else:
     print("missing background_img. Resizing automatically according to curves.")
-    # Automatically adjust the plot limits based on the curves if no background image
-    all_points = np.concatenate([curve for curve in outer_curves] + 
-                                [curve for curves in inner_curves.values() for curve in curves])
-    ax_main.set_xlim(np.min(all_points[:, 0]), np.max(all_points[:, 0]))
-    ax_main.set_ylim(np.min(all_points[:, 1]), np.max(all_points[:, 1]))
-    ax_main.invert_yaxis()  # Reverse the direction of the y-axis
+    # Check if outer or inner curves exist
+    if outer_curves:
+        # Use the first outer curve to set plot limits
+        first_outer_curve = outer_curves[0]
+        ax_main.set_xlim(np.min(first_outer_curve[:, 0]), np.max(first_outer_curve[:, 0]))
+        ax_main.set_ylim(np.min(first_outer_curve[:, 1]), np.max(first_outer_curve[:, 1]))
+        ax_main.invert_yaxis()  # Reverse the direction of the y-axis
+    elif inner_curves:
+        # Use the first inner curve if outer curves are not available
+        first_inner_curve_group = next(iter(inner_curves.values()))[0]
+        ax_main.set_xlim(np.min(first_inner_curve_group[:, 0]), np.max(first_inner_curve_group[:, 0]))
+        ax_main.set_ylim(np.min(first_inner_curve_group[:, 1]), np.max(first_inner_curve_group[:, 1]))
+        ax_main.invert_yaxis()  # Reverse the direction of the y-axis
+    else:
+        raise ValueError("No curves (outer or inner) are available to set plot bounds.")
 
 # Show legend
 if legend_img is not None:
@@ -259,11 +317,13 @@ if legend_img is not None:
     ax_legend.set_xlim(extent_legend[:2])
     ax_legend.set_ylim([extent_legend[2], extent_legend[3] + 0.1 * bbox_size[1]])  # Adjust ylim for the symbol placement
 
+# =============================================
+
 ax_main.set_aspect('equal')
 
-# Initialize the lines for inner (red) and outer (black) curves
+# Initialize the lines for inner (magenta) and outer (black) curves
 outer_line, = ax_main.plot([], [], 'k-', linewidth=2)  # Black outer curve
-inner_line_handles = [ax_main.plot([], [], '-', linewidth=2)[0] for _ in inner_curves]  # Different lines for each inner curve
+inner_line_handles = [ax_main.plot([], [], color='#65107a', linestyle='-', linewidth=2)[0] for _ in inner_curves]  # Different lines for each inner curve
 
 # Initialize the line data
 def init():
@@ -284,18 +344,37 @@ def update(frame):
         if inner_curve_group[frame].size > 0:
             x_inner, y_inner = inner_curve_group[frame].T
             inner_lines.set_data(x_inner, y_inner)
+
+    if inscribed_circle:
+        center = inscribed_circle["center"]
+        radius = inscribed_circle["radius"]
+        inscribed_circle_patch = patches.Circle(center, radius, edgecolor='purple', facecolor='none', linewidth=2)
+        ax_main.add_patch(inscribed_circle_patch)
     
     # Update the title with the current time step using time_id
     ax_main.set_title(f"Time Step: {time_ids[frame]}", fontsize=14)
 
     return [outer_line] + inner_line_handles
 
-# Create the animation
-ani = FuncAnimation(fig, update, frames=len(outer_curves), init_func=init, blit=False, repeat=True)
+# =============================================================================================
+#                                  Visualization
+# ---------------------------------------------------------------------------------------------
 
-# Save the animation as a GIF
-output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-ani.save(output_gif_path, writer='pillow', fps=30)
+if png_time_steps:
+    # Manually call the update function for each specified time step and export as PNG
+    for frame_idx, time_step in enumerate(time_ids):
+        if time_step in png_time_steps:
+            update(frame_idx)  # Call update for this frame
+            output_png_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.png")
+            print("Saving ", output_png_path)
+            plt.savefig(output_png_path, dpi=300)  # Save the PNG for the current frame
+else:
+    # Create the animation
+    ani = FuncAnimation(fig, update, frames=len(outer_curves), init_func=init, blit=False, repeat=True)
+
+    # Save the animation as a GIF
+    output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
+    ani.save(output_gif_path, writer='pillow', fps=30)
 
 # Show the animation
 plt.show()

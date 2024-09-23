@@ -507,6 +507,27 @@ namespace pmp
         return v;
     }
 
+    void ManifoldCurve2D::negate_orientation()
+    {
+        for (auto e : edges())
+        {
+            Vertex start = econn_[e].start_;
+            Vertex end = econn_[e].end_;
+            econn_[e].start_ = end;
+            econn_[e].end_ = start;
+
+            // Update vertex connectivity
+            if (start.is_valid())
+            {
+                vconn_[start].to_ = e;
+            }
+            if (end.is_valid())
+            {
+                vconn_[end].from_ = e;
+            }
+        }
+    }
+
     bool write_to_ply(const ManifoldCurve2D& curve, const std::string& fileName)
     {
         // Find the last dot after the last directory separator

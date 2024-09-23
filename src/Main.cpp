@@ -101,238 +101,245 @@ constexpr bool perfromTerrainTriangulationTest = false;
 constexpr bool performDistanceFieldHashTest = false;
 constexpr bool performDistanceField2DHashTest = false;
 constexpr bool performManifoldCurve2DTests = false;
-constexpr bool performPairedCurveEvolverTests = false;
+constexpr bool performPointCloud2DSliceTests = false;
+constexpr bool performCurveReorientTests = false;
+constexpr bool performMeshReorientTests = false;
 // constexpr bool performPairedSurfaceEvolverTests = true;
 constexpr bool performPropertyPerformanceTests = false;
-constexpr bool performOldVsNewLSWTests = true;
+constexpr bool performOldVsNewLSWTests = false;
+constexpr bool performPairedLSWTests = false;
+constexpr bool performPairedLSWRepulsionTests = false;
+constexpr bool performEquilibriumPairedManifoldTests = true;
 
 int main()
 {
-	// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
-	const std::vector<std::string> meshNames{
-		//"BentChair",
-			//"blub",
-			"bunny",
-			//"maxPlanck",
-			//"nefertiti",
-			//"ogre",
-			//"spot"
-	};
-
-	if (performSDFTests)
 	{
-		constexpr unsigned int nVoxelsPerMinDimension = 10;
-		constexpr bool computeGradients = false;
-
-		for (const auto& name : meshNames)
-		{
-			pmp::SurfaceMesh mesh;
-			mesh.read(dataDirPath + name + ".obj");
-
-			const auto meshBBox = mesh.bounds();
-			const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-			const float cellSize = minSize / nVoxelsPerMinDimension;
-			const SDF::DistanceFieldSettings sdfSettings{
-				cellSize,
-					1.0f,
-					DBL_MAX,
-					SDF::KDTreeSplitType::Center,
-					SDF::SignComputation::VoxelFloodFill,
-					SDF::BlurPostprocessingType::None,
-					SDF::PreprocessingType::Octree
-			};
-			SDF::ReportInput(mesh, sdfSettings, std::cout);
-
-			const auto startSDF = std::chrono::high_resolution_clock::now();
-			const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
-			const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
-			const auto endSDF = std::chrono::high_resolution_clock::now();
-
-			SDF::ReportOutput(sdf, std::cout);
-			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
-			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
-			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			ExportToVTI(dataOutPath + name + "SDF", sdf);
-			if (computeGradients)
-			{
-				std::cout << "Geometry::ComputeGradient(sdf) ...";
-				const auto gradSdf = Geometry::ComputeGradient(sdf);
-				ExportToVTK(dataOutPath + name + "gradSDF", gradSdf);
-				std::cout << "... done\n";
-				std::cout << "Geometry::ComputeNormalizedGradient(sdf) ...";
-				const auto normGradSdf = Geometry::ComputeNormalizedGradient(sdf);
-				ExportToVTK(dataOutPath + name + "normGradSDF", normGradSdf);
-				std::cout << "... done\n";
-				std::cout << "Geometry::ComputeNormalizedNegativeGradient(sdf) ...";
-				const auto negNormGradSdf = Geometry::ComputeNormalizedNegativeGradient(sdf);
-				ExportToVTK(dataOutPath + name + "negNormGradSDF", negNormGradSdf);
-				std::cout << "... done\n";
-			}
-
-			/*std::cout << "---------------------------------------------------\n";
-			std::cout << "SDF - Angle Weighted Pseudonormal Approach:\n";
-			std::cout << "---------------------------------------------------\n";
-
-			pmp::BoundingBox sdfBox(meshBBox);
-			const float expansion = 1.0f * minSize;
-			sdfBox.expand(expansion, expansion, expansion);
-			Geometry::ScalarGrid sdf2(cellSize, sdfBox);
-
-			const auto startSDF2 = std::chrono::high_resolution_clock::now();
-			pmp::Normals::compute_vertex_normals(mesh);
-			ComputeMeshSignedDistanceFromNormals(sdf2, mesh);
-			const auto endSDF2 = std::chrono::high_resolution_clock::now();
-			SDF::ReportOutput(sdf2, std::cout);
-			const std::chrono::duration<double> timeDiff2 = endSDF2 - startSDF2;
-			std::cout << "SDF (Pseudonormal) Time: " << timeDiff2.count() << " s\n";
-			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			ExportToVTI(dataOutPath + name + "SDF2", sdf2);*/
-		}
-	} // endif performSDFTests
-
-	if (performSphereTest)
-	{
-		 { // Setup 1: No remeshing, No tangential redistribution
-			const ST_MeshTopologySettings topoSettings{};
-
-			const SphereTestEvolutionSettings stSettings{
-				topoSettings,
-				false, false, dataOutPath,
-				ST_MeshLaplacian::Barycentric, 0.0f, false};
-
-			SphereTest st(stSettings);
-			st.PerformTest(4);
-		}
-
-		std::cout << "=====================================================\n";
-
-		{ // Setup 2: No remeshing, tangential redistribution with weight 0.25
-			const ST_MeshTopologySettings topoSettings{};
-
-			const SphereTestEvolutionSettings stSettings{
-				topoSettings,
-				false, false, dataOutPath,
-				ST_MeshLaplacian::Barycentric, 0.25f, false };
-
-			SphereTest st(stSettings);
-			st.PerformTest(4);
-		}
-
-		/*std::cout << "=====================================================\n";
-
-		{ // Setup 3: Remeshing, No tangential redistribution
-			const ST_MeshTopologySettings topoSettings{};
-
-			const SphereTestEvolutionSettings stSettings{
-				topoSettings,
-				false, false, dataOutPath,
-				ST_MeshLaplacian::Barycentric, 0.0f, true };
-
-			SphereTest st(stSettings);
-			st.PerformTest(4);
-		}
-
-		std::cout << "=====================================================\n";
-
-		{ // Setup 4: Remeshing, tangential redistribution with weight 0.25
-			const ST_MeshTopologySettings topoSettings{};
-
-			const SphereTestEvolutionSettings stSettings{
-				topoSettings,
-				false, false, dataOutPath,
-				ST_MeshLaplacian::Barycentric, 0.25f, true };
-
-			SphereTest st(stSettings);
-			st.PerformTest(4);
-		}*/
-
-	} // endif performSphereTest
-
-	if (performEvolverTests)
-	{
-		constexpr unsigned int nVoxelsPerMinDimension = 40;
-		constexpr double defaultTimeStep = 0.05;
-		const std::map<std::string, double> timeStepSizesForMeshes{
-			{"armadillo", 0.05 },
-			{ "BentChair", 0.05 },
-			{ "blub", 0.05 },
-			{ "bunny", 0.0025 },
-			{ "maxPlanck", 0.05 },
-			{ "nefertiti", 0.05 },
-			{ "ogre", 0.05 },
-			{ "spot", 0.05 }
+		// DISCLAIMER: the names need to match the models in "DROOT_DIR/data" except for the extension (which is always *.obj)
+		const std::vector<std::string> meshNames{
+			//"BentChair",
+				//"blub",
+				"bunny",
+				//"maxPlanck",
+				//"nefertiti",
+				//"ogre",
+				//"spot"
 		};
 
-		for (const auto& name : meshNames)
+		if (performSDFTests)
 		{
-			pmp::SurfaceMesh mesh;
-			mesh.read(dataDirPath + name + ".obj");
-			const auto meshBBox = mesh.bounds();
-			const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-			const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-			const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-			const float cellSize = minSize / nVoxelsPerMinDimension;
-			constexpr float volExpansionFactor = 1.0f;
-			const SDF::DistanceFieldSettings sdfSettings{
-				cellSize,
-					volExpansionFactor,
-					Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
-					SDF::KDTreeSplitType::Center,
-					SDF::SignComputation::VoxelFloodFill,
-					SDF::BlurPostprocessingType::None,
-					SDF::PreprocessingType::Octree
-			};
-			SDF::ReportInput(mesh, sdfSettings, std::cout);
+			constexpr unsigned int nVoxelsPerMinDimension = 10;
+			constexpr bool computeGradients = false;
 
-			const auto startSDF = std::chrono::high_resolution_clock::now();
-			const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
-			const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
-			const auto endSDF = std::chrono::high_resolution_clock::now();
-
-			SDF::ReportOutput(sdf, std::cout);
-			const std::chrono::duration<double> timeDiff = endSDF - startSDF;
-			std::cout << "SDF Time: " << timeDiff.count() << " s\n";
-			std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-			ExportToVTI(dataOutPath + name + "SDF", sdf);
-
-			const auto& sdfBox = sdf.Box();
-			const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
-			const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
-
-			const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
-
-			const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
-			SurfaceEvolutionSettings seSettings{
-				name,
-				80,
-				tau,
-				fieldIsoLevel,
-				3, // IcoSphereSubdivisionLevel
-				PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
-				{},
-				minSize, maxSize,
-				meshBBox.center(),
-				true, false,
-				dataOutPath,
-				MeshLaplacian::Voronoi,
-				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-				0.05f,
-				true
-			};
-			ReportInput(seSettings, std::cout);
-			SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
-
-			try
+			for (const auto& name : meshNames)
 			{
-				evolver.Evolve();
+				pmp::SurfaceMesh mesh;
+				mesh.read(dataDirPath + name + ".obj");
+
+				const auto meshBBox = mesh.bounds();
+				const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+				const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+				const float cellSize = minSize / nVoxelsPerMinDimension;
+				const SDF::DistanceFieldSettings sdfSettings{
+					cellSize,
+						1.0f,
+						DBL_MAX,
+						SDF::KDTreeSplitType::Center,
+						SDF::SignComputation::VoxelFloodFill,
+						SDF::BlurPostprocessingType::None,
+						SDF::PreprocessingType::Octree
+				};
+				SDF::ReportInput(mesh, sdfSettings, std::cout);
+
+				const auto startSDF = std::chrono::high_resolution_clock::now();
+				const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+				const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
+				const auto endSDF = std::chrono::high_resolution_clock::now();
+
+				SDF::ReportOutput(sdf, std::cout);
+				const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+				std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+				std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+				ExportToVTI(dataOutPath + name + "SDF", sdf);
+				if (computeGradients)
+				{
+					std::cout << "Geometry::ComputeGradient(sdf) ...";
+					const auto gradSdf = Geometry::ComputeGradient(sdf);
+					ExportToVTK(dataOutPath + name + "gradSDF", gradSdf);
+					std::cout << "... done\n";
+					std::cout << "Geometry::ComputeNormalizedGradient(sdf) ...";
+					const auto normGradSdf = Geometry::ComputeNormalizedGradient(sdf);
+					ExportToVTK(dataOutPath + name + "normGradSDF", normGradSdf);
+					std::cout << "... done\n";
+					std::cout << "Geometry::ComputeNormalizedNegativeGradient(sdf) ...";
+					const auto negNormGradSdf = Geometry::ComputeNormalizedNegativeGradient(sdf);
+					ExportToVTK(dataOutPath + name + "negNormGradSDF", negNormGradSdf);
+					std::cout << "... done\n";
+				}
+
+				/*std::cout << "---------------------------------------------------\n";
+				std::cout << "SDF - Angle Weighted Pseudonormal Approach:\n";
+				std::cout << "---------------------------------------------------\n";
+
+				pmp::BoundingBox sdfBox(meshBBox);
+				const float expansion = 1.0f * minSize;
+				sdfBox.expand(expansion, expansion, expansion);
+				Geometry::ScalarGrid sdf2(cellSize, sdfBox);
+
+				const auto startSDF2 = std::chrono::high_resolution_clock::now();
+				pmp::Normals::compute_vertex_normals(mesh);
+				ComputeMeshSignedDistanceFromNormals(sdf2, mesh);
+				const auto endSDF2 = std::chrono::high_resolution_clock::now();
+				SDF::ReportOutput(sdf2, std::cout);
+				const std::chrono::duration<double> timeDiff2 = endSDF2 - startSDF2;
+				std::cout << "SDF (Pseudonormal) Time: " << timeDiff2.count() << " s\n";
+				std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+				ExportToVTI(dataOutPath + name + "SDF2", sdf2);*/
 			}
-			catch (...)
+		} // endif performSDFTests
+
+		if (performSphereTest)
+		{
+			{ // Setup 1: No remeshing, No tangential redistribution
+				const ST_MeshTopologySettings topoSettings{};
+
+				const SphereTestEvolutionSettings stSettings{
+					topoSettings,
+					false, false, dataOutPath,
+					ST_MeshLaplacian::Barycentric, 0.0f, false };
+
+				SphereTest st(stSettings);
+				st.PerformTest(4);
+			}
+
+			std::cout << "=====================================================\n";
+
+			{ // Setup 2: No remeshing, tangential redistribution with weight 0.25
+				const ST_MeshTopologySettings topoSettings{};
+
+				const SphereTestEvolutionSettings stSettings{
+					topoSettings,
+					false, false, dataOutPath,
+					ST_MeshLaplacian::Barycentric, 0.25f, false };
+
+				SphereTest st(stSettings);
+				st.PerformTest(4);
+			}
+
+			/*std::cout << "=====================================================\n";
+
+			{ // Setup 3: Remeshing, No tangential redistribution
+				const ST_MeshTopologySettings topoSettings{};
+
+				const SphereTestEvolutionSettings stSettings{
+					topoSettings,
+					false, false, dataOutPath,
+					ST_MeshLaplacian::Barycentric, 0.0f, true };
+
+				SphereTest st(stSettings);
+				st.PerformTest(4);
+			}
+
+			std::cout << "=====================================================\n";
+
+			{ // Setup 4: Remeshing, tangential redistribution with weight 0.25
+				const ST_MeshTopologySettings topoSettings{};
+
+				const SphereTestEvolutionSettings stSettings{
+					topoSettings,
+					false, false, dataOutPath,
+					ST_MeshLaplacian::Barycentric, 0.25f, true };
+
+				SphereTest st(stSettings);
+				st.PerformTest(4);
+			}*/
+
+		} // endif performSphereTest
+
+		if (performEvolverTests)
+		{
+			constexpr unsigned int nVoxelsPerMinDimension = 40;
+			constexpr double defaultTimeStep = 0.05;
+			const std::map<std::string, double> timeStepSizesForMeshes{
+				{"armadillo", 0.05 },
+				{ "BentChair", 0.05 },
+				{ "blub", 0.05 },
+				{ "bunny", 0.0025 },
+				{ "maxPlanck", 0.05 },
+				{ "nefertiti", 0.05 },
+				{ "ogre", 0.05 },
+				{ "spot", 0.05 }
+			};
+
+			for (const auto& name : meshNames)
 			{
-				std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				pmp::SurfaceMesh mesh;
+				mesh.read(dataDirPath + name + ".obj");
+				const auto meshBBox = mesh.bounds();
+				const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
+				const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+				const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+				const float cellSize = minSize / nVoxelsPerMinDimension;
+				constexpr float volExpansionFactor = 1.0f;
+				const SDF::DistanceFieldSettings sdfSettings{
+					cellSize,
+						volExpansionFactor,
+						Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, // 0.2, TODO: zero gradient values lead to slow MCF outside of the truncated SDF region
+						SDF::KDTreeSplitType::Center,
+						SDF::SignComputation::VoxelFloodFill,
+						SDF::BlurPostprocessingType::None,
+						SDF::PreprocessingType::Octree
+				};
+				SDF::ReportInput(mesh, sdfSettings, std::cout);
+
+				const auto startSDF = std::chrono::high_resolution_clock::now();
+				const Geometry::PMPSurfaceMeshAdapter meshAdapter(std::make_shared<pmp::SurfaceMesh>(mesh));
+				const auto sdf = SDF::DistanceFieldGenerator::Generate(meshAdapter, sdfSettings);
+				const auto endSDF = std::chrono::high_resolution_clock::now();
+
+				SDF::ReportOutput(sdf, std::cout);
+				const std::chrono::duration<double> timeDiff = endSDF - startSDF;
+				std::cout << "SDF Time: " << timeDiff.count() << " s\n";
+				std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+				ExportToVTI(dataOutPath + name + "SDF", sdf);
+
+				const auto& sdfBox = sdf.Box();
+				const auto sdfBoxSize = sdfBox.max() - sdfBox.min();
+				const auto sdfBoxMaxDim = std::max<double>({ sdfBoxSize[0], sdfBoxSize[1], sdfBoxSize[2] });
+
+				const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+				const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
+				SurfaceEvolutionSettings seSettings{
+					name,
+					80,
+					tau,
+					fieldIsoLevel,
+					3, // IcoSphereSubdivisionLevel
+					PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize),
+					{},
+					minSize, maxSize,
+					meshBBox.center(),
+					true, false,
+					dataOutPath,
+					MeshLaplacian::Voronoi,
+					{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
+					0.05f,
+					true
+				};
+				ReportInput(seSettings, std::cout);
+				SurfaceEvolver evolver(sdf, volExpansionFactor, seSettings);
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > SurfaceEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
 			}
-		}
-	} // endif performEvolverTests
+		} // endif performEvolverTests
+	}
 
 	if (performOldArmadilloLSWTest)
 	{
@@ -3411,7 +3418,7 @@ int main()
 		}
 	}
 
-	if (performPairedCurveEvolverTests)
+	if (performPointCloud2DSliceTests)
 	{
 		// extract 2D point clouds
 		const std::vector<std::string> meshForPtCloudNames{
@@ -3491,7 +3498,38 @@ int main()
 			}
 		}
 
-	} // endif performPairedCurveEvolverTests
+	} // endif performPointCloud2DSliceTests
+
+	if (performCurveReorientTests)
+	{
+		auto circleCurve = pmp::CurveFactory::circle(pmp::Point2{}, 1.0f, 25);
+		circleCurve.negate_orientation();
+		if (!pmp::write_to_ply(circleCurve, dataOutPath + "circleCurve_Flipped.ply"))
+			std::cerr << "Error writing file!\n";
+
+	} // endif performCurveReorientTests
+
+	if (performMeshReorientTests)
+	{
+		const std::vector<std::string> meshNames{
+			"armadillo",
+			"blub",
+			"bunny",
+			"maxPlanck",
+			"nefertiti",
+			"ogre",
+			"spot"
+		};
+
+		for (const auto& meshName : meshNames)
+		{
+			pmp::SurfaceMesh mesh;
+			mesh.read(dataDirPath + meshName + ".obj");
+			mesh.negate_orientation();
+			mesh.write(dataOutPath + meshName + "_Flipped.obj");
+		}
+
+	} // endif performMeshReorientTests
 
 	if (performPropertyPerformanceTests)
 	{
@@ -3656,10 +3694,10 @@ int main()
 	if (performOldVsNewLSWTests)
 	{
 		const std::vector<std::string> meshForPtCloudNames{
-			//"armadillo",
+			"armadillo",
 			//"blub",
-			//"bunny",
-			//"maxPlanck",
+			"bunny",
+			"maxPlanck",
 			"nefertiti",
 			//"ogre",
 			//"spot"
@@ -3729,8 +3767,8 @@ int main()
 		constexpr bool executeOldEvolver = false;
 		constexpr bool executeNewSurfaceEvolver = false;
 		constexpr bool executeNewCurveEvolver = false;
-		constexpr bool executeNewSurfaceInnerOuterCustomEvolver = true;
-		constexpr bool executeNewCurveInnerOuterCustomEvolver = false;
+		constexpr bool executeNewSurfaceCustomEvolver = false;
+		constexpr bool executeNewCurveCustomEvolver = true;
 
 		for (const auto& meshName : meshForPtCloudNames)
 		{
@@ -3928,8 +3966,6 @@ int main()
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 				}
-
-				std::cout << "done.\n";
 			}
 
 			// ==========================================================================
@@ -4011,11 +4047,9 @@ int main()
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 				}
-
-				std::cout << "done.\n";
 			}
 
-			if (executeNewSurfaceInnerOuterCustomEvolver)
+			if (executeNewSurfaceCustomEvolver)
 			{
 				std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -4098,11 +4132,9 @@ int main()
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 				}
-
-				std::cout << "done.\n";
 			}
 
-			if (executeNewCurveInnerOuterCustomEvolver)
+			if (executeNewCurveCustomEvolver)
 			{
 				std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -4114,7 +4146,7 @@ int main()
 				};
 				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 				{
-					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 				strategySettings.TimeStep = tau;
 				strategySettings.LevelOfDetail = 3;
@@ -4171,11 +4203,826 @@ int main()
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
 				}
+			}
+		}
+		
+	} // endif performOldVsNewLSWTests
 
-				std::cout << "done.\n";
+	//
+	// =====================================================================================================================
+	//
+
+	if (performPairedLSWTests)
+	{
+		const std::vector<std::string> meshForPtCloudNames{
+			//"armadillo",
+			//"blub",
+			"bunny",
+			"maxPlanck",
+			//"nefertiti",
+			//"ogre",
+			//"spot"
+		};
+		const std::map<std::string, double> timeStepSizesForPtClouds{
+			{"armadillo", 0.05 },
+			{ "blub", 0.05 },
+			{ "bunny", 0.05 },
+			{ "maxPlanck", 0.05 },
+			{ "nefertiti", 0.05 },
+			{ "ogre", 0.05 },
+			{ "spot", 0.05 }
+		};
+		const std::map<std::string, double> isoLevelOffsetFactors{
+			{"armadillo", 0.5 },
+			{ "blub", 0.5 },
+			{ "bunny", 0.5 },
+			{ "maxPlanck", 0.5 },
+			{ "nefertiti", 0.5 },
+			{ "ogre", 0.5 },
+			{ "spot", 0.5 }
+		};
+
+		const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+			{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
+			{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
+			{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
+			{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		};
+
+		const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+			{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
+			{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
+			{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
+			{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		};
+
+		const std::map<std::string, Circle2D> outerCircles{
+			{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
+			{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
+			{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
+			{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		};
+		const std::map<std::string, Circle2D> innerCircles{
+			{"armadillo", Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}},
+			{"bunny", Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}},
+			{"maxPlanck", Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}},
+			{"nefertiti", Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}}
+		};
+
+		const std::map<std::string, Sphere3D> outerSpheres{
+			{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
+			{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
+			{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
+			{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+		//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+		SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
+
+		constexpr unsigned int NTimeSteps = 180;
+
+		constexpr bool executeCustomCurveEvolver = true;
+		constexpr bool executeCustomSurfaceEvolver = false;
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			// =======================================================================
+			//   - - - - - - - - - - - - -   Data   Prep   - - - - - - - - - - - -
+			// -----------------------------------------------------------------------
+
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+
+			const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto center = ptCloudBBox.center();
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+
+			const double isoLvlOffsetFactor = (isoLevelOffsetFactors.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+			// ==========================================================================
+			// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
+			// ==========================================================================
+
+			const float distTolerance = 0.01f * minSize;
+			const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
+			const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+			const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
+			if (pts2D.empty())
+			{
+				std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
+				continue;
+			}
+
+			if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+			{
+				std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+				continue;
+			}
+
+			// -----------------------
+			if (executeCustomSurfaceEvolver)
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = true;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+				if (!outerSpheres.contains(meshName))
+				{
+					std::cerr << "!outerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+
+				const auto outerSphere = outerSpheres.at(meshName);
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+
+				// construct outer ico-sphere
+				Geometry::IcoSphereBuilder icoBuilder({ strategySettings.LevelOfDetail, outerSphere.Radius });
+				icoBuilder.BuildBaseData();
+				icoBuilder.BuildPMPSurfaceMesh();
+				auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
+				const pmp::mat4 transfMatrixGeomMove{
+					1.0f, 0.0f, 0.0f, outerSphere.Center[0],
+					0.0f, 1.0f, 0.0f, outerSphere.Center[1],
+					0.0f, 0.0f, 1.0f, outerSphere.Center[2],
+					0.0f, 0.0f, 0.0f, 1.0f
+				};
+				outerSurface *= transfMatrixGeomMove;
+
+				std::vector<pmp::SurfaceMesh> innerSurfaces;
+				auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+					strategySettings, MeshLaplacian::Voronoi,
+					outerSurface, innerSurfaces,
+					std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+			}
+
+			if (executeCustomCurveEvolver)
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = true;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.InnerManifoldEpsilon = [](double distance)
+				{
+					return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 0.5 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts2D" + std::to_string(samplingLevel) + "_Repulsionless";
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+				if (!outerCircles.contains(meshName))
+				{
+					std::cerr << "!outerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+				if (!innerCircles.contains(meshName))
+				{
+					std::cerr << "!innerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+
+				const auto outerCircle = outerCircles.at(meshName);
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+				auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
+
+				const auto innerCircle = innerCircles.at(meshName);
+				const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
+				auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
+				innerCurve.negate_orientation();
+				std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
+
+				auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+					strategySettings, outerCurve, innerCurves,
+					std::make_shared<std::vector<pmp::Point2>>(pts2D));
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
 			}
 		}
 
-		
-	} // endif performOldVsNewLSWTests
+	} // endif performPairedLSWTests
+
+	if (performPairedLSWRepulsionTests)
+	{
+		const std::vector<std::string> meshForPtCloudNames{
+			//"armadillo",
+			//"blub",
+			"bunny",
+			//"maxPlanck",
+			//"nefertiti",
+			//"ogre",
+			//"spot"
+		};
+		const std::map<std::string, double> timeStepSizesForPtClouds{
+			{"armadillo", 0.05 },
+			{ "blub", 0.05 },
+			{ "bunny", 0.05 },
+			{ "maxPlanck", 0.05 },
+			{ "nefertiti", 0.05 },
+			{ "ogre", 0.05 },
+			{ "spot", 0.05 }
+		};
+		const std::map<std::string, double> isoLevelOffsetFactors{
+			{"armadillo", 0.5 },
+			{ "blub", 0.5 },
+			{ "bunny", 0.5 },
+			{ "maxPlanck", 0.5 },
+			{ "nefertiti", 0.5 },
+			{ "ogre", 0.5 },
+			{ "spot", 0.5 }
+		};
+
+		const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+			{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
+			{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
+			{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
+			{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		};
+
+		const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+			{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
+			{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
+			{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
+			{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		};
+
+		const std::map<std::string, Circle2D> outerCircles{
+			{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
+			{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
+			{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
+			{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		};
+		const std::map<std::string, Circle2D> innerCircles{
+			{"armadillo", Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}},
+			{"bunny", Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}},
+			{"maxPlanck", Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}},
+			{"nefertiti", Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}}
+		};
+
+		const std::map<std::string, Sphere3D> outerSpheres{
+			{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
+			{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
+			{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
+			{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		};
+
+		const std::map<std::string, double> criticalDistances{
+			{"armadillo", 5.0},
+			{"bunny", 0.005},
+			{"maxPlanck", 15.0},
+			{"nefertiti", 20.0}
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+
+		constexpr size_t samplingLevel = 3;
+		constexpr size_t nSamplings = 10;
+		constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+		constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+		//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+		SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
+
+		constexpr unsigned int NTimeSteps = 180;
+
+		constexpr bool executeCustomCurveEvolver = true;
+		constexpr bool executeCustomSurfaceEvolver = false;
+
+		for (const auto& meshName : meshForPtCloudNames)
+		{
+			// =======================================================================
+			//   - - - - - - - - - - - - -   Data   Prep   - - - - - - - - - - - -
+			// -----------------------------------------------------------------------
+
+			std::cout << "==================================================================\n";
+			std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+			std::cout << "------------------------------------------------------------------\n";
+			const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+			if (!baseDataOpt.has_value())
+			{
+				std::cerr << "baseDataOpt == nullopt!\n";
+				break;
+			}
+			std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+			const auto& baseData = baseDataOpt.value();
+			const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+			size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+			nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+			std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+			std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+			if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
+			{
+				std::cerr << "ExportSampledVerticesToPLY failed!\n";
+				break;
+			}
+
+			const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+			const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+			if (!ptCloudOpt.has_value())
+			{
+				std::cerr << "ptCloudOpt == nullopt!\n";
+				break;
+			}
+
+			const auto& ptCloud = ptCloudOpt.value();
+			const pmp::BoundingBox ptCloudBBox(ptCloud);
+			const auto center = ptCloudBBox.center();
+			const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+			const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+
+			const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+			// ==========================================================================
+			// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
+			// ==========================================================================
+
+			const float distTolerance = 0.01f * minSize;
+			const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
+			const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+			const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
+			if (pts2D.empty())
+			{
+				std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
+				continue;
+			}
+
+			if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+			{
+				std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+				continue;
+			}
+
+			if (!criticalDistances.contains(meshName))
+			{
+				std::cerr << "!criticalDistances.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+			const double criticalDistance = criticalDistances.at(meshName);
+
+			// -----------------------
+			if (executeCustomSurfaceEvolver)
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = true;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldRepulsion = [&criticalDistance](double distance)
+				{
+					return 1.0 * (1.0 / (criticalDistance + 0.2 * criticalDistance) - 1.0 / (distance + 0.2 * criticalDistance));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+				if (!outerSpheres.contains(meshName))
+				{
+					std::cerr << "!outerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+
+				const auto outerSphere = outerSpheres.at(meshName);
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+
+				// construct outer ico-sphere
+				Geometry::IcoSphereBuilder icoBuilder({ strategySettings.LevelOfDetail, outerSphere.Radius });
+				icoBuilder.BuildBaseData();
+				icoBuilder.BuildPMPSurfaceMesh();
+				auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
+				const pmp::mat4 transfMatrixGeomMove{
+					1.0f, 0.0f, 0.0f, outerSphere.Center[0],
+					0.0f, 1.0f, 0.0f, outerSphere.Center[1],
+					0.0f, 0.0f, 1.0f, outerSphere.Center[2],
+					0.0f, 0.0f, 0.0f, 1.0f
+				};
+				outerSurface *= transfMatrixGeomMove;
+
+				std::vector<pmp::SurfaceMesh> innerSurfaces;
+				auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+					strategySettings, MeshLaplacian::Voronoi,
+					outerSurface, innerSurfaces,
+					std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+			}
+
+			if (executeCustomCurveEvolver)
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = true;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.OuterManifoldRepulsion = [&criticalDistance](double distance)
+				{
+					return 0.001 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
+				};
+				strategySettings.InnerManifoldEpsilon = [](double distance)
+				{
+					return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 0.5 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.InnerManifoldRepulsion = [&criticalDistance](double distance)
+				{
+					return 0.001 * (1.0 / (criticalDistance + 0.5 * criticalDistance) - 1.0 / (distance + 0.5 * criticalDistance));
+				};
+				strategySettings.TimeStep = tau;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = meshName + "newEvol_Pts2D" + std::to_string(samplingLevel) + "_WithRepulsion";
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+				if (!outerCircles.contains(meshName))
+				{
+					std::cerr << "!outerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+				if (!innerCircles.contains(meshName))
+				{
+					std::cerr << "!innerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+					continue;
+				}
+
+				const auto outerCircle = outerCircles.at(meshName);
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+				auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
+
+				const auto innerCircle = innerCircles.at(meshName);
+				const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
+				auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
+				innerCurve.negate_orientation();
+				std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
+
+				auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+					strategySettings, outerCurve, innerCurves,
+					std::make_shared<std::vector<pmp::Point2>>(pts2D));
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+			}
+		}
+	} // endif performPairedLSWRepulsionTests
+
+	if (performEquilibriumPairedManifoldTests)
+	{
+		// Define the inner and outer circle pairs directly
+		const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
+			{Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}, Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f}},
+			{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}, Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f}},
+			{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f}},
+			{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f}}
+		};
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+		constexpr unsigned int NTimeSteps = 180;
+
+		for (unsigned int curveId = 0; const auto& circlePair : circlePairs)
+		{
+			std::cout << " ====================================================== \n";
+			std::cout << "Circles " << std::to_string(curveId) << ": \n";
+			std::cout << " ------------------------------------------------------ \n";
+
+			// Retrieve the inner and outer circles from the pair
+			const auto& innerCircle = circlePair.first;
+			const auto& outerCircle = circlePair.second;
+
+			const pmp::BoundingBox2 bbox{
+				pmp::Point2{
+					std::min(innerCircle.Center[0] - innerCircle.Radius, outerCircle.Center[0] - outerCircle.Radius),
+					std::min(innerCircle.Center[1] - innerCircle.Radius, outerCircle.Center[1] - outerCircle.Radius)
+				},
+				pmp::Point2{
+					std::max(innerCircle.Center[0] + innerCircle.Radius, outerCircle.Center[0] + outerCircle.Radius),
+					std::max(innerCircle.Center[1] + innerCircle.Radius, outerCircle.Center[1] + outerCircle.Radius)
+				}
+			};
+			const auto bboxSize = bbox.max() - bbox.min();
+			const float minSize = std::min(bboxSize[0], bboxSize[1]);
+			const float maxSize = std::max(bboxSize[0], bboxSize[1]);
+			const float cellSize = minSize / nVoxelsPerMinDimension;
+
+			const double isoLvlOffsetFactor = defaultOffsetFactor;
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			//if (executeCustomCurveEvolver)
+			{
+				std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+				ManifoldEvolutionSettings strategySettings;
+				strategySettings.UseInnerManifolds = true;
+				strategySettings.OuterManifoldEpsilon = [](double distance)
+				{
+					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.InnerManifoldEpsilon = [](double distance)
+				{
+					return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+				};
+				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+				{
+					return 0.5 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				};
+				strategySettings.TimeStep = defaultTimeStep;
+				strategySettings.LevelOfDetail = 3;
+				strategySettings.TangentialVelocityWeight = 0.05;
+
+				// Remeshing settings remain unchanged
+				strategySettings.RemeshingSettings.UseBackProjection = false;
+
+				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+				strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+				strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+				strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+				std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+				GlobalManifoldEvolutionSettings globalSettings;
+				globalSettings.NSteps = NTimeSteps;
+				globalSettings.DoRemeshing = true;
+				globalSettings.DetectFeatures = false;
+				globalSettings.ExportPerTimeStep = true;
+				globalSettings.ExportTargetDistanceFieldAsImage = true;
+				globalSettings.ProcedureName = "curve" + std::to_string(curveId) + "_Repulsionless";
+				globalSettings.OutputPath = dataOutPath;
+				globalSettings.ExportResult = false;
+
+				globalSettings.RemeshingResizeFactor = 0.7f;
+				globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+				auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
+
+				const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
+				auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
+				innerCurve.negate_orientation();
+				std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
+
+				auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+					strategySettings, outerCurve, innerCurves, nullptr);
+
+				std::cout << "Setting up ManifoldEvolver.\n";
+
+				ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+				std::cout << "ManifoldEvolver::Evolve ... ";
+
+				try
+				{
+					evolver.Evolve();
+				}
+				catch (...)
+				{
+					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+				}
+			}
+
+			curveId++;
+		}
+
+	}
 }

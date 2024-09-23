@@ -155,6 +155,9 @@ struct GlobalManifoldEvolutionSettings
 /// \brief Stabilization weight param from [0, 1]
 constexpr float STABILIZATION_FACTOR{ 1.0f };
 
+/// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
+constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
+
 //
 // ===============================================================================================
 //                                     Evolver strategies
@@ -887,6 +890,9 @@ public:
 
         for (unsigned int step = 1; step <= m_Settings.NSteps; ++step)
         {
+            // Print progress to the console
+            std::cout << "\rManifoldEvolver::Evolve ... Step: " << step << "/" << m_Settings.NSteps << std::flush;
+
             m_Strategy->PerformEvolutionStep(step);
 
             if (m_Settings.DetectFeatures)
@@ -915,6 +921,9 @@ public:
         {
             m_Strategy->ExportFinalResult(m_Settings.OutputPath + m_Settings.ProcedureName);
         }
+
+        // Clear the progress message after the loop ends
+        std::cout << "\rManifoldEvolver::Evolve ... Step: " << m_Settings.NSteps << "/" << m_Settings.NSteps << ". Done.\n";
     }
 
     /// \brief A getter for this evolver's strategy.

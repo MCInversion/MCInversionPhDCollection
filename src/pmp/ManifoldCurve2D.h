@@ -656,6 +656,9 @@ namespace pmp
             return dot(vpoint_[from_vertex(e)] - vpoint_[to_vertex(e)], vpoint_[from_vertex(e)] - vpoint_[to_vertex(e)]);
         }
 
+        //! Flips orientation of all edges
+        void negate_orientation();
+
     private:
 
         struct VertexConnectivity

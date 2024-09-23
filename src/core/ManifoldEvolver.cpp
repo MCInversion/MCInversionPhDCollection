@@ -12,9 +12,6 @@
 
 #include "ConversionUtils.h"
 
-/// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
-constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
-
 //
 // ======================================================================================
 //                    The strategy for 1D Curves in 2D space
@@ -245,7 +242,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = m_DistanceField ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -344,7 +341,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 
 			const double epsilonCtrlWeight =
-				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
@@ -352,7 +349,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = m_DistanceField ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -510,7 +507,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
 			const double epsilonCtrlWeight = 
-				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
@@ -681,29 +678,32 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
 		return;
 
-	const InscribedCircleInputData calcData{
-		*m_TargetPointCloud,
-		std::make_shared<Geometry::ScalarGrid2D>(*m_DistanceField) // clone
-	};
-	ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
-	const auto circles = inscribedCircleCalculator.Calculate(calcData);
+	throw std::invalid_argument(
+		"ManifoldCurveEvolutionStrategy::ConstructInitialManifolds: Automatic calculation of inscribed manifolds is not reliable yet! Please use CustomManifoldCurveEvolutionStrategy instead.");
+
+	//const InscribedCircleInputData calcData{
+	//	*m_TargetPointCloud,
+	//	std::make_shared<Geometry::ScalarGrid2D>(*m_DistanceField) // clone
+	//};
+	//ParticleSwarmDistanceFieldInscribedCircleCalculator inscribedCircleCalculator;
+	//const auto circles = inscribedCircleCalculator.Calculate(calcData);
 
 	// Hardcoded inner curves:
 	//const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85f} };
 
-	m_InnerCurves.reserve(circles.size());
+	//m_InnerCurves.reserve(circles.size());
 
-	for (const auto& circle : circles)
-	{
-		// keep the same vertex density for inner circles
-		const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * (circle.Radius) / outerCircleRadius);
-		m_InnerCurves.emplace_back(std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(
-			circle.Center,
-			circle.Radius * SPHERE_RADIUS_FACTOR, 
-			nInnerSegments
-		)));
-		m_InitialSphereSettings[m_InnerCurves.back().get()] = circle;
-	}
+	//for (const auto& circle : circles)
+	//{
+	//	// keep the same vertex density for inner circles
+	//	const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * (circle.Radius) / outerCircleRadius);
+	//	m_InnerCurves.emplace_back(std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(
+	//		circle.Center,
+	//		circle.Radius * SPHERE_RADIUS_FACTOR, 
+	//		nInnerSegments
+	//	)));
+	//	m_InitialSphereSettings[m_InnerCurves.back().get()] = circle;
+	//}
 }
 
 /// \brief The power of the stabilizing scale factor.
@@ -1166,7 +1166,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = m_DistanceField ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -1266,14 +1266,14 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			}
 
 			const double epsilonCtrlWeight = 
-				-1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
+				GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v])) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(vDistanceToOuter[v]));
 
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const double advectionDistance = GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v];
-			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
+			const double etaCtrlWeight = m_DistanceField ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -1425,7 +1425,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const double epsilonCtrlWeight = -1.0 * GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
+			const double epsilonCtrlWeight = GetSettings().InnerManifoldEpsilon(static_cast<double>(vMinDistance[v]));
 			const auto negGradDotNormal = pmp::ddot(vNegGradDistanceToTarget, vNormal);
 			const auto advectionDistance = static_cast<double>(GetSettings().AdvectionInteractWithOtherManifolds ? vMinDistance[v] : vDistanceToTarget[v]);
 			const double etaCtrlWeight = GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal);
@@ -1605,6 +1605,9 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
 		return;
 
+	throw std::invalid_argument(
+		"ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds: Automatic calculation of inscribed manifolds is not reliable yet! Please use CustomManifoldSurfaceEvolutionStrategy instead.");
+
 	// TODO: This is hardcoded, implement 3D version of ParticleSwarmDistanceFieldInscribedSphereCalculator
 	//const InscribedSphereInputData calcData{
 	//	*m_TargetPointCloud,
@@ -1612,29 +1615,29 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 	//};	
 	//ParticleSwarmDistanceFieldInscribedSphereCalculator inscribedSphereCalculator;
 	//const auto spheres = inscribedSphereCalculator.Calculate(calcData);
-	const std::vector spheres = {Sphere3D{pmp::Point(0, 0, 0), 0.7f}};
+	//const std::vector spheres = {Sphere3D{pmp::Point(0, 0, 0), 0.7f}};
 
-	m_InnerSurfaces.reserve(spheres.size());
+	//m_InnerSurfaces.reserve(spheres.size());
 
-	for (const auto& sphere : spheres)
-	{
-		// keep the same vertex density for inner spheres
-		const auto innerSubdiv = static_cast<unsigned int>(static_cast<pmp::Scalar>(GetSettings().LevelOfDetail) * (sphere.Radius * SPHERE_RADIUS_FACTOR) / outerSphereRadius);
-		Geometry::IcoSphereBuilder innerIcoBuilder({ 
-			innerSubdiv,
-			sphere.Radius * SPHERE_RADIUS_FACTOR
-		});
-		innerIcoBuilder.BuildBaseData();
-		innerIcoBuilder.BuildPMPSurfaceMesh();
-		auto mesh = innerIcoBuilder.GetPMPSurfaceMeshResult();
-		if (sphere.Center != pmp::Point(0, 0, 0))
-		{
-			const auto translationMatrix = translation_matrix(sphere.Center);
-			mesh *= translationMatrix;
-		}		
-		m_InnerSurfaces.push_back(std::make_shared<pmp::SurfaceMesh>(mesh));
-		m_InitialSphereSettings[m_InnerSurfaces.back().get()] = sphere;
-	}
+	//for (const auto& sphere : spheres)
+	//{
+	//	// keep the same vertex density for inner spheres
+	//	const auto innerSubdiv = static_cast<unsigned int>(static_cast<pmp::Scalar>(GetSettings().LevelOfDetail) * (sphere.Radius * SPHERE_RADIUS_FACTOR) / outerSphereRadius);
+	//	Geometry::IcoSphereBuilder innerIcoBuilder({ 
+	//		innerSubdiv,
+	//		sphere.Radius * SPHERE_RADIUS_FACTOR
+	//	});
+	//	innerIcoBuilder.BuildBaseData();
+	//	innerIcoBuilder.BuildPMPSurfaceMesh();
+	//	auto mesh = innerIcoBuilder.GetPMPSurfaceMeshResult();
+	//	if (sphere.Center != pmp::Point(0, 0, 0))
+	//	{
+	//		const auto translationMatrix = translation_matrix(sphere.Center);
+	//		mesh *= translationMatrix;
+	//	}		
+	//	m_InnerSurfaces.push_back(std::make_shared<pmp::SurfaceMesh>(mesh));
+	//	m_InitialSphereSettings[m_InnerSurfaces.back().get()] = sphere;
+	//}
 }
 
 /// \brief The power of the stabilizing scale factor.

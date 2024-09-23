@@ -226,6 +226,47 @@ Edge SurfaceMesh::find_edge(Vertex a, Vertex b) const
     return h.is_valid() ? edge(h) : Edge();
 }
 
+void SurfaceMesh::negate_orientation()
+{
+    for (auto f : faces())
+    {
+        Halfedge h0 = halfedge(f);
+        Halfedge h = h0;
+
+        // To store the reversed halfedge sequence
+        std::vector<Halfedge> reversed_halfedges;
+        // Collect all halfedges of the face in a vector
+        do
+        {
+            reversed_halfedges.push_back(h);
+            h = next_halfedge(h);
+        } while (h != h0);
+
+        // Now reverse the orientation by reversing the halfedges' next pointers
+        for (size_t i = 0; i < reversed_halfedges.size(); ++i)
+        {
+            Halfedge h_current = reversed_halfedges[i];
+            Halfedge h_prev = reversed_halfedges[(i + reversed_halfedges.size() - 1) % reversed_halfedges.size()];
+
+            // Set the new next halfedge to be the previous one in the original sequence
+            set_next_halfedge(h_current, h_prev);
+        }
+    }
+
+    // The vertex ordering for the half-edges also needs to be reversed.
+    for (auto h : halfedges())
+    {
+        // Swap the from_vertex and to_vertex of the half-edge
+        Halfedge opp = opposite_halfedge(h);
+        Vertex from = from_vertex(h);
+        Vertex to = to_vertex(h);
+
+        // Swap the vertices
+        set_vertex(h, from);
+        set_vertex(opp, to);
+    }
+}
+
 void SurfaceMesh::adjust_outgoing_halfedge(Vertex v)
 {
     Halfedge h = halfedge(v);
