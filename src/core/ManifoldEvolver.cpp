@@ -55,7 +55,15 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	if (GetSettings().UseStabilizationViaScaling)
 	{
 		const auto [minLength, maxLength] = CalculateCoVolumeRange();
+
+		// TODO: remove
+		std::cout << "Before stabilization: { minLength: " << minLength << ", maxLength: " << maxLength << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
+
 		StabilizeCustomGeometries(minLength, maxLength);
+
+		// TODO: remove
+		const auto [minLengthAfter, maxLengthAfter] = CalculateCoVolumeRange();
+		std::cout << "After stabilization: { minLengthAfter: " << minLengthAfter << ", maxLengthAfter: " << maxLengthAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
 	AssignRemeshingSettingsToEvolvingManifolds();
 	PrepareManifoldProperties();
@@ -878,7 +886,7 @@ std::pair<float, float> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeR
 void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor)
 {
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
-	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 
@@ -895,16 +903,15 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	{
 		const auto outerBounds = GetOuterCurve()->bounds();
 		const auto outerBoundsSize = outerBounds.max() - outerBounds.min();
-		radius = std::max(outerBoundsSize[0], outerBoundsSize[1]) * 0.5f;
+		radius = std::max(outerBoundsSize[0], outerBoundsSize[1]) * 0.58;
 		origin = outerBounds.center();
 	}
-	else
 	{
 		for (const auto& innerCurve : GetInnerCurves())
 		{
 			const auto innerBounds = innerCurve->bounds();
 			const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
-			radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.5f, radius);
+			radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.8f, radius);
 			origin += innerBounds.center();
 		}
 		if (!GetInnerCurves().empty())

@@ -551,7 +551,7 @@ private:
 	/// \param[in] minLength               the minimum length of a 1D co-volume within the custom curves.
 	/// \param[in] maxLength               the maximum length of a 1D co-volume within the custom curves.
 	/// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor = STABILIZATION_FACTOR);
+    void StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor = 1.0f);
 };
 
 /**
