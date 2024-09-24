@@ -5032,9 +5032,9 @@ int main()
 		// Define the inner and outer circle pairs directly
 		const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
 			{Circle2D{pmp::Point2{-3.0f, 52.0f}, 100.0f}, Circle2D{pmp::Point2{-3.0f, 52.0f}, 121.558f}},
-			//{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
-			//{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
-			//{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
+			{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
+			{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
+			{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -5085,7 +5085,7 @@ int main()
 				};
 				strategySettings.InnerManifoldEpsilon = [](double distance)
 				{
-					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+					return -1.0 * (1.0 - exp(-distance * distance / 1.0));
 				};
 				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 				{
@@ -5095,7 +5095,7 @@ int main()
 				strategySettings.LevelOfDetail = 3;
 				strategySettings.TangentialVelocityWeight = 0.05;
 
-				strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+				//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
 				strategySettings.RemeshingSettings.UseBackProjection = false;
 
 				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -5108,7 +5108,7 @@ int main()
 
 				GlobalManifoldEvolutionSettings globalSettings;
 				globalSettings.NSteps = NTimeSteps;
-				globalSettings.DoRemeshing = true;
+				globalSettings.DoRemeshing = false;
 				globalSettings.DetectFeatures = false;
 				globalSettings.ExportPerTimeStep = true;
 				globalSettings.ExportTargetDistanceFieldAsImage = true;
