@@ -36,10 +36,13 @@ import matplotlib.patches as patches
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
 
-procedure_name = "concentricCircles0_Repulsionless"
+#procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
 #procedure_name = "concentricCircles2_Repulsionless"
 #procedure_name = "concentricCircles3_Repulsionless"
+
+#procedure_name = "singleInnerCircleTest"
+procedure_name = "innerCircleOuterCirclePtsTest"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
@@ -102,13 +105,15 @@ background_image_path = os.path.join(directory, f"{procedure_name}_TargetDF.png"
 legend_image_path = os.path.join(directory, f"{procedure_name}_TargetDF_Scale.png")
 gdim2d_path = os.path.join(directory, f"{procedure_name}_TargetDF.gdim2d")
 
+background_img = None
 legend_img = None
 
-if os.path.exists(background_image_path) and os.path.exists(gdim2d_path) and os.path.exists(legend_image_path):
+if os.path.exists(background_image_path) and os.path.exists(gdim2d_path):
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(gdim2d_path)
     background_img = imageio.imread(background_image_path)
     extent = [bbox_min[0], bbox_max[0], bbox_max[1], bbox_min[1]]
 
+if os.path.exists(legend_image_path):
     legend_img = imageio.imread(legend_image_path)
     bbox_size = np.array(bbox_max) - np.array(bbox_min)
     clip_factor = 0.05
@@ -129,8 +134,7 @@ if os.path.exists(background_image_path) and os.path.exists(gdim2d_path) and os.
                      bbox_max[0] + legend_width_in_bbox,
                      bbox_min[1] + legend_bbox_y_offset,
                      bbox_max[1] - legend_bbox_y_offset]
-else:
-    background_img = None
+
 
 # Helper function to read PLY files and extract vertices
 def read_ply(file_path):
@@ -340,7 +344,9 @@ def init():
 # Update function for animation
 def update(frame):
     # Update outer curve
-    if outer_curves[frame].size > 0:
+    if not outer_curves:
+        outer_line = None
+    elif outer_curves[frame].size > 0:
         x_outer, y_outer = outer_curves[frame].T
         outer_line.set_data(x_outer, y_outer)
     
@@ -375,7 +381,15 @@ if png_time_steps:
             plt.savefig(output_png_path, dpi=300)  # Save the PNG for the current frame
 else:
     # Create the animation
-    ani = FuncAnimation(fig, update, frames=len(outer_curves), init_func=init, blit=False, repeat=True)
+    # Determine the number of frames based on available data
+    if outer_curves and len(outer_curves) > 0:
+        n_frames = len(outer_curves)
+    elif inner_curves and len(next(iter(inner_curves.values()))) > 0:
+        # Check the first inner curve group for frames
+        n_frames = len(next(iter(inner_curves.values())))
+    else:
+        raise ValueError("No curves (outer or inner) are available for animation.")
+    ani = FuncAnimation(fig, update, frames=n_frames, init_func=init, blit=False, repeat=True)
 
     # Save the animation as a GIF
     output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")

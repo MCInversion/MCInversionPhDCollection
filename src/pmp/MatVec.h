@@ -1284,7 +1284,7 @@ void apply_quaternion(Vector<Scalar, 3>& vec, const quat& q)
     const float iw = -q[0] * vec[0] - q[1] * vec[1] - q[2] * vec[2];
 
     // compute result * inverse quat
-    vec = {
+    vec = Vector<Scalar, 3>{
         ix * q[3] + iw * (-q[0]) + iy * (-q[2]) - iz * (-q[1]),
         iy * q[3] + iw * (-q[1]) + iz * (-q[0]) - ix * (-q[2]),
         iz * q[3] + iw * (-q[2]) + ix * (-q[1]) - iy * (-q[0])

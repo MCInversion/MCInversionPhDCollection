@@ -42,15 +42,18 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	if (!HasValidInnerOuterManifolds())
 		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
 
-	GetEvolBox() = GetOuterCurve()->bounds();
-	const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
-	GetEvolBox().expand(sizeVec[0], sizeVec[1]);
+	if (NeedsFieldsCalculation())
+	{
+		GetEvolBox() = GetOuterCurve() ? GetOuterCurve()->bounds() : GetInnerCurves()[0]->bounds();
+		const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
+		GetEvolBox().expand(sizeVec[0], sizeVec[1]);
 
-	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
-	const auto minTargetSize = std::min(sizeVec[0], sizeVec[1]);
-	GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
-	ComputeVariableDistanceFields();
+		const auto minTargetSize = std::min(sizeVec[0], sizeVec[1]);
+		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+		ComputeVariableDistanceFields();
+	}
 
 	if (GetSettings().UseStabilizationViaScaling)
 	{
@@ -254,7 +257,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -361,7 +364,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -458,7 +461,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*m_OuterCurve, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec2 tanVelocity(0.0, 0.0);
 			if (tanRedistWeight > 0.0f)
 			{
@@ -525,7 +528,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*innerCurve, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec2 tanVelocity(0.0, 0.0);
 			if (tanRedistWeight > 0.0f)
 			{
@@ -639,7 +642,7 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 
 void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 {
-	if (!m_OuterCurve || m_InnerCurves.empty())
+	if (!NeedsVariableFieldsCalculation())
 	{
 		// there's no possibility of interaction between the outer and the inner manifolds
 		return;
@@ -809,6 +812,16 @@ void ManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds(
 	}
 }
 
+bool ManifoldCurveEvolutionStrategy::NeedsVariableFieldsCalculation()
+{
+	return m_OuterCurve && !m_InnerCurves.empty();
+}
+
+bool ManifoldCurveEvolutionStrategy::NeedsFieldsCalculation()
+{
+	return NeedsVariableFieldsCalculation() || m_TargetPointCloud;
+}
+
 void CustomManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()
 {
 	if (GetOuterCurve())
@@ -830,7 +843,6 @@ bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 	if (GetOuterCurve() && Geometry::PMPManifoldCurve2DHasSelfIntersections(*GetOuterCurve()))
 		return false;
 
-	const auto& outerCurve = *GetOuterCurve();
 	// check inner curves
 	for (const auto& innerCurve : GetInnerCurves())
 	{
@@ -838,7 +850,11 @@ bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 		if (Geometry::PMPManifoldCurve2DHasSelfIntersections(*innerCurve))
 			return false;
 
+		if (!GetOuterCurve())
+			continue;
+
 		// check whether the inner curve is contained inside the outer curve.
+		const auto& outerCurve = *GetOuterCurve();
 		for (const auto& p : innerCurve->positions())
 		{
 			if (!Geometry::IsPointInsidePMPManifoldCurve(p, outerCurve))
@@ -927,14 +943,15 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	GetTransformToOriginal() = inverse(transfMatrixFull);
 
 	// Transform the geometries
-	(*GetOuterCurve()) *= transfMatrixFull;
+	if (GetOuterCurve())
+		(*GetOuterCurve()) *= transfMatrixFull;
 	for (auto& innerCurve : GetInnerCurves())
 	{
 		(*innerCurve) *= transfMatrixFull;
 	}
 
 	// test box for geometry validation
-	const float evolBoxFactor = 1.2f * scalingFactor;
+	const float evolBoxFactor = 5.2f * scalingFactor;
 	GetEvolBox() = pmp::BoundingBox2(
 		pmp::Point2{ -radius, -radius } * evolBoxFactor,
 		pmp::Point2{ radius, radius } * evolBoxFactor);
@@ -987,15 +1004,18 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 	if (!HasValidInnerOuterManifolds())
 		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
 
-	GetEvolBox() = GetOuterSurface()->bounds();
-	const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
-	GetEvolBox().expand(sizeVec[0], sizeVec[1], sizeVec[2]);
+	if (NeedsFieldsCalculation())
+	{
+		GetEvolBox() = GetOuterSurface()->bounds();
+		const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
+		GetEvolBox().expand(sizeVec[0], sizeVec[1], sizeVec[2]);
 
-	std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
-	const auto minTargetSize = std::min({ sizeVec[0], sizeVec[1], sizeVec[2] });
-	GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
-	ComputeVariableDistanceFields();
+		const auto minTargetSize = std::min({ sizeVec[0], sizeVec[1], sizeVec[2] });
+		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+		ComputeVariableDistanceFields();
+	}
 
 	if (GetSettings().UseStabilizationViaScaling)
 	{
@@ -1177,7 +1197,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -1284,7 +1304,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -1377,7 +1397,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*m_OuterSurface, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec3 tanVelocity(0.0, 0.0, 0.0);
 			if (tanRedistWeight > 0.0f)
 			{
@@ -1441,7 +1461,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*innerSurface, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * epsilonCtrlWeight;
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec3 tanVelocity(0.0, 0.0, 0.0);
 			if (tanRedistWeight > 0.0f)
 			{
@@ -1495,7 +1515,7 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 
 void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 {
-	if (!m_OuterSurface || m_InnerSurfaces.empty())
+	if (!NeedsVariableFieldsCalculation())
 	{
 		// there's no possibility of interaction between the outer and the inner manifolds
 		return;
@@ -1736,6 +1756,16 @@ void ManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifold
 			sphereSettings.Radius * GetScalingFactor(),
 			GetSettings().RemeshingSettings);
 	}
+}
+
+bool ManifoldSurfaceEvolutionStrategy::NeedsVariableFieldsCalculation()
+{
+	return m_OuterSurface && !m_InnerSurfaces.empty();
+}
+
+bool ManifoldSurfaceEvolutionStrategy::NeedsFieldsCalculation()
+{
+	return NeedsVariableFieldsCalculation() || m_TargetPointCloud;
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()

@@ -13,7 +13,7 @@ namespace
 	{
 		static std::random_device rd;
 		static std::mt19937 gen(rd());
-		const std::uniform_real_distribution<> dis(min, max);
+		std::uniform_real_distribution<> dis(min, max);
 		return dis(gen);
 	}
 

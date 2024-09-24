@@ -268,6 +268,12 @@ protected:
     /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
     virtual void AssignRemeshingSettingsToEvolvingManifolds() = 0;
 
+    /// \brief Verifies whether variable fields need to be defined.
+    virtual [[nodiscard]] bool NeedsVariableFieldsCalculation() = 0;
+
+    /// \brief Verifies whether target or variable fields need to be defined.
+    virtual [[nodiscard]] bool NeedsFieldsCalculation() = 0;
+
 private:
 
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
@@ -479,6 +485,12 @@ protected:
         return m_RemeshingSettings;
     }
 
+    /// \brief Verifies whether variable fields need to be defined.
+    [[nodiscard]] bool NeedsVariableFieldsCalculation() override;
+
+    /// \brief Verifies whether target or variable fields need to be defined.
+    [[nodiscard]] bool NeedsFieldsCalculation() override;
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point2>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -515,18 +527,18 @@ public:
     /**
      * \brief Constructor that accepts custom outer and inner curves.
      * \param settings            evolution strategy settings.
-     * \param outerCurve          Custom outer curve.
+     * \param outerCurve          Custom outer curve (optional).
      * \param innerCurves         Vector of custom inner curves.
      * \param targetPointCloud    target point cloud.
      */
     explicit CustomManifoldCurveEvolutionStrategy(
         ManifoldEvolutionSettings settings,
-        pmp::ManifoldCurve2D& outerCurve,
+        std::optional<pmp::ManifoldCurve2D> outerCurve,
         std::vector<pmp::ManifoldCurve2D>& innerCurves,
         std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
         : ManifoldCurveEvolutionStrategy(settings, std::move(targetPointCloud))
     {
-        GetOuterCurve() = std::make_shared<pmp::ManifoldCurve2D>(outerCurve);
+        GetOuterCurve() = outerCurve.has_value() ? std::make_shared<pmp::ManifoldCurve2D>(*outerCurve) : nullptr;
         for (auto& c : innerCurves)
             GetInnerCurves().emplace_back(std::make_shared<pmp::ManifoldCurve2D>(c));
     }
@@ -771,6 +783,12 @@ protected:
         return m_RemeshingSettings;
     }
 
+    /// \brief Verifies whether variable fields need to be defined.
+    [[nodiscard]] bool NeedsVariableFieldsCalculation() override;
+
+    /// \brief Verifies whether target or variable fields need to be defined.
+    [[nodiscard]] bool NeedsFieldsCalculation() override;
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -813,19 +831,19 @@ public:
      * \brief Constructor that accepts custom outer and inner surfaces.
      * \param settings         evolution strategy settings.
      * \param laplacianType    the type of Laplacian area element used during calculations.
-     * \param outerSurface     Custom outer surface.
+     * \param outerSurface     Custom outer surface (optional).
      * \param innerSurfaces    Vector of custom inner surfaces.
      * \param targetPointCloud target point cloud.
      */
     CustomManifoldSurfaceEvolutionStrategy(
         ManifoldEvolutionSettings settings, 
         MeshLaplacian laplacianType,
-        pmp::SurfaceMesh& outerSurface,
+        std::optional<pmp::SurfaceMesh> outerSurface,
         std::vector<pmp::SurfaceMesh>& innerSurfaces,
         std::shared_ptr<std::vector<pmp::Point>> targetPointCloud = nullptr)
         : ManifoldSurfaceEvolutionStrategy(settings, laplacianType, std::move(targetPointCloud))
     {
-        GetOuterSurface() = std::make_shared<pmp::SurfaceMesh>(outerSurface);
+        GetOuterSurface() = outerSurface.has_value() ? std::make_shared<pmp::SurfaceMesh>(*outerSurface) : nullptr;
         for (auto& s : innerSurfaces)
             GetInnerSurfaces().emplace_back(std::make_shared<pmp::SurfaceMesh>(s));
     }

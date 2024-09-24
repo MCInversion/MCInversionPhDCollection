@@ -1,3 +1,4 @@
+#include "CurveFactory.h"
 // Copyright 2011-2021 the Polygon Mesh Processing Library developers.
 // Distributed under a MIT-style license, see LICENSE.txt for details.
 
@@ -72,4 +73,142 @@ namespace pmp
         DeformCircleWithSineWave(result, amplitude, freq);
         return result;
     }
+
+    ManifoldCurve2D CurveFactory::rectangle(const Point2& center, Scalar sideX, Scalar sideY, size_t nSegments, bool chamferCorners)
+    {
+        ManifoldCurve2D curve;
+
+        // Half lengths of the sides
+        const Scalar halfSideX = sideX / 2.0;
+        const Scalar halfSideY = sideY / 2.0;
+
+        // Rectangle corner points (before chamfering)
+        std::vector<Point2> corners{
+            Point2{center[0] - halfSideX, center[1] - halfSideY},  // Bottom-left
+            Point2{center[0] + halfSideX, center[1] - halfSideY},  // Bottom-right
+            Point2{center[0] + halfSideX, center[1] + halfSideY},  // Top-right
+            Point2{center[0] - halfSideX, center[1] + halfSideY}   // Top-left
+        };
+
+        // To store the vertices
+        std::vector<Vertex> vertices;
+        vertices.reserve(nSegments);
+
+        // Iterate over each side of the rectangle
+        for (size_t i = 0; i < 4; ++i)
+        {
+            Point2 currentCorner = corners[i];
+            Point2 nextCorner = corners[(i + 1) % 4];
+
+            // Add straight segments between two corners
+            for (size_t j = 0; j <= nSegments; ++j)
+            {
+                Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(nSegments);
+                Point2 position = (1 - t) * currentCorner + t * nextCorner;
+
+                // If chamfering is enabled, skip adding the exact corner point
+                if (chamferCorners && (j == nSegments || j == 0))
+                {
+                    continue;  // Skip the middle point (corner point)
+                }
+
+                // Add the position as a vertex to the curve
+                vertices.push_back(curve.add_vertex(position));
+            }
+        }
+
+        // Create edges between consecutive vertices
+        for (size_t i = 0; i < vertices.size() - 1; ++i)
+        {
+            curve.new_edge(vertices[i], vertices[i + 1]);
+        }
+
+        // Close the loop by connecting the last vertex with the first
+        curve.new_edge(vertices.back(), vertices[0]);
+
+        return curve;
+    }
+
+    ManifoldCurve2D CurveFactory::sampled_polygon(const std::vector<Point2>& polyVertices, size_t nSegments, bool chamferCorners)
+    {
+        ManifoldCurve2D curve;
+        if (polyVertices.size() < 3)
+        {
+            std::cerr << "Invalid polygon: at least 3 vertices required.\n";
+            return curve;
+        }
+
+        // Calculate total length of the polyline
+        Scalar totalLength = 0.0;
+        std::vector<Scalar> segmentLengths(polyVertices.size());
+        for (size_t i = 0; i < polyVertices.size(); ++i)
+        {
+            size_t nextIndex = (i + 1) % polyVertices.size();  // Loop around the polygon
+            segmentLengths[i] = norm(polyVertices[nextIndex] - polyVertices[i]);
+            totalLength += segmentLengths[i];
+        }
+
+        // Determine the average segment length
+        Scalar segmentLength = totalLength / static_cast<Scalar>(nSegments);
+
+        // If chamfering, calculate chamfer length (proportional to the average segment length)
+        Scalar chamferLength = chamferCorners ? segmentLength : 0.0;
+
+        // Prepare to store vertices
+        std::vector<Vertex> vertices;
+        vertices.reserve(nSegments + (chamferCorners ? polyVertices.size() : 0));  // Reserve space for vertices
+
+        // Loop over each segment of the polygon
+        for (size_t i = 0; i < polyVertices.size(); ++i)
+        {
+            Point2 currentVertex = polyVertices[i];
+            Point2 nextVertex = polyVertices[(i + 1) % polyVertices.size()];  // Loop around
+
+            Scalar edgeLength = segmentLengths[i];
+
+            // If chamfering, skip exact corners and add chamfer points
+            if (chamferCorners)
+            {
+                Point2 prevVertex = polyVertices[(i == 0) ? polyVertices.size() - 1 : i - 1];
+                Point2 chamferStart = currentVertex + chamferLength * normalize(prevVertex - currentVertex);
+                Point2 chamferEnd = currentVertex + chamferLength * normalize(nextVertex - currentVertex);
+
+                vertices.push_back(curve.add_vertex(chamferStart));  // Start of chamfer
+                vertices.push_back(curve.add_vertex(chamferEnd));    // End of chamfer
+
+                // Sample remaining points between chamfer end and next vertex
+                size_t remainingSegments = nSegments / polyVertices.size();  // Segments per edge
+                for (size_t j = 1; j <= remainingSegments; ++j)
+                {
+                    Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(remainingSegments);
+                    Point2 sampledPoint = (1 - t) * chamferEnd + t * nextVertex;
+                    vertices.push_back(curve.add_vertex(sampledPoint));
+                }
+            }
+            else
+            {
+                // Sample along the edge between the current and next vertex
+                size_t remainingSegments = nSegments / polyVertices.size();  // Segments per edge
+                for (size_t j = 0; j <= remainingSegments; ++j)
+                {
+                    Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(remainingSegments);
+                    Point2 sampledPoint = (1 - t) * currentVertex + t * nextVertex;
+                    vertices.push_back(curve.add_vertex(sampledPoint));
+                }
+            }
+        }
+
+        // Add edges between consecutive vertices
+        for (size_t i = 0; i < vertices.size() - 1; ++i)
+        {
+            curve.new_edge(vertices[i], vertices[i + 1]);
+        }
+
+        // Close the loop by connecting the last vertex with the first
+        curve.new_edge(vertices.back(), vertices[0]);
+
+        return curve;
+    }
+
+
 } // namespace pmp

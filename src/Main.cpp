@@ -109,7 +109,10 @@ constexpr bool performPropertyPerformanceTests = false;
 constexpr bool performOldVsNewLSWTests = false;
 constexpr bool performPairedLSWTests = false;
 constexpr bool performPairedLSWRepulsionTests = false;
-constexpr bool performConcentricCirclesTests = true;
+constexpr bool performOutwardEvolvingInnerCircleTest = false;
+constexpr bool performAdditionalCurveShapesTests = true;
+constexpr bool performAdvectionDrivenInnerCircleTests = true;
+constexpr bool performConcentricCirclesTests = false;
 constexpr bool performEquilibriumPairedManifoldTests = false;
 
 int main()
@@ -3963,6 +3966,14 @@ int main()
 				{
 					newEvolver.Evolve();
 				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+				}
 				catch (...)
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
@@ -4043,6 +4054,14 @@ int main()
 				try
 				{
 					evolver.Evolve();
+				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
 				}
 				catch (...)
 				{
@@ -4129,6 +4148,14 @@ int main()
 				{
 					evolver.Evolve();
 				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+				}
 				catch (...)
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
@@ -4199,6 +4226,14 @@ int main()
 				try
 				{
 					evolver.Evolve();
+				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
 				}
 				catch (...)
 				{
@@ -4446,6 +4481,14 @@ int main()
 				{
 					evolver.Evolve();
 				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+				}
 				catch (...)
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
@@ -4535,6 +4578,14 @@ int main()
 				try
 				{
 					evolver.Evolve();
+				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
 				}
 				catch (...)
 				{
@@ -4796,6 +4847,14 @@ int main()
 				{
 					evolver.Evolve();
 				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+				}
 				catch (...)
 				{
 					std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
@@ -4901,6 +4960,266 @@ int main()
 			}
 		}
 	} // endif performPairedLSWRepulsionTests
+
+	if (performOutwardEvolvingInnerCircleTest)
+	{
+		const auto innerTestCircle = Circle2D{ pmp::Point2{-3.0f, 52.0f}, 20.0f };
+
+		constexpr unsigned int nVoxelsPerMinDimension = 40;
+		constexpr double defaultTimeStep = 0.05;
+		constexpr double defaultOffsetFactor = 1.5;
+		constexpr unsigned int NTimeSteps = 180;
+
+		const pmp::BoundingBox2 bbox{
+				pmp::Point2{
+					innerTestCircle.Center[0] - innerTestCircle.Radius,
+					innerTestCircle.Center[1] - innerTestCircle.Radius
+				},
+				pmp::Point2{
+					innerTestCircle.Center[0] + innerTestCircle.Radius,
+					innerTestCircle.Center[1] + innerTestCircle.Radius
+				}
+		};
+		const auto bboxSize = bbox.max() - bbox.min();
+		const float minSize = std::min(bboxSize[0], bboxSize[1]);
+		const float maxSize = std::max(bboxSize[0], bboxSize[1]);
+		const float cellSize = minSize / nVoxelsPerMinDimension;
+
+		const double isoLvlOffsetFactor = defaultOffsetFactor;
+		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+		{
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = true;
+			strategySettings.InnerManifoldEpsilon = [](double distance)
+			{
+				return -0.05 * TRIVIAL_EPSILON(distance);
+			};
+			strategySettings.TimeStep = defaultTimeStep;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
+			globalSettings.ProcedureName = "singleInnerCircleTest";
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+			auto innerCurve = pmp::CurveFactory::circle(innerTestCircle.Center, innerTestCircle.Radius, nSegments);
+			//innerCurve.negate_orientation();
+			std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
+
+			auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+				strategySettings, std::nullopt, innerCurves, nullptr);
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+			ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (std::invalid_argument& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (std::runtime_error& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+
+	} // endif performOutwardEvolvingInnerCircleTest
+
+	if (performAdditionalCurveShapesTests)
+	{
+		//
+		// ==============  pmp::CurveFactory::rectangle =============
+		//
+		// Test case 1: Full rectangle without chamfering
+		pmp::ManifoldCurve2D rectCurve1 = pmp::CurveFactory::rectangle(pmp::Point2{ 0, 0 }, 10, 5, 10, false);
+		if (!pmp::write_to_ply(rectCurve1, dataOutPath + "rectangleCurve1_noChamfer.ply"))
+			std::cerr << "Error writing rectangleCurve1_noChamfer.ply!\n";
+
+		// Test case 2: Full rectangle with chamfering
+		pmp::ManifoldCurve2D rectCurve2 = pmp::CurveFactory::rectangle(pmp::Point2{ 0, 0 }, 10, 5, 10, true);
+		if (!pmp::write_to_ply(rectCurve2, dataOutPath + "rectangleCurve2_withChamfer.ply"))
+			std::cerr << "Error writing rectangleCurve2_withChamfer.ply!\n";
+
+		// Test case 3: Small rectangle without chamfering
+		pmp::ManifoldCurve2D rectCurve3 = pmp::CurveFactory::rectangle(pmp::Point2{ 0, 0 }, 4, 2, 10, false);
+		if (!pmp::write_to_ply(rectCurve3, dataOutPath + "rectangleCurve3_noChamfer_small.ply"))
+			std::cerr << "Error writing rectangleCurve3_noChamfer_small.ply!\n";
+
+		// Test case 4: Small rectangle with chamfering
+		pmp::ManifoldCurve2D rectCurve4 = pmp::CurveFactory::rectangle(pmp::Point2{ 0, 0 }, 4, 2, 10, true);
+		if (!pmp::write_to_ply(rectCurve4, dataOutPath + "rectangleCurve4_withChamfer_small.ply"))
+			std::cerr << "Error writing rectangleCurve4_withChamfer_small.ply!\n";
+
+		//
+		// ==============  pmp::CurveFactory::sampled_polygon =============
+		//
+		// Test case 1: equilateral triangle without chamfering
+		pmp::ManifoldCurve2D polyCurve1 = pmp::CurveFactory::sampled_polygon(pmp::BASE_EQUILATERAL_TRIANGLE_VERTS, 20, false);
+		if (!pmp::write_to_ply(polyCurve1, dataOutPath + "triangle_noChamfer.ply"))
+			std::cerr << "Error writing triangle_noChamfer.ply!\n";
+
+		// Test case 2: equilateral triangle with chamfering
+		pmp::ManifoldCurve2D polyCurve2 = pmp::CurveFactory::sampled_polygon(pmp::BASE_EQUILATERAL_TRIANGLE_VERTS, 20, true);
+		if (!pmp::write_to_ply(polyCurve2, dataOutPath + "triangle_withChamfer.ply"))
+			std::cerr << "Error writing triangle_withChamfer.ply!\n";
+
+		const std::vector squareVertices = {
+			pmp::Point2{0.0, 0.0}, 
+			pmp::Point2{1.0, 0.0}, 
+			pmp::Point2{1.0, 1.0}, 
+			pmp::Point2{0.0, 1.0}
+		};
+		// Test case 3: unit square without chamfering
+		pmp::ManifoldCurve2D polyCurve3 = pmp::CurveFactory::sampled_polygon(squareVertices, 20, false);
+		if (!pmp::write_to_ply(polyCurve3, dataOutPath + "square_noChamfer.ply"))
+			std::cerr << "Error writing square_noChamfer.ply!\n";
+
+		// Test case 4: unit square with chamfering
+		pmp::ManifoldCurve2D polyCurve4 = pmp::CurveFactory::sampled_polygon(squareVertices, 20, true);
+		if (!pmp::write_to_ply(polyCurve4, dataOutPath + "square_withChamfer.ply"))
+			std::cerr << "Error writing square_withChamfer.ply!\n";
+
+	} // endif performAdditionalCurveShapesTests
+
+	//if (performAdvectionDrivenInnerCircleTests)
+	//{
+	//	const auto innerTestCircle = Circle2D{ pmp::Point2{-3.0f, 52.0f}, 20.0f };
+
+	//	const auto targetOuterCircle = pmp::CurveFactory::circle(innerTestCircle.Center, 1.8f * innerTestCircle.Radius, 25, 0.0, 2.0 * M_PI);
+	//	const auto pts2D = targetOuterCircle.positions();
+
+	//	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	//	constexpr double defaultTimeStep = 0.05;
+	//	constexpr double defaultOffsetFactor = 1.5;
+	//	constexpr unsigned int NTimeSteps = 180;
+
+	//	const pmp::BoundingBox2 bbox{
+	//			pmp::Point2{
+	//				innerTestCircle.Center[0] - innerTestCircle.Radius,
+	//				innerTestCircle.Center[1] - innerTestCircle.Radius
+	//			},
+	//			pmp::Point2{
+	//				innerTestCircle.Center[0] + innerTestCircle.Radius,
+	//				innerTestCircle.Center[1] + innerTestCircle.Radius
+	//			}
+	//	};
+	//	const auto bboxSize = bbox.max() - bbox.min();
+	//	const float minSize = std::min(bboxSize[0], bboxSize[1]);
+	//	const float maxSize = std::max(bboxSize[0], bboxSize[1]);
+	//	const float cellSize = minSize / nVoxelsPerMinDimension;
+
+	//	const double isoLvlOffsetFactor = defaultOffsetFactor;
+	//	const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+	//	{
+	//		std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+	//		ManifoldEvolutionSettings strategySettings;
+	//		strategySettings.UseInnerManifolds = true;
+	//		strategySettings.InnerManifoldEpsilon = [](double distance)
+	//			{
+	//				return -0.00 * TRIVIAL_EPSILON(distance);
+	//			};
+	//		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+	//		{
+	//			return 1.0 * distance * (negGradDotNormal + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	//		};
+	//		strategySettings.TimeStep = defaultTimeStep;
+	//		strategySettings.LevelOfDetail = 3;
+	//		strategySettings.TangentialVelocityWeight = 0.05;
+
+	//		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+	//		strategySettings.RemeshingSettings.UseBackProjection = false;
+
+	//		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+	//		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+	//		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+	//		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+	//		std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+	//		GlobalManifoldEvolutionSettings globalSettings;
+	//		globalSettings.NSteps = NTimeSteps;
+	//		globalSettings.DoRemeshing = true;
+	//		globalSettings.DetectFeatures = false;
+	//		globalSettings.ExportPerTimeStep = true;
+	//		globalSettings.ExportTargetDistanceFieldAsImage = true;
+	//		globalSettings.ProcedureName = "innerCircle_" + ptCloudName + "_PtsTest";
+	//		globalSettings.OutputPath = dataOutPath;
+	//		globalSettings.ExportResult = false;
+
+	//		globalSettings.RemeshingResizeFactor = 0.7f;
+	//		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+	//		const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+	//		auto innerCurve = pmp::CurveFactory::circle(innerTestCircle.Center, innerTestCircle.Radius, nSegments);
+	//		//innerCurve.negate_orientation();
+	//		std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
+
+	//		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+	//			strategySettings, std::nullopt, innerCurves, 
+	//			std::make_shared<std::vector<pmp::Point2>>(pts2D));
+
+	//		std::cout << "Setting up ManifoldEvolver.\n";
+
+	//		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+	//		std::cout << "ManifoldEvolver::Evolve ... ";
+
+	//		try
+	//		{
+	//			evolver.Evolve();
+	//		}
+	//		catch (std::invalid_argument& ex)
+	//		{
+	//			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+	//		}
+	//		catch (std::runtime_error& ex)
+	//		{
+	//			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+	//		}
+	//		catch (...)
+	//		{
+	//			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+	//		}
+	//	}
+
+	//} // endif performAdvectionDrivenInnerCircleTests
 
 	if (performEquilibriumPairedManifoldTests)
 	{
@@ -5015,6 +5334,14 @@ int main()
 				try
 				{
 					evolver.Evolve();
+				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
 				}
 				catch (...)
 				{
@@ -5140,6 +5467,14 @@ int main()
 				try
 				{
 					evolver.Evolve();
+				}
+				catch (std::invalid_argument& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+				}
+				catch (std::runtime_error& ex)
+				{
+					std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
 				}
 				catch (...)
 				{

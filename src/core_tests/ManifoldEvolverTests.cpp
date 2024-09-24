@@ -124,13 +124,15 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
     pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
     innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 16));
-
+    innerCurves[0].negate_orientation();
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
     strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
     strategySettings.OuterManifoldEta = STANDARD_ETA;
-    strategySettings.InnerManifoldEpsilon = strategySettings.OuterManifoldEpsilon;
-    strategySettings.InnerManifoldEta = strategySettings.OuterManifoldEta;
+    strategySettings.InnerManifoldEpsilon = [&strategySettings](double distance)
+    {
+        return -1.0 * strategySettings.OuterManifoldEpsilon(distance);
+    };
     GlobalManifoldEvolutionSettings globalSettings;
     globalSettings.NSteps = 10;
     globalSettings.DoRemeshing = false;
@@ -171,7 +173,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_Slower
     pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
     innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 16));
-
+    innerCurves[0].negate_orientation();
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
     strategySettings.OuterManifoldEpsilon = STANDARD_EPSILON;
