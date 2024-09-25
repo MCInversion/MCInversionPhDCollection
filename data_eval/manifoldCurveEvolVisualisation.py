@@ -37,7 +37,7 @@ import matplotlib.patches as patches
 #procedure_name = "curve3_Repulsionless"
 
 #procedure_name = "concentricCircles0_Repulsionless"
-#procedure_name = "concentricCircles1_Repulsionless"
+procedure_name = "concentricCircles1_Repulsionless"
 #procedure_name = "concentricCircles2_Repulsionless"
 #procedure_name = "concentricCircles3_Repulsionless"
 
@@ -45,7 +45,7 @@ import matplotlib.patches as patches
 #procedure_name = "innerCircleOuterCirclePtsTest"
 
 #procedure_name = "innerCircle_circle_PtsTest"
-procedure_name = "innerCircle_incompleteCircle_PtsTest"
+#procedure_name = "innerCircle_incompleteCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedIncompleteCircle_PtsTest"
 #procedure_name = "innerCircle_chamferedRectangle_PtsTest"
@@ -343,6 +343,7 @@ ax_main.set_aspect('equal')
 outer_line, = ax_main.plot([], [], 'k-', linewidth=2)  # Black outer curve
 inner_line_handles = [ax_main.plot([], [], color='#65107a', linestyle='-', linewidth=2)[0] for _ in inner_curves]  # Different lines for each inner curve
 
+
 # Initialize the line data
 def init():
     outer_line.set_data([], [])
@@ -353,11 +354,11 @@ def init():
 # Update function for animation
 def update(frame):
     # Update outer curve
-    if not outer_curves:
-        outer_line = None
-    elif outer_curves[frame].size > 0:
+    if outer_curves and outer_curves[frame].size > 0:
         x_outer, y_outer = outer_curves[frame].T
         outer_line.set_data(x_outer, y_outer)
+    # else:
+    #     outer_line = None
     
     # Update inner curves
     for inner_lines, inner_curve_group in zip(inner_line_handles, inner_curves.values()):
@@ -402,8 +403,8 @@ else:
 
     # Save the animation as a GIF
     output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-    ani.save(output_gif_path, writer='pillow', fps=30)
-    #ani.save(output_gif_path, writer='pillow', fps=10)
+    #ani.save(output_gif_path, writer='pillow', fps=30)
+    ani.save(output_gif_path, writer='pillow', fps=10)
 
 # Show the animation
 plt.show()

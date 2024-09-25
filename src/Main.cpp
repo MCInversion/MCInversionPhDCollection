@@ -111,8 +111,8 @@ constexpr bool performPairedLSWTests = false;
 constexpr bool performPairedLSWRepulsionTests = false;
 constexpr bool performOutwardEvolvingInnerCircleTest = false;
 constexpr bool performAdditionalCurveShapesTests = false;
-constexpr bool performAdvectionDrivenInnerCircleTests = true;
-constexpr bool performConcentricCirclesTests = false;
+constexpr bool performAdvectionDrivenInnerCircleTests = false;
+constexpr bool performConcentricCirclesTests = true;
 constexpr bool performEquilibriumPairedManifoldTests = false;
 
 int main()
@@ -4330,6 +4330,8 @@ int main()
 		constexpr bool executeCustomCurveEvolver = true;
 		constexpr bool executeCustomSurfaceEvolver = false;
 
+		// TODO: don't forget to adjust this according to the new inner curve tests
+
 		for (const auto& meshName : meshForPtCloudNames)
 		{
 			// =======================================================================
@@ -5406,7 +5408,7 @@ int main()
 		// Define the inner and outer circle pairs directly
 		const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
 			{Circle2D{pmp::Point2{-3.0f, 52.0f}, 100.0f}, Circle2D{pmp::Point2{-3.0f, 52.0f}, 121.558f}},
-			{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
+			//{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
 			{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
 			{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
 		};
@@ -5449,6 +5451,7 @@ int main()
 
 				ManifoldEvolutionSettings strategySettings;
 				strategySettings.UseInnerManifolds = true;
+				strategySettings.AdvectionInteractWithOtherManifolds = true;
 				strategySettings.OuterManifoldEpsilon = [](double distance)
 				{
 					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
@@ -5459,17 +5462,17 @@ int main()
 				};
 				strategySettings.InnerManifoldEpsilon = [](double distance)
 				{
-					return -1.0 * (1.0 - exp(-distance * distance / 1.0));
+					return 0.0 * TRIVIAL_EPSILON(distance);
 				};
 				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 				{
-					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+					return 1.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 				strategySettings.TimeStep = defaultTimeStep;
 				strategySettings.LevelOfDetail = 3;
 				strategySettings.TangentialVelocityWeight = 0.05;
 
-				//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+				strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
 				strategySettings.RemeshingSettings.UseBackProjection = false;
 
 				strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -5482,7 +5485,7 @@ int main()
 
 				GlobalManifoldEvolutionSettings globalSettings;
 				globalSettings.NSteps = NTimeSteps;
-				globalSettings.DoRemeshing = false;
+				globalSettings.DoRemeshing = true;
 				globalSettings.DetectFeatures = false;
 				globalSettings.ExportPerTimeStep = true;
 				globalSettings.ExportTargetDistanceFieldAsImage = true;
