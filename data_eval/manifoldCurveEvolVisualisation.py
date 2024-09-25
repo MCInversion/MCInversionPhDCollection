@@ -42,7 +42,16 @@ import matplotlib.patches as patches
 #procedure_name = "concentricCircles3_Repulsionless"
 
 #procedure_name = "singleInnerCircleTest"
-procedure_name = "innerCircleOuterCirclePtsTest"
+#procedure_name = "innerCircleOuterCirclePtsTest"
+
+#procedure_name = "innerCircle_circle_PtsTest"
+#procedure_name = "innerCircle_incompleteCircle_PtsTest"
+procedure_name = "innerCircle_sineDeformedCircle_PtsTest"
+#procedure_name = "innerCircle_sineDeformedIncompleteCircle_PtsTest"
+#procedure_name = "innerCircle_chamferedRectangle_PtsTest"
+#procedure_name = "innerCircle_incompleteChamferedRectangle_PtsTest"
+#procedure_name = "innerCircle_chamferedTriangle_PtsTest"
+#procedure_name = "innerCircle_incompleteChamferedTriangle_PtsTest"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
@@ -393,8 +402,8 @@ else:
 
     # Save the animation as a GIF
     output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-    #ani.save(output_gif_path, writer='pillow', fps=30)
-    ani.save(output_gif_path, writer='pillow', fps=10)
+    ani.save(output_gif_path, writer='pillow', fps=30)
+    #ani.save(output_gif_path, writer='pillow', fps=10)
 
 # Show the animation
 plt.show()

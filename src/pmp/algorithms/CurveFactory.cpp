@@ -129,7 +129,7 @@ namespace pmp
         return curve;
     }
 
-    ManifoldCurve2D CurveFactory::sampled_polygon(const std::vector<Point2>& polyVertices, size_t nSegments, bool chamferCorners)
+    ManifoldCurve2D CurveFactory::sampled_polygon(const std::vector<Point2>& polyVertices, size_t nSegments, bool chamferCorners, bool closeLoop)
     {
         ManifoldCurve2D curve;
         if (polyVertices.size() < 3)
@@ -138,82 +138,85 @@ namespace pmp
             return curve;
         }
 
-        // TODO: fix this nonsense
-
-        // Calculate total length of the polyline
+        // Step 1: Calculate total length of the polygon edges and the mean segment length
         Scalar totalLength = 0.0;
+        std::vector<Scalar> polyEdgeLengths(polyVertices.size());
         for (size_t i = 0; i < polyVertices.size(); ++i)
         {
-            totalLength += norm(polyVertices[(i + 1) % polyVertices.size()] - polyVertices[i]);
+            polyEdgeLengths[i] = norm(polyVertices[(i + 1) % polyVertices.size()] - polyVertices[i]);
+            totalLength += polyEdgeLengths[i];
         }
         const Scalar meanSegmentLength = totalLength / static_cast<Scalar>(nSegments);
+        
+        // Step 2: Calculate the number of segments per edge
+        std::vector<size_t> nSegmentsPerEdge;
+        nSegmentsPerEdge.reserve(polyVertices.size());
+        size_t totalAssignedSegments = 0;
+        for (size_t i = 0; i < polyEdgeLengths.size(); ++i)
+        {
+            // Compute the number of segments proportional to the edge length
+            size_t segments = static_cast<size_t>(std::round(polyEdgeLengths[i] / meanSegmentLength));
+            nSegmentsPerEdge.push_back(segments);
+            totalAssignedSegments += segments;
+        }
+        // If there's a difference in total assigned segments (due to rounding), adjust
+        if (totalAssignedSegments > nSegments)
+        {
+            // Reduce the number of segments by removing them from the longest edges
+            while (totalAssignedSegments > nSegments)
+            {
+                auto maxIt = std::max_element(nSegmentsPerEdge.begin(), nSegmentsPerEdge.end());
+                if (*maxIt > 1)
+                {
+                    (*maxIt)--;
+                    totalAssignedSegments--;
+                }
+            }
+        }
+        else if (totalAssignedSegments < nSegments)
+        {
+            // Increase the number of segments by adding them to the longest edges
+            while (totalAssignedSegments < nSegments)
+            {
+                auto maxIt = std::max_element(nSegmentsPerEdge.begin(), nSegmentsPerEdge.end());
+                (*maxIt)++;
+                totalAssignedSegments++;
+            }
+        }
 
-        for (size_t i = 0; i < polyVertices.size(); ++i)
+        // Step 3: Tessellate the polygon
+        std::vector<Vertex> vertices;
+        vertices.reserve(nSegments + (chamferCorners ? polyVertices.size() : 0));
+        const size_t mainPolySegments = polyVertices.size() - (closeLoop ? 0 : 1);
+        for (size_t i = 0; i < mainPolySegments; ++i)
         {
             Point2 startVertex = polyVertices[i];
             Point2 endVertex = polyVertices[(i + 1) % polyVertices.size()];
-            const auto edgeLength = norm(endVertex - startVertex);
+            size_t segmentsOnEdge = nSegmentsPerEdge[i];
 
-            for (size_t j = 0; j <= nSegments; ++j)
+            for (size_t j = 0; j <= segmentsOnEdge; ++j)
             {
-                const Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(nSegments);
+                const Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(segmentsOnEdge);
                 Point2 sampledPoint = (1 - t) * startVertex + t * endVertex;
+
+                // Chamfer logic: Skip corner points
+                if (chamferCorners && (j == segmentsOnEdge || j == 0))
+                {
+                    continue;  // Skip the exact corner point
+                }
+
+                // Add the sampled point as a vertex
+                vertices.push_back(curve.add_vertex(sampledPoint));
             }
         }
 
-        // If chamfering, calculate chamfer length (proportional to the average segment length)
-        const Scalar chamferLength = chamferCorners ? segmentLength : 0.0f;
-
-        // Prepare to store vertices
-        std::vector<Vertex> vertices;
-        vertices.reserve(nSegments + (chamferCorners ? polyVertices.size() : 0));  // Reserve space for vertices
-
-        // Loop over each segment of the polygon
-        for (size_t i = 0; i < polyVertices.size(); ++i)
-        {
-            Point2 currentVertex = polyVertices[i];
-            Point2 nextVertex = polyVertices[(i + 1) % polyVertices.size()];  // Loop around
-
-            // If chamfering, skip exact corners and add chamfer points
-            if (chamferCorners)
-            {
-                Point2 prevVertex = polyVertices[(i == 0) ? polyVertices.size() - 1 : i - 1];
-                Point2 chamferStart = currentVertex + chamferLength * normalize(prevVertex - currentVertex);
-                Point2 chamferEnd = currentVertex + chamferLength * normalize(nextVertex - currentVertex);
-
-                vertices.push_back(curve.add_vertex(chamferStart));  // Start of chamfer
-                vertices.push_back(curve.add_vertex(chamferEnd));    // End of chamfer
-
-                // Sample remaining points between chamfer end and next vertex
-                size_t remainingSegments = nSegments / polyVertices.size();  // Segments per edge
-                for (size_t j = 1; j <= remainingSegments; ++j)
-                {
-                    Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(remainingSegments);
-                    Point2 sampledPoint = (1 - t) * chamferEnd + t * nextVertex;
-                    vertices.push_back(curve.add_vertex(sampledPoint));
-                }
-            }
-            else
-            {
-                // Sample along the edge between the current and next vertex
-                size_t remainingSegments = nSegments / polyVertices.size();  // Segments per edge
-                for (size_t j = 0; j <= remainingSegments; ++j)
-                {
-                    Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(remainingSegments);
-                    Point2 sampledPoint = (1 - t) * currentVertex + t * nextVertex;
-                    vertices.push_back(curve.add_vertex(sampledPoint));
-                }
-            }
-        }
-
-        // Add edges between consecutive vertices
+        // Step 4: Create edges between consecutive vertices
         for (size_t i = 0; i < vertices.size() - 1; ++i)
         {
             curve.new_edge(vertices[i], vertices[i + 1]);
         }
-
-        // Close the loop by connecting the last vertex with the first
-        curve.new_edge(vertices.back(), vertices[0]);
+        if (closeLoop)
+            curve.new_edge(vertices.back(), vertices[0]);
 
         return curve;
     }

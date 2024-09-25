@@ -11,7 +11,7 @@ namespace pmp {
     const std::vector BASE_EQUILATERAL_TRIANGLE_VERTS{ 
         Point2{-0.5f, -sqrtf(3.0f) / 6.0f}, 
         Point2{0.5f, -sqrtf(3.0f) / 6.0f}, 
-        Point2{0.0f, -sqrtf(3.0f) / 3.0f} };
+        Point2{0.0f, sqrtf(3.0f) / 3.0f} };
 
     //! \addtogroup algorithms
     //! @{
@@ -48,6 +48,7 @@ namespace pmp {
         static ManifoldCurve2D sampled_polygon(
             const std::vector<Point2>& polyVertices = BASE_EQUILATERAL_TRIANGLE_VERTS,
             size_t nSegments = 10,
-            bool chamferCorners = true);
+            bool chamferCorners = true,
+            bool closeLoop = true);
     };
 } // namespace pmp
