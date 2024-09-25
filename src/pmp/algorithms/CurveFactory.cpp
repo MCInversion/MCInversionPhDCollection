@@ -138,21 +138,31 @@ namespace pmp
             return curve;
         }
 
+        // TODO: fix this nonsense
+
         // Calculate total length of the polyline
         Scalar totalLength = 0.0;
-        std::vector<Scalar> segmentLengths(polyVertices.size());
         for (size_t i = 0; i < polyVertices.size(); ++i)
         {
-            size_t nextIndex = (i + 1) % polyVertices.size();  // Loop around the polygon
-            segmentLengths[i] = norm(polyVertices[nextIndex] - polyVertices[i]);
-            totalLength += segmentLengths[i];
+            totalLength += norm(polyVertices[(i + 1) % polyVertices.size()] - polyVertices[i]);
+        }
+        const Scalar meanSegmentLength = totalLength / static_cast<Scalar>(nSegments);
+
+        for (size_t i = 0; i < polyVertices.size(); ++i)
+        {
+            Point2 startVertex = polyVertices[i];
+            Point2 endVertex = polyVertices[(i + 1) % polyVertices.size()];
+            const auto edgeLength = norm(endVertex - startVertex);
+
+            for (size_t j = 0; j <= nSegments; ++j)
+            {
+                const Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(nSegments);
+                Point2 sampledPoint = (1 - t) * startVertex + t * endVertex;
+            }
         }
 
-        // Determine the average segment length
-        Scalar segmentLength = totalLength / static_cast<Scalar>(nSegments);
-
         // If chamfering, calculate chamfer length (proportional to the average segment length)
-        Scalar chamferLength = chamferCorners ? segmentLength : 0.0;
+        const Scalar chamferLength = chamferCorners ? segmentLength : 0.0f;
 
         // Prepare to store vertices
         std::vector<Vertex> vertices;
@@ -163,8 +173,6 @@ namespace pmp
         {
             Point2 currentVertex = polyVertices[i];
             Point2 nextVertex = polyVertices[(i + 1) % polyVertices.size()];  // Loop around
-
-            Scalar edgeLength = segmentLengths[i];
 
             // If chamfering, skip exact corners and add chamfer points
             if (chamferCorners)
