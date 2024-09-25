@@ -5409,8 +5409,8 @@ int main()
 		const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
 			{Circle2D{pmp::Point2{-3.0f, 52.0f}, 100.0f}, Circle2D{pmp::Point2{-3.0f, 52.0f}, 121.558f}},
 			//{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
-			{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
-			{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
+			//{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
+			//{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
 		};
 
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -5466,6 +5466,8 @@ int main()
 				};
 				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 				{
+					if (distance < 4.5)
+						return 0.0;
 					return 1.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 				strategySettings.TimeStep = defaultTimeStep;
