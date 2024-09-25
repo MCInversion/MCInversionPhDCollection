@@ -45,8 +45,8 @@ import matplotlib.patches as patches
 #procedure_name = "innerCircleOuterCirclePtsTest"
 
 #procedure_name = "innerCircle_circle_PtsTest"
-#procedure_name = "innerCircle_incompleteCircle_PtsTest"
-procedure_name = "innerCircle_sineDeformedCircle_PtsTest"
+procedure_name = "innerCircle_incompleteCircle_PtsTest"
+#procedure_name = "innerCircle_sineDeformedCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedIncompleteCircle_PtsTest"
 #procedure_name = "innerCircle_chamferedRectangle_PtsTest"
 #procedure_name = "innerCircle_incompleteChamferedRectangle_PtsTest"

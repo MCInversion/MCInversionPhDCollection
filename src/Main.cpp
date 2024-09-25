@@ -5098,10 +5098,10 @@ int main()
 			std::cerr << "Error writing triangle_withChamfer.ply!\n";
 
 		const std::vector squareVertices = {
-			pmp::Point2{0.0, 0.0}, 
-			pmp::Point2{1.0, 0.0}, 
-			pmp::Point2{1.0, 1.0}, 
-			pmp::Point2{0.0, 1.0}
+			pmp::Point2{0.0f, 0.0f}, 
+			pmp::Point2{1.0f, 0.0f}, 
+			pmp::Point2{1.0f, 1.0f}, 
+			pmp::Point2{0.0f, 1.0f}
 		};
 		// Test case 3: unit square without chamfering
 		pmp::ManifoldCurve2D polyCurve3 = pmp::CurveFactory::sampled_polygon(squareVertices, 20, false);
@@ -5114,10 +5114,10 @@ int main()
 			std::cerr << "Error writing square_withChamfer.ply!\n";
 
 		const std::vector nonClosedPolyline = {
-			pmp::Point2{0.0, 0.0},
-			pmp::Point2{1.0, 0.0},
-			pmp::Point2{1.5, 0.5},
-			pmp::Point2{2.0, 0.0}
+			pmp::Point2{0.0f, 0.0f},
+			pmp::Point2{1.0f, 0.0f},
+			pmp::Point2{1.5f, 0.5f},
+			pmp::Point2{2.0f, 0.0f}
 		};
 		// Test case 5: non-closed polyline without chamfering
 		pmp::ManifoldCurve2D polyCurve5 = pmp::CurveFactory::sampled_polygon(nonClosedPolyline, 20, false, false);
@@ -5129,12 +5129,12 @@ int main()
 			std::cerr << "Error writing nonClosedPolyline_withChamfer.ply!\n";
 
 		const std::vector hexagonVertices = {
-			pmp::Point2{0.0, 1.0},
-			pmp::Point2{0.866, 0.5},
-			pmp::Point2{0.866, -0.5},
-			pmp::Point2{0.0, -1.0},
-			pmp::Point2{-0.866, -0.5},
-			pmp::Point2{-0.866, 0.5}
+			pmp::Point2{0.0f, 1.0f},
+			pmp::Point2{0.866f, 0.5f},
+			pmp::Point2{0.866f, -0.5f},
+			pmp::Point2{0.0f, -1.0f},
+			pmp::Point2{-0.866f, -0.5f},
+			pmp::Point2{-0.866f, 0.5f}
 		};
 		// Test case 7: hexagon without chamfering
 		pmp::ManifoldCurve2D polyCurve7 = pmp::CurveFactory::sampled_polygon(hexagonVertices, 30, false, true);
@@ -5198,11 +5198,11 @@ int main()
 				strategySettings.UseInnerManifolds = true;
 				strategySettings.InnerManifoldEpsilon = [](double distance)
 					{
-						return -0.00 * TRIVIAL_EPSILON(distance);
+						return 0.001 * TRIVIAL_EPSILON(distance);
 					};
 				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 					{
-						return 1.0 * distance * (negGradDotNormal + 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+						return 1.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 					};
 				strategySettings.TimeStep = defaultTimeStep;
 				strategySettings.LevelOfDetail = 3;
@@ -5234,7 +5234,7 @@ int main()
 
 				const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
 				auto innerCurve = pmp::CurveFactory::circle(innerTestCircle.Center, innerTestCircle.Radius, nSegments);
-				//innerCurve.negate_orientation();
+				innerCurve.negate_orientation();
 				std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
 
 				auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
