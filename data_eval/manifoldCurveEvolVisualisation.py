@@ -36,7 +36,7 @@ import matplotlib.patches as patches
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
 
-procedure_name = "concentricCircles0_Repulsionless"
+#procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
 #procedure_name = "concentricCircles2_Repulsionless"
 #procedure_name = "concentricCircles3_Repulsionless"
@@ -45,7 +45,7 @@ procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "innerCircleOuterCirclePtsTest"
 
 #procedure_name = "innerCircle_circle_PtsTest"
-#procedure_name = "innerCircle_incompleteCircle_PtsTest"
+procedure_name = "innerCircle_incompleteCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedIncompleteCircle_PtsTest"
 #procedure_name = "innerCircle_chamferedRectangle_PtsTest"

@@ -112,7 +112,7 @@ constexpr bool performPairedLSWRepulsionTests = false;
 constexpr bool performOutwardEvolvingInnerCircleTest = false;
 constexpr bool performAdditionalCurveShapesTests = false;
 constexpr bool performAdvectionDrivenInnerCircleTests = false;
-constexpr bool performConcentricCirclesTests = true;
+constexpr bool performConcentricCirclesTests = false;
 constexpr bool performEquilibriumPairedManifoldTests = false;
 
 int main()
@@ -5152,9 +5152,9 @@ int main()
 	if (performAdvectionDrivenInnerCircleTests)
 	{
 		const std::map<std::string, pmp::ManifoldCurve2D> targetCurves{
-			{ "circle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 0.0, 2.0 * M_PI)},
+			//{ "circle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 0.0, 2.0 * M_PI)},
 			{ "incompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, M_PI_2, 2.0 * M_PI)},
-			{ "sineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, 0.0, 2.0 * M_PI)},
+			/*{ "sineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, 0.0, 2.0 * M_PI)},
 			{ "sineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, M_PI_2, 2.0 * M_PI)},
 			{ "chamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0f, 52.0f}, 60.0f, 70.0f, 15, true)},
 			{ "incompleteChamferedRectangle", pmp::CurveFactory::sampled_polygon({
@@ -5169,7 +5169,7 @@ int main()
 			{ "incompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
 				pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
 				pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-				pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)}
+				pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)}*/
 		};
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double defaultTimeStep = 0.05;
@@ -5200,7 +5200,7 @@ int main()
 				strategySettings.UseInnerManifolds = true;
 				strategySettings.InnerManifoldEpsilon = [](double distance)
 					{
-						return 0.001 * TRIVIAL_EPSILON(distance);
+						return 0.05 * TRIVIAL_EPSILON(distance);
 					};
 				strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 					{
