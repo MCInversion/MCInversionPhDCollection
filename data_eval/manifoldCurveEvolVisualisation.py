@@ -24,7 +24,9 @@ import matplotlib.patches as patches
 #procedure_name = "armadillonewEvol_Pts2D3_Repulsionless"
 #procedure_name = "bunnynewEvol_Pts2D3_Repulsionless"
 #procedure_name = "maxPlancknewEvol_Pts2D3_Repulsionless"
+
 #procedure_name = "nefertitinewEvol_Pts2D3_Repulsionless"
+procedure_name = "nefertitinewEvol_Pts2D3_TwoInner_Repulsionless"
 
 #procedure_name = "armadillonewEvol_Pts2D3_WithRepulsion"
 #procedure_name = "bunnynewEvol_Pts2D3_WithRepulsion"
@@ -45,7 +47,7 @@ import matplotlib.patches as patches
 #procedure_name = "innerCircleOuterCirclePtsTest"
 
 #procedure_name = "innerCircle_circle_PtsTest"
-procedure_name = "innerCircle_incompleteCircle_PtsTest"
+#procedure_name = "innerCircle_incompleteCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedCircle_PtsTest"
 #procedure_name = "innerCircle_sineDeformedIncompleteCircle_PtsTest"
 #procedure_name = "innerCircle_chamferedRectangle_PtsTest"

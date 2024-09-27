@@ -200,7 +200,7 @@ void AdvectionDrivenInnerCircleTests();
 void ConcentricCirclesTests();
 void EquilibriumPairedManifoldTests();
 void VisualizeMCFAndLSW();
-void VisualizeNefertitiMultipleInnerCurves();
+void VisualizeMultipleInnerCurves();
 
 //
 // =================================================================================
@@ -306,7 +306,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"ConcentricCirclesTests", ConcentricCirclesTests},
     {"EquilibriumPairedManifoldTests", EquilibriumPairedManifoldTests},
     {"VisualizeMCFAndLSW", VisualizeMCFAndLSW},
-    {"VisualizeNefertitiMultipleInnerCurves", VisualizeNefertitiMultipleInnerCurves}
+    {"VisualizeMultipleInnerCurves", VisualizeMultipleInnerCurves}
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

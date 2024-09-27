@@ -102,15 +102,19 @@ int main()
         // "MeshReorientTests",
         // "PropertyPerformanceTests",
         // "OldVsNewLSWTests",
-        // "PairedLSWTests",
+        "PairedLSWTests",
         // "PairedLSWRepulsionTests",
         // "OutwardEvolvingInnerCircleTest",
         // "AdditionalCurveShapesTests",
-        "AdvectionDrivenInnerCircleTests",
+        // "AdvectionDrivenInnerCircleTests",
         // "ConcentricCirclesTests",
         // "EquilibriumPairedManifoldTests",
-        "VisualizeMCFAndLSW",
-        "VisualizeNefertitiMultipleInnerCurves"
+        //"VisualizeMCFAndLSW", // TODO: implement
+        "VisualizeMultipleInnerCurves"
+
+// ------------------------- NEW_EXPERIMENTS ------------------------------
+// Allow new experiments here
+// ........................................................................
     };
 
     for (const auto& experimentId : enabledExperiments)
@@ -120,7 +124,7 @@ int main()
             std::cout << "main: Experiment \"" << experimentId << "\" not found in REGISTERED_EXPERIMENTS!" << "\n";
             continue;
         }
-        std::cout << "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n";
+        std::cout << "\nvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n";
         std::cout << "main: Executing experiment \"" << experimentId << "\" ... \n";
         std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
         REGISTERED_EXPERIMENTS[experimentId]();  // Call the corresponding function
