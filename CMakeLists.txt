@@ -180,9 +180,13 @@ add_subdirectory(src/quickhull)
 add_subdirectory(src/stb_utils)
 add_subdirectory(src/utils)
 
+file(GLOB Experiment_Src CONFIGURE_DEPENDS "src/experiments/*.h" "src/experiments/*.cpp")
 file(GLOB Main_Src CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
 
-add_executable(${PROJECT_NAME} ${Main_Src})
+source_group("Experiments" FILES ${Experiment_Src})
+source_group("Main" FILES ${Main_Src})
+
+add_executable(${PROJECT_NAME} ${Main_Src} ${Experiment_Src})
 
 target_link_libraries(${PROJECT_NAME}
     pmp
