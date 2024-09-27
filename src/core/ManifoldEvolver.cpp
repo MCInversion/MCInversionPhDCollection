@@ -903,6 +903,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 {
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
 	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
+	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
 	GetScalingFactor() = scalingFactor;
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 
