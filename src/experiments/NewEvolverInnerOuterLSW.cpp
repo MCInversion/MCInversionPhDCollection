@@ -34,6 +34,7 @@
 
 #include "IOEnvironment.h"
 #include "../Experiments.h"
+#include <geometry/PlaneBuilder.h>
 
 void DistanceFieldHashTest()
 {
@@ -517,15 +518,31 @@ void PropertyPerformanceTests()
 	}
 }
 
+void DeletePointsContainedInCircles(std::vector<pmp::Point2>& pointsToFilter, const std::vector<Circle2D>& cutCircles)
+{
+	auto isPointInCircle = [](const pmp::Point2& point, const Circle2D& circle) {
+		return sqrnorm(point - circle.Center) <= (circle.Radius * circle.Radius);
+	};
+
+	auto isInAnyCircle = [&cutCircles, &isPointInCircle](const pmp::Point2& point) {
+		for (const auto& circle : cutCircles) {
+			if (isPointInCircle(point, circle)) return true;
+		}
+		return false;
+	};
+
+	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnyCircle).begin(), pointsToFilter.end());
+}
+
 
 void OldVsNewLSWTests()
 {
 	const std::vector<std::string> meshForPtCloudNames{
-		"armadillo",
+		//"armadillo",
 		//"blub",
 		"bunny",
-		"maxPlanck",
-		"nefertiti",
+		//"maxPlanck",
+		//"nefertiti",
 		//"ogre",
 		//"spot"
 	};
@@ -576,7 +593,7 @@ void OldVsNewLSWTests()
 		{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
 	};
 
-	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	constexpr unsigned int nVoxelsPerMinDimension = 50;
 	constexpr double defaultTimeStep = 0.05;
 	constexpr double defaultOffsetFactor = 1.5;
 
@@ -589,13 +606,13 @@ void OldVsNewLSWTests()
 	//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
 	SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
 
-	constexpr unsigned int NTimeSteps = 180;
+	constexpr unsigned int NTimeSteps = 400;
 
 	constexpr bool executeOldEvolver = false;
 	constexpr bool executeNewSurfaceEvolver = false;
-	constexpr bool executeNewCurveEvolver = false;
+	constexpr bool executeNewCurveEvolver = true;
 	constexpr bool executeNewSurfaceCustomEvolver = false;
-	constexpr bool executeNewCurveCustomEvolver = true;
+	constexpr bool executeNewCurveCustomEvolver = false;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
@@ -810,12 +827,16 @@ void OldVsNewLSWTests()
 		const float distTolerance = 0.01f * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
 		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
-		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
+		auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
 			std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
 			continue;
 		}
+		const std::vector cutCircles{ 
+			Circle2D{pmp::Point2{-0.02f, 0.04f}, 0.015f },
+			Circle2D{pmp::Point2{0.03f, 0.04f}, 0.015f } };
+		DeletePointsContainedInCircles(pts2D, cutCircles);
 
 		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
@@ -836,10 +857,10 @@ void OldVsNewLSWTests()
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 0.5 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
-			strategySettings.LevelOfDetail = 3;
+			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
@@ -1121,7 +1142,7 @@ void PairedLSWTests()
 		{"armadillo", Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}},
 		{"bunny", Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}},
 		{"maxPlanck", Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}},
-		{"nefertiti", Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}}
+		{"nefertiti", Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f}}
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
@@ -1337,10 +1358,10 @@ void PairedLSWTests()
 				return 1.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
-			strategySettings.LevelOfDetail = 3;
+			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -1470,7 +1491,7 @@ void PairedLSWRepulsionTests()
 		{"armadillo", Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}},
 		{"bunny", Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}},
 		{"maxPlanck", Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}},
-		{"nefertiti", Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}}
+		{"nefertiti", Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f}}
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
@@ -2094,9 +2115,9 @@ void ConcentricCirclesTests()
 	// Define the inner and outer circle pairs directly
 	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
 		{Circle2D{pmp::Point2{-3.0f, 52.0f}, 100.0f}, Circle2D{pmp::Point2{-3.0f, 52.0f}, 121.558f}},
-		//{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
-		//{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
-		//{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
+		{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.055f}, Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.142831f}},
+		{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
+		{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2148,19 +2169,17 @@ void ConcentricCirclesTests()
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				return 0.0 * TRIVIAL_EPSILON(distance);
+				return 0.001 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				if (distance < 4.5)
-					return 0.0;
-				return 1.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 0.2 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -2358,9 +2377,96 @@ void EquilibriumPairedManifoldTests()
 }
 
 
-void VisualizeMCFAndLSW()
+void VisualizeMCF()
 {
+	std::vector curves{
+		pmp::CurveFactory::circle(pmp::Point2(0, 0), 10.0, 40),
+		pmp::CurveFactory::sine_deformed_circle(pmp::Point2(0, 0), 10.0, 40, 10.0, 4)
+	};
 
+	// remesh the deformed circle
+	constexpr float edgeLength = 2.0f;
+	constexpr unsigned int iterations = 10;
+	pmp::CurveRemeshing remesher(curves[1]);
+	pmp::AdaptiveRemeshingSettings settings;
+	settings.MinEdgeLength = edgeLength;
+	settings.MaxEdgeLength = 1.5f * edgeLength;
+	settings.ApproxError = 0.05f * edgeLength;
+	settings.NRemeshingIterations = iterations;
+	settings.NTangentialSmoothingIters = 6;
+	settings.UseProjection = true;
+	remesher.adaptive_remeshing(settings);
+
+	constexpr unsigned int NTimeSteps = 30;
+
+	for (unsigned int curveId = 0; const auto& curve : curves)
+	{
+		std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+		ManifoldEvolutionSettings strategySettings;
+		strategySettings.UseInnerManifolds = true;
+		strategySettings.OuterManifoldEpsilon = [](double distance)
+		{
+			return 0.02 * TRIVIAL_EPSILON(distance);
+		};
+		strategySettings.TimeStep = 0.01;
+		strategySettings.LevelOfDetail = 4;
+		strategySettings.TangentialVelocityWeight = 0.05;
+
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+		strategySettings.RemeshingSettings.UseBackProjection = false;
+
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+		strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
+		strategySettings.FieldSettings.FieldIsoLevel = 0.01;
+
+		std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+		GlobalManifoldEvolutionSettings globalSettings;
+		globalSettings.NSteps = NTimeSteps;
+		globalSettings.DoRemeshing = true;
+		globalSettings.DetectFeatures = false;
+		globalSettings.ExportPerTimeStep = true;
+		globalSettings.ExportTargetDistanceFieldAsImage = true;
+		globalSettings.ProcedureName = "mcfCurve" + std::to_string(curveId);
+		globalSettings.OutputPath = dataOutPath;
+		globalSettings.ExportResult = false;
+
+		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+		std::vector<pmp::ManifoldCurve2D> innerCurves{};
+
+		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+			strategySettings, curve, innerCurves, nullptr);
+
+		std::cout << "Setting up ManifoldEvolver.\n";
+
+		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+		std::cout << "ManifoldEvolver::Evolve ... ";
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (std::invalid_argument& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (std::runtime_error& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+
+		curveId++;
+	}
 }
 
 
@@ -2411,8 +2517,9 @@ void VisualizeMultipleInnerCurves()
 		//{"maxPlanck", { Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f} }},
 
 		{"nefertiti", {
-			Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f},
-			Circle2D{pmp::Point2{-75.0f, -50.0f}, 25.0f}
+			Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f},
+			//Circle2D{pmp::Point2{-75.0f, -50.0f}, 25.0f}
+			Circle2D{pmp::Point2{-10.0f, -200.0f}, 35.0f}
 		}}
 	};
 
@@ -2525,10 +2632,10 @@ void VisualizeMultipleInnerCurves()
 				return 1.0 * distance * (negGradDotNormal - 1.5 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
-			strategySettings.LevelOfDetail = 3;
+			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -2545,7 +2652,7 @@ void VisualizeMultipleInnerCurves()
 			globalSettings.DetectFeatures = false;
 			globalSettings.ExportPerTimeStep = true;
 			globalSettings.ExportTargetDistanceFieldAsImage = true;
-			globalSettings.ProcedureName = meshName + "newEvol_Pts2D" + std::to_string(samplingLevel) + "_TwoInner_Repulsionless";
+			globalSettings.ProcedureName = meshName + "newEvol_Pts2D" + std::to_string(samplingLevel) + "_RepulsionlessTwo";
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
@@ -2608,3 +2715,52 @@ void VisualizeMultipleInnerCurves()
 	}
 }
 
+void ExportSlicingPlanes()
+{
+	const std::vector<std::string> meshForPtCloudNames{
+		"armadillo",
+		"bunny",
+		"maxPlanck",
+		"nefertiti"
+	};
+
+	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
+		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
+		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
+		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+	};
+
+	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
+		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
+		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
+		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+	};
+
+	for (const auto& meshName : meshForPtCloudNames)
+	{
+		Geometry::PlaneSettings planeSettings;
+		planeSettings.Width = 200.0f;
+		planeSettings.Depth = 250.0f;
+		planeSettings.nWidthSegments = 1;
+		planeSettings.nDepthSegments = 1;
+		planeSettings.Origin = slicingPlaneRefPts.at(meshName) - 0.5f * pmp::vec3{ planeSettings.Width, planeSettings.Depth, 0.0f };
+
+		Geometry::PlaneBuilder pb(planeSettings);
+		pb.BuildBaseData();
+		pb.BuildPMPSurfaceMesh();
+		auto pMesh = pb.GetPMPSurfaceMeshResult();
+
+		const pmp::vec3 defaultNormal(0.0f, 0.0f, 1.0f);
+		const pmp::vec3 targetNormal = slicingPlaneNormals.at(meshName);
+
+		const pmp::mat4 rotationMat = rotation_matrix(targetNormal, defaultNormal);
+		pMesh *= rotationMat;
+
+		const pmp::mat4 translationMat = translation_matrix(slicingPlaneRefPts.at(meshName));
+		pMesh *= translationMat;
+
+		pMesh.write(dataOutPath + meshName + "_SlicingPlane.vtk");
+	}
+}

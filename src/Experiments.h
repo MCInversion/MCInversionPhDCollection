@@ -199,8 +199,9 @@ void AdditionalCurveShapesTests();
 void AdvectionDrivenInnerCircleTests();
 void ConcentricCirclesTests();
 void EquilibriumPairedManifoldTests();
-void VisualizeMCFAndLSW();
+void VisualizeMCF();
 void VisualizeMultipleInnerCurves();
+void ExportSlicingPlanes();
 
 //
 // =================================================================================
@@ -305,8 +306,9 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"AdvectionDrivenInnerCircleTests", AdvectionDrivenInnerCircleTests},
     {"ConcentricCirclesTests", ConcentricCirclesTests},
     {"EquilibriumPairedManifoldTests", EquilibriumPairedManifoldTests},
-    {"VisualizeMCFAndLSW", VisualizeMCFAndLSW},
-    {"VisualizeMultipleInnerCurves", VisualizeMultipleInnerCurves}
+    {"VisualizeMCF", VisualizeMCF},
+    {"VisualizeMultipleInnerCurves", VisualizeMultipleInnerCurves},
+    {"ExportSlicingPlanes", ExportSlicingPlanes}
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

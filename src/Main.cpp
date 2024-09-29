@@ -102,20 +102,26 @@ int main()
         // "MeshReorientTests",
         // "PropertyPerformanceTests",
         // "OldVsNewLSWTests",
-        "PairedLSWTests",
+        // "PairedLSWTests",
         // "PairedLSWRepulsionTests",
         // "OutwardEvolvingInnerCircleTest",
         // "AdditionalCurveShapesTests",
         // "AdvectionDrivenInnerCircleTests",
-        // "ConcentricCirclesTests",
+        "ConcentricCirclesTests",
         // "EquilibriumPairedManifoldTests",
-        //"VisualizeMCFAndLSW", // TODO: implement
-        "VisualizeMultipleInnerCurves"
+        // "VisualizeMCF",
+        // "VisualizeMultipleInnerCurves"
+        // "ExportSlicingPlanes"
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here
 // ........................................................................
     };
+
+    if (enabledExperiments.empty())
+    {
+        std::cout << "main: No experiments have been chosen. Uncomment experiments in enabledExperiments vector.\n";
+    }
 
     for (const auto& experimentId : enabledExperiments)
     {

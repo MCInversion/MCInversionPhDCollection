@@ -8,6 +8,10 @@ import matplotlib.gridspec as gridspec
 import matplotlib.image as mpimg
 import matplotlib.patches as patches
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# WARNING: Don't put keywords "Inner" or "Outer" in the procedure name because it's used to identify inner/outer curves
+# ====================================================================================================
+
 # Define the procedure name and the path to your directory containing the files
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing"
 #procedure_name = "ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing"
@@ -26,7 +30,7 @@ import matplotlib.patches as patches
 #procedure_name = "maxPlancknewEvol_Pts2D3_Repulsionless"
 
 #procedure_name = "nefertitinewEvol_Pts2D3_Repulsionless"
-procedure_name = "nefertitinewEvol_Pts2D3_TwoInner_Repulsionless"
+#procedure_name = "nefertitinewEvol_Pts2D3_RepulsionlessTwo"
 
 #procedure_name = "armadillonewEvol_Pts2D3_WithRepulsion"
 #procedure_name = "bunnynewEvol_Pts2D3_WithRepulsion"
@@ -39,7 +43,7 @@ procedure_name = "nefertitinewEvol_Pts2D3_TwoInner_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
 
 #procedure_name = "concentricCircles0_Repulsionless"
-#procedure_name = "concentricCircles1_Repulsionless"
+procedure_name = "concentricCircles1_Repulsionless"
 #procedure_name = "concentricCircles2_Repulsionless"
 #procedure_name = "concentricCircles3_Repulsionless"
 
@@ -55,10 +59,39 @@ procedure_name = "nefertitinewEvol_Pts2D3_TwoInner_Repulsionless"
 #procedure_name = "innerCircle_chamferedTriangle_PtsTest"
 #procedure_name = "innerCircle_incompleteChamferedTriangle_PtsTest"
 
+#procedure_name = "mcfCurve0"
+#procedure_name = "mcfCurve1"
+
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
 
 png_time_steps = [] # a specified time step container for png export. If empty, a gif animation will be exported
+svg_time_steps = [] # a specified time step container for svg export. If empty, all time steps will be exported
+
+# a specified time step container for exporting a single png with opaque curve polylines (except the last one). If empty, no png will be exported
+multi_png_time_steps = []
+#multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
+#multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
+#multi_png_time_steps = [0, 20, 40, 60, 80, 100] 
+#multi_png_time_steps = [0, 10, 100] 
+#multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
+
+inner_curves_color_palette = [
+    '#65107a', # dark purple
+    #'#00ffff', # cyan
+    #'#e3fcfc', # bright cyan
+    '#1c7373', # dark teal
+    #'#ff00ff', # magenta
+    #'#32CD32', # lime green
+]
+
+inner_curves_line_styles = [
+    (3, 1, 1, 1), # dash-dot
+    (None, None),  # solid
+    (None, None),  # solid
+    (3, 1),       # dashed
+    (1, 1),       # dotted
+]
 
 # =============================================================
 #        Inscribed circle estimation
@@ -227,10 +260,15 @@ time_ids = []  # To store the time_id values
 
 for f in sorted(os.listdir(directory)):
     if f.startswith(f"{procedure_name}_Inner") and f.endswith(".ply"):
+        # The files take form of "{procedure_name}_Inner{curve_id}_Evol_{time_id}.ply"
         # Extract the curve ID and time ID from the filename
         parts = f.split('_')
-        curve_id = parts[2].replace('Inner', '')  # Extract curve ID (e.g., "0" from "Inner0")
-        time_id = int(parts[-1].replace('Evol', '').replace('.ply', ''))  # Extract time ID (e.g., "1" from "Evol1")
+
+        # find part containing "Inner" to extract curve_id
+        curve_id_part = [part for part in parts if "Inner" in part][0]
+        curve_id = curve_id_part.replace('Inner', '')  # Extract curve ID (e.g., "0" from "Inner0")
+
+        time_id = int(parts[-1].replace('Evol', '').replace('.ply', ''))  # Extract time ID
         inner_ply_files[curve_id][time_id] = os.path.join(directory, f)
         if time_id not in time_ids:
             time_ids.append(time_id)  # Collect time_id if not already added
@@ -294,8 +332,21 @@ else:
     if outer_curves:
         # Use the first outer curve to set plot limits
         first_outer_curve = outer_curves[0]
-        ax_main.set_xlim(np.min(first_outer_curve[:, 0]), np.max(first_outer_curve[:, 0]))
-        ax_main.set_ylim(np.min(first_outer_curve[:, 1]), np.max(first_outer_curve[:, 1]))
+
+        x_bounds = [np.min(first_outer_curve[:, 0]), np.max(first_outer_curve[:, 0])]
+        y_bounds = [np.min(first_outer_curve[:, 1]), np.max(first_outer_curve[:, 1])]
+
+        # expand the bounds by 10% to avoid clipping the curves
+        y_range = y_bounds[1] - y_bounds[0]
+        x_range = x_bounds[1] - x_bounds[0]
+        y_bounds[0] -= 0.1 * y_range
+        y_bounds[1] += 0.1 * y_range
+        x_bounds[0] -= 0.1 * x_range
+        x_bounds[1] += 0.1 * x_range
+
+        ax_main.set_xlim(x_bounds)
+        ax_main.set_ylim(y_bounds)
+        
         ax_main.invert_yaxis()  # Reverse the direction of the y-axis
     elif inner_curves:
         # Use the first inner curve if outer curves are not available
@@ -359,8 +410,6 @@ def update(frame):
     if outer_curves and outer_curves[frame].size > 0:
         x_outer, y_outer = outer_curves[frame].T
         outer_line.set_data(x_outer, y_outer)
-    # else:
-    #     outer_line = None
     
     # Update inner curves
     for inner_lines, inner_curve_group in zip(inner_line_handles, inner_curves.values()):
@@ -379,18 +428,104 @@ def update(frame):
 
     return [outer_line] + inner_line_handles
 
+# Update curves only for svg export (do not add them to ax_main)
+def update_curves_only(frame):
+    # Update outer curve
+    if outer_curves and outer_curves[frame].size > 0:
+        x_outer, y_outer = outer_curves[frame].T
+        outer_line.set_data(x_outer, y_outer)
+    
+    # Update inner curves
+    for inner_lines, inner_curve_group in zip(inner_line_handles, inner_curves.values()):
+        if inner_curve_group[frame].size > 0:
+            x_inner, y_inner = inner_curve_group[frame].T
+            inner_lines.set_data(x_inner, y_inner)
+
+    return [outer_line] + inner_line_handles
+
+def plot_curves_with_increasing_opacity(frames):
+    # Draw the base image and overlay the curves with opacity from 0 to 1 for the specified frames
+    n_frames = len(frames)
+    min_opacity = 0.2  # Minimum opacity for the curves
+
+    outer_label = "F"  # Label for the outer curve
+    inner_labels = [f"$G_{{{idx}}}$" for idx in range(1, len(inner_curves) + 1)]  # Labels for the inner curves (indexed from 1 in the article)
+
+    for frame_idx, frame in enumerate(frames):
+
+        alpha = min_opacity + (1.0 - min_opacity) * (frame_idx / (n_frames - 1))  # linear interpolation for opacity
+        # alpha = min_opacity + (1.0 - min_opacity) * (1.0 - np.exp(-frame_idx / (n_frames - 1)))  # exponential interpolation for opacity
+
+        # Update outer curve
+        if outer_curves and outer_curves[frame].size > 0:
+            x_outer, y_outer = outer_curves[frame].T
+            outer_line.set_data(x_outer, y_outer)
+            if frame_idx == n_frames - 1:  # Add label only for the last frame
+                ax_main.plot(x_outer, y_outer, 'k-', linewidth=2, alpha=1, label=outer_label)[0]
+            else:
+                ax_main.plot(x_outer, y_outer, 'k-', linewidth=2, alpha=alpha)[0]
+
+        # Update inner curves
+        for idx, inner_curve_group in enumerate(inner_curves.values()):
+            if inner_curve_group[frame].size > 0:
+                x_inner, y_inner = inner_curve_group[frame].T
+                inner_color = inner_curves_color_palette[idx]  # Use idx to access color palette
+                inner_line_type = inner_curves_line_styles[idx]  # Use idx to access line style palette
+                if frame_idx == n_frames - 1:  # Add labels only for the last frame
+                    ax_main.plot(x_inner, y_inner, color=inner_color, linewidth=2, alpha=1, label=inner_labels[idx], dashes=inner_line_type)[0]
+                else:
+                    ax_main.plot(x_inner, y_inner, color=inner_color, linewidth=2, alpha=alpha, dashes=inner_line_type)[0]
+
+    # Set title and add the legend on the last frame
+    ax_main.set_title(f"{procedure_name}", fontsize=14)
+    if frame_idx == n_frames - 1:
+        ax_main.legend(loc='upper right')  # Position the legend in the upper right corner
+
+
+
 # =============================================================================================
 #                                  Visualization
 # ---------------------------------------------------------------------------------------------
 
-if png_time_steps:
-    # Manually call the update function for each specified time step and export as PNG
-    for frame_idx, time_step in enumerate(time_ids):
-        if time_step in png_time_steps:
-            update(frame_idx)  # Call update for this frame
-            output_png_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.png")
-            print("Saving ", output_png_path)
-            plt.savefig(output_png_path, dpi=300)  # Save the PNG for the current frame
+if png_time_steps or svg_time_steps or multi_png_time_steps:
+    # Specialized image exports
+    if png_time_steps:
+        # Manually call the update function for each specified time step and export as PNG
+        for frame_idx, time_step in enumerate(time_ids):
+            if time_step in png_time_steps:
+                update(frame_idx)  # Call update for this frame
+                output_png_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.png")
+                print("Saving ", output_png_path)
+                plt.savefig(output_png_path, dpi=300)  # Save the PNG for the current frame
+    elif svg_time_steps:
+        # Manually call the update function for each specified time step and export as SVG
+        for frame_idx, time_step in enumerate(time_ids):
+            if time_step in svg_time_steps:
+                update_curves_only(frame_idx)  # Call update for this frame
+                output_svg_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.svg")
+                print("Saving ", output_svg_path)
+                
+                # save outer_line and inner_line_handles to svg as paths in correct coordinates with flipped y-axis
+                with open(output_svg_path, 'w') as f:
+                    f.write(f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="100%">\n')
+                    f.write(f'<g transform="scale(1,-1) translate(0,-{extent[3]})">\n')
+                    f.write(f'<path d="M')
+                    for x, y in zip(outer_line.get_xdata(), outer_line.get_ydata()):
+                        f.write(f'{x},{y} ')
+                    f.write(f'Z" stroke="black" fill="none" stroke-width="2"/>\n')
+                    for inner_lines in inner_line_handles:
+                        f.write(f'<path d="M')
+                        for x, y in zip(inner_lines.get_xdata(), inner_lines.get_ydata()):
+                            f.write(f'{x},{y} ')
+                        f.write(f'Z" stroke="#65107a" fill="none" stroke-width="2"/>\n')
+                    f.write(f'</g>\n')
+                    f.write(f'</svg>\n')
+    elif multi_png_time_steps:
+        # Draw the base image and overlay the curves with increasing opacity for the specified frames
+        plot_curves_with_increasing_opacity(multi_png_time_steps)
+        output_png_path = os.path.join(directory, f"{procedure_name}_CurvesOpacity.png")
+        print("Saving ", output_png_path)
+        plt.savefig(output_png_path, dpi=300)
 else:
     # Create the animation
     # Determine the number of frames based on available data
@@ -405,8 +540,8 @@ else:
 
     # Save the animation as a GIF
     output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-    #ani.save(output_gif_path, writer='pillow', fps=30)
-    ani.save(output_gif_path, writer='pillow', fps=10)
+    ani.save(output_gif_path, writer='pillow', fps=30)
+    #ani.save(output_gif_path, writer='pillow', fps=10)
 
 # Show the animation
 plt.show()

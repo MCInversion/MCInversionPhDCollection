@@ -11,6 +11,7 @@
 #include "pmp/ManifoldCurve2D.h"
 
 #include <ranges>
+#include <fstream>
 
 namespace pmp
 {
@@ -327,6 +328,7 @@ template <typename ManifoldType>
 
 /**
  * \brief Logs settings for manifold remeshing.
+ * \class ManifoldRemeshingSettingsWrapper
  * \tparam ManifoldType  either pmp::ManifoldCurve2D or pmp::SurfaceMesh.
  */
 template<typename ManifoldType>
@@ -363,6 +365,7 @@ private:
 
 /**
  * \brief Logs initial sphere manifold settings.
+ * \class InitialSphereSettingsWrapper
  * \tparam ManifoldType  either pmp::ManifoldCurve2D or pmp::SurfaceMesh.
  * \tparam SphereType    either Sphere2D or Sphere3D.
  */
@@ -418,4 +421,69 @@ public:
 
 private:
 	std::map<ManifoldType*, SphereType> m_ManifoldSettings{};
+};
+
+
+/**
+ * \brief Gathers interaction distance info between interacting evolving manifolds and target point cloud.
+ * \class InteractionDistanceInfo
+ * \tparam VectorType   either pmp::dvec2 or pmp::dvec3.
+ */
+template<typename VectorType>
+class InteractionDistanceInfo
+{
+public:
+	double Distance{ DBL_MAX };   //>! interaction distance
+	VectorType NegGradient{}; //>! interaction vector
+
+	/// \brief Stream operator for updating the interaction info
+	InteractionDistanceInfo& operator<<(const InteractionDistanceInfo& newInfo)
+	{
+		if (newInfo.Distance < this->Distance)
+		{
+			// update both distance and gradient
+			this->Distance = newInfo.Distance;
+			this->NegGradient = newInfo.NegGradient;
+		}
+		return *this;
+	}
+};
+
+/**
+ * \brief Gathers vertex values and dumps them in a specified log file
+ * \class InteractionDistanceInfo
+ * \tparam VectorType   either pmp::dvec2 or pmp::dvec3.
+ */
+class VertexValueLogger
+{
+public:
+	/// \brief prepare the file stream and reset buffer
+	void Init(const std::string& fileName, const size_t& nVertices)
+	{
+		m_File.open(fileName, std::ios_base::app);
+		ResetValues(nVertices);
+	}
+
+	/// \brief reset and preallocate buffers
+	void ResetValues(const size_t& nVertices)
+	{
+		m_Values.clear();
+		m_Values.reserve(nVertices);
+	}
+
+	/// \brief Dump buffer contents into a file
+	void Save();
+
+	/// \brief Close after writing into the file.
+	void Close()
+	{
+		m_File.close();
+	}
+
+	/// \brief Stream operator for adding new values
+	VertexValueLogger& operator<<(const double& value);
+private:
+
+	std::ofstream m_File; //>! log file
+	std::vector<double> m_Values{}; //>! value buffer
 };

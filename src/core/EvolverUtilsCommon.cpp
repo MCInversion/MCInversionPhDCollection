@@ -465,3 +465,22 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shar
 
 	return settings;
 }
+
+void VertexValueLogger::Save()
+{
+	if (!m_File)
+	{
+		throw std::logic_error("VertexValueLogger::Save: file not opened!\n");
+	}
+
+	// TODO: stream (append) indexed values to File
+}
+
+VertexValueLogger& VertexValueLogger::operator<<(const double& value)
+{
+	if (m_Values.size() >= m_Values.capacity())
+	{
+		throw std::logic_error("VertexValueLogger::operator<<: Attempting to add values beyond buffer capacity!\n");
+	}
+	m_Values.push_back(value);
+}

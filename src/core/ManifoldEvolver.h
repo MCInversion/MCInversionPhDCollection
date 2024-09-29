@@ -126,6 +126,9 @@ struct ManifoldEvolutionSettings
     FaceQualitySettings QualitySettings{}; //>! settings for mesh quality evaluation
     ManifoldAdaptiveRemeshingParams RemeshingSettings{}; //>! settings for pmp::Remeshing.
     FeatureDetectionSettings FeatureSettings{}; //>! settings for feature detection.
+
+    bool ExportEpsilonValues{ false }; //>! if true, values of the epsilon control function of all manifolds will be exported into respective files for all time steps.
+    bool ExportEtaValues{ false }; //>! if true, values of the eta control functio of all manifoldsn will be exported into respective files for all time steps.
 };
 
 /**
@@ -186,6 +189,11 @@ public:
     virtual void Preprocess() = 0;
 
     /**
+     * \brief Cleanup procedures after evolution is finished.
+     */
+    virtual void Postprocess() = 0;
+
+    /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
      */
     virtual void PerformEvolutionStep(unsigned int stepId) = 0;
@@ -240,12 +248,6 @@ protected:
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
     virtual void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) = 0;
-
-    /// \brief Prepares the property arrays for all evolving manifolds.
-    virtual void PrepareManifoldProperties() = 0;
-
-    /// \brief Resets the property arrays for all evolving manifolds.
-    virtual void ResetManifoldProperties() = 0;
 
     /// \brief A getter for the numerical integration step function.
     NumericalStepIntegrateFunction& GetIntegrate()
@@ -333,6 +335,11 @@ public:
     void Preprocess() override;
 
     /**
+     * \brief Cleanup procedures after evolution is finished.
+     */
+    void Postprocess() override;
+
+    /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
      */
     void PerformEvolutionStep(unsigned int stepId) override;
@@ -383,12 +390,6 @@ protected:
 
     /// \brief Explicit integration method step.
     void ExplicitIntegrationStep(unsigned int step) override;
-
-    /// \brief Prepares the property arrays for all evolving manifolds.
-    void PrepareManifoldProperties() override;
-
-    /// \brief Resets the property arrays for all evolving manifolds.
-    void ResetManifoldProperties() override;
 
     /// \brief A getter for the outer curve
     std::shared_ptr<pmp::ManifoldCurve2D>& GetOuterCurve()
@@ -470,10 +471,22 @@ protected:
         return m_OuterCurveDistanceField;
     }
 
+    /// \brief A getter for the negative normalized gradient of the distance field to outer curve
+    std::shared_ptr<Geometry::VectorGrid2D>& GetOuterCurveDFNegNormalizedGradient()
+    {
+        return m_OuterCurveDFNegNormalizedGradient;
+    }
+
     /// \brief A getter for the distance fields of inner curves
     std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& GetInnerCurvesDistanceFields()
     {
         return m_InnerCurvesDistanceFields;
+    }
+
+    /// \brief A getter for the negative normalized gradients of the distance fields to inner curves
+    std::vector<std::shared_ptr<Geometry::VectorGrid2D>>& GetInnerCurvesDFNegNormalizedGradients()
+    {
+        return m_InnerCurvesDFNegNormalizedGradients;
     }
 
     /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
@@ -502,8 +515,10 @@ private:
     std::shared_ptr<Geometry::VectorGrid2D> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 
     // TODO: investigate performance
-    std::shared_ptr<Geometry::ScalarGrid2D> m_OuterCurveDistanceField{ nullptr }; //>! the updated distance field of the evolving outer surface.
-    std::vector<std::shared_ptr<Geometry::ScalarGrid2D>> m_InnerCurvesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
+    std::shared_ptr<Geometry::ScalarGrid2D> m_OuterCurveDistanceField{ nullptr }; //>! the updated distance field of the evolving outer manifold.
+    std::shared_ptr<Geometry::VectorGrid2D> m_OuterCurveDFNegNormalizedGradient{ nullptr }; //>! the updated gradient of distance field to evolving outer manifold.
+    std::vector<std::shared_ptr<Geometry::ScalarGrid2D>> m_InnerCurvesDistanceFields{}; //>! the updated distance fields of the evolving inner manifolds.
+    std::vector<std::shared_ptr<Geometry::VectorGrid2D>> m_InnerCurvesDFNegNormalizedGradients{}; //>! the updated gradients of distance fields to evolving inner manifolds.
 
     pmp::mat3 m_TransformToOriginal = pmp::mat3::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
@@ -619,6 +634,11 @@ public:
     void Preprocess() override;
 
     /**
+     * \brief Cleanup procedures after evolution is finished.
+     */
+    void Postprocess() override;
+
+    /**
      * \brief Performs a single step of manifold evolution from the configuration at previous time step.
      */
     void PerformEvolutionStep(unsigned int stepId) override;
@@ -669,12 +689,6 @@ protected:
 
     /// \brief Explicit integration method step.
     void ExplicitIntegrationStep(unsigned int step) override;
-
-    /// \brief Prepares the property arrays for all evolving manifolds.
-    void PrepareManifoldProperties() override;
-
-    /// \brief Resets the property arrays for all evolving manifolds.
-    void ResetManifoldProperties() override;
 
     /// \brief A getter for the outer surface
     std::shared_ptr<pmp::SurfaceMesh>& GetOuterSurface()
@@ -768,10 +782,22 @@ protected:
         return m_OuterSurfaceDistanceField;
     }
 
+    /// \brief A getter for the normalized negative gradient of the distance field to outer surface
+    std::shared_ptr<Geometry::VectorGrid>& GetOuterSurfaceDFNegNormalizedGradient()
+    {
+        return m_OuterSurfaceDFNegNormalizedGradient;
+    }
+
     /// \brief A getter for the distance fields of inner surfaces
     std::vector<std::shared_ptr<Geometry::ScalarGrid>>& GetInnerSurfacesDistanceFields()
     {
         return m_InnerSurfacesDistanceFields;
+    }
+
+    /// \brief A getter for the normalized negative gradients of the distance fields to inner surfaces
+    std::vector<std::shared_ptr<Geometry::VectorGrid>>& GetInnerSurfacesDFNegNormalizedGradients()
+    {
+        return m_InnerSurfacesDFNegNormalizedGradients;
     }
 
     /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
@@ -800,8 +826,10 @@ private:
     std::shared_ptr<Geometry::VectorGrid> m_DFNegNormalizedGradient{ nullptr }; //>! the normalized negative gradient of m_DistanceField.
 
     // TODO: investigate performance
-    std::shared_ptr<Geometry::ScalarGrid> m_OuterSurfaceDistanceField{ nullptr }; //>! the updated distance field of the evolving outer surface.
-    std::vector<std::shared_ptr<Geometry::ScalarGrid>> m_InnerSurfacesDistanceFields{}; //>! the updated distance fields of the evolving inner surfaces.
+    std::shared_ptr<Geometry::ScalarGrid> m_OuterSurfaceDistanceField{ nullptr }; //>! the updated distance field of the evolving outer manifold.
+    std::shared_ptr<Geometry::VectorGrid> m_OuterSurfaceDFNegNormalizedGradient{ nullptr }; //>! the updated gradient of distance field to evolving outer manifold.
+    std::vector<std::shared_ptr<Geometry::ScalarGrid>> m_InnerSurfacesDistanceFields{}; //>! the updated distance fields of the evolving inner manifolds.
+    std::vector<std::shared_ptr<Geometry::VectorGrid>> m_InnerSurfacesDFNegNormalizedGradients{}; //>! the updated gradients of distance fields to evolving inner manifolds.
 
     pmp::mat4 m_TransformToOriginal = pmp::mat4::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
@@ -934,6 +962,8 @@ public:
                 m_Strategy->ExportCurrentState(step, m_Settings.OutputPath + m_Settings.ProcedureName);
             }
         }
+
+        m_Strategy->Postprocess();
 
         if (m_Settings.ExportResult) 
         {
