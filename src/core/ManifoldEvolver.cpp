@@ -144,6 +144,48 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOu
 
 void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename)
 {
+	// ----------------------------------------------------------------
+	if (GetSettings().ExportVariableScalarFieldsDimInfo && m_OuterCurveDistanceField)
+	{
+		auto exportedOuterCurveDF = *m_OuterCurveDistanceField;
+		exportedOuterCurveDF *= m_TransformToOriginal;
+		exportedOuterCurveDF /= static_cast<double>(GetScalingFactor());
+		ExportScalarGridDimInfo2D(baseOutputFilename + "_OuterDF.gdim2d", exportedOuterCurveDF);
+	}
+	if (GetSettings().ExportVariableVectorFieldsDimInfo && m_OuterCurveDFNegNormalizedGradient)
+	{
+		auto exportedOuterCurveDFNegGrad = *m_OuterCurveDFNegNormalizedGradient;
+		exportedOuterCurveDFNegGrad *= m_TransformToOriginal;
+		ExportVectorGridDimInfo2D(baseOutputFilename + "_OuterDFNegGrad.gdim2d", exportedOuterCurveDFNegGrad);
+	}
+
+	if (GetSettings().ExportVariableScalarFieldsDimInfo)
+	{
+		for (size_t i = 0; i < m_InnerCurvesDistanceFields.size(); ++i)
+		{
+			if (!m_InnerCurvesDistanceFields[i])
+				continue;
+
+			auto exportedInnerCurveDF = *m_InnerCurvesDistanceFields[i];
+			exportedInnerCurveDF *= m_TransformToOriginal;
+			exportedInnerCurveDF /= static_cast<double>(GetScalingFactor());
+			ExportScalarGridDimInfo2D(baseOutputFilename + "_InnerDF" + std::to_string(i) + ".gdim2d", exportedInnerCurveDF);
+		}
+	}
+	if (GetSettings().ExportVariableVectorFieldsDimInfo)
+	{
+		for (size_t i = 0; i < m_InnerCurvesDFNegNormalizedGradients.size(); ++i)
+		{
+			if (!m_InnerCurvesDFNegNormalizedGradients[i])
+				continue;
+
+			auto exportedInnerCurveDFNegGrad = *m_InnerCurvesDFNegNormalizedGradients[i];
+			exportedInnerCurveDFNegGrad *= m_TransformToOriginal;
+			ExportVectorGridDimInfo2D(baseOutputFilename + "_InnerDFNegGrad" + std::to_string(i) + ".gdim2d", exportedInnerCurveDFNegGrad);
+		}
+	}
+	// ----------------------------------------------------------------
+
 	if (!m_DistanceField)
 		return; // field not defined
 
@@ -219,11 +261,11 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
 
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
-		std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
-		std::fstream outerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_outerLog" + std::to_string(step) + ".txt", std::fstream::out);
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		//std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
+		//std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
+		//std::fstream outerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_outerLog" + std::to_string(step) + ".txt", std::fstream::out);
+		//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		for (const auto v : m_OuterCurve->vertices())
 		{
@@ -263,9 +305,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance)) +
 				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
 
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			//DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
@@ -276,9 +318,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double etaCtrlWeight = 
 				(m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 			
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_ETA[v.idx()] = etaCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			//DEBUG_ETA[v.idx()] = etaCtrlWeight;
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -332,21 +374,21 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			m_OuterCurve->position(pmp::Vertex(i)) = newPos;
 		}
 
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		outerLog << "OUTER_DEBUG_EPSILON = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			outerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		outerLog << "]\n";
-		outerLog << "OUTER_DEBUG_ETA = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			outerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		outerLog << "]\n";
-		outerLog.close();
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		//outerLog << "OUTER_DEBUG_EPSILON = [\n";
+		//for (int i = 0; i < NVertices; ++i)
+		//{
+		//	outerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		//}
+		//outerLog << "]\n";
+		//outerLog << "OUTER_DEBUG_ETA = [\n";
+		//for (int i = 0; i < NVertices; ++i)
+		//{
+		//	outerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		//}
+		//outerLog << "]\n";
+		//outerLog.close();
+		//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	}
 
 	// ================================== Handle m_InnerCurves ==========================================================
@@ -356,11 +398,11 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 2);
 
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
-		std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
-		std::fstream innerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_innerLog" + std::to_string(step) + ".txt", std::fstream::out);
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		//std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
+		//std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
+		//std::fstream innerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_innerLog" + std::to_string(step) + ".txt", std::fstream::out);
+		//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		const auto tStep = GetSettings().TimeStep;
 
@@ -404,9 +446,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double epsilonCtrlWeight =
 				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance)) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			//DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
@@ -417,9 +459,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
 				(m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_ETA[v.idx()] = etaCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			//DEBUG_ETA[v.idx()] = etaCtrlWeight;
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -473,21 +515,21 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			innerCurve->position(pmp::Vertex(i)) = newPos;
 		}
 
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		innerLog << "INNER_DEBUG_EPSILON = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			innerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		innerLog << "]\n";
-		innerLog << "INNER_DEBUG_ETA = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			innerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		innerLog << "]\n";
-		innerLog.close();
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		//innerLog << "INNER_DEBUG_EPSILON = [\n";
+		//for (int i = 0; i < NVertices; ++i)
+		//{
+		//	innerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		//}
+		//innerLog << "]\n";
+		//innerLog << "INNER_DEBUG_ETA = [\n";
+		//for (int i = 0; i < NVertices; ++i)
+		//{
+		//	innerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		//}
+		//innerLog << "]\n";
+		//innerLog.close();
+		//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	}
 }
 
@@ -816,12 +858,12 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	}
 	for (const auto& innerCurveDF : m_InnerCurvesDistanceFields)
 	{
-		(*innerCurveDF) *= transfMatrixFull;
+		(*innerCurveDF) *= transfMatrixGeomScale; //transfMatrixFull;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerCurveDFGradient : m_InnerCurvesDFNegNormalizedGradients)
 	{
-		(*innerCurveDFGradient) *= transfMatrixFull;
+		(*innerCurveDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1008,12 +1050,12 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 
 	if (GetOuterCurveDistanceField())
 	{
-		(*GetOuterCurveDistanceField()) *= transfMatrixFull;
+		(*GetOuterCurveDistanceField()) *= transfMatrixGeomScale; //transfMatrixFull;
 		(*GetOuterCurveDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (GetOuterCurveDFNegNormalizedGradient())
 	{
-		(*GetOuterCurveDFNegNormalizedGradient()) *= transfMatrixFull;
+		(*GetOuterCurveDFNegNormalizedGradient()) *= transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerCurveDF : GetInnerCurvesDistanceFields())
@@ -1023,7 +1065,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	}
 	for (const auto& innerCurveDFGradient : GetInnerCurvesDFNegNormalizedGradients())
 	{
-		(*innerCurveDFGradient) *= transfMatrixFull;
+		(*innerCurveDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1777,17 +1819,17 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	}
 	if (m_OuterSurfaceDFNegNormalizedGradient)
 	{
-		(*m_OuterSurfaceDFNegNormalizedGradient) *= transfMatrixFull;
+		(*m_OuterSurfaceDFNegNormalizedGradient) *= transfMatrixGeomScale; // transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerSurfaceDF : m_InnerSurfacesDistanceFields)
 	{
-		(*innerSurfaceDF) *= transfMatrixFull;
+		(*innerSurfaceDF) *= transfMatrixGeomScale; //transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDFGradient : m_InnerSurfacesDFNegNormalizedGradients)
 	{
-		(*innerSurfaceDFGradient) *= transfMatrixFull;
+		(*innerSurfaceDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1965,7 +2007,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 
 	if (GetOuterSurfraceDistanceField())
 	{
-		(*GetOuterSurfraceDistanceField()) *= transfMatrixFull;
+		(*GetOuterSurfraceDistanceField()) *= transfMatrixGeomScale; //transfMatrixFull;
 		(*GetOuterSurfraceDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (GetOuterSurfaceDFNegNormalizedGradient())
@@ -1975,12 +2017,12 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	}
 	for (const auto& innerSurfaceDF : GetInnerSurfacesDistanceFields())
 	{
-		(*innerSurfaceDF) *= transfMatrixFull;
+		(*innerSurfaceDF) *= transfMatrixGeomScale; //transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDFGradient : GetInnerSurfacesDFNegNormalizedGradients())
 	{
-		(*innerSurfaceDFGradient) *= transfMatrixFull;
+		(*innerSurfaceDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 

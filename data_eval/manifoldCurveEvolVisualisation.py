@@ -308,6 +308,32 @@ for inner_id, inner_curve_group in inner_curves.items():
 for i, outer_curve in enumerate(outer_curves):
     print(f"Outer file [{i}]: {outer_ply_files[i]}: {len(outer_curve)} vertices")
 
+# =============================================
+
+# Prepare a list to store the patches for boxes
+gdim2d_boxes = []
+
+# Handle OuterDF box
+outer_gdim2d_path = os.path.join(directory, f"{procedure_name}_OuterDF.gdim2d")
+if os.path.exists(outer_gdim2d_path):
+    bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(outer_gdim2d_path)
+    # Create a rectangle patch for the bounding box
+    outer_box_patch = patches.Rectangle(bbox_min, bbox_max[0] - bbox_min[0], bbox_max[1] - bbox_min[1], 
+                                        linewidth=2, edgecolor='blue', linestyle='--', facecolor='none')
+    gdim2d_boxes.append(outer_box_patch)  # Add to the list of boxes
+
+# Handle InnerDF boxes
+for i in range(len(inner_curves)):  # Assuming you know the number of inner curves
+    inner_gdim2d_path = os.path.join(directory, f"{procedure_name}_InnerDF{i}.gdim2d")
+    if os.path.exists(inner_gdim2d_path):
+        bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(inner_gdim2d_path)
+        # Create a rectangle patch for each inner curve bounding box
+        inner_box_patch = patches.Rectangle(bbox_min, bbox_max[0] - bbox_min[0], bbox_max[1] - bbox_min[1], 
+                                            linewidth=2, edgecolor='green', linestyle='--', facecolor='none')
+        gdim2d_boxes.append(inner_box_patch)  # Add to the list of boxes
+
+# =============================================
+
 # Set up the figure with two subplots: one for the main plot, one for the legend
 fig = plt.figure(figsize=(8, 6))
 gs = gridspec.GridSpec(1, 2, width_ratios=[8, 1])  # ratio for main plot and legend
@@ -338,13 +364,14 @@ else:
         x_bounds = [np.min(first_outer_curve[:, 0]), np.max(first_outer_curve[:, 0])]
         y_bounds = [np.min(first_outer_curve[:, 1]), np.max(first_outer_curve[:, 1])]
 
-        # expand the bounds by 10% to avoid clipping the curves
+        # expand the bounds to avoid clipping the curves
+        expansion_factor = 2.0
         y_range = y_bounds[1] - y_bounds[0]
         x_range = x_bounds[1] - x_bounds[0]
-        y_bounds[0] -= 0.1 * y_range
-        y_bounds[1] += 0.1 * y_range
-        x_bounds[0] -= 0.1 * x_range
-        x_bounds[1] += 0.1 * x_range
+        y_bounds[0] -= expansion_factor * y_range
+        y_bounds[1] += expansion_factor * y_range
+        x_bounds[0] -= expansion_factor * x_range
+        x_bounds[1] += expansion_factor * x_range
 
         ax_main.set_xlim(x_bounds)
         ax_main.set_ylim(y_bounds)
@@ -398,6 +425,18 @@ ax_main.set_aspect('equal')
 outer_line, = ax_main.plot([], [], 'k-', linewidth=2)  # Black outer curve
 inner_line_handles = [ax_main.plot([], [], color='#65107a', linestyle='-', linewidth=2)[0] for _ in inner_curves]  # Different lines for each inner curve
 
+# Handle outer curve box (black with dashed style and alpha 0.5)
+outer_box_patch.set_edgecolor('black')
+outer_box_patch.set_linestyle('--')
+outer_box_patch.set_alpha(0.5)
+ax_main.add_patch(outer_box_patch)  # Add the outer box to the plot
+
+# Handle inner curve boxes (magenta with dashed style and alpha 0.5)
+for idx, inner_box_patch in enumerate(gdim2d_boxes[1:]):  # Assuming first box is outer
+    inner_box_patch.set_edgecolor('#65107a')  # Magenta color for inner boxes
+    inner_box_patch.set_linestyle('--')
+    inner_box_patch.set_alpha(0.5)
+    ax_main.add_patch(inner_box_patch)  # Add the inner box to the plot
 
 # Initialize the line data
 def init():
@@ -424,11 +463,10 @@ def update(frame):
         radius = inscribed_circle["radius"]
         inscribed_circle_patch = patches.Circle(center, radius, edgecolor='purple', facecolor='none', linewidth=2)
         ax_main.add_patch(inscribed_circle_patch)
-    
-    # Update the title with the current time step using time_id
-    ax_main.set_title(f"Time Step: {time_ids[frame]}", fontsize=14)
 
+    ax_main.set_title(f"Time Step: {time_ids[frame]}", fontsize=14)
     return [outer_line] + inner_line_handles
+
 
 # Update curves only for svg export (do not add them to ax_main)
 def update_curves_only(frame):

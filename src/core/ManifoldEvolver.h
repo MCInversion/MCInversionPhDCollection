@@ -126,6 +126,9 @@ struct ManifoldEvolutionSettings
     FaceQualitySettings QualitySettings{}; //>! settings for mesh quality evaluation
     ManifoldAdaptiveRemeshingParams RemeshingSettings{}; //>! settings for pmp::Remeshing.
     FeatureDetectionSettings FeatureSettings{}; //>! settings for feature detection.
+
+    bool ExportVariableScalarFieldsDimInfo{ false }; //>! whether to export the dimensions of the variable scalar fields.
+    bool ExportVariableVectorFieldsDimInfo{ false }; //>! whether to export the dimensions of the variable vector fields.
 };
 
 /**

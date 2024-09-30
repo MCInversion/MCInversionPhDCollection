@@ -2188,6 +2188,8 @@ void ConcentricCirclesTests()
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
 
+			strategySettings.ExportVariableScalarFieldsDimInfo = true;
+
 			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
 			GlobalManifoldEvolutionSettings globalSettings;

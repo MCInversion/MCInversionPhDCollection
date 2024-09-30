@@ -83,6 +83,9 @@ void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::Scalar
 /// \brief A specialized export of file (*.gdim2d) for containing the proper dimensions of the 2D scalar grid.
 void ExportScalarGridDimInfo2D(const std::string& filename, const Geometry::ScalarGrid2D& grid);
 
+/// \brief A specialized export of file (*.gdim2d) for containing the proper dimensions of the 2D vector grid.
+void ExportVectorGridDimInfo2D(const std::string& filename, const Geometry::VectorGrid2D& grid);
+
 /// \brief Overload multiplication for RGBColorScheme
 RGBColorScheme operator*(const RGBColorScheme& scheme, double factor);
 
