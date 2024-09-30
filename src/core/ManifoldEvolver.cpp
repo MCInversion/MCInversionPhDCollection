@@ -219,6 +219,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
 
+		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
+		std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
+		std::fstream outerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_outerLog" + std::to_string(step) + ".txt", std::fstream::out);
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
@@ -257,6 +263,10 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance)) +
 				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
 
+			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
 			const auto negGradDotNormal = pmp::ddot(
@@ -265,6 +275,10 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
 				(m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
+			
+			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			DEBUG_ETA[v.idx()] = etaCtrlWeight;
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -317,6 +331,22 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 			m_OuterCurve->position(pmp::Vertex(i)) = newPos;
 		}
+
+		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		outerLog << "OUTER_DEBUG_EPSILON = [\n";
+		for (int i = 0; i < NVertices; ++i)
+		{
+			outerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		}
+		outerLog << "]\n";
+		outerLog << "OUTER_DEBUG_ETA = [\n";
+		for (int i = 0; i < NVertices; ++i)
+		{
+			outerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		}
+		outerLog << "]\n";
+		outerLog.close();
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	}
 
 	// ================================== Handle m_InnerCurves ==========================================================
@@ -325,6 +355,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		const auto NVertices = static_cast<unsigned int>(innerCurve->n_vertices());
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 2);
+
+		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
+		std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
+		std::fstream innerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_innerLog" + std::to_string(step) + ".txt", std::fstream::out);
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		const auto tStep = GetSettings().TimeStep;
 
@@ -368,6 +404,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double epsilonCtrlWeight =
 				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance)) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
+			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
@@ -378,6 +417,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
 				(m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
+			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+			DEBUG_ETA[v.idx()] = etaCtrlWeight;
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -430,6 +472,22 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 			innerCurve->position(pmp::Vertex(i)) = newPos;
 		}
+
+		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
+		innerLog << "INNER_DEBUG_EPSILON = [\n";
+		for (int i = 0; i < NVertices; ++i)
+		{
+			innerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		}
+		innerLog << "]\n";
+		innerLog << "INNER_DEBUG_ETA = [\n";
+		for (int i = 0; i < NVertices; ++i)
+		{
+			innerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
+		}
+		innerLog << "]\n";
+		innerLog.close();
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	}
 }
 

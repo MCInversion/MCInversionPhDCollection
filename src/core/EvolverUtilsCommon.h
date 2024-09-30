@@ -449,41 +449,82 @@ public:
 	}
 };
 
-/**
- * \brief Gathers vertex values and dumps them in a specified log file
- * \class InteractionDistanceInfo
- * \tparam VectorType   either pmp::dvec2 or pmp::dvec3.
- */
-class VertexValueLogger
-{
-public:
-	/// \brief prepare the file stream and reset buffer
-	void Init(const std::string& fileName, const size_t& nVertices)
-	{
-		m_File.open(fileName, std::ios_base::app);
-		ResetValues(nVertices);
-	}
-
-	/// \brief reset and preallocate buffers
-	void ResetValues(const size_t& nVertices)
-	{
-		m_Values.clear();
-		m_Values.reserve(nVertices);
-	}
-
-	/// \brief Dump buffer contents into a file
-	void Save();
-
-	/// \brief Close after writing into the file.
-	void Close()
-	{
-		m_File.close();
-	}
-
-	/// \brief Stream operator for adding new values
-	VertexValueLogger& operator<<(const double& value);
-private:
-
-	std::ofstream m_File; //>! log file
-	std::vector<double> m_Values{}; //>! value buffer
-};
+///**
+// * \brief Gathers vertex values from multiple manifolds and dumps them into a specified log file.
+// * \class VertexValueLogger
+// * \tparam ManifoldType   The type of the manifold (pmp::ManifoldCurve2D or pmp::SurfaceMesh).
+// */
+//template<typename ManifoldType>
+//class VertexValueLogger
+//{
+//public:
+//	/// \brief Initialize the logger with a file name.
+//	void Init(const std::string& fileName)
+//	{
+//		m_File.open(fileName, std::ios_base::app);
+//		if (!m_File.is_open())
+//		{
+//			throw std::runtime_error("VertexValueLogger::Init: Failed to open file: " + fileName);
+//		}
+//	}
+//
+//	/// \brief Reset the values for a new time step.
+//	void ResetValues()
+//	{
+//		m_ManifoldValues.clear();
+//	}
+//
+//	/// \brief Add a new manifold to the logger.
+//	void AddManifold(const ManifoldType* manifold)
+//	{
+//		size_t nVertices = manifold->n_vertices();
+//		m_ManifoldValues[manifold].reserve(nVertices);
+//	}
+//
+//	/// \brief Log a value for a specific manifold and vertex.
+//	void LogValue(const ManifoldType* manifold, const std::string& valueId, double value)
+//	{
+//		m_ManifoldValues[manifold][valueId].push_back(value);
+//	}
+//
+//	/// \brief Save the logged values to the file.
+//	void Save(unsigned int timeStep)
+//	{
+//		if (!m_File)
+//		{
+//			throw std::logic_error("VertexValueLogger::Save: File not opened!\n");
+//		}
+//
+//		// Write a header for the time step
+//		m_File << "# Time Step: " << timeStep << "\n";
+//
+//		for (const auto& [manifold, valuesMap] : m_ManifoldValues)
+//		{
+//			// Write values for each manifold, keyed by type (e.g., epsilonCtrlWeight, etaCtrlWeight)
+//			m_File << "Manifold: " << manifold << "\n";
+//
+//			for (const auto& [key, values] : valuesMap)
+//			{
+//				m_File << key << ": VertexIndex, Value\n";
+//				for (size_t i = 0; i < values.size(); ++i)
+//				{
+//					m_File << i << ", " << values[i] << "\n";
+//				}
+//				m_File << "\n";  // Separate different value types by a line
+//			}
+//		}
+//
+//		// Optionally add a separator between time steps
+//		m_File << "\n";
+//	}
+//
+//	/// \brief Close the log file.
+//	void Close()
+//	{
+//		m_File.close();
+//	}
+//
+//private:
+//	std::ofstream m_File;  //!< Log file
+//	std::unordered_map<ManifoldType*, std::map<std::string, std::vector<double>>> m_ManifoldValues;  //!< Map of manifold to its vertex values
+//};

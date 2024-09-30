@@ -2169,7 +2169,7 @@ void ConcentricCirclesTests()
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				return 0.001 * TRIVIAL_EPSILON(distance);
+				return 0.0 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
@@ -2192,7 +2192,7 @@ void ConcentricCirclesTests()
 
 			GlobalManifoldEvolutionSettings globalSettings;
 			globalSettings.NSteps = NTimeSteps;
-			globalSettings.DoRemeshing = true;
+			globalSettings.DoRemeshing = false;
 			globalSettings.DetectFeatures = false;
 			globalSettings.ExportPerTimeStep = true;
 			globalSettings.ExportTargetDistanceFieldAsImage = true;

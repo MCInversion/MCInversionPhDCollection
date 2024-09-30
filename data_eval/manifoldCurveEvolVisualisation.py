@@ -43,9 +43,9 @@ import matplotlib.patches as patches
 #procedure_name = "curve3_Repulsionless"
 
 #procedure_name = "concentricCircles0_Repulsionless"
-procedure_name = "concentricCircles1_Repulsionless"
+#procedure_name = "concentricCircles1_Repulsionless"
 #procedure_name = "concentricCircles2_Repulsionless"
-#procedure_name = "concentricCircles3_Repulsionless"
+procedure_name = "concentricCircles3_Repulsionless"
 
 #procedure_name = "singleInnerCircleTest"
 #procedure_name = "innerCircleOuterCirclePtsTest"
@@ -64,6 +64,8 @@ procedure_name = "concentricCircles1_Repulsionless"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
+
+fps = 10
 
 png_time_steps = [] # a specified time step container for png export. If empty, a gif animation will be exported
 svg_time_steps = [] # a specified time step container for svg export. If empty, all time steps will be exported
@@ -540,8 +542,7 @@ else:
 
     # Save the animation as a GIF
     output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-    ani.save(output_gif_path, writer='pillow', fps=30)
-    #ani.save(output_gif_path, writer='pillow', fps=10)
+    ani.save(output_gif_path, writer='pillow', fps=fps)
 
 # Show the animation
 plt.show()

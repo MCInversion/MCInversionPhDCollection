@@ -126,9 +126,6 @@ struct ManifoldEvolutionSettings
     FaceQualitySettings QualitySettings{}; //>! settings for mesh quality evaluation
     ManifoldAdaptiveRemeshingParams RemeshingSettings{}; //>! settings for pmp::Remeshing.
     FeatureDetectionSettings FeatureSettings{}; //>! settings for feature detection.
-
-    bool ExportEpsilonValues{ false }; //>! if true, values of the epsilon control function of all manifolds will be exported into respective files for all time steps.
-    bool ExportEtaValues{ false }; //>! if true, values of the eta control functio of all manifoldsn will be exported into respective files for all time steps.
 };
 
 /**
