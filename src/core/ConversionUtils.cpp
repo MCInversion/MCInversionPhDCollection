@@ -766,7 +766,7 @@ void ExportVectorGridDimInfo2D(const std::string& filename, const Geometry::Vect
 
 	const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(filename);
 
-	if (extension != "vdim2d")
+	if (extension != "gdim2d")
 	{
 		throw std::invalid_argument("ExportVectorGridDimInfo2D: Invalid file extension!");
 	}

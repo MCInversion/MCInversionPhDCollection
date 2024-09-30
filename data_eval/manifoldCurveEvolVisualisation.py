@@ -95,6 +95,8 @@ inner_curves_line_styles = [
     (1, 1),       # dotted
 ]
 
+do_variable_fields_comparison = False
+
 # =============================================================
 #        Inscribed circle estimation
 # -------------------------------------------------------------
@@ -145,6 +147,82 @@ def read_gdim2d_file(filepath):
                 cell_size = float(line.split(':')[1].strip())
 
     return bbox_min, bbox_max, nx, ny, cell_size
+
+# =============================================================
+
+def plot_variable_fields_comparison():
+    # Define the paths to the inner and outer distance field images and their corresponding grid dimensions
+    inner_field_image_path = os.path.join(directory, f"{procedure_name}_InnerDF0.png")
+    inner_field_gdim2d_path = os.path.join(directory, f"{procedure_name}_InnerDF0.gdim2d")
+    
+    outer_field_image_path = os.path.join(directory, f"{procedure_name}_OuterDF.png")
+    outer_field_gdim2d_path = os.path.join(directory, f"{procedure_name}_OuterDF.gdim2d")
+    
+    # Load the inner distance field image and grid dimensions
+    if os.path.exists(inner_field_image_path) and os.path.exists(inner_field_gdim2d_path):
+        bbox_min_inner, bbox_max_inner, nx_inner, ny_inner, cell_size_inner = read_gdim2d_file(inner_field_gdim2d_path)
+        inner_field_img = imageio.imread(inner_field_image_path)
+        extent_inner = [bbox_min_inner[0], bbox_max_inner[0], bbox_max_inner[1], bbox_min_inner[1]]
+    else:
+        print("Inner distance field image or gdim2d file not found.")
+        return
+    
+    # Load the outer distance field image and grid dimensions
+    if os.path.exists(outer_field_image_path) and os.path.exists(outer_field_gdim2d_path):
+        bbox_min_outer, bbox_max_outer, nx_outer, ny_outer, cell_size_outer = read_gdim2d_file(outer_field_gdim2d_path)
+        outer_field_img = imageio.imread(outer_field_image_path)
+        extent_outer = [bbox_min_outer[0], bbox_max_outer[0], bbox_max_outer[1], bbox_min_outer[1]]
+    else:
+        print("Outer distance field image or gdim2d file not found.")
+        return
+    
+    # Create the figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Plot the inner distance field with curves at time step 0
+    ax1.imshow(inner_field_img, extent=extent_inner)
+    ax1.invert_yaxis()  # Reverse the y-axis to match your coordinate system
+    # Plot the outer curve at time step 0
+    if outer_curves and outer_curves[0].size > 0:
+        x_outer, y_outer = outer_curves[0].T
+        ax1.plot(x_outer, y_outer, 'k-', linewidth=2, label='Outer Curve')
+    # Plot the inner curves at time step 0
+    for idx, (curve_id, inner_curve_group) in enumerate(inner_curves.items()):
+        if inner_curve_group[0].size > 0:
+            x_inner, y_inner = inner_curve_group[0].T
+            inner_color = inner_curves_color_palette[idx % len(inner_curves_color_palette)]
+            inner_line_type = inner_curves_line_styles[idx % len(inner_curves_line_styles)]
+            ax1.plot(x_inner, y_inner, color=inner_color, linewidth=2, label=f'Inner Curve {curve_id}', dashes=inner_line_type)
+    ax1.set_title('Inner Distance Field with Curves at Step 0')
+    ax1.set_xlabel('X')
+    ax1.set_ylabel('Y')
+    ax1.legend()
+    ax1.set_aspect('equal')
+    
+    # Plot the outer distance field with curves at time step 0
+    ax2.imshow(outer_field_img, extent=extent_outer)
+    ax2.invert_yaxis()  # Reverse the y-axis
+    # Plot the outer curve at time step 0
+    if outer_curves and outer_curves[0].size > 0:
+        x_outer, y_outer = outer_curves[0].T
+        ax2.plot(x_outer, y_outer, 'k-', linewidth=2, label='Outer Curve')
+    # Plot the inner curves at time step 0
+    for idx, (curve_id, inner_curve_group) in enumerate(inner_curves.items()):
+        if inner_curve_group[0].size > 0:
+            x_inner, y_inner = inner_curve_group[0].T
+            inner_color = inner_curves_color_palette[idx % len(inner_curves_color_palette)]
+            inner_line_type = inner_curves_line_styles[idx % len(inner_curves_line_styles)]
+            ax2.plot(x_inner, y_inner, color=inner_color, linewidth=2, label=f'Inner Curve {curve_id}', dashes=inner_line_type)
+    ax2.set_title('Outer Distance Field with Curves at Step 0')
+    ax2.set_xlabel('X')
+    ax2.set_ylabel('Y')
+    ax2.legend()
+    ax2.set_aspect('equal')
+    
+    plt.tight_layout()
+    plt.show()
+
+# =============================================================
 
 # Load the background image and grid dimensions if both files exist
 background_image_path = os.path.join(directory, f"{procedure_name}_TargetDF.png")
@@ -315,6 +393,7 @@ gdim2d_boxes = []
 
 # Handle OuterDF box
 outer_gdim2d_path = os.path.join(directory, f"{procedure_name}_OuterDF.gdim2d")
+outer_box_patch = None
 if os.path.exists(outer_gdim2d_path):
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(outer_gdim2d_path)
     # Create a rectangle patch for the bounding box
@@ -331,6 +410,26 @@ for i in range(len(inner_curves)):  # Assuming you know the number of inner curv
         inner_box_patch = patches.Rectangle(bbox_min, bbox_max[0] - bbox_min[0], bbox_max[1] - bbox_min[1], 
                                             linewidth=2, edgecolor='green', linestyle='--', facecolor='none')
         gdim2d_boxes.append(inner_box_patch)  # Add to the list of boxes
+
+# Handle OuterDFNegGrad box
+outer_neg_grad_gdim2d_path = os.path.join(directory, f"{procedure_name}_OuterDFNegGrad.gdim2d")
+outer_neg_grad_box_patch = None
+if os.path.exists(outer_neg_grad_gdim2d_path):
+    bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(outer_neg_grad_gdim2d_path)
+    # Create a rectangle patch for the bounding box
+    outer_neg_grad_box_patch = patches.Rectangle(bbox_min, bbox_max[0] - bbox_min[0], bbox_max[1] - bbox_min[1], 
+                                                linewidth=2, edgecolor='red', linestyle='--', facecolor='none')
+    gdim2d_boxes.append(outer_neg_grad_box_patch)  # Add to the list of boxes
+
+# Handle InnerDFNegGrad boxes
+for i in range(len(inner_curves)):  # Assuming you know the number of inner curves
+    inner_neg_grad_gdim2d_path = os.path.join(directory, f"{procedure_name}_InnerDF{i}NegGrad.gdim2d")
+    if os.path.exists(inner_neg_grad_gdim2d_path):
+        bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(inner_neg_grad_gdim2d_path)
+        # Create a rectangle patch for each inner curve bounding box
+        inner_neg_grad_box_patch = patches.Rectangle(bbox_min, bbox_max[0] - bbox_min[0], bbox_max[1] - bbox_min[1], 
+                                                    linewidth=2, edgecolor='orange', linestyle='--', facecolor='none')
+        gdim2d_boxes.append(inner_neg_grad_box_patch)  # Add to the list of boxes
 
 # =============================================
 
@@ -365,7 +464,7 @@ else:
         y_bounds = [np.min(first_outer_curve[:, 1]), np.max(first_outer_curve[:, 1])]
 
         # expand the bounds to avoid clipping the curves
-        expansion_factor = 2.0
+        expansion_factor = 1.5
         y_range = y_bounds[1] - y_bounds[0]
         x_range = x_bounds[1] - x_bounds[0]
         y_bounds[0] -= expansion_factor * y_range
@@ -426,10 +525,17 @@ outer_line, = ax_main.plot([], [], 'k-', linewidth=2)  # Black outer curve
 inner_line_handles = [ax_main.plot([], [], color='#65107a', linestyle='-', linewidth=2)[0] for _ in inner_curves]  # Different lines for each inner curve
 
 # Handle outer curve box (black with dashed style and alpha 0.5)
-outer_box_patch.set_edgecolor('black')
-outer_box_patch.set_linestyle('--')
-outer_box_patch.set_alpha(0.5)
-ax_main.add_patch(outer_box_patch)  # Add the outer box to the plot
+if outer_box_patch:
+    outer_box_patch.set_edgecolor('black')
+    outer_box_patch.set_linestyle('--')
+    outer_box_patch.set_alpha(0.5)
+    ax_main.add_patch(outer_box_patch)  # Add the outer box to the plot
+
+if outer_neg_grad_box_patch:
+    outer_neg_grad_box_patch.set_edgecolor('black')
+    outer_neg_grad_box_patch.set_linestyle('--')
+    outer_neg_grad_box_patch.set_alpha(0.5)
+    ax_main.add_patch(outer_neg_grad_box_patch)  # Add the outer box to the plot
 
 # Handle inner curve boxes (magenta with dashed style and alpha 0.5)
 for idx, inner_box_patch in enumerate(gdim2d_boxes[1:]):  # Assuming first box is outer
@@ -437,6 +543,13 @@ for idx, inner_box_patch in enumerate(gdim2d_boxes[1:]):  # Assuming first box i
     inner_box_patch.set_linestyle('--')
     inner_box_patch.set_alpha(0.5)
     ax_main.add_patch(inner_box_patch)  # Add the inner box to the plot
+
+# Handle inner curve gradient boxes (orange with dashed style and alpha 0.5)
+for idx, inner_neg_grad_box_patch in enumerate(gdim2d_boxes[1:]):  # Assuming first box is outer
+    inner_neg_grad_box_patch.set_edgecolor('#65107a')  # Magenta color for inner boxes
+    inner_neg_grad_box_patch.set_linestyle('--')
+    inner_neg_grad_box_patch.set_alpha(0.5)
+    ax_main.add_patch(inner_neg_grad_box_patch)  # Add the inner box to the plot
 
 # Initialize the line data
 def init():
@@ -527,60 +640,62 @@ def plot_curves_with_increasing_opacity(frames):
 #                                  Visualization
 # ---------------------------------------------------------------------------------------------
 
-if png_time_steps or svg_time_steps or multi_png_time_steps:
-    # Specialized image exports
-    if png_time_steps:
-        # Manually call the update function for each specified time step and export as PNG
-        for frame_idx, time_step in enumerate(time_ids):
-            if time_step in png_time_steps:
-                update(frame_idx)  # Call update for this frame
-                output_png_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.png")
-                print("Saving ", output_png_path)
-                plt.savefig(output_png_path, dpi=300)  # Save the PNG for the current frame
-    elif svg_time_steps:
-        # Manually call the update function for each specified time step and export as SVG
-        for frame_idx, time_step in enumerate(time_ids):
-            if time_step in svg_time_steps:
-                update_curves_only(frame_idx)  # Call update for this frame
-                output_svg_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.svg")
-                print("Saving ", output_svg_path)
-                
-                # save outer_line and inner_line_handles to svg as paths in correct coordinates with flipped y-axis
-                with open(output_svg_path, 'w') as f:
-                    f.write(f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="100%">\n')
-                    f.write(f'<g transform="scale(1,-1) translate(0,-{extent[3]})">\n')
-                    f.write(f'<path d="M')
-                    for x, y in zip(outer_line.get_xdata(), outer_line.get_ydata()):
-                        f.write(f'{x},{y} ')
-                    f.write(f'Z" stroke="black" fill="none" stroke-width="2"/>\n')
-                    for inner_lines in inner_line_handles:
-                        f.write(f'<path d="M')
-                        for x, y in zip(inner_lines.get_xdata(), inner_lines.get_ydata()):
-                            f.write(f'{x},{y} ')
-                        f.write(f'Z" stroke="#65107a" fill="none" stroke-width="2"/>\n')
-                    f.write(f'</g>\n')
-                    f.write(f'</svg>\n')
-    elif multi_png_time_steps:
-        # Draw the base image and overlay the curves with increasing opacity for the specified frames
-        plot_curves_with_increasing_opacity(multi_png_time_steps)
-        output_png_path = os.path.join(directory, f"{procedure_name}_CurvesOpacity.png")
-        print("Saving ", output_png_path)
-        plt.savefig(output_png_path, dpi=300)
+if do_variable_fields_comparison:
+    plot_variable_fields_comparison()
 else:
-    # Create the animation
-    # Determine the number of frames based on available data
-    if outer_curves and len(outer_curves) > 0:
-        n_frames = len(outer_curves)
-    elif inner_curves and len(next(iter(inner_curves.values()))) > 0:
-        # Check the first inner curve group for frames
-        n_frames = len(next(iter(inner_curves.values())))
+    if png_time_steps or svg_time_steps or multi_png_time_steps:
+        # Specialized image exports
+        if png_time_steps:
+            # Manually call the update function for each specified time step and export as PNG
+            for frame_idx, time_step in enumerate(time_ids):
+                if time_step in png_time_steps:
+                    update(frame_idx)  # Call update for this frame
+                    output_png_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.png")
+                    print("Saving ", output_png_path)
+                    plt.savefig(output_png_path, dpi=300)  # Save the PNG for the current frame
+        elif svg_time_steps:
+            # Manually call the update function for each specified time step and export as SVG
+            for frame_idx, time_step in enumerate(time_ids):
+                if time_step in svg_time_steps:
+                    update_curves_only(frame_idx)  # Call update for this frame
+                    output_svg_path = os.path.join(directory, f"{procedure_name}_Step{time_step}.svg")
+                    print("Saving ", output_svg_path)
+                    
+                    # save outer_line and inner_line_handles to svg as paths in correct coordinates with flipped y-axis
+                    with open(output_svg_path, 'w') as f:
+                        f.write(f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="100%">\n')
+                        f.write(f'<g transform="scale(1,-1) translate(0,-{extent[3]})">\n')
+                        f.write(f'<path d="M')
+                        for x, y in zip(outer_line.get_xdata(), outer_line.get_ydata()):
+                            f.write(f'{x},{y} ')
+                        f.write(f'Z" stroke="black" fill="none" stroke-width="2"/>\n')
+                        for inner_lines in inner_line_handles:
+                            f.write(f'<path d="M')
+                            for x, y in zip(inner_lines.get_xdata(), inner_lines.get_ydata()):
+                                f.write(f'{x},{y} ')
+                            f.write(f'Z" stroke="#65107a" fill="none" stroke-width="2"/>\n')
+                        f.write(f'</g>\n')
+                        f.write(f'</svg>\n')
+        elif multi_png_time_steps:
+            # Draw the base image and overlay the curves with increasing opacity for the specified frames
+            plot_curves_with_increasing_opacity(multi_png_time_steps)
+            output_png_path = os.path.join(directory, f"{procedure_name}_CurvesOpacity.png")
+            print("Saving ", output_png_path)
+            plt.savefig(output_png_path, dpi=300)
     else:
-        raise ValueError("No curves (outer or inner) are available for animation.")
-    ani = FuncAnimation(fig, update, frames=n_frames, init_func=init, blit=False, repeat=True)
+        # Create the animation
+        # Determine the number of frames based on available data
+        if outer_curves and len(outer_curves) > 0:
+            n_frames = len(outer_curves)
+        elif inner_curves and len(next(iter(inner_curves.values()))) > 0:
+            # Check the first inner curve group for frames
+            n_frames = len(next(iter(inner_curves.values())))
+        else:
+            raise ValueError("No curves (outer or inner) are available for animation.")
+        ani = FuncAnimation(fig, update, frames=n_frames, init_func=init, blit=False, repeat=True)
 
-    # Save the animation as a GIF
-    output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
-    ani.save(output_gif_path, writer='pillow', fps=fps)
-
-# Show the animation
-plt.show()
+        # Save the animation as a GIF
+        output_gif_path = os.path.join(directory, f"{procedure_name}_animation.gif")
+        ani.save(output_gif_path, writer='pillow', fps=fps)
+    # Show the animation
+    plt.show()

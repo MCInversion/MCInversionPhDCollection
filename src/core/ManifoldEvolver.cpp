@@ -144,6 +144,8 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOu
 
 void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename)
 {
+	constexpr double colorMapPlotScaleFactor = 0.5; // scale the distance field color map down to show more detail
+
 	// ----------------------------------------------------------------
 	if (GetSettings().ExportVariableScalarFieldsDimInfo && m_OuterCurveDistanceField)
 	{
@@ -151,6 +153,8 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 		exportedOuterCurveDF *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
 		exportedOuterCurveDF /= static_cast<double>(GetScalingFactor());
 		ExportScalarGridDimInfo2D(baseOutputFilename + "_OuterDF.gdim2d", exportedOuterCurveDF);
+		ExportScalarGrid2DToPNG(baseOutputFilename + "_OuterDF.png", exportedOuterCurveDF, m_ScalarInterpolate, 
+			10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
 	}
 	if (GetSettings().ExportVariableVectorFieldsDimInfo && m_OuterCurveDFNegNormalizedGradient)
 	{
@@ -170,6 +174,8 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 			exportedInnerCurveDF *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
 			exportedInnerCurveDF /= static_cast<double>(GetScalingFactor());
 			ExportScalarGridDimInfo2D(baseOutputFilename + "_InnerDF" + std::to_string(i) + ".gdim2d", exportedInnerCurveDF);
+			ExportScalarGrid2DToPNG(baseOutputFilename + "_InnerDF" + std::to_string(i) + ".png", exportedInnerCurveDF, m_ScalarInterpolate, 
+				10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
 		}
 	}
 	if (GetSettings().ExportVariableVectorFieldsDimInfo)
@@ -193,7 +199,6 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	exportedField *= m_TransformToOriginal;
 	exportedField /= static_cast<double>(GetScalingFactor());
 
-	constexpr double colorMapPlotScaleFactor = 0.5; // scale the distance field color map down to show more detail
 	ExportScalarGrid2DToPNG(baseOutputFilename + "_TargetDF.png", exportedField, m_ScalarInterpolate, 
 		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
 	const auto [dfMin, dfMax] = std::ranges::minmax_element(m_DistanceField->Values());
