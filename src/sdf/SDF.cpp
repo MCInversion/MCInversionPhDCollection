@@ -297,7 +297,10 @@ namespace SDF
 	// ===============================================================================================
 	//
 
-	Geometry::ScalarGrid DistanceFieldGenerator::Generate(const Geometry::MeshAdapter& inputMesh, const DistanceFieldSettings& settings)
+	Geometry::ScalarGrid DistanceFieldGenerator::Generate(
+		const Geometry::MeshAdapter& inputMesh, 
+		const DistanceFieldSettings& settings,
+		const std::optional<pmp::BoundingBox>& customFieldBox)
 	{
 		assert(settings.CellSize > 0.0f);
 		assert(settings.VolumeExpansionFactor >= 0.0f);
@@ -307,6 +310,22 @@ namespace SDF
 		if (m_Mesh->IsEmpty())
 		{
 			throw std::invalid_argument("DistanceFieldGenerator::Generate: m_Mesh->IsEmpty()! inputMesh contains no spatial data!\n");
+		}
+
+		if (customFieldBox.has_value() && customFieldBox->is_empty())
+		{
+			throw std::invalid_argument("DistanceFieldGenerator::Generate: customFieldBox is not valid!\n");
+		}
+
+		if (customFieldBox.has_value())
+		{
+			for (const auto& p : m_Mesh->GetVertices())
+			{
+				if (!customFieldBox->Contains(p))
+				{
+					throw std::invalid_argument("DistanceFieldGenerator::Generate: customFieldBox does not contain all mesh vertices!\n");
+				}
+			}
 		}
 
 		if (settings.SignMethod != SignComputation::None)
@@ -320,11 +339,11 @@ namespace SDF
 #endif
 		}
 
-		auto sdfBBox = m_Mesh->GetBounds();
+		auto sdfBBox = customFieldBox.value_or(m_Mesh->GetBounds());
 		const auto size = sdfBBox.max() - sdfBBox.min();
 		const float minSize = std::min({ size[0], size[1], size[2] });
 
-		if (settings.VolumeExpansionFactor > 0.0f)
+		if (settings.VolumeExpansionFactor > 0.0f && !customFieldBox.has_value())
 		{
 			const float expansion = settings.VolumeExpansionFactor * minSize;
 			sdfBBox.expand(expansion, expansion, expansion);
@@ -677,7 +696,10 @@ namespace SDF
 		}
 	}
 
-	Geometry::ScalarGrid2D PlanarDistanceFieldGenerator::Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings)
+	Geometry::ScalarGrid2D PlanarDistanceFieldGenerator::Generate(
+		const Geometry::CurveAdapter& inputCurve, 
+		const DistanceField2DSettings& settings, 
+		const std::optional<pmp::BoundingBox2>& customFieldBox)
 	{
 		assert(settings.CellSize > 0.0f);
 		assert(settings.AreaExpansionFactor >= 0.0f);
@@ -687,6 +709,22 @@ namespace SDF
 		if (m_Curve->IsEmpty())
 		{
 			throw std::invalid_argument("PlanarDistanceFieldGenerator::Generate: m_Curve->IsEmpty()! inputCurve contains no spatial data!\n");
+		}
+
+		if (customFieldBox.has_value() && customFieldBox->is_empty())
+		{
+			throw std::invalid_argument("PlanarDistanceFieldGenerator::Generate: customFieldBox is not valid!\n");
+		}
+
+		if (customFieldBox.has_value())
+		{
+			for (const auto& p : m_Curve->GetVertices())
+			{
+				if (!customFieldBox->Contains(p))
+				{
+					throw std::invalid_argument("PlanarDistanceFieldGenerator::Generate: customFieldBox does not contain all curve vertices!\n");
+				}
+			}
 		}
 
 //		if (settings.SignMethod != SignComputation2D::None)
@@ -700,11 +738,11 @@ namespace SDF
 //#endif
 //		}
 
-		auto sdfBBox = m_Curve->GetBounds();
+		auto sdfBBox = customFieldBox.value_or(m_Curve->GetBounds());
 		const auto size = sdfBBox.max() - sdfBBox.min();
 		const float minSize = std::min( size[0], size[1] );
 
-		if (settings.AreaExpansionFactor > 0.0f)
+		if (settings.AreaExpansionFactor > 0.0f && !customFieldBox.has_value())
 		{
 			const float expansion = settings.AreaExpansionFactor * minSize;
 			sdfBBox.expand(expansion, expansion);

@@ -67,10 +67,14 @@ namespace SDF
 		 * \brief Compute the signed distance field of given input mesh.
 		 * \param inputMesh               an adapter for the evaluated mesh.
 		 * \param settings                settings for the distance field.
+		 * \param customFieldBox          optional custom bounding box for the distance field.
 		 * \return the computed distance field's ScalarGrid.
 		 * \throw std::invalid_argument if inputMesh contains no spatial data!
 		 */
-		static [[nodiscard]] Geometry::ScalarGrid Generate(const Geometry::MeshAdapter& inputMesh, const DistanceFieldSettings& settings);
+		static [[nodiscard]] Geometry::ScalarGrid Generate(
+			const Geometry::MeshAdapter& inputMesh, 
+			const DistanceFieldSettings& settings,
+			const std::optional<pmp::BoundingBox>& customFieldBox = std::nullopt);
 		
 	private:
 		inline static std::unique_ptr<Geometry::MeshAdapter> m_Mesh{ nullptr }; //>! mesh to be (pre)processed.
@@ -214,10 +218,14 @@ namespace SDF
 		 * \brief Compute the signed distance field of given input curve.
 		 * \param inputCurve              an adapter for the evaluated curve.
 		 * \param settings                settings for the distance field.
+		 * \param customFieldBox          optional custom bounding box for the distance field.
 		 * \return the computed distance field's ScalarGrid2D.
 		 * \throw std::invalid_argument if inputMesh contains no spatial data!
 		 */
-		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const Geometry::CurveAdapter& inputCurve, const DistanceField2DSettings& settings);
+		static [[nodiscard]] Geometry::ScalarGrid2D Generate(
+			const Geometry::CurveAdapter& inputCurve, 
+			const DistanceField2DSettings& settings, 
+			const std::optional<pmp::BoundingBox2>& customFieldBox = std::nullopt);
 
 	private:
 		inline static std::unique_ptr<Geometry::CurveAdapter> m_Curve{ nullptr }; //>! curve to be (pre)processed.

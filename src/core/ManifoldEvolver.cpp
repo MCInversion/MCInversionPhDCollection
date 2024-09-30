@@ -743,7 +743,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 	{
 		const Geometry::ManifoldCurve2DAdapter innerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(*innerCurve));
 		m_InnerCurvesDistanceFields.emplace_back(std::make_shared<Geometry::ScalarGrid2D>(
-			SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings)));
+			SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings, m_OuterCurveDistanceField->Box())));
 		m_InnerCurvesDFNegNormalizedGradients.emplace_back(
 			std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_InnerCurvesDistanceFields.back())));
 	}
@@ -849,22 +849,22 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 
 	if (m_OuterCurveDistanceField)
 	{
-		(*m_OuterCurveDistanceField) *= transfMatrixGeomScale; // transfMatrixFull;
+		(*m_OuterCurveDistanceField) *= transfMatrixFull; //transfMatrixGeomScale; // transfMatrixFull;
 		(*m_OuterCurveDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (m_OuterCurveDFNegNormalizedGradient)
 	{
-		(*m_OuterCurveDFNegNormalizedGradient) *= transfMatrixGeomScale; // transfMatrixFull;
+		(*m_OuterCurveDFNegNormalizedGradient) *= transfMatrixFull; //transfMatrixGeomScale; // transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerCurveDF : m_InnerCurvesDistanceFields)
 	{
-		(*innerCurveDF) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerCurveDF) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerCurveDFGradient : m_InnerCurvesDFNegNormalizedGradients)
 	{
-		(*innerCurveDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerCurveDFGradient) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1693,7 +1693,7 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 	{
 		const Geometry::PMPSurfaceMeshAdapter innerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(*innerSurface));
 		m_InnerSurfacesDistanceFields.emplace_back(std::make_shared<Geometry::ScalarGrid>(
-			SDF::DistanceFieldGenerator::Generate(innerSurfaceAdapter, surfaceDFSettings)));
+			SDF::DistanceFieldGenerator::Generate(innerSurfaceAdapter, surfaceDFSettings, m_OuterSurfaceDistanceField->Box())));
 		m_InnerSurfacesDFNegNormalizedGradients.emplace_back(
 			std::make_shared<Geometry::VectorGrid>(ComputeNormalizedNegativeGradient(*m_InnerSurfacesDistanceFields.back())));
 	}
@@ -1822,17 +1822,17 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	}
 	if (m_OuterSurfaceDFNegNormalizedGradient)
 	{
-		(*m_OuterSurfaceDFNegNormalizedGradient) *= transfMatrixGeomScale; // transfMatrixFull;
+		(*m_OuterSurfaceDFNegNormalizedGradient) *= transfMatrixFull; //transfMatrixGeomScale; // transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerSurfaceDF : m_InnerSurfacesDistanceFields)
 	{
-		(*innerSurfaceDF) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerSurfaceDF) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDFGradient : m_InnerSurfacesDFNegNormalizedGradients)
 	{
-		(*innerSurfaceDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerSurfaceDFGradient) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -2011,7 +2011,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 
 	if (GetOuterSurfraceDistanceField())
 	{
-		(*GetOuterSurfraceDistanceField()) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*GetOuterSurfraceDistanceField()) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		(*GetOuterSurfraceDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (GetOuterSurfaceDFNegNormalizedGradient())
@@ -2021,12 +2021,12 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	}
 	for (const auto& innerSurfaceDF : GetInnerSurfacesDistanceFields())
 	{
-		(*innerSurfaceDF) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerSurfaceDF) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDFGradient : GetInnerSurfacesDFNegNormalizedGradients())
 	{
-		(*innerSurfaceDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerSurfaceDFGradient) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
