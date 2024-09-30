@@ -148,14 +148,14 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	if (GetSettings().ExportVariableScalarFieldsDimInfo && m_OuterCurveDistanceField)
 	{
 		auto exportedOuterCurveDF = *m_OuterCurveDistanceField;
-		exportedOuterCurveDF *= m_TransformToOriginal;
+		exportedOuterCurveDF *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
 		exportedOuterCurveDF /= static_cast<double>(GetScalingFactor());
 		ExportScalarGridDimInfo2D(baseOutputFilename + "_OuterDF.gdim2d", exportedOuterCurveDF);
 	}
 	if (GetSettings().ExportVariableVectorFieldsDimInfo && m_OuterCurveDFNegNormalizedGradient)
 	{
 		auto exportedOuterCurveDFNegGrad = *m_OuterCurveDFNegNormalizedGradient;
-		exportedOuterCurveDFNegGrad *= m_TransformToOriginal;
+		exportedOuterCurveDFNegGrad *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
 		ExportVectorGridDimInfo2D(baseOutputFilename + "_OuterDFNegGrad.gdim2d", exportedOuterCurveDFNegGrad);
 	}
 
@@ -167,7 +167,7 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 				continue;
 
 			auto exportedInnerCurveDF = *m_InnerCurvesDistanceFields[i];
-			exportedInnerCurveDF *= m_TransformToOriginal;
+			exportedInnerCurveDF *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
 			exportedInnerCurveDF /= static_cast<double>(GetScalingFactor());
 			ExportScalarGridDimInfo2D(baseOutputFilename + "_InnerDF" + std::to_string(i) + ".gdim2d", exportedInnerCurveDF);
 		}
@@ -180,7 +180,7 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 				continue;
 
 			auto exportedInnerCurveDFNegGrad = *m_InnerCurvesDFNegNormalizedGradients[i];
-			exportedInnerCurveDFNegGrad *= m_TransformToOriginal;
+			exportedInnerCurveDFNegGrad *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
 			ExportVectorGridDimInfo2D(baseOutputFilename + "_InnerDFNegGrad" + std::to_string(i) + ".gdim2d", exportedInnerCurveDFNegGrad);
 		}
 	}
@@ -829,6 +829,7 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
+	m_ScaleFieldToOriginal = inverse(transfMatrixGeomScale);
 
 	// transform geometries
 	if (m_OuterCurve)
@@ -848,12 +849,12 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 
 	if (m_OuterCurveDistanceField)
 	{
-		(*m_OuterCurveDistanceField) *= transfMatrixFull;
+		(*m_OuterCurveDistanceField) *= transfMatrixGeomScale; // transfMatrixFull;
 		(*m_OuterCurveDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (m_OuterCurveDFNegNormalizedGradient)
 	{
-		(*m_OuterCurveDFNegNormalizedGradient) *= transfMatrixFull;
+		(*m_OuterCurveDFNegNormalizedGradient) *= transfMatrixGeomScale; // transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerCurveDF : m_InnerCurvesDistanceFields)
@@ -1033,6 +1034,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	GetTransformToOriginal() = inverse(transfMatrixFull);
+	GetScaleFieldToOriginal() = inverse(transfMatrixGeomScale);
 
 	// Transform the geometries
 	if (GetOuterCurve())
@@ -1050,22 +1052,22 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 
 	if (GetOuterCurveDistanceField())
 	{
-		(*GetOuterCurveDistanceField()) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*GetOuterCurveDistanceField()) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		(*GetOuterCurveDistanceField()) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (GetOuterCurveDFNegNormalizedGradient())
 	{
-		(*GetOuterCurveDFNegNormalizedGradient()) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*GetOuterCurveDFNegNormalizedGradient()) *= transfMatrixFull; // transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerCurveDF : GetInnerCurvesDistanceFields())
 	{
-		(*innerCurveDF) *= transfMatrixFull;
+		(*innerCurveDF) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerCurveDFGradient : GetInnerCurvesDFNegNormalizedGradients())
 	{
-		(*innerCurveDFGradient) *= transfMatrixGeomScale; //transfMatrixFull;
+		(*innerCurveDFGradient) *= transfMatrixFull; // transfMatrixGeomScale; //transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1795,6 +1797,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
+	m_ScaleFieldToOriginal = inverse(transfMatrixGeomScale);
 
 	// transform geometries
 	if (m_OuterSurface)
@@ -1991,6 +1994,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	GetTransformToOriginal() = inverse(transfMatrixFull);
+	GetScaleFieldToOriginal() = inverse(transfMatrixGeomScale);
 
 	// Transform the geometries
 	(*GetOuterSurface()) *= transfMatrixFull;

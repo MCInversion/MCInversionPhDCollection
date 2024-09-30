@@ -421,6 +421,12 @@ protected:
         return m_TransformToOriginal;
     }
 
+    /// \brief  A getter for the inverse stabilization scaling matrix.
+    pmp::mat3& GetScaleFieldToOriginal()
+	{
+		return m_ScaleFieldToOriginal;
+	}
+
     /// \brief A getter for the distance field scalar grid.
     std::shared_ptr<Geometry::ScalarGrid2D>& GetDistanceField()
     {
@@ -520,7 +526,8 @@ private:
     std::vector<std::shared_ptr<Geometry::ScalarGrid2D>> m_InnerCurvesDistanceFields{}; //>! the updated distance fields of the evolving inner manifolds.
     std::vector<std::shared_ptr<Geometry::VectorGrid2D>> m_InnerCurvesDFNegNormalizedGradients{}; //>! the updated gradients of distance fields to evolving inner manifolds.
 
-    pmp::mat3 m_TransformToOriginal = pmp::mat3::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+    pmp::mat3 m_TransformToOriginal = pmp::mat3::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale and translate to the target center.
+    pmp::mat3 m_ScaleFieldToOriginal = pmp::mat3::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
     ScalarGridInterpolationFunction2D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
     VectorGridInterpolationFunction2D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
@@ -734,6 +741,12 @@ protected:
         return m_TransformToOriginal;
     }
 
+    /// \brief  A getter for the inverse stabilization scaling matrix.
+    pmp::mat4& GetScaleFieldToOriginal()
+	{
+		return m_ScaleFieldToOriginal;
+	}
+
     /// \brief A getter for the distance field scalar grid.
     std::shared_ptr<Geometry::ScalarGrid>& GetDistanceField()
     {
@@ -831,7 +844,8 @@ private:
     std::vector<std::shared_ptr<Geometry::ScalarGrid>> m_InnerSurfacesDistanceFields{}; //>! the updated distance fields of the evolving inner manifolds.
     std::vector<std::shared_ptr<Geometry::VectorGrid>> m_InnerSurfacesDFNegNormalizedGradients{}; //>! the updated gradients of distance fields to evolving inner manifolds.
 
-    pmp::mat4 m_TransformToOriginal = pmp::mat4::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
+    pmp::mat4 m_TransformToOriginal = pmp::mat4::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale and translate to the target center.
+    pmp::mat4 m_ScaleFieldToOriginal = pmp::mat4::identity(); //>! a transformation matrix to transform the stabilized geometry back to its original scale.
 
     AreaFunction m_LaplacianAreaFunction{}; //>! a function for calculating co-volume areas (see [Meyer, Desbrun, Schroder, Barr, 2003])
 
