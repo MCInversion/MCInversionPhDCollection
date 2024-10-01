@@ -150,7 +150,7 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	if (GetSettings().ExportVariableScalarFieldsDimInfo && m_OuterCurveDistanceField)
 	{
 		auto exportedOuterCurveDF = *m_OuterCurveDistanceField;
-		exportedOuterCurveDF *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
+		exportedOuterCurveDF *= m_TransformToOriginal;
 		exportedOuterCurveDF /= static_cast<double>(GetScalingFactor());
 		ExportScalarGridDimInfo2D(baseOutputFilename + "_OuterDF.gdim2d", exportedOuterCurveDF);
 		ExportScalarGrid2DToPNG(baseOutputFilename + "_OuterDF.png", exportedOuterCurveDF, m_ScalarInterpolate, 
@@ -159,7 +159,7 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 	if (GetSettings().ExportVariableVectorFieldsDimInfo && m_OuterCurveDFNegNormalizedGradient)
 	{
 		auto exportedOuterCurveDFNegGrad = *m_OuterCurveDFNegNormalizedGradient;
-		exportedOuterCurveDFNegGrad *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
+		exportedOuterCurveDFNegGrad *= m_TransformToOriginal;
 		ExportVectorGridDimInfo2D(baseOutputFilename + "_OuterDFNegGrad.gdim2d", exportedOuterCurveDFNegGrad);
 	}
 
@@ -171,7 +171,7 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 				continue;
 
 			auto exportedInnerCurveDF = *m_InnerCurvesDistanceFields[i];
-			exportedInnerCurveDF *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
+			exportedInnerCurveDF *= m_TransformToOriginal;
 			exportedInnerCurveDF /= static_cast<double>(GetScalingFactor());
 			ExportScalarGridDimInfo2D(baseOutputFilename + "_InnerDF" + std::to_string(i) + ".gdim2d", exportedInnerCurveDF);
 			ExportScalarGrid2DToPNG(baseOutputFilename + "_InnerDF" + std::to_string(i) + ".png", exportedInnerCurveDF, m_ScalarInterpolate, 
@@ -186,7 +186,7 @@ void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std:
 				continue;
 
 			auto exportedInnerCurveDFNegGrad = *m_InnerCurvesDFNegNormalizedGradients[i];
-			exportedInnerCurveDFNegGrad *= m_TransformToOriginal; // m_ScaleFieldToOriginal;
+			exportedInnerCurveDFNegGrad *= m_TransformToOriginal;
 			ExportVectorGridDimInfo2D(baseOutputFilename + "_InnerDFNegGrad" + std::to_string(i) + ".gdim2d", exportedInnerCurveDFNegGrad);
 		}
 	}
@@ -244,8 +244,6 @@ std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrateg
 	return innerCurvesTransformed;
 }
 
-#define DEBUG_CTRL_FUNC_VALUES false
-
 // -------------------------------------------------------------------------------------
 
 void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int step)
@@ -265,14 +263,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		// prepare matrix & rhs for m_OuterCurve:
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
-
-#if DEBUG_CTRL_FUNC_VALUES
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
-		std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
-		std::fstream outerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_outerLog" + std::to_string(step) + ".txt", std::fstream::out);
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
 
 		for (const auto v : m_OuterCurve->vertices())
 		{
@@ -313,11 +303,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double epsilonCtrlWeight =
 				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance)) +
 				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
-#if DEBUG_CTRL_FUNC_VALUES
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
+
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
 			const auto negGradDotNormal = pmp::ddot(
@@ -326,11 +312,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
 				(m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
-#if DEBUG_CTRL_FUNC_VALUES			
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_ETA[v.idx()] = etaCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
+
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
 			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
@@ -382,23 +364,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 			m_OuterCurve->position(pmp::Vertex(i)) = newPos;
 		}
-#if DEBUG_CTRL_FUNC_VALUES
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		outerLog << "OUTER_DEBUG_EPSILON = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			outerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		outerLog << "]\n";
-		outerLog << "OUTER_DEBUG_ETA = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			outerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		outerLog << "]\n";
-		outerLog.close();
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
 	}
 
 	// ================================== Handle m_InnerCurves ==========================================================
@@ -407,13 +372,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		const auto NVertices = static_cast<unsigned int>(innerCurve->n_vertices());
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 2);
-#if DEBUG_CTRL_FUNC_VALUES
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		std::vector<double> DEBUG_EPSILON(NVertices, DBL_MAX);
-		std::vector<double> DEBUG_ETA(NVertices, DBL_MAX);
-		std::fstream innerLog("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\DEBUG_innerLog" + std::to_string(step) + ".txt", std::fstream::out);
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
 
 		const auto tStep = GetSettings().TimeStep;
 
@@ -457,11 +415,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double epsilonCtrlWeight =
 				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance)) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
-#if DEBUG_CTRL_FUNC_VALUES
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_EPSILON[v.idx()] = epsilonCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
+
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
 			const auto negGradDotNormal = pmp::ddot(
@@ -471,11 +425,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
 				(m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
-#if DEBUG_CTRL_FUNC_VALUES
-			// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-			DEBUG_ETA[v.idx()] = etaCtrlWeight;
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
+
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
 			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
@@ -527,23 +477,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 			innerCurve->position(pmp::Vertex(i)) = newPos;
 		}
-#if DEBUG_CTRL_FUNC_VALUES
-		// !!!!!!!!!!!!!!!!!!!!!! TODO: Remove deugging !!!!!!!!!!!!!!!!!!!!!!!!!!
-		innerLog << "INNER_DEBUG_EPSILON = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			innerLog << "\t" << DEBUG_EPSILON[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		innerLog << "]\n";
-		innerLog << "INNER_DEBUG_ETA = [\n";
-		for (int i = 0; i < NVertices; ++i)
-		{
-			innerLog << "\t" << DEBUG_ETA[i] << (i < NVertices - 1 ? "," : "") << "\n";
-		}
-		innerLog << "]\n";
-		innerLog.close();
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
 	}
 }
 
@@ -554,14 +487,14 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 	{
 		const auto tStep = GetSettings().TimeStep;
 
-		InteractionDistanceInfo<pmp::dvec2> interaction{};
-
 		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
 		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
 
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
+
+			InteractionDistanceInfo<pmp::dvec2> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
 			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
@@ -635,14 +568,14 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 	{
 		const auto tStep = GetSettings().TimeStep;
 
-		InteractionDistanceInfo<pmp::dvec2> interaction{};
-
 		pmp::Normals2::compute_vertex_normals(*innerCurve);
 		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
 
 		for (const auto v : innerCurve->vertices())
 		{
 			const auto vPosToUpdate = innerCurve->position(v);
+
+			InteractionDistanceInfo<pmp::dvec2> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
 			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
@@ -777,6 +710,8 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	if (GetSettings().UseOuterManifolds)
 	{
 		m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(pmp::Point2{}, outerCircleRadius, nSegments));
+		// DISCLAIMER: Since we want to evolve manifolds centered at the origin, we will not move the outer manifold into its "true" position.
+		// The "true" position will be stored in m_InitialSphereSettings:
 		m_InitialSphereSettings[m_OuterCurve.get()] = Circle2D{ targetBoundsCenter, outerCircleRadius };
 	}
 
@@ -827,7 +762,14 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	const auto expectedMeanCoVolLength = (2.0f * static_cast<float>(M_PI) * radius / static_cast<float>(expectedVertexCount));
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
+
+	// -----------------------------------------------------------------------------------------------
+	// All geometric quantities need to be scaled by the scalingFactor to ensure numerical stability.
+	// For spatial conveniences, geometries must also be centered, i.e.: translated by -origin.
+	// Geometries that are already centered at (0, 0) are not translated.
+	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
+	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f,
@@ -852,7 +794,7 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	}
 	for (const auto& innerCurve : m_InnerCurves)
 	{
-		(*innerCurve) *= transfMatrixGeomScale;
+		(*innerCurve) *= transfMatrixFull;
 	}
 
 	// test box for geometry validation
@@ -863,22 +805,22 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 
 	if (m_OuterCurveDistanceField)
 	{
-		(*m_OuterCurveDistanceField) *= transfMatrixFull; //transfMatrixGeomScale; // transfMatrixFull;
+		(*m_OuterCurveDistanceField) *= transfMatrixGeomScale;
 		(*m_OuterCurveDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (m_OuterCurveDFNegNormalizedGradient)
 	{
-		(*m_OuterCurveDFNegNormalizedGradient) *= transfMatrixFull; //transfMatrixGeomScale; // transfMatrixFull;
+		(*m_OuterCurveDFNegNormalizedGradient) *= transfMatrixGeomScale;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerCurveDF : m_InnerCurvesDistanceFields)
 	{
-		(*innerCurveDF) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
+		(*innerCurveDF) *= transfMatrixFull;
 		(*innerCurveDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerCurveDFGradient : m_InnerCurvesDFNegNormalizedGradients)
 	{
-		(*innerCurveDFGradient) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
+		(*innerCurveDFGradient) *= transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1011,6 +953,12 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
 	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
 	GetScalingFactor() = scalingFactor;
+
+	// -----------------------------------------------------------------------------------------------
+	// All geometric quantities need to be scaled by the scalingFactor to ensure numerical stability.
+	// For spatial conveniences, geometries must also be centered, i.e.: translated by -origin.
+	// Geometries that are already centered at (0, 0) are not translated.
+	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 	GetFieldCellSize() *= scalingFactor;
 
@@ -1054,7 +1002,9 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 
 	// Transform the geometries so that they're centered at (0, 0) and in proper scale
 	if (GetOuterCurve())
+	{
 		(*GetOuterCurve()) *= transfMatrixFull;
+	}
 	for (auto& innerCurve : GetInnerCurves())
 	{
 		(*innerCurve) *= transfMatrixFull;
@@ -1271,8 +1221,6 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 3);
 
-		InteractionDistanceInfo<pmp::dvec3> interaction{};
-
 		const auto tStep = GetSettings().TimeStep;
 
 		pmp::Normals::compute_vertex_normals(*m_OuterSurface);
@@ -1285,6 +1233,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (const auto v : m_OuterSurface->vertices())
 		{
 			const auto vPosToUpdate = m_OuterSurface->position(v);
+
+			InteractionDistanceInfo<pmp::dvec3> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
 			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
@@ -1390,8 +1340,6 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		SparseMatrix sysMat(NVertices, NVertices);
 		Eigen::MatrixXd sysRhs(NVertices, 3);
 
-		InteractionDistanceInfo<pmp::dvec3> interaction{};
-
 		const auto tStep = GetSettings().TimeStep;
 
 		pmp::Normals::compute_vertex_normals(*innerSurface);
@@ -1404,6 +1352,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 		for (const auto v : innerSurface->vertices())
 		{
 			const auto vPosToUpdate = innerSurface->position(v);
+
+			InteractionDistanceInfo<pmp::dvec3> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
 			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
@@ -1505,14 +1455,14 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 	{
 		const auto tStep = GetSettings().TimeStep;
 
-		InteractionDistanceInfo<pmp::dvec3> interaction{};
-
 		pmp::Normals::compute_vertex_normals(*m_OuterSurface);
 		auto vNormalsProp = m_OuterSurface->get_vertex_property<pmp::vec3>("v:normal");
 
 		for (const auto v : m_OuterSurface->vertices())
 		{
 			const auto vPosToUpdate = m_OuterSurface->position(v);
+
+			InteractionDistanceInfo<pmp::dvec3> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
 			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
@@ -1584,9 +1534,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 	// ================================== Handle m_InnerSurfaces ==========================================================
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
-		const auto tStep = GetSettings().TimeStep;
-		
-		InteractionDistanceInfo<pmp::dvec3> interaction{};
+		const auto tStep = GetSettings().TimeStep;		
 
 		pmp::Normals::compute_vertex_normals(*innerSurface);
 		auto vNormalsProp = innerSurface->get_vertex_property<pmp::vec3>("v:normal");
@@ -1594,6 +1542,8 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 		for (const auto v : innerSurface->vertices())
 		{
 			const auto vPosToUpdate = innerSurface->position(v);
+
+			InteractionDistanceInfo<pmp::dvec3> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
 			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
@@ -1722,12 +1672,6 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds: Current setting is: UseInnerManifolds == false && UseOuterManifolds == false. This means there's nothing to evolve!\n");
 	}
 
-	//const pmp::mat4 transfMatrixGeomMove{
-	//	1.0f, 0.0f, 0.0f, targetBoundsCenter[0],
-	//	0.0f, 1.0f, 0.0f, targetBoundsCenter[1],
-	//	0.0f, 0.0f, 1.0f, targetBoundsCenter[2],
-	//	0.0f, 0.0f, 0.0f, 1.0f
-	//};
 	const float outerSphereRadius = 0.5f * SPHERE_RADIUS_FACTOR *
 		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
 
@@ -1737,7 +1681,8 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		icoBuilder.BuildBaseData();
 		icoBuilder.BuildPMPSurfaceMesh();
 		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
-		//(*m_OuterSurface) *= transfMatrixGeomMove; // center to target bounds
+		// DISCLAIMER: Since we want to evolve manifolds centered at the origin, we will not move the outer manifold into its "true" position.
+		// The "true" position will be stored in m_InitialSphereSettings:
 		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
 	}
 
@@ -1795,6 +1740,12 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	const float expectedMeanCoVolArea = (4.0f * static_cast<float>(M_PI) * radius * radius / static_cast<float>(expectedVertexCount));
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
+	
+	// -----------------------------------------------------------------------------------------------
+	// All geometric quantities need to be scaled by the scalingFactor to ensure numerical stability.
+	// For spatial conveniences, geometries must also be centered, i.e.: translated by -origin.
+	// Geometries that are already centered at (0, 0, 0) are not translated.
+	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 	GetFieldCellSize() = scalingFactor;
 
@@ -1823,7 +1774,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	}
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
-		(*innerSurface) *= transfMatrixGeomScale;
+		(*innerSurface) *= transfMatrixFull;
 	}
 
 	// test box for geometry validation
@@ -1834,22 +1785,22 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 
 	if (m_OuterSurfaceDistanceField)
 	{
-		(*m_OuterSurfaceDistanceField) *= transfMatrixFull;
+		(*m_OuterSurfaceDistanceField) *= transfMatrixGeomScale;
 		(*m_OuterSurfaceDistanceField) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	if (m_OuterSurfaceDFNegNormalizedGradient)
 	{
-		(*m_OuterSurfaceDFNegNormalizedGradient) *= transfMatrixFull; //transfMatrixGeomScale; // transfMatrixFull;
+		(*m_OuterSurfaceDFNegNormalizedGradient) *= transfMatrixGeomScale;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 	for (const auto& innerSurfaceDF : m_InnerSurfacesDistanceFields)
 	{
-		(*innerSurfaceDF) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
+		(*innerSurfaceDF) *= transfMatrixFull;
 		(*innerSurfaceDF) *= static_cast<double>(scalingFactor); // scale also the distance values.
 	}
 	for (const auto& innerSurfaceDFGradient : m_InnerSurfacesDFNegNormalizedGradients)
 	{
-		(*innerSurfaceDFGradient) *= transfMatrixFull; //transfMatrixGeomScale; //transfMatrixFull;
+		(*innerSurfaceDFGradient) *= transfMatrixFull;
 		// values are supposed to be unit vectors regardless of scaling
 	}
 
@@ -1972,7 +1923,14 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
 	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
+
+	// -----------------------------------------------------------------------------------------------
+	// All geometric quantities need to be scaled by the scalingFactor to ensure numerical stability.
+	// For spatial conveniences, geometries must also be centered, i.e.: translated by -origin.
+	// Geometries that are already centered at (0, 0, 0) are not translated.
+	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
+	GetFieldCellSize() = scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,
@@ -2000,8 +1958,9 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 			radius = std::max(std::max({ innerBoundsSize[0], innerBoundsSize[1], innerBoundsSize[2] }) * 0.5f, radius);
 			origin += innerBounds.center();
 		}
+		// mean bounds center position for all initial curves
 		if (!GetInnerSurfaces().empty())
-			origin /= GetInnerSurfaces().size();
+			origin /= static_cast<pmp::Scalar>(GetInnerSurfaces().size() + 1);
 	}
 	const pmp::mat4 transfMatrixGeomMove{
 		1.0f, 0.0f, 0.0f, -origin[0],
@@ -2014,7 +1973,10 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	GetScaleFieldToOriginal() = inverse(transfMatrixGeomScale);
 
 	// Transform the geometries
-	(*GetOuterSurface()) *= transfMatrixFull;
+	if (GetOuterSurface())
+	{
+		(*GetOuterSurface()) *= transfMatrixFull;
+	}
 	for (auto& innerSurface : GetInnerSurfaces())
 	{
 		(*innerSurface) *= transfMatrixFull;

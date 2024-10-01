@@ -2122,7 +2122,7 @@ void ConcentricCirclesTests()
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
-	constexpr double defaultOffsetFactor = 1.5;
+	constexpr double defaultOffsetFactor = 0.25; // 1.5;
 	constexpr unsigned int NTimeSteps = 180;
 
 	for (unsigned int curveId = 0; const auto & circlePair : circlePairs)
@@ -2169,11 +2169,11 @@ void ConcentricCirclesTests()
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				return 0.0 * TRIVIAL_EPSILON(distance);
+				return 0.001 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 2.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
@@ -2195,7 +2195,7 @@ void ConcentricCirclesTests()
 
 			GlobalManifoldEvolutionSettings globalSettings;
 			globalSettings.NSteps = NTimeSteps;
-			globalSettings.DoRemeshing = false;
+			globalSettings.DoRemeshing = true;
 			globalSettings.DetectFeatures = false;
 			globalSettings.ExportPerTimeStep = true;
 			globalSettings.ExportTargetDistanceFieldAsImage = true;
@@ -2259,7 +2259,7 @@ void EquilibriumPairedManifoldTests()
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
-	constexpr double defaultOffsetFactor = 1.5;
+	constexpr double defaultOffsetFactor = 0.25; //1.5;
 	constexpr unsigned int NTimeSteps = 180;
 
 	for (unsigned int curveId = 0; const auto & circlePair : circlePairs)
@@ -2306,17 +2306,17 @@ void EquilibriumPairedManifoldTests()
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				return -1.0 * (1.0 - exp(-distance * distance / 1.0));
+				return 0.001 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return -1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -2345,7 +2345,7 @@ void EquilibriumPairedManifoldTests()
 
 			const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
 			auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
-			//innerCurve.negate_orientation();
+			innerCurve.negate_orientation();
 			std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
 
 			auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
