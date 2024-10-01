@@ -2385,49 +2385,50 @@ void NonConcentricCirclesTest()
 
 void EquilibriumPairedManifoldTests()
 {
-	const std::vector<pmp::Point2> squareVerticesLarge = {
-		pmp::Point2{-50.0f, -50.0f},
-		pmp::Point2{50.0f, -50.0f},
-		pmp::Point2{50.0f, 50.0f},
-		pmp::Point2{-50.0f, 50.0f}
-	};
-	const std::vector<pmp::Point2> triangleVerticesLarge = {
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * 200.0f,
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * 200.0f,
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * 200.0f
-	};
-	const std::vector<pmp::Point2> squareVerticesSmall = {
-		pmp::Point2{-20.0f, -20.0f},
-		pmp::Point2{20.0f, -20.0f},
-		pmp::Point2{20.0f, 20.0f},
-		pmp::Point2{-20.0f, 20.0f}
-	};
-	const std::vector<pmp::Point2> triangleVerticesSmall = {
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * 40.0f,
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * 40.0f,
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * 40.0f
-	};
-
+	const auto center = pmp::Point2(200, 400);
 	const float outerRadius = 100.0f;
 	const float innerRadius = 40.0f;
+
+	const std::vector<pmp::Point2> squareVerticesLarge = {
+		pmp::Point2{-50.0f, -50.0f} + center,
+		pmp::Point2{50.0f, -50.0f} + center,
+		pmp::Point2{50.0f, 50.0f} + center,
+		pmp::Point2{-50.0f, 50.0f} + center
+	};
+	const std::vector<pmp::Point2> triangleVerticesLarge = {
+		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * (2.0f * outerRadius) + center,
+		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * (2.0f * outerRadius) + center,
+		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * (2.0f * outerRadius) + center
+	};
+	const std::vector<pmp::Point2> squareVerticesSmall = {
+		pmp::Point2{-20.0f, -20.0f} + center,
+		pmp::Point2{20.0f, -20.0f} + center,
+		pmp::Point2{20.0f, 20.0f} + center,
+		pmp::Point2{-20.0f, 20.0f} + center
+	};
+	const std::vector<pmp::Point2> triangleVerticesSmall = {
+		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * innerRadius + center,
+		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * innerRadius + center,
+		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * innerRadius + center
+	};
 	const unsigned int segments = 30;
 
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		// Pair 1: Outer chamfered square and inner circle
 		{pmp::CurveFactory::sampled_polygon(squareVerticesLarge, segments, true),
-		 pmp::CurveFactory::circle(pmp::Point2(0, 0), innerRadius, segments)},
+		 pmp::CurveFactory::circle(center, innerRadius, segments)},
 
 		// Pair 2: Outer chamfered equilateral triangle and inner circle
 		{pmp::CurveFactory::sampled_polygon(triangleVerticesLarge, segments, true),
-		pmp::CurveFactory::circle(pmp::Point2(0, 0), innerRadius, segments)},
+		pmp::CurveFactory::circle(center, innerRadius, segments)},
 
 		// Pair 3: Outer circle and inner chamfered square
-		{pmp::CurveFactory::circle(pmp::Point2(0, 0), outerRadius, segments),
+		{pmp::CurveFactory::circle(center, outerRadius, segments),
 		pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
 
 		// Pair 4: Outer circle and inner chamfered equilateral triangle
-		{pmp::CurveFactory::circle(pmp::Point2(0, 0), outerRadius, segments),
+		{pmp::CurveFactory::circle(center, outerRadius, segments),
 		pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments, true)}
 	};
 
@@ -2458,12 +2459,15 @@ void EquilibriumPairedManifoldTests()
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
 	strategySettings.RemeshingSettings.UseBackProjection = false;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
 	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
+
+	strategySettings.ExportVariableScalarFieldsDimInfo = true;
+	strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
@@ -2474,6 +2478,9 @@ void EquilibriumPairedManifoldTests()
 	globalSettings.ExportTargetDistanceFieldAsImage = true;
 	globalSettings.OutputPath = dataOutPath;
 	globalSettings.ExportResult = false;
+
+	globalSettings.RemeshingResizeFactor = 0.7f;
+	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 	for (unsigned int pairId = 0; const auto & [outerCurve, innerCurve] : curvePairs)
 	{

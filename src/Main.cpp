@@ -108,8 +108,8 @@ int main()
         // "AdditionalCurveShapesTests",
         // "AdvectionDrivenInnerCircleTests",
         // "ConcentricCirclesTests",
-        "NonConcentricCirclesTest",
-        //"EquilibriumPairedManifoldTests",
+        //"NonConcentricCirclesTest",
+        "EquilibriumPairedManifoldTests",
         // "VisualizeMCF",
         // "VisualizeMultipleInnerCurves"
         // "ExportSlicingPlanes"

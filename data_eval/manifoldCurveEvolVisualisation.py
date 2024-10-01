@@ -37,15 +37,15 @@ import matplotlib.patches as patches
 #procedure_name = "maxPlancknewEvol_Pts2D3_WithRepulsion"
 #procedure_name = "nefertitinewEvol_Pts2D3_WithRepulsion"
 
-#procedure_name = "curve0_Repulsionless"
-#procedure_name = "curve1_Repulsionless"
+procedure_name = "curve0_Repulsionless"
+procedure_name = "curve1_Repulsionless"
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
 
-procedure_name = "equilibriumPair0"
-procedure_name = "equilibriumPair1"
-procedure_name = "equilibriumPair2"
-procedure_name = "equilibriumPair3"
+#procedure_name = "equilibriumPair0"
+#procedure_name = "equilibriumPair1"
+#procedure_name = "equilibriumPair2"
+#procedure_name = "equilibriumPair3"
 
 #procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
@@ -77,10 +77,10 @@ png_time_steps = [] # a specified time step container for png export. If empty, 
 svg_time_steps = [] # a specified time step container for svg export. If empty, all time steps will be exported
 
 # a specified time step container for exporting a single png with opaque curve polylines (except the last one). If empty, no png will be exported
-multi_png_time_steps = []
+#multi_png_time_steps = []
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
 #multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
-#multi_png_time_steps = [0, 20, 40, 60, 80, 100] 
+multi_png_time_steps = [0, 4, 10, 40, 100, 180]
 #multi_png_time_steps = [0, 10, 100] 
 #multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
 
