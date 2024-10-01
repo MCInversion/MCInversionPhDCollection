@@ -244,7 +244,7 @@ std::vector<std::shared_ptr<pmp::ManifoldCurve2D>> ManifoldCurveEvolutionStrateg
 	return innerCurvesTransformed;
 }
 
-#define DEBUG_CTRL_FUNC_VALUES true
+#define DEBUG_CTRL_FUNC_VALUES false
 
 // -------------------------------------------------------------------------------------
 
@@ -1012,6 +1012,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
 	GetScalingFactor() = scalingFactor;
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
+	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f,
@@ -1795,6 +1796,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
+	GetFieldCellSize() = scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,

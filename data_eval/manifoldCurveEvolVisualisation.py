@@ -45,7 +45,7 @@ import matplotlib.patches as patches
 procedure_name = "concentricCircles0_Repulsionless"
 procedure_name = "concentricCircles1_Repulsionless"
 procedure_name = "concentricCircles2_Repulsionless"
-#procedure_name = "concentricCircles3_Repulsionless"
+procedure_name = "concentricCircles3_Repulsionless"
 
 #procedure_name = "singleInnerCircleTest"
 #procedure_name = "innerCircleOuterCirclePtsTest"
