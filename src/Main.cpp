@@ -109,10 +109,12 @@ int main()
         // "AdvectionDrivenInnerCircleTests",
         // "ConcentricCirclesTests",
         //"NonConcentricCirclesTest",
-        "EquilibriumPairedManifoldTests",
+        // "EquilibriumPairedManifoldTests",
         // "VisualizeMCF",
-        // "VisualizeMultipleInnerCurves"
-        // "ExportSlicingPlanes"
+        // "VisualizeMultipleInnerCurves",
+        // "ExportSlicingPlanes",
+        //"AdvectionDrivenInnerOuterCircleTests",
+        "OuterOnlySimpleShapeTests"
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

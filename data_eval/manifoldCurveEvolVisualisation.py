@@ -37,8 +37,8 @@ import matplotlib.patches as patches
 #procedure_name = "maxPlancknewEvol_Pts2D3_WithRepulsion"
 #procedure_name = "nefertitinewEvol_Pts2D3_WithRepulsion"
 
-procedure_name = "curve0_Repulsionless"
-procedure_name = "curve1_Repulsionless"
+#procedure_name = "curve0_Repulsionless"
+#procedure_name = "curve1_Repulsionless"
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
 
@@ -64,6 +64,24 @@ procedure_name = "curve1_Repulsionless"
 #procedure_name = "innerCircle_chamferedTriangle_PtsTest"
 #procedure_name = "innerCircle_incompleteChamferedTriangle_PtsTest"
 
+#procedure_name = "innerOuterCircle"
+#procedure_name = "innerOuterIncompleteCircle"
+#procedure_name = "innerOuterSineDeformedCircle"
+#procedure_name = "innerOuterSineDeformedIncompleteCircle"
+#procedure_name = "innerOuterChamferedRectangle"
+#procedure_name = "innerOuterIncompleteChamferedRectangle"
+#procedure_name = "innerOuterChamferedTriangle"
+#procedure_name = "innerOuterIncompleteChamferedTriangle"
+
+procedure_name = "outerCircle"
+procedure_name = "outerIncompleteCircle"
+procedure_name = "outerSineDeformedCircle"
+procedure_name = "outerSineDeformedIncompleteCircle"
+procedure_name = "outerChamferedRectangle"
+procedure_name = "outerIncompleteChamferedRectangle"
+procedure_name = "outerChamferedTriangle"
+procedure_name = "outerIncompleteChamferedTriangle"
+
 #procedure_name = "mcfCurve0"
 #procedure_name = "mcfCurve1"
 
@@ -71,7 +89,9 @@ procedure_name = "curve1_Repulsionless"
 directory = "../output"  # Adjust this path accordingly
 
 fps = 20
-box_expansion = 0.1
+#box_expansion = 0.1
+#box_expansion = 0.5
+box_expansion = 1.0
 
 png_time_steps = [] # a specified time step container for png export. If empty, a gif animation will be exported
 svg_time_steps = [] # a specified time step container for svg export. If empty, all time steps will be exported
@@ -81,6 +101,7 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
 #multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
 multi_png_time_steps = [0, 4, 10, 40, 100, 180]
+#multi_png_time_steps = [0, 2, 4, 8, 10]
 #multi_png_time_steps = [0, 10, 100] 
 #multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
 
@@ -486,8 +507,20 @@ else:
     elif inner_curves:
         # Use the first inner curve if outer curves are not available
         first_inner_curve_group = next(iter(inner_curves.values()))[0]
-        ax_main.set_xlim(np.min(first_inner_curve_group[:, 0]), np.max(first_inner_curve_group[:, 0]))
-        ax_main.set_ylim(np.min(first_inner_curve_group[:, 1]), np.max(first_inner_curve_group[:, 1]))
+        x_bounds = [np.min(first_inner_curve_group[:, 0]), np.max(first_inner_curve_group[:, 0])]
+        y_bounds = [np.min(first_inner_curve_group[:, 1]), np.max(first_inner_curve_group[:, 1])]
+
+        # expand the bounds to avoid clipping the curves
+        y_range = y_bounds[1] - y_bounds[0]
+        x_range = x_bounds[1] - x_bounds[0]
+        y_bounds[0] -= box_expansion * y_range
+        y_bounds[1] += box_expansion * y_range
+        x_bounds[0] -= box_expansion * x_range
+        x_bounds[1] += box_expansion * x_range
+
+        ax_main.set_xlim(x_bounds)
+        ax_main.set_ylim(y_bounds)
+        
         ax_main.invert_yaxis()  # Reverse the direction of the y-axis
     else:
         raise ValueError("No curves (outer or inner) are available to set plot bounds.")
