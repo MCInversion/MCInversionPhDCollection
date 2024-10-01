@@ -43,7 +43,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
 	
 	if (!HasValidInnerOuterManifolds())
-		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
+		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner curves are contained within the custom outer curve.\n");
 
 	if (NeedsFieldsCalculation())
 	{
@@ -978,6 +978,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 		radius = std::max(outerBoundsSize[0], outerBoundsSize[1]) * 0.58;
 		origin = outerBounds.center();
 	}
+	else
 	{
 		for (const auto& innerCurve : GetInnerCurves())
 		{
@@ -988,7 +989,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 		}
 		// mean bounds center position for all initial curves
 		if (!GetInnerCurves().empty())
-			origin /= static_cast<pmp::Scalar>(GetInnerCurves().size() + 1);
+			origin /= static_cast<pmp::Scalar>(GetInnerCurves().size());
 	}
 
 	const pmp::mat3 transfMatrixGeomMove{
@@ -1077,7 +1078,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
 
 	if (!HasValidInnerOuterManifolds())
-		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! all custom inner curves are contained within the custom outer curve.\n");
+		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner surfaces are contained within the custom outer surface.\n");
 
 	if (NeedsFieldsCalculation())
 	{
@@ -1960,7 +1961,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 		}
 		// mean bounds center position for all initial curves
 		if (!GetInnerSurfaces().empty())
-			origin /= static_cast<pmp::Scalar>(GetInnerSurfaces().size() + 1);
+			origin /= static_cast<pmp::Scalar>(GetInnerSurfaces().size());
 	}
 	const pmp::mat4 transfMatrixGeomMove{
 		1.0f, 0.0f, 0.0f, -origin[0],

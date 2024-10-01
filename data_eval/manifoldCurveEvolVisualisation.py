@@ -42,10 +42,15 @@ import matplotlib.patches as patches
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
 
+procedure_name = "equilibriumPair0"
+procedure_name = "equilibriumPair1"
+procedure_name = "equilibriumPair2"
+procedure_name = "equilibriumPair3"
+
 #procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
 #procedure_name = "concentricCircles2_Repulsionless"
-procedure_name = "concentricCircles3_Repulsionless"
+#procedure_name = "concentricCircles3_Repulsionless"
 
 #procedure_name = "singleInnerCircleTest"
 #procedure_name = "innerCircleOuterCirclePtsTest"

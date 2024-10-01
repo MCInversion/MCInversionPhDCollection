@@ -2247,7 +2247,7 @@ void ConcentricCirclesTests()
 }
 
 
-void EquilibriumPairedManifoldTests()
+void NonConcentricCirclesTest()
 {
 	// Define the inner and outer circle pairs directly
 	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
@@ -2296,6 +2296,8 @@ void EquilibriumPairedManifoldTests()
 
 			ManifoldEvolutionSettings strategySettings;
 			strategySettings.UseInnerManifolds = true;
+			strategySettings.AdvectionInteractWithOtherManifolds = true;
+			// use PreComputeAdvectionDiffusionParams?
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
 				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
@@ -2310,7 +2312,7 @@ void EquilibriumPairedManifoldTests()
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 2.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
@@ -2324,6 +2326,8 @@ void EquilibriumPairedManifoldTests()
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			std::cout << "fieldIsoLevel: " << fieldIsoLevel << "\n";
 
 			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
@@ -2346,7 +2350,7 @@ void EquilibriumPairedManifoldTests()
 			const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
 			auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
 			innerCurve.negate_orientation();
-			std::vector<pmp::ManifoldCurve2D> innerCurves{ innerCurve };
+			std::vector innerCurves{ innerCurve };
 
 			auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 				strategySettings, outerCurve, innerCurves, nullptr);
@@ -2379,6 +2383,123 @@ void EquilibriumPairedManifoldTests()
 	}
 }
 
+void EquilibriumPairedManifoldTests()
+{
+	const std::vector<pmp::Point2> squareVerticesLarge = {
+		pmp::Point2{-50.0f, -50.0f},
+		pmp::Point2{50.0f, -50.0f},
+		pmp::Point2{50.0f, 50.0f},
+		pmp::Point2{-50.0f, 50.0f}
+	};
+	const std::vector<pmp::Point2> triangleVerticesLarge = {
+		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * 200.0f,
+		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * 200.0f,
+		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * 200.0f
+	};
+	const std::vector<pmp::Point2> squareVerticesSmall = {
+		pmp::Point2{-20.0f, -20.0f},
+		pmp::Point2{20.0f, -20.0f},
+		pmp::Point2{20.0f, 20.0f},
+		pmp::Point2{-20.0f, 20.0f}
+	};
+	const std::vector<pmp::Point2> triangleVerticesSmall = {
+		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * 40.0f,
+		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * 40.0f,
+		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * 40.0f
+	};
+
+	const float outerRadius = 100.0f;
+	const float innerRadius = 40.0f;
+	const unsigned int segments = 30;
+
+	// List of curve pairs to evolve
+	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
+		// Pair 1: Outer chamfered square and inner circle
+		{pmp::CurveFactory::sampled_polygon(squareVerticesLarge, segments, true),
+		 pmp::CurveFactory::circle(pmp::Point2(0, 0), innerRadius, segments)},
+
+		// Pair 2: Outer chamfered equilateral triangle and inner circle
+		{pmp::CurveFactory::sampled_polygon(triangleVerticesLarge, segments, true),
+		pmp::CurveFactory::circle(pmp::Point2(0, 0), innerRadius, segments)},
+
+		// Pair 3: Outer circle and inner chamfered square
+		{pmp::CurveFactory::circle(pmp::Point2(0, 0), outerRadius, segments),
+		pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
+
+		// Pair 4: Outer circle and inner chamfered equilateral triangle
+		{pmp::CurveFactory::circle(pmp::Point2(0, 0), outerRadius, segments),
+		pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments, true)}
+	};
+
+	// Prepare the settings for the evolver
+	ManifoldEvolutionSettings strategySettings;
+	strategySettings.UseInnerManifolds = true;
+
+	strategySettings.AdvectionInteractWithOtherManifolds = true;
+	// use PreComputeAdvectionDiffusionParams?
+	strategySettings.OuterManifoldEpsilon = [](double distance)
+	{
+		return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+	};
+	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+	{
+		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	};
+	strategySettings.InnerManifoldEpsilon = [](double distance)
+	{
+		return 0.001 * TRIVIAL_EPSILON(distance);
+	};
+	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+	{
+		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	};
+	strategySettings.LevelOfDetail = 3;
+	strategySettings.TangentialVelocityWeight = 0.05;
+
+	strategySettings.TimeStep = 0.05;
+	strategySettings.TangentialVelocityWeight = 0.05;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+	strategySettings.RemeshingSettings.UseBackProjection = false;
+	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
+	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
+
+	// Global settings
+	GlobalManifoldEvolutionSettings globalSettings;
+	globalSettings.NSteps = 180;
+	globalSettings.DoRemeshing = true;
+	globalSettings.DetectFeatures = false;
+	globalSettings.ExportPerTimeStep = true;
+	globalSettings.ExportTargetDistanceFieldAsImage = true;
+	globalSettings.OutputPath = dataOutPath;
+	globalSettings.ExportResult = false;
+
+	for (unsigned int pairId = 0; const auto & [outerCurve, innerCurve] : curvePairs)
+	{
+		std::cout << "EquilibriumPairedManifoldTest for pair: " << pairId << "\n";
+
+		globalSettings.ProcedureName = "equilibriumPair" + std::to_string(pairId);
+
+		std::vector innerCurves{ innerCurve };
+		innerCurves[0].negate_orientation();
+		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+			strategySettings, outerCurve, innerCurves, nullptr);
+
+		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (std::exception& ex)
+		{
+			std::cerr << "Error during evolution of pair " << pairId << ": " << ex.what() << "\n";
+		}
+
+		pairId++;
+	}
+}
 
 void VisualizeMCF()
 {

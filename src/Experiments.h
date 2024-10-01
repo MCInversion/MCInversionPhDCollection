@@ -198,6 +198,7 @@ void OutwardEvolvingInnerCircleTest();
 void AdditionalCurveShapesTests();
 void AdvectionDrivenInnerCircleTests();
 void ConcentricCirclesTests();
+void NonConcentricCirclesTest();
 void EquilibriumPairedManifoldTests();
 void VisualizeMCF();
 void VisualizeMultipleInnerCurves();
@@ -305,6 +306,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"AdditionalCurveShapesTests", AdditionalCurveShapesTests},
     {"AdvectionDrivenInnerCircleTests", AdvectionDrivenInnerCircleTests},
     {"ConcentricCirclesTests", ConcentricCirclesTests},
+    {"NonConcentricCirclesTest", NonConcentricCirclesTest},
     {"EquilibriumPairedManifoldTests", EquilibriumPairedManifoldTests},
     {"VisualizeMCF", VisualizeMCF},
     {"VisualizeMultipleInnerCurves", VisualizeMultipleInnerCurves},
