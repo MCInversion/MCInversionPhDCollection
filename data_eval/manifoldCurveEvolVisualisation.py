@@ -37,7 +37,7 @@ import matplotlib.patches as patches
 #procedure_name = "maxPlancknewEvol_Pts2D3_WithRepulsion"
 #procedure_name = "nefertitinewEvol_Pts2D3_WithRepulsion"
 
-#procedure_name = "curve0_Repulsionless"
+procedure_name = "curve0_Repulsionless"
 #procedure_name = "curve1_Repulsionless"
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
@@ -73,14 +73,14 @@ import matplotlib.patches as patches
 #procedure_name = "innerOuterChamferedTriangle"
 #procedure_name = "innerOuterIncompleteChamferedTriangle"
 
-procedure_name = "outerCircle"
-procedure_name = "outerIncompleteCircle"
-procedure_name = "outerSineDeformedCircle"
-procedure_name = "outerSineDeformedIncompleteCircle"
-procedure_name = "outerChamferedRectangle"
-procedure_name = "outerIncompleteChamferedRectangle"
-procedure_name = "outerChamferedTriangle"
-procedure_name = "outerIncompleteChamferedTriangle"
+#procedure_name = "outerCircle"
+#procedure_name = "outerIncompleteCircle"
+#procedure_name = "outerSineDeformedCircle"
+#procedure_name = "outerSineDeformedIncompleteCircle"
+#procedure_name = "outerChamferedRectangle"
+#procedure_name = "outerIncompleteChamferedRectangle"
+#procedure_name = "outerChamferedTriangle"
+#procedure_name = "outerIncompleteChamferedTriangle"
 
 #procedure_name = "mcfCurve0"
 #procedure_name = "mcfCurve1"
@@ -89,9 +89,9 @@ procedure_name = "outerIncompleteChamferedTriangle"
 directory = "../output"  # Adjust this path accordingly
 
 fps = 20
-#box_expansion = 0.1
+box_expansion = 0.1
 #box_expansion = 0.5
-box_expansion = 1.0
+#box_expansion = 1.0
 
 png_time_steps = [] # a specified time step container for png export. If empty, a gif animation will be exported
 svg_time_steps = [] # a specified time step container for svg export. If empty, all time steps will be exported

@@ -534,6 +534,22 @@ void DeletePointsContainedInCircles(std::vector<pmp::Point2>& pointsToFilter, co
 	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnyCircle).begin(), pointsToFilter.end());
 }
 
+void DeletePointsContainedInSpheres(std::vector<pmp::Point>& pointsToFilter, const std::vector<Sphere3D>& cutSpheres)
+{
+	auto isPointInSphere = [](const pmp::Point& point, const Sphere3D& sphere) {
+		return sqrnorm(point - sphere.Center) <= (sphere.Radius * sphere.Radius);
+	};
+
+	auto isInAnySphere = [&cutSpheres, &isPointInSphere](const pmp::Point& point) {
+		for (const auto& sphere : cutSpheres) {
+			if (isPointInSphere(point, sphere)) return true;
+		}
+		return false;
+	};
+
+	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnySphere).begin(), pointsToFilter.end());
+}
+
 
 void OldVsNewLSWTests()
 {
@@ -2417,7 +2433,7 @@ void EquilibriumPairedManifoldTests()
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		// Pair 1: Outer chamfered square and inner circle
 		{pmp::CurveFactory::sampled_polygon(squareVerticesLarge, segments, true),
-		 pmp::CurveFactory::circle(center, innerRadius, segments)},
+		 pmp::CurveFactory::circle(center, 0.5f * innerRadius, segments)},
 
 		// Pair 2: Outer chamfered equilateral triangle and inner circle
 		{pmp::CurveFactory::sampled_polygon(triangleVerticesLarge, segments, true),
@@ -3162,4 +3178,392 @@ void OuterOnlySimpleShapeTests()
 			}
 		}
 	}
+}
+
+void StandardMeshesIOLSWTests()
+{
+	const std::vector<std::string> meshForPtCloudNames{
+		//"armadillo",
+		//"blub",
+		"bunny",
+		//"maxPlanck",
+		//"nefertiti",
+		//"ogre",
+		//"spot"
+	};
+	const std::map<std::string, double> timeStepSizesForPtClouds{
+		{"armadillo", 0.05 },
+		{ "blub", 0.05 },
+		{ "bunny", 0.05 },
+		{ "maxPlanck", 0.05 },
+		{ "nefertiti", 0.05 },
+		{ "ogre", 0.05 },
+		{ "spot", 0.05 }
+	};
+	const std::map<std::string, double> isoLevelOffsetFactors{
+		{"armadillo", 0.5 },
+		{ "blub", 0.5 },
+		{ "bunny", 0.5 },
+		{ "maxPlanck", 0.5 },
+		{ "nefertiti", 0.5 },
+		{ "ogre", 0.5 },
+		{ "spot", 0.5 }
+	};
+
+	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
+		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
+		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
+		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+	};
+
+	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
+		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
+		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
+		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+	};
+
+	const std::map<std::string, Circle2D> outerCircles{
+		{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
+		{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
+		{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
+		{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+	};
+	const std::map<std::string, std::vector<Circle2D>> innerCircles{
+		//{"armadillo", std::vector{ Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}} },
+		{"bunny", std::vector{ Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}} },
+		//{"maxPlanck", std::vector{ Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}} },
+		//{"nefertiti", std::vector{ Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f}} }
+	};
+
+	const std::map<std::string, Sphere3D> outerSpheres{
+		{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
+		{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
+		{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
+		{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+	};
+	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
+		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0f, 52.0f}, 20.0f}} },
+		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0f, 0.08f, 0.012f}, 0.03f}} },
+		//{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f}, 50.0f}} },
+		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0f, 100.0f}, 55.0f}} }
+	};
+
+	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
+		{"armadillo", {}},
+		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.02f, 0.04f, 0.01f}, 0.032f}, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.04f}}},
+		{"maxPlanck", {}},
+		{"nefertiti", {}}
+	};
+
+	constexpr unsigned int nVoxelsPerMinDimension = 50;
+	constexpr double defaultTimeStep = 0.05;
+	constexpr double defaultOffsetFactor = 1.5;
+
+	constexpr size_t samplingLevel = 3;
+	constexpr size_t nSamplings = 10;
+	constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+	constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+	//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+	SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
+
+	constexpr unsigned int NTimeSteps = 400;
+
+	constexpr bool executeOldEvolver = false;
+	constexpr bool executeNewSurfaceEvolver = false;
+	constexpr bool executeNewCurveEvolver = true;
+	constexpr bool executeNewSurfaceCustomEvolver = false;
+	constexpr bool executeNewCurveCustomEvolver = false;
+
+	for (const auto& meshName : meshForPtCloudNames)
+	{
+		// =======================================================================
+		//   - - - - - - - - - - - - -   Data   Prep   - - - - - - - - - - - -
+		// -----------------------------------------------------------------------
+
+		std::cout << "==================================================================\n";
+		std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+		std::cout << "------------------------------------------------------------------\n";
+		const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+		if (!baseDataOpt.has_value())
+		{
+			std::cerr << "baseDataOpt == nullopt!\n";
+			break;
+		}
+		std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+		const auto& baseData = baseDataOpt.value();
+		const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+		size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+		nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+		std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+		std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+		if (!ExportSampledVerticesToPLY(baseData, nVerts, filename, seed))
+		{
+			std::cerr << "ExportSampledVerticesToPLY failed!\n";
+			break;
+		}
+
+		const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+		auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+		if (!ptCloudOpt.has_value())
+		{
+			std::cerr << "ptCloudOpt == nullopt!\n";
+			break;
+		}
+
+		auto& ptCloud = ptCloudOpt.value();
+		if (!cutSpheres.contains(meshName))
+		{
+			std::cerr << "!cutSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+			continue;
+		}
+
+		DeletePointsContainedInSpheres(ptCloud, cutSpheres.at(meshName));
+
+		const pmp::BoundingBox ptCloudBBox(ptCloud);
+		const auto center = ptCloudBBox.center();
+		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr float volExpansionFactor = 1.0f;
+		const SDF::PointCloudDistanceFieldSettings dfSettings{
+			cellSize,
+			volExpansionFactor,
+			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+			SDF::BlurPostprocessingType::None
+		};
+
+		const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+		const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+		// ==========================================================================
+		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
+		// ==========================================================================
+
+		const float distTolerance = 0.01f * minSize;
+		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
+		if (pts2D.empty())
+		{
+			std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for mesh " << meshName << "!\n";
+			continue;
+		}
+
+		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		{
+			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+			continue;
+		}
+
+		// -----------------------
+		if (executeNewSurfaceCustomEvolver)
+		{
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = true;
+			strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
+			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.TimeStep = tau;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
+			globalSettings.ProcedureName = meshName + "newEvol_Pts" + std::to_string(samplingLevel);
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+			if (!outerSpheres.contains(meshName))
+			{
+				std::cerr << "!outerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+			const auto outerSphere = outerSpheres.at(meshName);
+
+			// construct outer ico-sphere
+			Geometry::IcoSphereBuilder icoBuilder({ strategySettings.LevelOfDetail, outerSphere.Radius });
+			icoBuilder.BuildBaseData();
+			icoBuilder.BuildPMPSurfaceMesh();
+			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
+			const pmp::mat4 transfMatrixGeomMove{
+				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
+				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
+				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
+				0.0f, 0.0f, 0.0f, 1.0f
+			};
+			outerSurface *= transfMatrixGeomMove;
+
+			if (!innerSpheres.contains(meshName))
+			{
+				std::cerr << "!innerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+			const auto innerSpheresPerMesh = innerSpheres.at(meshName);
+			std::vector<pmp::SurfaceMesh> innerSurfaces;
+			innerSurfaces.reserve(innerSpheresPerMesh.size());
+			for (const auto& innerSphere : innerSpheresPerMesh)
+			{
+				// construct innrt ico-sphere
+				Geometry::IcoSphereBuilder innerIcoBuilder({ strategySettings.LevelOfDetail, innerSphere.Radius });
+				innerIcoBuilder.BuildBaseData();
+				innerIcoBuilder.BuildPMPSurfaceMesh();
+				auto innerSurface = innerIcoBuilder.GetPMPSurfaceMeshResult();
+				const pmp::mat4 transfMatrixGeomMove{
+					1.0f, 0.0f, 0.0f, innerSphere.Center[0],
+					0.0f, 1.0f, 0.0f, innerSphere.Center[1],
+					0.0f, 0.0f, 1.0f, innerSphere.Center[2],
+					0.0f, 0.0f, 0.0f, 1.0f
+				};
+				outerSurface *= transfMatrixGeomMove;
+			}
+
+			auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+				strategySettings, MeshLaplacian::Voronoi,
+				outerSurface, innerSurfaces,
+				std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+			ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (std::invalid_argument& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (std::runtime_error& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+
+		if (executeNewCurveCustomEvolver)
+		{
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = true;
+			strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
+			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.TimeStep = tau;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
+			globalSettings.ProcedureName = meshName + "newEvol_Pts2D" + std::to_string(samplingLevel);
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+			if (!outerCircles.contains(meshName))
+			{
+				std::cerr << "!outerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+
+			const auto outerCircle = outerCircles.at(meshName);
+			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+			auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
+
+			// TODO: finish inner circles setup
+
+			std::vector<pmp::ManifoldCurve2D> innerCurves;
+			auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+				strategySettings, outerCurve, innerCurves,
+				std::make_shared<std::vector<pmp::Point2>>(pts2D));
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+			ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (std::invalid_argument& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (std::runtime_error& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+	}
+}
+
+void HyperellipseEllipsoidEquilibriumTests()
+{
+	// TODO: implement
 }

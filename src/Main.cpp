@@ -108,13 +108,14 @@ int main()
         // "AdditionalCurveShapesTests",
         // "AdvectionDrivenInnerCircleTests",
         // "ConcentricCirclesTests",
-        //"NonConcentricCirclesTest",
+        // "NonConcentricCirclesTest",
         // "EquilibriumPairedManifoldTests",
         // "VisualizeMCF",
         // "VisualizeMultipleInnerCurves",
         // "ExportSlicingPlanes",
-        //"AdvectionDrivenInnerOuterCircleTests",
-        "OuterOnlySimpleShapeTests"
+        // "AdvectionDrivenInnerOuterCircleTests",
+        // "OuterOnlySimpleShapeTests",
+        // "StandardMeshesIOLSWTests"
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here
