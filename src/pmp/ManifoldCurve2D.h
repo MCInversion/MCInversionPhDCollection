@@ -259,6 +259,9 @@ namespace pmp
         //! \return true if the curve is empty, i.e., has no vertices
         [[nodiscard]] bool is_empty() const { return n_vertices() == 0; }
 
+        //! \return true if the curve is closed, i.e., has no boundary vertices
+        [[nodiscard]] bool is_closed() const;
+
         //! clear curve: remove all vertices, edges, faces
         virtual void clear();
 

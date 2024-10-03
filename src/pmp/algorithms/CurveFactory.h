@@ -50,5 +50,16 @@ namespace pmp {
             size_t nSegments = 10,
             bool chamferCorners = true,
             bool closeLoop = true);
+        //! Generate a hyperellipse centered at \p center with radii \p radiusX and \p radiusY of degree 
+        //! \p degree, and with \p nSegments segments, start angle \p startAngle, and end angle \p endAngle
+        static ManifoldCurve2D hyper_ellipse(
+			const Point2& center = Point2{ 0.0f, 0.0f },
+			Scalar radiusX = 1.0f,
+			Scalar radiusY = 1.0f,
+            size_t degree = 4,
+			size_t nSegments = 6,
+			Scalar startAngle = 0.0f,
+			Scalar endAngle = 2.0f * M_PI
+		);
     };
 } // namespace pmp

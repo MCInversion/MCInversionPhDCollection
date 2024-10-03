@@ -177,6 +177,7 @@ add_subdirectory(src/pmp)
 add_subdirectory(src/sdf)
 add_subdirectory(src/geometry)
 add_subdirectory(src/quickhull)
+add_subdirectory(src/sawhney_mat)
 add_subdirectory(src/stb_utils)
 add_subdirectory(src/utils)
 

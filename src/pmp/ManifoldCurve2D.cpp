@@ -187,6 +187,20 @@ namespace pmp
         return *this;
     }
 
+    bool ManifoldCurve2D::is_closed() const
+    {
+        if (n_vertices() < 2)
+			return false;
+
+        for (const auto v : vertices())
+        {
+            if (is_boundary(v))
+				return false;
+        }
+
+        return true;
+    }
+
     ManifoldCurve2D& ManifoldCurve2D::assign(const ManifoldCurve2D& rhs)
     {
         if (this != &rhs)

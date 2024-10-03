@@ -21,6 +21,7 @@
 #include "pmp/algorithms/Normals.h"
 
 #include "geometry/GridUtil.h"
+#include "geometry/PlaneBuilder.h"
 
 #include "sdf/SDF.h"
 
@@ -34,7 +35,6 @@
 
 #include "IOEnvironment.h"
 #include "../Experiments.h"
-#include <geometry/PlaneBuilder.h>
 
 void DistanceFieldHashTest()
 {
@@ -3563,7 +3563,184 @@ void StandardMeshesIOLSWTests()
 	}
 }
 
+void MedialAxisTests()
+{
+	pmp::ManifoldCurve2D hyperEllipse = pmp::CurveFactory::hyper_ellipse(pmp::Point2{ 0, 0 }, 300.0, 150.0, 4, 10);
+	if (!pmp::write_to_ply(hyperEllipse, dataOutPath + "hyperEllipse.ply"))
+		std::cerr << "Error writing hyperEllipse.ply!\n";
+
+	//hyperEllipse.negate_orientation();
+	//const auto medialAxis = Geometry::CalculateApproxMedialAxisFromCurve(hyperEllipse);
+	//if (medialAxis.has_value())
+	//{
+	//	if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "hyperEllipse_medialAxis.ply"))
+	//		std::cerr << "Error writing hyperEllipse_medialAxis.ply!\n";
+	//}
+
+	// Rohan Sawney's code is amazingly non-universal! Only his examples work.
+
+	{
+		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('q');
+		if (medialAxis.has_value())
+		{
+			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeQ.ply"))
+				std::cerr << "Error writing sawhneyShapeQ.ply!\n";
+		}
+	}
+
+	{
+		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('w');
+		if (medialAxis.has_value())
+		{
+			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeW.ply"))
+				std::cerr << "Error writing sawhneyShapeW.ply!\n";
+		}
+	}
+
+	{
+		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('e');
+		if (medialAxis.has_value())
+		{
+			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeE.ply"))
+				std::cerr << "Error writing sawhneyShapeE.ply!\n";
+		}
+	}
+
+	{
+		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('r');
+		if (medialAxis.has_value())
+		{
+			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeR.ply"))
+				std::cerr << "Error writing sawhneyShapeR.ply!\n";
+		}
+	}
+
+	{
+		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('t');
+		if (medialAxis.has_value())
+		{
+			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeT.ply"))
+				std::cerr << "Error writing sawhneyShapeT.ply!\n";
+		}
+	}
+}
+
 void HyperellipseEllipsoidEquilibriumTests()
 {
-	// TODO: implement
+	pmp::ManifoldCurve2D hyperEllipse = pmp::CurveFactory::hyper_ellipse(pmp::Point2{ 0, 0 }, 300.0, 150.0, 4, 40);
+	hyperEllipse.negate_orientation();
+	if (!pmp::write_to_ply(hyperEllipse, dataOutPath + "hyperEllipse.ply"))
+		std::cerr << "Error writing hyperEllipse.ply!\n";
+	// remesh hyper ellipse
+	constexpr float edgeLength = 15.0f;
+	constexpr unsigned int iterations = 10;
+	pmp::CurveRemeshing remesher(hyperEllipse);
+	pmp::AdaptiveRemeshingSettings settings;
+	settings.MinEdgeLength = edgeLength;
+	settings.MaxEdgeLength = 1.5f * edgeLength;
+	settings.ApproxError = 0.05f * edgeLength;
+	settings.NRemeshingIterations = iterations;
+	settings.NTangentialSmoothingIters = 6;
+	settings.UseProjection = true;
+	remesher.adaptive_remeshing(settings);	
+
+	const std::vector<Circle2D> testInnerCircles{
+		{ pmp::Point2{ 0.0f, 0.0f }, 130.0f },
+		{ pmp::Point2{ 100.0f, 0.0f }, 60.0f },
+		{ pmp::Point2{ 130.0f, 0.0f }, 60.0f }
+	};
+
+	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	constexpr double defaultTimeStep = 0.05;
+	constexpr double defaultOffsetFactor = 1.5;
+	constexpr unsigned int NTimeSteps = 180;
+	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
+
+	for (size_t hyperellipseId = 0; const auto& innerCircle : testInnerCircles)
+	{
+		std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+		ManifoldEvolutionSettings strategySettings;
+		strategySettings.UseInnerManifolds = true;
+		strategySettings.AdvectionInteractWithOtherManifolds = true;
+		strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				return 0.01 * (1.0 - exp(-distance * distance / 1.0));
+			};
+		strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 0.01 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+		strategySettings.InnerManifoldEpsilon = [](double distance)
+			{
+				return 0.0 * TRIVIAL_EPSILON(distance);
+			};
+		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+		strategySettings.TimeStep = defaultTimeStep;
+		strategySettings.LevelOfDetail = 4;
+		strategySettings.TangentialVelocityWeight = 0.05;
+
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+		strategySettings.RemeshingSettings.UseBackProjection = false;
+
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+		std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+		GlobalManifoldEvolutionSettings globalSettings;
+		globalSettings.NSteps = NTimeSteps;
+		globalSettings.DoRemeshing = true;
+		globalSettings.DetectFeatures = false;
+		globalSettings.ExportPerTimeStep = true;
+		globalSettings.ExportTargetDistanceFieldAsImage = true;
+		globalSettings.ProcedureName = "hyperellipse" + std::to_string(hyperellipseId);
+		globalSettings.OutputPath = dataOutPath;
+		globalSettings.ExportResult = false;
+
+		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+		const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+		const auto outerCurve = hyperEllipse;
+
+		std::vector<pmp::ManifoldCurve2D> innerCurves{
+			pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nSegments)
+		};
+		innerCurves[0].negate_orientation();
+
+		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+			strategySettings, outerCurve, innerCurves, nullptr);
+
+		std::cout << "Setting up ManifoldEvolver.\n";
+
+		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+		std::cout << "ManifoldEvolver::Evolve ... ";
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (std::invalid_argument& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (std::runtime_error& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+
+		hyperellipseId++;
+	}
 }

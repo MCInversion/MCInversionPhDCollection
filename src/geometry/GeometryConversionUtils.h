@@ -268,4 +268,11 @@ namespace Geometry
 	 */
 	[[nodiscard]] std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance);
 
+	/// \brief Computes the medial axis of a given 2D curve.
+	[[nodiscard]] std::optional<BaseCurveGeometryData> CalculateApproxMedialAxisFromCurve(const pmp::ManifoldCurve2D& curve);
+
+	/// \brief A PLY exporter for a general curve geometry.
+	[[nodiscard]] bool ExportBaseCurveGeometryDataToPLY(const BaseCurveGeometryData& geomData, const std::string& absFileName);
+
+	[[nodiscard]] std::optional<BaseCurveGeometryData> GetMedialAxisOfSawhneysStupidMATAlgorithm(unsigned char shape);
 } // namespace Geometry

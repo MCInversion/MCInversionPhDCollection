@@ -1,4 +1,5 @@
 #include "CurveFactory.h"
+#include "CurveFactory.h"
 // Copyright 2011-2021 the Polygon Mesh Processing Library developers.
 // Distributed under a MIT-style license, see LICENSE.txt for details.
 
@@ -217,6 +218,65 @@ namespace pmp
         }
         if (closeLoop)
             curve.new_edge(vertices.back(), vertices[0]);
+
+        return curve;
+    }
+
+    ManifoldCurve2D CurveFactory::hyper_ellipse(
+        const Point2& center,
+        Scalar radiusX,
+        Scalar radiusY,
+        size_t degree,
+        size_t nSegments,
+        Scalar startAngle,
+        Scalar endAngle)
+    {
+        ManifoldCurve2D curve;
+        const bool isFullEllipse = std::fabs(endAngle - startAngle - 2.0f * M_PI) < 1e-6f;
+        const size_t nVerts = (isFullEllipse ? nSegments : nSegments + 1);
+        curve.reserve(nVerts, nSegments);
+        std::vector<Vertex> vertices;
+        vertices.reserve(nVerts);
+
+        const Scalar angleIncrement = (endAngle - startAngle) / static_cast<Scalar>(nSegments);
+
+        // Loop over the number of segments to generate points along the hyperellipse
+        for (size_t i = 0; i < nSegments; ++i)
+        {
+            const Scalar angle = startAngle + i * angleIncrement;
+            const Scalar cosAngle = std::cos(angle);
+            const Scalar sinAngle = std::sin(angle);
+
+            // Use the degree to modify the cos and sin values, creating a superellipse shape
+            Point2 position(
+                center[0] + radiusX * std::pow(std::abs(cosAngle), Scalar(2) / degree) * (cosAngle >= 0 ? 1 : -1),
+                center[1] + radiusY * std::pow(std::abs(sinAngle), Scalar(2) / degree) * (sinAngle >= 0 ? 1 : -1)
+            );
+            vertices.push_back(curve.add_vertex(position));
+        }
+
+        // Handle the last vertex
+        if (isFullEllipse)
+        {
+            vertices.push_back(vertices[0]);
+        }
+        else
+        {
+            const Scalar angle = endAngle;
+            const Scalar cosAngle = std::cos(angle);
+            const Scalar sinAngle = std::sin(angle);
+            const Point2 position(
+                center[0] + radiusX * std::pow(std::abs(cosAngle), Scalar(2) / degree) * (cosAngle >= 0 ? 1 : -1),
+                center[1] + radiusY * std::pow(std::abs(sinAngle), Scalar(2) / degree) * (sinAngle >= 0 ? 1 : -1)
+            );
+            vertices.push_back(curve.add_vertex(position));
+        }
+
+        // Create edges between consecutive vertices
+        for (size_t i = 0; i < vertices.size() - 1; ++i)
+        {
+            curve.new_edge(vertices[i], vertices[i + 1]);
+        }
 
         return curve;
     }

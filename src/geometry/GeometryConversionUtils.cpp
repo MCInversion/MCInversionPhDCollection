@@ -17,7 +17,13 @@
 #include <numeric>
 
 #include "pmp/algorithms/Normals.h"
+
 #include "quickhull/QuickHull.hpp"
+
+#include "sawhney_mat/MedialAxisTransform.h"
+#include "sawhney_mat/BoundaryElement.h"
+#include "sawhney_mat/BoundaryGenerator.h"
+#include "sawhney_mat/Path.h"
 
 #ifdef _WINDOWS
 // Windows-specific headers
@@ -1148,13 +1154,6 @@ namespace Geometry
 			return false;
 		}
 
-		std::ofstream file(absFileName);
-		if (!file.is_open())
-		{
-			std::cerr << "Geometry::ExportPointsToPLY: Failed to open file for writing: " << absFileName << std::endl;
-			return false;
-		}
-
 		// Write to a .ply file
 		std::ofstream outFile(absFileName);
 		if (!outFile.is_open())
@@ -1832,6 +1831,230 @@ namespace Geometry
 		}
 
 		return slicedPoints;
+	}
+
+	namespace
+	{
+		// Function to sample points along a parabolic segment
+		[[nodiscard]] std::vector<pmp::Point2> SampleParabola(const MAT::Parabola& parabola, const Vector2d& start, const Vector2d& end, size_t numSamples)
+		{
+			std::vector<pmp::Point2> sampledPoints;
+			double step = (end.x() - start.x()) / static_cast<double>(numSamples);
+
+			for (size_t i = 0; i <= numSamples; ++i)
+			{
+				double x = start.x() + i * step;
+				auto ys = parabola.getY(x); // Get the two possible y-values for the parabola at x
+				double y = (i == 0) ? ys.first : ys.second;  // Pick the appropriate branch of the parabola
+
+				sampledPoints.emplace_back(pmp::Point2(x, y));
+			}
+
+			return sampledPoints;
+		}
+	} // anonymous namespace
+
+	std::optional<BaseCurveGeometryData> CalculateApproxMedialAxisFromCurve(const pmp::ManifoldCurve2D& curve)
+	{
+		if (curve.is_empty())
+		{
+			std::cerr << "CalculateApproxMedialAxisFromCurve: curve is empty!\n";
+			return {};
+		}
+
+		if (!curve.is_closed())
+		{
+			std::cerr << "CalculateApproxMedialAxisFromCurve: curve is not closed!\n";
+			return {};
+		}
+
+		// Convert the ManifoldCurve2D vertices to a vector of Vector2d in reverse order (CW)
+		std::vector<Vector2d> customShapePoints;
+		for (auto it = curve.vertices().end() - 1; it != curve.vertices().begin(); --it)
+		{
+			const pmp::Point2& point = curve.position(*it);
+			customShapePoints.push_back(Vector2d(point[0], point[1]));
+		}
+
+		// Initialize the medial axis data structure
+		Geometry::BaseCurveGeometryData medialAxisData;
+
+		// Generate boundary elements using the BoundaryGenerator
+		MAT::BoundaryGenerator boundaryGen;
+		std::vector<MAT::BoundaryElement> boundaryElements = boundaryGen.getBoundaryElementsFromCurve(customShapePoints);
+
+		if (boundaryElements.empty())
+		{
+			std::cerr << "CalculateApproxMedialAxisFromCurve: Failed to generate boundary elements!\n";
+			return {};
+		}
+
+		// force transitions for boundaryElements
+		for (size_t i = 0; i < boundaryElements.size(); ++i)
+		{
+			size_t iNext = (i + 1) % boundaryElements.size();
+			size_t iPrev = (i + boundaryElements.size() - 1) % boundaryElements.size();
+			boundaryElements[i].transForward = iNext;
+			boundaryElements[iNext].transBack = iPrev;
+		}
+
+		// Run the medial axis transform using the generated boundary elements
+		MAT::MedialAxisTransform mat;
+		mat.setBoundaryElements(boundaryElements);
+		std::vector<MAT::Path> medialPaths = mat.run();
+
+		// debug medialPaths
+		for (const auto& path : medialPaths)
+		{
+			std::cout << "Path: { " << path.keyPoint1.x() << ", " << path.keyPoint1.y() << " } -> { " << path.keyPoint2.x() << ", " << path.keyPoint2.y() << " }\n";
+		}
+
+		// For each path, sample the parabolic segments and store them
+		size_t numSamplesPerParabola = 20;  // Adjust the number of samples per parabolic segment as needed
+		for (const auto& path : medialPaths)
+		{
+			if (path.parabola.set) 
+			{
+				// Sample points along the parabola
+				auto sampledPoints = SampleParabola(path.parabola, path.keyPoint1, path.keyPoint2, numSamplesPerParabola);
+
+				// Add the sampled points to the medial axis data
+				for (const auto& point : sampledPoints)
+				{
+					medialAxisData.Vertices.push_back(point);
+				}
+
+				// Add edges between consecutive sampled points
+				for (size_t i = 0; i < sampledPoints.size() - 1; ++i)
+				{
+					medialAxisData.EdgeIndices.push_back({ medialAxisData.Vertices.size() - sampledPoints.size() + i,
+						medialAxisData.Vertices.size() - sampledPoints.size() + i + 1 });
+				}
+			}
+			else 
+			{
+				// Handle linear segments by directly connecting the key points
+				const auto p1 = pmp::Point2(path.keyPoint1.x(), path.keyPoint1.y());
+				const auto p2 = pmp::Point2(path.keyPoint2.x(), path.keyPoint2.y());
+				if (norm(p1 - p2) < 1e-6f) 
+					continue; // Skip zero-length segments
+
+				medialAxisData.Vertices.push_back(p1);
+				medialAxisData.Vertices.push_back(p2);
+				medialAxisData.EdgeIndices.push_back({ medialAxisData.Vertices.size() - 2, medialAxisData.Vertices.size() - 1 });
+			}
+		}
+
+		return medialAxisData;
+	}
+
+	bool ExportBaseCurveGeometryDataToPLY(const BaseCurveGeometryData& geomData, const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "ply")
+		{
+			std::cerr << "Geometry::ExportBaseCurveGeometryDataToPLY:" << absFileName << " has invalid extension!" << std::endl;
+			return false;
+		}
+
+		if (geomData.Vertices.empty())
+		{
+			std::cerr << "Geometry::ExportBaseCurveGeometryDataToPLY: No vertices to write!\n";
+			return false;
+		}
+
+		// Write to a .ply file
+		std::ofstream outFile(absFileName);
+		if (!outFile.is_open())
+		{
+			std::cerr << "Geometry::ExportBaseCurveGeometryDataToPLY: Unable to open file: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Write the PLY header
+		outFile << "ply\n";
+		outFile << "format ascii 1.0\n";
+		outFile << "element vertex " << geomData.Vertices.size() << "\n";
+		outFile << "property float x\n";
+		outFile << "property float y\n";
+		outFile << "property float z\n";
+		outFile << "element edge " << geomData.EdgeIndices.size() << "\n";
+		outFile << "property int vertex1\n";
+		outFile << "property int vertex2\n";
+		outFile << "end_header\n";
+
+		// Write the vertex data
+		for (const auto& vertex : geomData.Vertices)
+		{
+			outFile << vertex[0] << " " << vertex[1] << " 0.0\n"; // Since it's 2D, z is set to 0
+		}
+
+		// Write the edge data
+		for (const auto& edge : geomData.EdgeIndices)
+		{
+			outFile << edge.first << " " << edge.second << "\n";
+		}
+
+		// Close the file
+		outFile.close();
+		return true;
+	}
+
+	std::optional<BaseCurveGeometryData> GetMedialAxisOfSawhneysStupidMATAlgorithm(unsigned char shape)
+	{
+		MAT::BoundaryGenerator boundaryGen;
+		std::vector<MAT::BoundaryElement> boundaryElements = boundaryGen.getBoundaryElements(shape);
+
+		MAT::MedialAxisTransform mat;
+		mat.setBoundaryElements(boundaryElements);
+		std::vector<MAT::Path> medialPaths = mat.run();
+
+		// debug medialPaths
+		for (const auto& path : medialPaths)
+		{
+			std::cout << "Path: { " << path.keyPoint1.x() << ", " << path.keyPoint1.y() << " } -> { " << path.keyPoint2.x() << ", " << path.keyPoint2.y() << " }\n";
+		}
+
+		// Initialize the medial axis data structure
+		Geometry::BaseCurveGeometryData medialAxisData;
+
+		// For each path, sample the parabolic segments and store them
+		size_t numSamplesPerParabola = 20;  // Adjust the number of samples per parabolic segment as needed
+		for (const auto& path : medialPaths)
+		{
+			if (path.parabola.set)
+			{
+				// Sample points along the parabola
+				auto sampledPoints = SampleParabola(path.parabola, path.keyPoint1, path.keyPoint2, numSamplesPerParabola);
+
+				// Add the sampled points to the medial axis data
+				for (const auto& point : sampledPoints)
+				{
+					medialAxisData.Vertices.push_back(point);
+				}
+
+				// Add edges between consecutive sampled points
+				for (size_t i = 0; i < sampledPoints.size() - 1; ++i)
+				{
+					medialAxisData.EdgeIndices.push_back({ medialAxisData.Vertices.size() - sampledPoints.size() + i,
+						medialAxisData.Vertices.size() - sampledPoints.size() + i + 1 });
+				}
+			}
+			else
+			{
+				// Handle linear segments by directly connecting the key points
+				const auto p1 = pmp::Point2(path.keyPoint1.x(), path.keyPoint1.y());
+				const auto p2 = pmp::Point2(path.keyPoint2.x(), path.keyPoint2.y());
+				if (norm(p1 - p2) < 1e-6f)
+					continue; // Skip zero-length segments
+
+				medialAxisData.Vertices.push_back(p1);
+				medialAxisData.Vertices.push_back(p2);
+				medialAxisData.EdgeIndices.push_back({ medialAxisData.Vertices.size() - 2, medialAxisData.Vertices.size() - 1 });
+			}
+		}
+
+		return medialAxisData;
 	}
 
 } // namespace Geometry
