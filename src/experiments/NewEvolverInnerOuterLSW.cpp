@@ -3272,11 +3272,8 @@ void StandardMeshesIOLSWTests()
 
 	constexpr unsigned int NTimeSteps = 400;
 
-	constexpr bool executeOldEvolver = false;
-	constexpr bool executeNewSurfaceEvolver = false;
-	constexpr bool executeNewCurveEvolver = true;
-	constexpr bool executeNewSurfaceCustomEvolver = false;
-	constexpr bool executeNewCurveCustomEvolver = false;
+	constexpr bool executeNewSurfaceCustomEvolver = true;
+	constexpr bool executeNewCurveCustomEvolver = true;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
@@ -3447,7 +3444,8 @@ void StandardMeshesIOLSWTests()
 					0.0f, 0.0f, 1.0f, innerSphere.Center[2],
 					0.0f, 0.0f, 0.0f, 1.0f
 				};
-				outerSurface *= transfMatrixGeomMove;
+				innerSurface *= transfMatrixGeomMove;
+				innerSurfaces.push_back(innerSurface);
 			}
 
 			auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
@@ -3526,13 +3524,25 @@ void StandardMeshesIOLSWTests()
 				continue;
 			}
 
+			if (!innerCircles.contains(meshName))
+			{
+				std::cerr << "!innerCircles.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+
 			const auto outerCircle = outerCircles.at(meshName);
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
 			auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
 
-			// TODO: finish inner circles setup
-
 			std::vector<pmp::ManifoldCurve2D> innerCurves;
+			for (const auto& innerCircle : innerCircles.at(meshName))
+			{
+				const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
+				auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
+				innerCurve.negate_orientation();
+				innerCurves.push_back(innerCurve);
+			}
+
 			auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 				strategySettings, outerCurve, innerCurves,
 				std::make_shared<std::vector<pmp::Point2>>(pts2D));
@@ -3627,8 +3637,8 @@ void MedialAxisTests()
 
 void HyperellipseEllipsoidEquilibriumTests()
 {
-	pmp::ManifoldCurve2D hyperEllipse = pmp::CurveFactory::hyper_ellipse(pmp::Point2{ 0, 0 }, 300.0, 150.0, 4, 40);
-	hyperEllipse.negate_orientation();
+	pmp::ManifoldCurve2D hyperEllipse = pmp::CurveFactory::hyper_ellipse(pmp::Point2{ 0, 0 }, 200.0, 110.0, 4, 40);
+	//hyperEllipse.negate_orientation();
 	if (!pmp::write_to_ply(hyperEllipse, dataOutPath + "hyperEllipse.ply"))
 		std::cerr << "Error writing hyperEllipse.ply!\n";
 	// remesh hyper ellipse
@@ -3645,9 +3655,11 @@ void HyperellipseEllipsoidEquilibriumTests()
 	remesher.adaptive_remeshing(settings);	
 
 	const std::vector<Circle2D> testInnerCircles{
-		{ pmp::Point2{ 0.0f, 0.0f }, 130.0f },
-		{ pmp::Point2{ 100.0f, 0.0f }, 60.0f },
-		{ pmp::Point2{ 130.0f, 0.0f }, 60.0f }
+		//{ pmp::Point2{ 0.0f, 0.0f }, 70.0f },
+		//{ pmp::Point2{ 100.0f, 0.0f }, 60.0f },
+		//{ pmp::Point2{ 140.0f, 0.0f }, 40.0f }
+		//{ pmp::Point2{ 130.0f, 0.0f }, 60.0f },
+		{ pmp::Point2{ 130.0f, 40.0f }, 40.0f }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -3656,7 +3668,7 @@ void HyperellipseEllipsoidEquilibriumTests()
 	constexpr unsigned int NTimeSteps = 180;
 	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
 
-	for (size_t hyperellipseId = 0; const auto& innerCircle : testInnerCircles)
+	for (size_t hyperellipseId = 9; const auto& innerCircle : testInnerCircles)
 	{
 		std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -3665,15 +3677,15 @@ void HyperellipseEllipsoidEquilibriumTests()
 		strategySettings.AdvectionInteractWithOtherManifolds = true;
 		strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
-				return 0.01 * (1.0 - exp(-distance * distance / 1.0));
+			return 0.00; // * (1.0 - exp(-distance * distance / 1.0));
 			};
 		strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 0.01 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			return 0.00; // * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 		strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				return 0.0 * TRIVIAL_EPSILON(distance);
+				return 0.0025 * TRIVIAL_EPSILON(distance);
 			};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
@@ -3683,7 +3695,7 @@ void HyperellipseEllipsoidEquilibriumTests()
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
-		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
 		strategySettings.RemeshingSettings.UseBackProjection = false;
 
 		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;

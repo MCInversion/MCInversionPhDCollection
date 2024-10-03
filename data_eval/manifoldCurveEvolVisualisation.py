@@ -37,7 +37,7 @@ import matplotlib.patches as patches
 #procedure_name = "maxPlancknewEvol_Pts2D3_WithRepulsion"
 #procedure_name = "nefertitinewEvol_Pts2D3_WithRepulsion"
 
-procedure_name = "curve0_Repulsionless"
+#procedure_name = "curve0_Repulsionless"
 #procedure_name = "curve1_Repulsionless"
 #procedure_name = "curve2_Repulsionless"
 #procedure_name = "curve3_Repulsionless"
@@ -85,6 +85,17 @@ procedure_name = "curve0_Repulsionless"
 #procedure_name = "mcfCurve0"
 #procedure_name = "mcfCurve1"
 
+#procedure_name = "hyperellipse0"
+#procedure_name = "hyperellipse1"
+#procedure_name = "hyperellipse2"
+#procedure_name = "hyperellipse3"
+#procedure_name = "hyperellipse4"
+#procedure_name = "hyperellipse5"
+#procedure_name = "hyperellipse6"
+#procedure_name = "hyperellipse7"
+#procedure_name = "hyperellipse8"
+procedure_name = "hyperellipse9"
+
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
 
@@ -98,6 +109,7 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 
 # a specified time step container for exporting a single png with opaque curve polylines (except the last one). If empty, no png will be exported
 #multi_png_time_steps = []
+#multi_png_time_steps = [0, 2, 4, 8, 12, 16, 22]
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
 #multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
 multi_png_time_steps = [0, 4, 10, 40, 100, 180]

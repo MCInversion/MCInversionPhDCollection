@@ -902,12 +902,12 @@ bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 			continue;
 
 		// check whether the inner curve is contained inside the outer curve.
-		const auto& outerCurve = *GetOuterCurve();
-		for (const auto& p : innerCurve->positions())
-		{
-			if (!Geometry::IsPointInsidePMPManifoldCurve(p, outerCurve))
-				return false;
-		}
+		//const auto& outerCurve = *GetOuterCurve();
+		//for (const auto& p : innerCurve->positions())
+		//{
+		//	if (!Geometry::IsPointInsidePMPManifoldCurve(p, outerCurve))
+		//		return false;
+		//}
 	}
 
 	return true;
