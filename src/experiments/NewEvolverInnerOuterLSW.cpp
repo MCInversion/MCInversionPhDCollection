@@ -3374,7 +3374,15 @@ void StandardMeshesIOLSWTests()
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.InnerManifoldEpsilon = [](double distance)
+			{
+				return 0.002 * TRIVIAL_EPSILON(distance);
+			};
+			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 3;
@@ -3445,6 +3453,7 @@ void StandardMeshesIOLSWTests()
 					0.0f, 0.0f, 0.0f, 1.0f
 				};
 				innerSurface *= transfMatrixGeomMove;
+				innerSurface.negate_orientation();
 				innerSurfaces.push_back(innerSurface);
 			}
 
