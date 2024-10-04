@@ -94,7 +94,15 @@ import matplotlib.patches as patches
 #procedure_name = "hyperellipse6"
 #procedure_name = "hyperellipse7"
 #procedure_name = "hyperellipse8"
-procedure_name = "hyperellipse9"
+#procedure_name = "hyperellipse9"
+
+#procedure_name = "bunny_CurveIOLSW"
+#procedure_name = "maxPlanck_CurveIOLSW"
+
+#procedure_name = "canStraight_CurveIOLSW"
+procedure_name = "canStraightMissingBottom_CurveIOLSW"
+#procedure_name = "crushedCan_CurveIOLSW"
+#procedure_name = "crushedCanMissingBottom_CurveIOLSW"
 
 #directory = "../output/core_tests/"  # Adjust this path accordingly
 directory = "../output"  # Adjust this path accordingly
@@ -380,6 +388,7 @@ time_ids = []  # To store the time_id values
 
 for f in sorted(os.listdir(directory)):
     if f.startswith(f"{procedure_name}_Inner") and f.endswith(".ply"):
+
         # The files take form of "{procedure_name}_Inner{curve_id}_Evol_{time_id}.ply"
         # Extract the curve ID and time ID from the filename
         parts = f.split('_')

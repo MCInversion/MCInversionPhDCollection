@@ -208,6 +208,7 @@ void OuterOnlySimpleShapeTests();
 void StandardMeshesIOLSWTests();
 void MedialAxisTests();
 void HyperellipseEllipsoidEquilibriumTests();
+void JunkCan2DTests();
 
 //
 // =================================================================================
@@ -320,7 +321,8 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"OuterOnlySimpleShapeTests", OuterOnlySimpleShapeTests },
     {"StandardMeshesIOLSWTests", StandardMeshesIOLSWTests },
     {"MedialAxisTests", MedialAxisTests },
-    {"HyperellipseEllipsoidEquilibriumTests", HyperellipseEllipsoidEquilibriumTests }
+    {"HyperellipseEllipsoidEquilibriumTests", HyperellipseEllipsoidEquilibriumTests },
+    {"JunkCan2DTests", JunkCan2DTests }
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

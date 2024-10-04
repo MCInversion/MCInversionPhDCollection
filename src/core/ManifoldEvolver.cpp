@@ -42,8 +42,8 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	if (!GetOuterCurve() && GetInnerCurves().empty())
 		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
 	
-	if (!HasValidInnerOuterManifolds())
-		throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner curves are contained within the custom outer curve.\n");
+	//if (!HasValidInnerOuterManifolds())
+	//	throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner curves are contained within the custom outer curve.\n");
 
 	if (NeedsFieldsCalculation())
 	{
@@ -1077,8 +1077,8 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 	if (!GetOuterSurface() && GetInnerSurfaces().empty())
 		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: There's nothing to evolve!\n");
 
-	if (!HasValidInnerOuterManifolds())
-		throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner surfaces are contained within the custom outer surface.\n");
+	//if (!HasValidInnerOuterManifolds())
+	//	throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner surfaces are contained within the custom outer surface.\n");
 
 	if (NeedsFieldsCalculation())
 	{

@@ -115,9 +115,10 @@ int main()
         // "ExportSlicingPlanes",
         // "AdvectionDrivenInnerOuterCircleTests",
         // "OuterOnlySimpleShapeTests",
-        "StandardMeshesIOLSWTests",
+        // "StandardMeshesIOLSWTests",
 		// "MedialAxisTests",
-		// "HyperellipseEllipsoidEquilibriumTests"
+		// "HyperellipseEllipsoidEquilibriumTests",
+        "JunkCan2DTests"
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here
