@@ -228,42 +228,39 @@ Edge SurfaceMesh::find_edge(Vertex a, Vertex b) const
 
 void SurfaceMesh::negate_orientation()
 {
+    // Reverse halfedges for each face
     for (auto f : faces())
     {
         Halfedge h0 = halfedge(f);
         Halfedge h = h0;
 
-        // To store the reversed halfedge sequence
-        std::vector<Halfedge> reversed_halfedges;
-        // Collect all halfedges of the face in a vector
+        // Store halfedges in original order
+        std::vector<Halfedge> halfedges;
+        halfedges.reserve(valence(f));
         do
         {
-            reversed_halfedges.push_back(h);
+            halfedges.push_back(h);
             h = next_halfedge(h);
         } while (h != h0);
 
-        // Now reverse the orientation by reversing the halfedges' next pointers
-        for (size_t i = 0; i < reversed_halfedges.size(); ++i)
+        // Reverse the next and prev pointers for the halfedges
+        for (size_t i = 0; i < halfedges.size(); ++i)
         {
-            Halfedge h_current = reversed_halfedges[i];
-            Halfedge h_prev = reversed_halfedges[(i + reversed_halfedges.size() - 1) % reversed_halfedges.size()];
+            Halfedge h_current = halfedges[i];
+            Halfedge h_next = halfedges[(i + 1) % halfedges.size()];
+            Halfedge h_prev = halfedges[(i + halfedges.size() - 1) % halfedges.size()];
 
-            // Set the new next halfedge to be the previous one in the original sequence
-            set_next_halfedge(h_current, h_prev);
+            // Reverse the next and prev pointers
+            hconn_[h_current].next_halfedge_ = h_prev;
+            hconn_[h_current].prev_halfedge_ = h_next;
         }
     }
 
-    // The vertex ordering for the half-edges also needs to be reversed.
+    // Now update the vertex assignments once next/prev are guaranteed to be correct
     for (auto h : halfedges())
     {
-        // Swap the from_vertex and to_vertex of the half-edge
-        Halfedge opp = opposite_halfedge(h);
-        Vertex from = from_vertex(h);
-        Vertex to = to_vertex(h);
-
-        // Swap the vertices
-        set_vertex(h, from);
-        set_vertex(opp, to);
+        Vertex v_from = from_vertex(h);  // This should now be correct after updating next/prev
+        hconn_[h].vertex_ = v_from;
     }
 }
 

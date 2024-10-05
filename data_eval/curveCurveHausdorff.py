@@ -168,9 +168,9 @@ def compute_and_plot_hausdorff_distances(procedure_names):
         plt.plot(time_ids[:len(normalized_distances)], normalized_distances, label=f'{proper_name}', linewidth=2)
 
     # Customize the plot
-    plt.title('Normalized Hausdorff Distance Over Time for Different Procedures')
+    #plt.title('Normalized Hausdorff Distance Over Time for Different Procedures')
     plt.xlabel('Time Step')
-    plt.ylabel('H(F,G) (%)')
+    plt.ylabel("$d_{{H}}$(F, G)")
     plt.legend(loc='upper center')
     plt.grid(True)
     plt.tight_layout()

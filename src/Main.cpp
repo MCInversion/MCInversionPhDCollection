@@ -99,7 +99,7 @@ int main()
         // "ManifoldCurve2DTests",
         // "PointCloud2DSliceTests",
         // "CurveReorientTests",
-        // "MeshReorientTests",
+        "MeshReorientTests",
         // "PropertyPerformanceTests",
         // "OldVsNewLSWTests",
         // "PairedLSWTests",
@@ -118,7 +118,7 @@ int main()
         // "StandardMeshesIOLSWTests",
 		// "MedialAxisTests",
 		// "HyperellipseEllipsoidEquilibriumTests",
-        "JunkCan2DTests"
+        // "JunkCan2DTests"
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

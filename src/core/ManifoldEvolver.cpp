@@ -62,12 +62,10 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	{
 		const auto [minLength, maxLength] = CalculateCoVolumeRange();
 
-		// TODO: remove
 		std::cout << "Before stabilization: { minLength: " << minLength << ", maxLength: " << maxLength << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 
 		StabilizeCustomGeometries(minLength, maxLength);
 
-		// TODO: remove
 		const auto [minLengthAfter, maxLengthAfter] = CalculateCoVolumeRange();
 		std::cout << "After stabilization: { minLengthAfter: " << minLengthAfter << ", maxLengthAfter: " << maxLengthAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
@@ -130,7 +128,7 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOu
 		auto exportedOuterCurve = *m_OuterCurve;
 		exportedOuterCurve *= m_TransformToOriginal;
 		if (!write_to_ply(exportedOuterCurve, baseOutputFilename + "_Outer" + connectingName + ".ply"))
-			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
+			std::cerr << "ManifoldCurveEvolutionStrategy::ExportFinalResult: error writing " << (baseOutputFilename + "_Outer" + connectingName + ".ply") << "!\n";
 	}
 
 	for (size_t i = 0; const auto & innerCurve : m_InnerCurves)
@@ -138,7 +136,7 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOu
 		auto exportedInnerCurve = *innerCurve;
 		exportedInnerCurve *= m_TransformToOriginal;
 		if (!write_to_ply(exportedInnerCurve, baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply"))
-			std::cerr << "ManifoldCurveEvolutionStrategy::ExportCurrentState: error writing " << (baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply") << "!\n";
+			std::cerr << "ManifoldCurveEvolutionStrategy::ExportFinalResult: error writing " << (baseOutputFilename + "_Inner" + std::to_string(i++) + connectingName + ".ply") << "!\n";
 	}
 }
 
@@ -975,7 +973,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	{
 		const auto outerBounds = GetOuterCurve()->bounds();
 		const auto outerBoundsSize = outerBounds.max() - outerBounds.min();
-		radius = std::max(outerBoundsSize[0], outerBoundsSize[1]) * 0.58;
+		radius = std::max(outerBoundsSize[0], outerBoundsSize[1]) * 0.5;
 		origin = outerBounds.center();
 	}
 	else
@@ -1096,7 +1094,11 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 	if (GetSettings().UseStabilizationViaScaling)
 	{
 		const auto [minArea, maxArea] = CalculateCoVolumeRange();
+		std::cout << "Before stabilization: { minArea: " << minArea << ", maxArea: " << maxArea << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
+
 		StabilizeCustomGeometries(minArea, maxArea);
+		const auto [minAreaAfter, maxAreaAfter] = CalculateCoVolumeRange();
+		std::cout << "After stabilization: { minAreaAfter: " << minAreaAfter << ", maxAreaAfter: " << maxAreaAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
 	AssignRemeshingSettingsToEvolvingManifolds();
 }
@@ -1173,6 +1175,46 @@ void ManifoldSurfaceEvolutionStrategy::ExportFinalResult(const std::string& base
 
 void ManifoldSurfaceEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename)
 {
+	if (GetSettings().ExportVariableScalarFieldsDimInfo && m_OuterSurfaceDistanceField)
+	{
+		auto exportedOuterSurfaceDF = *m_OuterSurfaceDistanceField;
+		exportedOuterSurfaceDF *= m_TransformToOriginal;
+		exportedOuterSurfaceDF /= static_cast<double>(GetScalingFactor());
+		ExportToVTI(baseOutputFilename + "_OuterDF", exportedOuterSurfaceDF);
+	}
+	if (GetSettings().ExportVariableVectorFieldsDimInfo && m_OuterSurfaceDFNegNormalizedGradient)
+	{
+		auto exportedOuterSurfaceDFNegGrad = *m_OuterSurfaceDFNegNormalizedGradient;
+		exportedOuterSurfaceDFNegGrad *= m_TransformToOriginal;
+		ExportToVTK(baseOutputFilename + "_OuterDFNegGrad", exportedOuterSurfaceDFNegGrad);
+	}
+	if (GetSettings().ExportVariableScalarFieldsDimInfo)
+	{
+		for (size_t i = 0; i < m_InnerSurfacesDistanceFields.size(); ++i)
+		{
+			if (!m_InnerSurfacesDistanceFields[i])
+				continue;
+
+			auto exportedInnerSurfaceDF = *m_InnerSurfacesDistanceFields[i];
+			exportedInnerSurfaceDF *= m_TransformToOriginal;
+			exportedInnerSurfaceDF /= static_cast<double>(GetScalingFactor());
+			ExportToVTI(baseOutputFilename + "_InnerDF" + std::to_string(i), exportedInnerSurfaceDF);
+		}
+	}
+	if (GetSettings().ExportVariableVectorFieldsDimInfo)
+	{
+		for (size_t i = 0; i < m_InnerSurfacesDFNegNormalizedGradients.size(); ++i)
+		{
+			if (!m_InnerSurfacesDFNegNormalizedGradients[i])
+				continue;
+
+			auto exportedInnerSurfaceDFNegGrad = *m_InnerSurfacesDFNegNormalizedGradients[i];
+			exportedInnerSurfaceDFNegGrad *= m_TransformToOriginal;
+			ExportToVTK(baseOutputFilename + "_InnerDFNegGrad" + std::to_string(i), exportedInnerSurfaceDFNegGrad);
+		}
+	}
+	// ----------------------------------------------------------------
+
 	if (!m_DistanceField)
 		return; // field not defined
 
@@ -1651,9 +1693,10 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 		SDF::BlurPostprocessingType::None,
 		SDF::PreprocessingType::Octree
 	};
+	const std::optional<pmp::BoundingBox> outerFieldBox = m_DistanceField ? std::make_optional(m_DistanceField->Box()) : std::nullopt;
 	const Geometry::PMPSurfaceMeshAdapter outerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(*m_OuterSurface));
 	m_OuterSurfaceDistanceField = std::make_shared<Geometry::ScalarGrid>(
-		SDF::DistanceFieldGenerator::Generate(outerSurfaceAdapter, surfaceDFSettings));
+		SDF::DistanceFieldGenerator::Generate(outerSurfaceAdapter, surfaceDFSettings, outerFieldBox));
 	m_OuterSurfaceDFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid>(ComputeNormalizedNegativeGradient(*m_OuterSurfaceDistanceField));
 
 	for (const auto& innerSurface : m_InnerSurfaces)
