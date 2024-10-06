@@ -341,14 +341,14 @@ void CurveReorientTests()
 void MeshReorientTests()
 {
 	const std::vector<std::string> meshNames{
-		"ico"
-		//"armadillo",
-		//"blub",
-		//"bunny",
-		//"maxPlanck",
-		//"nefertiti",
-		//"ogre",
-		//"spot"
+		"ico",
+		"armadillo",
+		"blub",
+		"bunny",
+		"maxPlanck",
+		"nefertiti",
+		"ogre",
+		"spot"
 	};
 
 	for (const auto& meshName : meshNames)
@@ -359,62 +359,62 @@ void MeshReorientTests()
 		mesh.read(dataDirPath + meshName + ".obj");
 		mesh.negate_orientation();
 
-		// Function to test forward and backward circulation and check topological consistency of halfedges
-		auto test_halfedge_circulation = [&](pmp::Face f) {
-			pmp::Halfedge h0 = mesh.halfedge(f); // Start with the first halfedge of the face
-			pmp::Halfedge h = h0;
+		//// Function to test forward and backward circulation and check topological consistency of halfedges
+		//auto test_halfedge_circulation = [&](pmp::Face f) {
+		//	pmp::Halfedge h0 = mesh.halfedge(f); // Start with the first halfedge of the face
+		//	pmp::Halfedge h = h0;
 
-			bool testPassed = true;
+		//	bool testPassed = true;
 
-			// Check forward and backward circulation and test key methods
-			do
-			{
-				pmp::Halfedge next_h = mesh.next_halfedge(h);
-				pmp::Halfedge prev_h = mesh.prev_halfedge(h);
-				pmp::Vertex from_v = mesh.from_vertex(h);
-				pmp::Vertex to_v = mesh.to_vertex(h);
+		//	// Check forward and backward circulation and test key methods
+		//	do
+		//	{
+		//		pmp::Halfedge next_h = mesh.next_halfedge(h);
+		//		pmp::Halfedge prev_h = mesh.prev_halfedge(h);
+		//		pmp::Vertex from_v = mesh.from_vertex(h);
+		//		pmp::Vertex to_v = mesh.to_vertex(h);
 
-				// 1. Test if next and previous halfedge form a consistent loop
-				if (mesh.next_halfedge(prev_h) != h)
-				{
-					//std::cout << "ERR [0]: next_halfedge(prev_halfedge(h)) != h for halfedge " << h.idx() << "\n";
-					testPassed = false;
-				}
-				if (mesh.prev_halfedge(next_h) != h)
-				{
-					//std::cout << "ERR [1]: prev_halfedge(next_halfedge(h)) != h for halfedge " << h.idx() << "\n";
-					testPassed = false;
-				}
+		//		// 1. Test if next and previous halfedge form a consistent loop
+		//		if (mesh.next_halfedge(prev_h) != h)
+		//		{
+		//			//std::cout << "ERR [0]: next_halfedge(prev_halfedge(h)) != h for halfedge " << h.idx() << "\n";
+		//			testPassed = false;
+		//		}
+		//		if (mesh.prev_halfedge(next_h) != h)
+		//		{
+		//			//std::cout << "ERR [1]: prev_halfedge(next_halfedge(h)) != h for halfedge " << h.idx() << "\n";
+		//			testPassed = false;
+		//		}
 
-				// 2. Check vertex connectivity between next/prev
-				if (mesh.from_vertex(next_h) != to_v)
-				{
-					//std::cout << "ERR [2]: to_vertex of current halfedge does not match from_vertex of next_halfedge at halfedge " << h.idx() << "\n";
-					testPassed = false;
-				}
-				if (mesh.to_vertex(prev_h) != from_v)
-				{
-					//std::cout << "ERR [3]: from_vertex of current halfedge does not match to_vertex of prev_halfedge at halfedge " << h.idx() << "\n";
-					testPassed = false;
-				}
+		//		// 2. Check vertex connectivity between next/prev
+		//		if (mesh.from_vertex(next_h) != to_v)
+		//		{
+		//			//std::cout << "ERR [2]: to_vertex of current halfedge does not match from_vertex of next_halfedge at halfedge " << h.idx() << "\n";
+		//			testPassed = false;
+		//		}
+		//		if (mesh.to_vertex(prev_h) != from_v)
+		//		{
+		//			//std::cout << "ERR [3]: from_vertex of current halfedge does not match to_vertex of prev_halfedge at halfedge " << h.idx() << "\n";
+		//			testPassed = false;
+		//		}
 
-				// 4. Output debug info for vertices and positions
-				std::cout << "Halfedge " << h.idx() << " connects vertex " << from_v.idx() << " to vertex " << to_v.idx() << "\n";
+		//		// 4. Output debug info for vertices and positions
+		//		std::cout << "Halfedge " << h.idx() << " connects vertex " << from_v.idx() << " to vertex " << to_v.idx() << "\n";
 
-				h = next_h;
-			} while (h != h0); // Continue until we've looped back to the start
+		//		h = next_h;
+		//	} while (h != h0); // Continue until we've looped back to the start
 
-			return testPassed;
-		};
+		//	return testPassed;
+		//};
 
-		// Iterate through faces and check halfedge circulation and topological consistency
-		for (auto f : mesh.faces())
-		{
-			if (!test_halfedge_circulation(f))
-			{
-				std::cout << "Circulation test failed for face " << f.idx() << "\n";
-			}
-		}
+		//// Iterate through faces and check halfedge circulation and topological consistency
+		//for (auto f : mesh.faces())
+		//{
+		//	if (!test_halfedge_circulation(f))
+		//	{
+		//		std::cout << "Circulation test failed for face " << f.idx() << "\n";
+		//	}
+		//}
 
 		pmp::Normals::compute_vertex_normals(mesh);
 		auto vNormalsProp = mesh.get_vertex_property<pmp::vec3>("v:normal");

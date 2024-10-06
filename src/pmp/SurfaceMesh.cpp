@@ -228,7 +228,28 @@ Edge SurfaceMesh::find_edge(Vertex a, Vertex b) const
 
 void SurfaceMesh::negate_orientation()
 {
-    // Reverse halfedges for each face
+    // Map to store the original from/to vertex pairs
+    std::unordered_map<unsigned int, std::pair<Vertex, Vertex>> vertex_map;
+
+    // Step 1: Store the original vertex pairs (from/to) in a map
+    for (auto f : faces())
+    {
+        Halfedge h0 = halfedge(f);
+        Halfedge h = h0;
+
+        do
+        {
+            Vertex from_v = from_vertex(h);
+            Vertex to_v = to_vertex(h);
+
+            // Store the original from/to pair in the map
+            vertex_map[h.idx()] = { from_v, to_v };
+
+            h = next_halfedge(h);
+        } while (h != h0);
+    }
+
+    // Step 2: Reverse halfedges for each face
     for (auto f : faces())
     {
         Halfedge h0 = halfedge(f);
@@ -243,7 +264,7 @@ void SurfaceMesh::negate_orientation()
             h = next_halfedge(h);
         } while (h != h0);
 
-        // Reverse the next and prev pointers for the halfedges
+        // Step 3: Reverse the next and prev pointers for the halfedges
         for (size_t i = 0; i < halfedges.size(); ++i)
         {
             Halfedge h_current = halfedges[i];
@@ -253,16 +274,18 @@ void SurfaceMesh::negate_orientation()
             // Reverse the next and prev pointers
             hconn_[h_current].next_halfedge_ = h_prev;
             hconn_[h_current].prev_halfedge_ = h_next;
+
+            // Step 4: Reassign the vertices from the map (use the stored original from/to pair)
+            Vertex original_from = vertex_map[h_current.idx()].first;
+            Vertex original_to = vertex_map[h_current.idx()].second;
+
+            // Assign the original to_vertex as the new from_vertex after reversal
+            hconn_[h_current].vertex_ = original_from;
         }
     }
-
-    // Now update the vertex assignments once next/prev are guaranteed to be correct
-    for (auto h : halfedges())
-    {
-        Vertex v_from = from_vertex(h);  // This should now be correct after updating next/prev
-        hconn_[h].vertex_ = v_from;
-    }
 }
+
+
 
 void SurfaceMesh::adjust_outgoing_halfedge(Vertex v)
 {
