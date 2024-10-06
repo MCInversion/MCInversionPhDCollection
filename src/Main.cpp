@@ -99,7 +99,7 @@ int main()
         // "ManifoldCurve2DTests",
         // "PointCloud2DSliceTests",
         // "CurveReorientTests",
-        "MeshReorientTests",
+        // "MeshReorientTests",
         // "PropertyPerformanceTests",
         // "OldVsNewLSWTests",
         // "PairedLSWTests",
@@ -115,7 +115,7 @@ int main()
         // "ExportSlicingPlanes",
         // "AdvectionDrivenInnerOuterCircleTests",
         // "OuterOnlySimpleShapeTests",
-        // "StandardMeshesIOLSWTests",
+        "StandardMeshesIOLSWTests",
 		// "MedialAxisTests",
 		// "HyperellipseEllipsoidEquilibriumTests",
         // "JunkCan2DTests"

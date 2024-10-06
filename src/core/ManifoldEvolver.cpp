@@ -299,8 +299,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 
 			const double epsilonCtrlWeight =
-				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance)) +
-				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
+				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance));
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
@@ -309,7 +308,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double advectionDistance = 
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
-				(m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
+				((m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
+				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -411,8 +411,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 
 			const double epsilonCtrlWeight =
-				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance)) +
-				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
+				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance));
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
@@ -422,7 +421,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double advectionDistance = 
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
-				(m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
+				((m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
+				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
@@ -1966,6 +1966,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 {
 	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
 	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
 	GetScalingFactor() = scalingFactor;
 
 	// -----------------------------------------------------------------------------------------------

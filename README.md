@@ -13,16 +13,13 @@ This repo is a fork of the PMP Library: https://www.pmp-library.org.
 Additional dependencies include:
 
 - Eigen
-- Glew
-- Glfw
 - GoogleTest
-- Imgui
 - [Nanoflann](https://github.com/jlblancoc/nanoflann)
-- Rply
 - [VCGLib](https://github.com/cnr-isti-vclab/vcglib)
 - [Quickhull](https://github.com/akuukka/quickhull)
 - [Fade2D](https://github.com/Lee0326/Fade2D)
 - [Poly2Tri](https://github.com/greenm01/poly2tri)
+- [STBImage](https://github.com/nothings/stb/tree/master)
 
 ## Get Started
 
