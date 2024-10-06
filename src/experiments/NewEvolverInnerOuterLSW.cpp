@@ -3264,6 +3264,337 @@ void OuterOnlySimpleShapeTests()
 	}
 }
 
+void SimpleMeshesIOLSWTests()
+{
+	const std::vector<std::string> meshForPtCloudNames{
+		"boxWithAHole"
+	};
+	const std::map<std::string, double> timeStepSizesForPtClouds{
+		{ "boxWithAHole", 0.05 }
+	};
+	const std::map<std::string, double> isoLevelOffsetFactors{
+		{"boxWithAHole", 1.5 }
+	};
+
+	const std::map<std::string, Sphere3D> outerSpheres{
+		{"boxWithAHole", Sphere3D{pmp::Point{0, 0, 0}, 2.0f} },
+	};
+	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
+		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{0, 0, 0}, 0.9f}} },
+	};
+
+	constexpr unsigned int nVoxelsPerMinDimension = 30;
+	constexpr double defaultTimeStep = 0.05;
+	constexpr double defaultOffsetFactor = 1.5;
+
+	constexpr size_t samplingLevel = 9;
+	constexpr size_t nSamplings = 10;
+	constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+	constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+	//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
+	SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
+
+	constexpr unsigned int NTimeSteps = 180;
+
+	constexpr bool executeSurfaceLSW = false;
+	constexpr bool executeSurfaceIOLSW = true;
+
+	for (const auto& meshName : meshForPtCloudNames)
+	{
+		// =======================================================================
+		//   - - - - - - - - - - - - -   Data   Prep   - - - - - - - - - - - -
+		// -----------------------------------------------------------------------
+
+		std::cout << "==================================================================\n";
+		std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+		std::cout << "------------------------------------------------------------------\n";
+		const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+		if (!baseDataOpt.has_value())
+		{
+			std::cerr << "baseDataOpt == nullopt!\n";
+			break;
+		}
+		std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+		const auto& baseData = baseDataOpt.value();
+		const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+		size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+		nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+		std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+		auto ptCloud = SamplePointsFromMeshData(baseData, nVerts, seed);
+		const auto ptCloudName = meshName + "Pts_" + std::to_string(samplingLevel);
+
+		std::cout << "Cutting " << nVerts - ptCloud.size() << " / " << nVerts << " points ... \n";
+
+		std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+		Geometry::BaseMeshGeometryData ptData;
+		ptData.Vertices = ptCloud;
+		if (!ExportPointsToPLY(ptData, filename))
+		{
+			std::cerr << "ExportPointsToPLY failed!\n";
+			break;
+		}
+
+		const pmp::BoundingBox ptCloudBBox(ptCloud);
+		const auto center = ptCloudBBox.center();
+		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const float cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr float volExpansionFactor = 1.0f;
+		const SDF::PointCloudDistanceFieldSettings dfSettings{
+			cellSize,
+			volExpansionFactor,
+			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
+			SDF::BlurPostprocessingType::None
+		};
+
+		const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
+		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+		const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
+
+		// ==========================================================================
+		// - - - - - - - - -  New Manifold Evolver (Surface)  - - - - - - - - - - - - 
+		// ==========================================================================
+
+		// ------------------------------ Only outer --------------------------------
+		if (executeSurfaceLSW)
+		{
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = false;
+			strategySettings.AdvectionInteractWithOtherManifolds = false;
+
+			strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
+			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.TimeStep = tau;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
+			globalSettings.ProcedureName = meshName + "_SurfaceLSW";
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+			if (!outerSpheres.contains(meshName))
+			{
+				std::cerr << "!outerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+			const auto outerSphere = outerSpheres.at(meshName);
+
+			// construct outer ico-sphere
+			Geometry::IcoSphereBuilder icoBuilder({ strategySettings.LevelOfDetail, outerSphere.Radius });
+			icoBuilder.BuildBaseData();
+			icoBuilder.BuildPMPSurfaceMesh();
+			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
+			const pmp::mat4 transfMatrixGeomMove{
+				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
+				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
+				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
+				0.0f, 0.0f, 0.0f, 1.0f
+			};
+			outerSurface *= transfMatrixGeomMove;
+			std::vector<pmp::SurfaceMesh> innerSurfaces; // no inner surfaces to evolve
+
+			auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+				strategySettings, MeshLaplacian::Voronoi,
+				outerSurface, innerSurfaces,
+				std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+			ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (std::invalid_argument& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (std::runtime_error& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+
+		// -------------------------- Both inner and outer ---------------------------
+		if (executeSurfaceIOLSW)
+		{
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = true;
+			strategySettings.AdvectionInteractWithOtherManifolds = true;
+
+			strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				if (distance <= 0.0)
+					return 0.0;
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
+			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				if (distance <= 0.0)
+					return 0.0;
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.InnerManifoldEpsilon = [](double distance)
+			{
+				if (distance <= 0.0)
+					return 0.0;
+				return 0.0005 * TRIVIAL_EPSILON(distance);
+			};
+			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				if (distance <= 0.0)
+					return 0.0;
+				return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.TimeStep = tau;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
+			globalSettings.ProcedureName = meshName + "_SurfaceIOLSW";
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+			if (!outerSpheres.contains(meshName))
+			{
+				std::cerr << "!outerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+			const auto outerSphere = outerSpheres.at(meshName);
+
+			// construct outer ico-sphere
+			Geometry::IcoSphereBuilder icoBuilder({ strategySettings.LevelOfDetail, outerSphere.Radius });
+			icoBuilder.BuildBaseData();
+			icoBuilder.BuildPMPSurfaceMesh();
+			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
+			const pmp::mat4 transfMatrixGeomMove{
+				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
+				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
+				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
+				0.0f, 0.0f, 0.0f, 1.0f
+			};
+			outerSurface *= transfMatrixGeomMove;
+
+			if (!innerSpheres.contains(meshName))
+			{
+				std::cerr << "!innerSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+				continue;
+			}
+			const auto innerSpheresPerMesh = innerSpheres.at(meshName);
+			std::vector<pmp::SurfaceMesh> innerSurfaces;
+			innerSurfaces.reserve(innerSpheresPerMesh.size());
+			for (const auto& innerSphere : innerSpheresPerMesh)
+			{
+				// construct innrt ico-sphere
+				const auto innerSubdiv = static_cast<unsigned int>(static_cast<pmp::Scalar>(strategySettings.LevelOfDetail) * (innerSphere.Radius * 2.0) / outerSphere.Radius);
+				Geometry::IcoSphereBuilder innerIcoBuilder({ innerSubdiv, innerSphere.Radius });
+				innerIcoBuilder.BuildBaseData();
+				innerIcoBuilder.BuildPMPSurfaceMesh();
+				auto innerSurface = innerIcoBuilder.GetPMPSurfaceMeshResult();
+				const pmp::mat4 transfMatrixGeomMove{
+					1.0f, 0.0f, 0.0f, innerSphere.Center[0],
+					0.0f, 1.0f, 0.0f, innerSphere.Center[1],
+					0.0f, 0.0f, 1.0f, innerSphere.Center[2],
+					0.0f, 0.0f, 0.0f, 1.0f
+				};
+				innerSurface *= transfMatrixGeomMove;
+				innerSurface.negate_orientation();
+				innerSurfaces.push_back(innerSurface);
+			}
+
+			auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
+				strategySettings, MeshLaplacian::Voronoi,
+				outerSurface, innerSurfaces,
+				std::make_shared<std::vector<pmp::Point>>(ptCloud));
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+			ManifoldEvolver evolver(globalSettings, std::move(surfaceStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			try
+			{
+				evolver.Evolve();
+			}
+			catch (std::invalid_argument& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (std::runtime_error& ex)
+			{
+				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+			}
+			catch (...)
+			{
+				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+			}
+		}
+	}
+}
+
 void StandardMeshesIOLSWTests()
 {
 	const std::vector<std::string> meshForPtCloudNames{
@@ -3276,7 +3607,7 @@ void StandardMeshesIOLSWTests()
 		//"spot"
 	};
 	const std::map<std::string, double> timeStepSizesForPtClouds{
-		{"armadillo", 0.05 },
+		{ "armadillo", 0.05 },
 		{ "blub", 0.05 },
 		{ "bunny", 0.05 },
 		{ "maxPlanck", 0.05 },
@@ -3331,14 +3662,14 @@ void StandardMeshesIOLSWTests()
 	};
 	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
 		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0f, 52.0f}, 20.0f}} },
-		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0f, 0.072f, 0.012f}, 0.03f}} },
+		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.072f, 0.012f}, 0.03f}} },
 		//{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f}, 50.0f}} },
 		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0f, 100.0f}, 55.0f}} }
 	};
 
 	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
 		{"armadillo", {}},
-		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.015f, 0.05f, 0.012f}, 0.03f} /*, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}*/}},
+		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f} /*, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}*/}},
 		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} }},
 		{"nefertiti", {}}
 	};
@@ -3360,7 +3691,7 @@ void StandardMeshesIOLSWTests()
 
 	constexpr bool executeCurveLSW = false;
 	constexpr bool executeCurveIOLSW = false;
-	constexpr bool executeSurfaceLSW = true;
+	constexpr bool executeSurfaceLSW = false;
 	constexpr bool executeSurfaceIOLSW = true;
 
 	for (const auto& meshName : meshForPtCloudNames)
@@ -3553,7 +3884,7 @@ void StandardMeshesIOLSWTests()
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 0.6 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 0.6 * distance * (negGradDotNormal - 1.2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 4;
@@ -3655,7 +3986,7 @@ void StandardMeshesIOLSWTests()
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 1.2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 3;
@@ -3746,19 +4077,27 @@ void StandardMeshesIOLSWTests()
 
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
+				if (distance <= 0.0)
+					return 0.0;
 				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 1.2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				if (distance <= 0.0)
+					return 0.0;
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
+				if (distance <= 0.0)
+					return 0.0;
 				return 0.0005 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 0.6 * distance * (negGradDotNormal - 1.2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				if (distance <= 0.0)
+					return 0.0;
+				return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 3;

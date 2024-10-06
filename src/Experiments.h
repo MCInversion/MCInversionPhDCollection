@@ -205,6 +205,7 @@ void VisualizeMultipleInnerCurves();
 void ExportSlicingPlanes();
 void AdvectionDrivenInnerOuterCircleTests();
 void OuterOnlySimpleShapeTests();
+void SimpleMeshesIOLSWTests();
 void StandardMeshesIOLSWTests();
 void MedialAxisTests();
 void HyperellipseEllipsoidEquilibriumTests();
@@ -319,6 +320,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"ExportSlicingPlanes", ExportSlicingPlanes},
     {"AdvectionDrivenInnerOuterCircleTests", AdvectionDrivenInnerOuterCircleTests},
     {"OuterOnlySimpleShapeTests", OuterOnlySimpleShapeTests },
+    {"SimpleMeshesIOLSWTests", SimpleMeshesIOLSWTests },
     {"StandardMeshesIOLSWTests", StandardMeshesIOLSWTests },
     {"MedialAxisTests", MedialAxisTests },
     {"HyperellipseEllipsoidEquilibriumTests", HyperellipseEllipsoidEquilibriumTests },

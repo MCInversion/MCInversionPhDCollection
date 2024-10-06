@@ -1309,9 +1309,18 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				continue;
 			}
 
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//auto cutSphereVec = vPosToUpdate;
+			//affine_transform(m_TransformToOriginal, cutSphereVec);
+			//cutSphereVec -= pmp::Point{ -0.01f, 0.04f, 0.012f };
+			//if (sqrnorm(cutSphereVec) < 0.02 * 0.02)
+			//{
+			//	std::cout << "Point " << cutSphereVec << " located in the cut sphrere\n";
+			//}
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 			const double epsilonCtrlWeight =
-				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance)) +
-				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
+				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance));
 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
@@ -1421,6 +1430,16 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
 				continue;
 			}
+
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//auto cutSphereVec = vPosToUpdate;
+			//affine_transform(m_TransformToOriginal, cutSphereVec);
+			//cutSphereVec -= pmp::Point{ -0.01f, 0.04f, 0.012f };
+			//if (sqrnorm(cutSphereVec) < 0.02 * 0.02)
+			//{
+			//	std::cout << "Point " << cutSphereVec << " located in the cut sphrere\n";
+			//}
+			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const double epsilonCtrlWeight =
 				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance)) +
@@ -1684,7 +1703,7 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 		return;
 	}
 
-	const SDF::DistanceFieldSettings surfaceDFSettings{
+	SDF::DistanceFieldSettings surfaceDFSettings{
 		GetFieldCellSize(),
 		GetSettings().FieldSettings.FieldExpansionFactor,
 		DBL_MAX,
