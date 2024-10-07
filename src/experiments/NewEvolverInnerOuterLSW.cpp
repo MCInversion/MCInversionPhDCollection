@@ -3273,7 +3273,7 @@ void SimpleMeshesIOLSWTests()
 		{ "boxWithAHole", 0.05 }
 	};
 	const std::map<std::string, double> isoLevelOffsetFactors{
-		{"boxWithAHole", 1.5 }
+		{"boxWithAHole", 1.0 }
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
@@ -3315,7 +3315,7 @@ void SimpleMeshesIOLSWTests()
 	//SetRemeshingAdjustmentTimeIndices({}); // no remeshing adjustment
 	SetRemeshingAdjustmentTimeIndices({ /*3, 10,*/ 30 /*, 50 , 100, 120, 140, 145*/ });
 
-	constexpr unsigned int NTimeSteps = 180;
+	constexpr unsigned int NTimeSteps = 80;
 
 	constexpr bool executeCurveLSW = false;
 	constexpr bool executeCurveIOLSW = false;
@@ -3415,10 +3415,14 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.AdvectionInteractWithOtherManifolds = false;
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 				{
+					if (distance <= 0.0)
+						return 0.0;
 					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 				};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 				{
+					if (distance <= 0.0)
+						return 0.0;
 					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 			strategySettings.TimeStep = tau;
@@ -3499,19 +3503,27 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.AdvectionInteractWithOtherManifolds = true;
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 				{
+					if (distance <= 0.0)
+						return 0.0;
 					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 				};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 				{
+					if (distance <= 0.0)
+						return 0.0;
 					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 				{
+					if (distance <= 0.0)
+						return 0.0;
 					return 0.0005 * TRIVIAL_EPSILON(distance);
 				};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 				{
-					return 0.6 * distance * (negGradDotNormal - 1.2 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+					if (distance <= 0.0)
+						return 0.0;
+					return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 4;
@@ -3609,10 +3621,14 @@ void SimpleMeshesIOLSWTests()
 
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
+				if (distance <= 0.0)
+					return 0.0;
 				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
+				if (distance <= 0.0)
+					return 0.0;
 				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
@@ -3902,14 +3918,14 @@ void StandardMeshesIOLSWTests()
 	};
 	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
 		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0f, 52.0f}, 20.0f}} },
-		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.072f, 0.012f}, 0.03f}} },
+		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0f, 0.082f, 0.012f}, 0.03f}} },
 		//{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f}, 50.0f}} },
 		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0f, 100.0f}, 55.0f}} }
 	};
 
 	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
 		{"armadillo", {}},
-		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f} /*, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}*/}},
+		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f}, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}/**/}},
 		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} }},
 		{"nefertiti", {}}
 	};
@@ -3929,10 +3945,10 @@ void StandardMeshesIOLSWTests()
 
 	constexpr unsigned int NTimeSteps = 180;
 
-	constexpr bool executeCurveLSW = false;
-	constexpr bool executeCurveIOLSW = false;
-	constexpr bool executeSurfaceLSW = false;
-	constexpr bool executeSurfaceIOLSW = true;
+	constexpr bool executeCurveLSW = true;
+	constexpr bool executeCurveIOLSW = true;
+	constexpr bool executeSurfaceLSW = true;
+	constexpr bool executeSurfaceIOLSW = false;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{

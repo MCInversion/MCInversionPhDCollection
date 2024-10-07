@@ -96,10 +96,10 @@ import matplotlib.patches as patches
 #procedure_name = "hyperellipse8"
 #procedure_name = "hyperellipse9"
 
-procedure_name = "boxWithAHole_CurveIOLSW"
+#procedure_name = "boxWithAHole_CurveIOLSW"
 
 #procedure_name = "bunny_CurveLSW"
-#procedure_name = "bunny_CurveIOLSW"
+procedure_name = "bunny_CurveIOLSW"
 
 #procedure_name = "maxPlanck_CurveIOLSW"
 

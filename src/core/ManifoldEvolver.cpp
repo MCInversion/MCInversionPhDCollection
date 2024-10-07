@@ -280,7 +280,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				if (!m_InnerCurvesDistanceFields[i] || !m_InnerCurvesDFNegNormalizedGradients[i])
 					continue;
 
-				const auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerCurvesDistanceFields[i]);
+				auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerCurvesDistanceFields[i]);
+				innerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToInner = m_VectorInterpolate(vPosToUpdate, *m_InnerCurvesDFNegNormalizedGradients[i]);
 
 				interaction << InteractionDistanceInfo<pmp::dvec2>{innerDfAtVPos, vNegGradDistanceToInner};
@@ -396,6 +397,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			if (m_OuterCurveDistanceField && m_OuterCurveDFNegNormalizedGradient)
 			{
 				outerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField);
+				outerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToOuter = m_VectorInterpolate(vPosToUpdate, *m_OuterCurveDFNegNormalizedGradient);
 
 				interaction << InteractionDistanceInfo<pmp::dvec2>{outerDfAtVPos, vNegGradDistanceToOuter};
@@ -506,7 +508,8 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 				if (!m_InnerCurvesDistanceFields[i] || !m_InnerCurvesDFNegNormalizedGradients[i])
 					continue;
 
-				const auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_InnerCurvesDistanceFields[i]));
+				auto innerDfAtVPos = static_cast<pmp::Scalar>(m_ScalarInterpolate(vPosToUpdate, *m_InnerCurvesDistanceFields[i]));
+				innerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToInner = m_VectorInterpolate(vPosToUpdate, *m_InnerCurvesDFNegNormalizedGradients[i]);
 
 				interaction << InteractionDistanceInfo<pmp::dvec2>{innerDfAtVPos, vNegGradDistanceToInner};
@@ -585,6 +588,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			if (m_OuterCurveDistanceField && m_OuterCurveDFNegNormalizedGradient)
 			{
 				outerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField);
+				outerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToOuter = m_VectorInterpolate(vPosToUpdate, *m_OuterCurveDFNegNormalizedGradient);
 
 				interaction << InteractionDistanceInfo<pmp::dvec2>{outerDfAtVPos, vNegGradDistanceToOuter};
@@ -669,6 +673,12 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 		// there's no possibility of interaction between the outer and the inner manifolds
 		return;
 	}
+
+	// clear fields
+	m_OuterCurveDistanceField.reset();
+	m_OuterCurveDFNegNormalizedGradient.reset();
+	m_InnerCurvesDistanceFields.clear();
+	m_InnerCurvesDFNegNormalizedGradients.clear();
 
 	const SDF::DistanceField2DSettings curveDFSettings{
 		GetFieldCellSize(),
@@ -1291,7 +1301,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				if (!m_InnerSurfacesDistanceFields[i] || !m_InnerSurfacesDFNegNormalizedGradients[i])
 					continue;
 
-				const auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerSurfacesDistanceFields[i]);
+				auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerSurfacesDistanceFields[i]);
+				innerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToInner = m_VectorInterpolate(vPosToUpdate, *m_InnerSurfacesDFNegNormalizedGradients[i]);
 
 				interaction << InteractionDistanceInfo<pmp::dvec3>{innerDfAtVPos, vNegGradDistanceToInner};
@@ -1308,15 +1319,6 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
 				continue;
 			}
-
-			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			//auto cutSphereVec = vPosToUpdate;
-			//affine_transform(m_TransformToOriginal, cutSphereVec);
-			//if (sqrnorm(cutSphereVec - pmp::Point{ 1.0f, 0.0f, 0.0f }) < 0.2 * 0.2)
-			//{
-			//	std::cout << "m_OuterSurface point " << cutSphereVec << " located in the cut sphere for time step " << step << ".\n";
-			//}
-			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const double epsilonCtrlWeight =
 				GetSettings().OuterManifoldEpsilon(static_cast<double>(interaction.Distance));
@@ -1416,6 +1418,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			if (m_OuterSurfaceDistanceField && m_OuterSurfaceDFNegNormalizedGradient)
 			{
 				outerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField);
+				outerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToOuter = m_VectorInterpolate(vPosToUpdate, *m_OuterSurfaceDFNegNormalizedGradient);
 
 				interaction << InteractionDistanceInfo<pmp::dvec3>{outerDfAtVPos, vNegGradDistanceToOuter};
@@ -1429,15 +1432,6 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
 				continue;
 			}
-
-			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			//auto cutSphereVec = vPosToUpdate;
-			//affine_transform(m_TransformToOriginal, cutSphereVec);
-			//if (sqrnorm(cutSphereVec - pmp::Point{ 1.0f, 0.0f, 0.0f }) < 0.2 * 0.2)
-			//{
-			//	std::cout << "innerSurface point " << cutSphereVec << " located in the cut sphere for time step " << step << ".\n";
-			//}
-			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const double epsilonCtrlWeight =
 				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance));
@@ -1535,7 +1529,8 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 				if (!m_InnerSurfacesDistanceFields[i] || !m_InnerSurfacesDFNegNormalizedGradients[i])
 					continue;
 
-				const auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerSurfacesDistanceFields[i]);
+				auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerSurfacesDistanceFields[i]);
+				innerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToInner = m_VectorInterpolate(vPosToUpdate, *m_InnerSurfacesDFNegNormalizedGradients[i]);
 
 				interaction << InteractionDistanceInfo<pmp::dvec3>{innerDfAtVPos, vNegGradDistanceToInner};
@@ -1614,6 +1609,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			if (m_OuterSurfaceDistanceField && m_OuterSurfaceDFNegNormalizedGradient)
 			{
 				outerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_OuterSurfaceDistanceField);
+				outerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToOuter = m_VectorInterpolate(vPosToUpdate, *m_OuterSurfaceDFNegNormalizedGradient);
 
 				interaction << InteractionDistanceInfo<pmp::dvec3>{outerDfAtVPos, vNegGradDistanceToOuter};
@@ -1699,6 +1695,12 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 		// there's no possibility of interaction between the outer and the inner manifolds
 		return;
 	}
+
+	// clear fields
+	m_OuterSurfaceDistanceField.reset();
+	m_OuterSurfaceDFNegNormalizedGradient.reset();
+	m_InnerSurfacesDistanceFields.clear();
+	m_InnerSurfacesDFNegNormalizedGradients.clear();
 
 	SDF::DistanceFieldSettings surfaceDFSettings{
 		GetFieldCellSize(),
@@ -1808,7 +1810,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	// Geometries that are already centered at (0, 0, 0) are not translated.
 	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
-	GetFieldCellSize() = scalingFactor;
+	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,
@@ -1992,7 +1994,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	// Geometries that are already centered at (0, 0, 0) are not translated.
 	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
-	GetFieldCellSize() = scalingFactor;
+	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
 		scalingFactor, 0.0f, 0.0f, 0.0f,
