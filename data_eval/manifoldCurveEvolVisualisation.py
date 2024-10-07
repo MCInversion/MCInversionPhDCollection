@@ -99,7 +99,10 @@ import matplotlib.patches as patches
 #procedure_name = "boxWithAHole_CurveIOLSW"
 
 #procedure_name = "bunny_CurveLSW"
-procedure_name = "bunny_CurveIOLSW"
+#procedure_name = "maxPlanck_CurveLSW"
+
+#procedure_name = "bunny_CurveIOLSW"
+procedure_name = "maxPlanck_CurveIOLSW"
 
 #procedure_name = "maxPlanck_CurveIOLSW"
 

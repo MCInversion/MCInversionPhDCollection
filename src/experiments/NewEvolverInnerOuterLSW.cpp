@@ -3856,8 +3856,8 @@ void StandardMeshesIOLSWTests()
 	const std::vector<std::string> meshForPtCloudNames{
 		//"armadillo",
 		//"blub",
-		"bunny",
-		//"maxPlanck",
+		//"bunny",
+		"maxPlanck",
 		//"nefertiti",
 		//"ogre",
 		//"spot"
@@ -3872,10 +3872,10 @@ void StandardMeshesIOLSWTests()
 		{ "spot", 0.05 }
 	};
 	const std::map<std::string, double> isoLevelOffsetFactors{
-		{"armadillo", 0.5 },
+		{"armadillo", 1.5 },
 		{ "blub", 0.5 },
 		{ "bunny", 1.5 },
-		{ "maxPlanck", 0.5 },
+		{ "maxPlanck", 1.5 },
 		{ "nefertiti", 0.5 },
 		{ "ogre", 0.5 },
 		{ "spot", 0.5 }
@@ -3919,14 +3919,14 @@ void StandardMeshesIOLSWTests()
 	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
 		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0f, 52.0f}, 20.0f}} },
 		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0f, 0.082f, 0.012f}, 0.03f}} },
-		//{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f}, 50.0f}} },
+		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 50.0f, 100.0f}, 50.0f}} },
 		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0f, 100.0f}, 55.0f}} }
 	};
 
 	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
 		{"armadillo", {}},
 		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f}, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}/**/}},
-		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} }},
+		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f, 0.0f}, 50.0f}, Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} /**/}},
 		{"nefertiti", {}}
 	};
 
@@ -3945,10 +3945,10 @@ void StandardMeshesIOLSWTests()
 
 	constexpr unsigned int NTimeSteps = 180;
 
-	constexpr bool executeCurveLSW = true;
-	constexpr bool executeCurveIOLSW = true;
-	constexpr bool executeSurfaceLSW = true;
-	constexpr bool executeSurfaceIOLSW = false;
+	constexpr bool executeCurveLSW = false;
+	constexpr bool executeCurveIOLSW = false;
+	constexpr bool executeSurfaceLSW = false;
+	constexpr bool executeSurfaceIOLSW = true;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
