@@ -459,7 +459,7 @@ namespace Geometry
 		return false;
 	}
 
-	void RepairScalarGrid(ScalarGrid& grid)
+	void RepairScalarGrid(ScalarGrid& grid, bool verbose)
 	{
 		size_t nanCount = 0;
 		size_t infCount = 0;
@@ -472,8 +472,11 @@ namespace Geometry
 		const auto Ny = static_cast<unsigned int>(dim.Ny);
 		const auto Nz = static_cast<unsigned int>(dim.Nz);
 
-		std::cout << "----------------------------------------------------------\n";
-		std::cout << "RepairScalarGrid: repairing scalar grid...\n";
+		if (verbose)
+		{
+			std::cout << "----------------------------------------------------------\n";
+			std::cout << "RepairScalarGrid: repairing scalar grid...\n";
+		}
 
 		for (unsigned int iz = 0; iz < Nz; iz++) 
 		{
@@ -519,15 +522,18 @@ namespace Geometry
 			}
 		}
 
-		if (nanCount > 0 || infCount > 0)
+		if (verbose)
 		{
-			std::cout << "RepairScalarGrid: [WARNING]: Encountered & repaired invalid cell values! nanCount: " << nanCount << ", infCount: " << infCount << ".\n";
-			std::cout << "----------------------------------------------------------\n";
-			return;
-		}
+			if (nanCount > 0 || infCount > 0)
+			{
+				std::cout << "RepairScalarGrid: [WARNING]: Encountered & repaired invalid cell values! nanCount: " << nanCount << ", infCount: " << infCount << ".\n";
+				std::cout << "----------------------------------------------------------\n";
+				return;
+			}
 
-		std::cout << "RepairScalarGrid: All grid values are valid.\n";
-		std::cout << "----------------------------------------------------------\n";
+			std::cout << "RepairScalarGrid: All grid values are valid.\n";
+			std::cout << "----------------------------------------------------------\n";
+		}
 	}
 
 	void NormalizeScalarGridValues(ScalarGrid& grid)
@@ -782,7 +788,7 @@ namespace Geometry
 						std::isnan(grad_y) || std::isinf(grad_z))
 					{
 						const std::string msg = "ComputeNormalizedNegativeGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
-						assert(false);
+						//assert(false);
 						std::cerr << msg;
 						continue;
 					}

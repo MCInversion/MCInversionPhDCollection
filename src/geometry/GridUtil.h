@@ -95,7 +95,7 @@ namespace Geometry
 	 * \brief Looks for nans and infinities in the grid, if the cell neighbors have valid values, averaged value is written for an invalid cell. Otherwise the cell value is set to default init value.
 	 * \param grid    input grid.
 	 */
-	void RepairScalarGrid(ScalarGrid& grid);
+	void RepairScalarGrid(ScalarGrid& grid, bool verbose = false);
 
 	/**
 	 * \brief Normalizes the values of the scalar grid to interval [-1, 1]

@@ -1312,10 +1312,9 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			//auto cutSphereVec = vPosToUpdate;
 			//affine_transform(m_TransformToOriginal, cutSphereVec);
-			//cutSphereVec -= pmp::Point{ -0.01f, 0.04f, 0.012f };
-			//if (sqrnorm(cutSphereVec) < 0.02 * 0.02)
+			//if (sqrnorm(cutSphereVec - pmp::Point{ 1.0f, 0.0f, 0.0f }) < 0.2 * 0.2)
 			//{
-			//	std::cout << "Point " << cutSphereVec << " located in the cut sphrere\n";
+			//	std::cout << "m_OuterSurface point " << cutSphereVec << " located in the cut sphere for time step " << step << ".\n";
 			//}
 			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1434,16 +1433,14 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			//auto cutSphereVec = vPosToUpdate;
 			//affine_transform(m_TransformToOriginal, cutSphereVec);
-			//cutSphereVec -= pmp::Point{ -0.01f, 0.04f, 0.012f };
-			//if (sqrnorm(cutSphereVec) < 0.02 * 0.02)
+			//if (sqrnorm(cutSphereVec - pmp::Point{ 1.0f, 0.0f, 0.0f }) < 0.2 * 0.2)
 			//{
-			//	std::cout << "Point " << cutSphereVec << " located in the cut sphrere\n";
+			//	std::cout << "innerSurface point " << cutSphereVec << " located in the cut sphere for time step " << step << ".\n";
 			//}
 			//// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 			const double epsilonCtrlWeight =
-				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance)) +
-				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
+				GetSettings().InnerManifoldEpsilon(static_cast<double>(interaction.Distance));
 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
@@ -1716,6 +1713,7 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 	const Geometry::PMPSurfaceMeshAdapter outerSurfaceAdapter(std::make_shared<pmp::SurfaceMesh>(*m_OuterSurface));
 	m_OuterSurfaceDistanceField = std::make_shared<Geometry::ScalarGrid>(
 		SDF::DistanceFieldGenerator::Generate(outerSurfaceAdapter, surfaceDFSettings, outerFieldBox));
+	RepairScalarGrid(*m_OuterSurfaceDistanceField);
 	m_OuterSurfaceDFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid>(ComputeNormalizedNegativeGradient(*m_OuterSurfaceDistanceField));
 
 	for (const auto& innerSurface : m_InnerSurfaces)
