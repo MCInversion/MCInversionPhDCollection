@@ -3856,8 +3856,8 @@ void StandardMeshesIOLSWTests()
 	const std::vector<std::string> meshForPtCloudNames{
 		//"armadillo",
 		//"blub",
-		//"bunny",
-		"maxPlanck",
+		"bunny",
+		//"maxPlanck",
 		//"nefertiti",
 		//"ogre",
 		//"spot"
@@ -4891,4 +4891,58 @@ void JunkCan2DTests()
 			}
 		}
 	}
+}
+
+void InscribedCircleCalculatorVisualization()
+{
+	// Data (incomplete circle)
+	pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+	auto targetPts = targetCurve.positions();
+	targetPts.erase(targetPts.begin());
+	targetPts.erase(targetPts.begin());
+	targetPts.erase(targetPts.begin());
+	InscribedCircleInputData inputData;
+	inputData.Points = targetPts;
+
+	const auto pointBBox = pmp::BoundingBox2(inputData.Points);
+	const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+	const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+	const float cellSize = minSize / 20.0f;
+	const SDF::PointCloudDistanceField2DSettings sdfSettings{
+		cellSize,
+		0.5f,
+		DBL_MAX
+	};
+	inputData.DistanceField = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(inputData.Points, sdfSettings));
+	// export png and gdim2d
+	ExportScalarGridDimInfo2D(dataOutPath + "incompleteCircleDF.gdim2d", *inputData.DistanceField);
+	ExportScalarGrid2DToPNG(dataOutPath + "incompleteCircleDF.png", *inputData.DistanceField, Geometry::BilinearInterpolateScalarValue, 10, 10, RAINBOW_TO_WHITE_MAP);
+
+	// Distance field (brute force)
+	std::cout << "DistanceFieldInscribedCircleCalculator::Calculate ... ";
+	DistanceFieldInscribedCircleCalculator dfCalculator;
+	const auto dfCircles = dfCalculator.Calculate(inputData);
+	std::cout << "done.\n";
+
+	// Hierarchical
+	std::cout << "HierarchicalDistanceFieldInscribedCircleCalculator::Calculate ... ";
+	HierarchicalDistanceFieldInscribedCircleCalculator hCalculator;
+	std::ofstream hCalculatorFile(dataOutPath + "incompleteCircleDF_HierarchicalLog.json");
+	if (!hCalculatorFile)
+		throw std::runtime_error("Failed to open file \"incompleteCircleDF_HierarchicalLog.txt\" for writing.");
+	hCalculator.SetOutputStream(hCalculatorFile);
+	const auto hCircles = hCalculator.Calculate(inputData);
+	hCalculatorFile.close();
+	std::cout << "done.\n";
+
+	// Particle swarm
+	std::cout << "ParticleSwarmDistanceFieldInscribedCircleCalculator::Calculate ... ";
+	ParticleSwarmDistanceFieldInscribedCircleCalculator psCalculator;
+	std::ofstream psCalculatorFile(dataOutPath + "incompleteCircleDF_ParticleSwarmLog.json");
+	if (!psCalculatorFile)
+		throw std::runtime_error("Failed to open file \"incompleteCircleDF_ParticleSwarmLog.txt\" for writing.");
+	psCalculator.SetOutputStream(psCalculatorFile);
+	const auto psCircles = psCalculator.Calculate(inputData);
+	psCalculatorFile.close();
+	std::cout << "done.\n";
 }

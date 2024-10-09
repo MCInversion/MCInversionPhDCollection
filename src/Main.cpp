@@ -116,10 +116,11 @@ int main()
         // "AdvectionDrivenInnerOuterCircleTests",
         // "OuterOnlySimpleShapeTests",
         // "SimpleMeshesIOLSWTests",
-        "StandardMeshesIOLSWTests",
+        // "StandardMeshesIOLSWTests",
 		// "MedialAxisTests",
 		// "HyperellipseEllipsoidEquilibriumTests",
-        // "JunkCan2DTests"
+        // "JunkCan2DTests",
+        "InscribedCircleCalculatorVisualization",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

@@ -35,6 +35,19 @@ public:
 	 * \return a vector of circles.
 	 */
 	virtual [[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) = 0;
+
+	/**
+	 * \brief Sets the output stream for logging (e.g., std::cout or a file stream).
+	 * If no stream is set, no output will be produced.
+	 * \param os   The output stream to be used for logging.
+	 */
+	void SetOutputStream(std::ostream& os)
+	{
+		m_OutputStream = os;
+	}
+
+protected:
+	std::optional<std::reference_wrapper<std::ostream>> m_OutputStream; //>! output for visualization
 };
 
 /// \brief Calculates the centers and radii of circles inscribed to a point cloud using the naive approach:

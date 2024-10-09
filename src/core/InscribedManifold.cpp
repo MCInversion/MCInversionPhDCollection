@@ -167,6 +167,65 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
 
 namespace
 {
+    constexpr unsigned int MIN_RADIUS{ 1 };
+
+    /// \brief Helper function to print the correct number of spaces for indentation
+    void PrintIndent(std::ostream& output, unsigned int depth) 
+    {
+        for (unsigned int i = 0; i < depth; ++i) {
+            output << "    ";  // Four spaces per level of depth
+        }
+    }
+
+    // Helper function to print the bounding box info
+    void PrintBoundingBox(std::ostream& os, unsigned int minX, unsigned int maxX, unsigned int minY, unsigned int maxY, unsigned int depth)
+    {
+        PrintIndent(os, depth);
+        os << "\"minX\": " << minX << ",\n";
+        PrintIndent(os, depth);
+        os << "\"maxX\": " << maxX << ",\n";
+        PrintIndent(os, depth);
+        os << "\"minY\": " << minY << ",\n";
+        PrintIndent(os, depth);
+        os << "\"maxY\": " << maxY;
+    }
+
+    // Helper function to print children or maximum
+    void PrintChildrenOrMaximum(std::ostream& os, const std::optional<std::reference_wrapper<std::ostream>>& output, bool hasChildren, bool hasMaximum, unsigned int depth, bool isLast) 
+    {
+        if (hasChildren || hasMaximum) 
+        {
+            os << ",\n";  // Only add a comma if more content follows
+        }
+        if (hasChildren)
+        {
+            PrintIndent(os, depth);
+            os << "\"children\": [\n";
+        }
+        if (hasMaximum) 
+        {
+            PrintIndent(os, depth);
+            os << "\"Maximum found!\": true";
+            if (!isLast && hasChildren)
+            {
+                os << ",";
+            }
+            os << "\n";
+        }
+    }
+
+    // Finalizer function to close JSON object
+    void CloseJsonObject(std::ostream& os, unsigned int depth, bool isLast) 
+    {
+        PrintIndent(os, depth);
+        os << "}";
+        if (!isLast && depth > 0)
+        {
+            os << ",";
+        }
+        os << "\n";
+    }
+
     void RecursiveSearchForMaxima(
         std::vector<Circle2D>& circles,
         const Geometry::ScalarGrid2D& grid,
@@ -176,41 +235,78 @@ namespace
         unsigned int maxX,
         unsigned int maxY,
         unsigned int radius,
-        const std::function<void(const pmp::Point2& localMaxPt)>& onTerminate)
+        const std::function<void(const pmp::Point2& localMaxPt)>& onTerminate,
+        const std::optional<std::reference_wrapper<std::ostream>>& output,
+        unsigned int depth,
+        bool isLast = false)
     {
-        // Base case: Stop recursion when the radius is 2 or the region is too small
-        if (radius < 1)
+        // Base case: Stop recursion when the radius is too small
+        if (radius < MIN_RADIUS)
         {
             return;
+        }
+
+        bool hasChildren = false;
+        bool hasMaximum = false;
+
+        // If there is output, start by printing bounding box information
+        if (output)
+        {
+            PrintIndent(output->get(), depth);
+            output->get() << "{\n";
+            PrintBoundingBox(output->get(), minX, maxX, minY, maxY, depth + 1);
         }
 
         const unsigned int centerX = (minX + maxX) / 2;
         const unsigned int centerY = (minY + maxY) / 2;
 
-        if (radius == 1)
+        if (radius == MIN_RADIUS) 
         {
+            // Local maximum check
             const auto localMaxPt = FindLocalMaximumNearScalarGridCell(grid, centerX, centerY, radius);
-            if (!localMaxPt.has_value())
-                return;
-
-            onTerminate(*localMaxPt);
-            return;
+            if (localMaxPt.has_value())
+            {
+                hasMaximum = true;
+                if (output) 
+                {
+                    PrintChildrenOrMaximum(output->get(), output, false, true, depth + 1, isLast);
+                }
+                onTerminate(*localMaxPt);
+            }
         }
 
-        // Check if there's a local extreme near the center of this region
-        if (IsConvergentOrDivergentNearCell(gridGradient, centerX, centerY, radius))
+        // Check if there are any children regions to process
+        if (IsConvergentOrDivergentNearCell(gridGradient, centerX, centerY, radius) && !hasMaximum)
         {
-            // Subdivide the region into four quadrants and search each
+            hasChildren = true;
+            if (output)
+            {
+                PrintChildrenOrMaximum(output->get(), output, true, false, depth + 1, isLast);
+            }
+
             const unsigned int midX = (minX + maxX) / 2;
             const unsigned int midY = (minY + maxY) / 2;
             const auto newRadius = static_cast<unsigned int>(std::floor(static_cast<float>(radius) / 2));
 
-            RecursiveSearchForMaxima(circles, grid, gridGradient, minX, minY, midX, midY, newRadius, onTerminate);
-            RecursiveSearchForMaxima(circles, grid, gridGradient, midX, minY, maxX, midY, newRadius, onTerminate);
-            RecursiveSearchForMaxima(circles, grid, gridGradient, minX, midY, midX, maxY, newRadius, onTerminate);
-            RecursiveSearchForMaxima(circles, grid, gridGradient, midX, midY, maxX, maxY, newRadius, onTerminate);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, minX, minY, midX, midY, newRadius, onTerminate, output, depth + 1, false);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, midX, minY, maxX, midY, newRadius, onTerminate, output, depth + 1, false);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, minX, midY, midX, maxY, newRadius, onTerminate, output, depth + 1, false);
+            RecursiveSearchForMaxima(circles, grid, gridGradient, midX, midY, maxX, maxY, newRadius, onTerminate, output, depth + 1, true);
+
+            if (output) 
+            {
+                PrintIndent(output->get(), depth + 1);
+                output->get() << "]\n";  // Close the children array
+            }
+        }
+
+        // Close the JSON object for this region
+        if (output) 
+        {
+            CloseJsonObject(output->get(), depth, isLast);
         }
     }
+
 
     void RecursiveSearchForMaxima3D(
         std::vector<Sphere3D>& spheres,
@@ -226,7 +322,7 @@ namespace
         const std::function<void(const pmp::Point& localMaxPt)>& onTerminate)
     {
         // Base case: Stop recursion when the radius is less than 1
-        if (radius < 1)
+        if (radius < MIN_RADIUS)
         {
             return;
         }
@@ -235,7 +331,7 @@ namespace
         const unsigned int centerY = (minY + maxY) / 2;
         const unsigned int centerZ = (minZ + maxZ) / 2;
 
-        if (radius == 1)
+        if (radius == MIN_RADIUS)
         {
             const auto localMaxPt = FindLocalMaximumNearScalarGridCell(grid, centerX, centerY, centerZ, radius);
             if (!localMaxPt.has_value())
@@ -317,7 +413,10 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
         if (!nearestPointDistanceSq.has_value())
             return;
         circles.push_back({ localMaxPt, sqrt(*nearestPointDistanceSq) });
-    });
+    },
+        m_OutputStream, // log output (if defined)
+        0 // depth
+    );
 
     return FilterOverlappingCircles(circles);
 }
@@ -330,6 +429,7 @@ namespace
     struct Grid2DParticle
     {
         int ix{ -1 }, iy{ -1 }; // -1 means invalid
+        int id{ -1 }; // identifier for debugging purposes
     };
 
     /// \brief A very simple index wrapper for a 3D grid particle acting in the "particle swarm optimization" (PSO).
@@ -375,22 +475,45 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
     std::unordered_set<unsigned int> processedGridPts{};
 
     // Initialize the particles
+    int particleId = 0;
     for (unsigned int iy = sampleInterval; iy < Ny - 1; iy += sampleInterval)
     {
         for (unsigned int ix = sampleInterval; ix < Nx - 1; ix += sampleInterval)
         {
-            particles.push_back({ static_cast<int>(ix), static_cast<int>(iy) });
+            particles.push_back({ static_cast<int>(ix), static_cast<int>(iy), particleId });
+            particleId++;
         }
     }
 
+    if (m_OutputStream)
+    {
+        // open the brace
+        m_OutputStream->get() << "{\n";
+    }
+
     // Iterate over active particles
+    int stepCounter = 0;
     while (!particles.empty())
     {
+        if (m_OutputStream)
+        {
+            // open the brace
+            PrintIndent(m_OutputStream->get(), 1);
+            m_OutputStream->get() << "\"step " << std::to_string(stepCounter) << "\": {\n";
+        }
         std::vector<Grid2DParticle> activeParticles;
-        for (const auto& particle : particles)
+        for (int particleCounter = 0; const auto& particle : particles)
         {
             int ix = particle.ix;
             int iy = particle.iy;
+
+            if (m_OutputStream)
+            {
+                // log the particle index coords
+                PrintIndent(m_OutputStream->get(), 2);
+                m_OutputStream->get() << "\"p" << particle.id << "\": \"(" << ix << ", " << iy << ")\"" << (particleCounter == particles.size() - 1 ? "" : ",") << "\n";
+            }
+            particleCounter++;
 
             // Check if the position has already been covered
             if (processedGridPts.contains(iy * Nx + ix))
@@ -436,10 +559,24 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
             }
 
             // Otherwise, keep the particle active for the next iteration
-            activeParticles.push_back({ ix, iy });
+            activeParticles.push_back({ ix, iy, particle.id });
         }
 
         particles.swap(activeParticles); // Update the active particles for the next iteration
+        if (m_OutputStream)
+        {
+            // close the brace
+            PrintIndent(m_OutputStream->get(), 1);
+            m_OutputStream->get() << "}" << (particles.empty() ? "" : ",") << "\n";
+        }
+
+        stepCounter++;
+    }
+
+    if (m_OutputStream)
+    {
+        // close the brace
+        m_OutputStream->get() << "}\n";
     }
 
     return FilterOverlappingCircles(circles);
