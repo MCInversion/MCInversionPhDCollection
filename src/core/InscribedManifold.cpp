@@ -386,11 +386,10 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
 
     // Calculate grid bounds within the bounding box
     const auto bbox = pmp::BoundingBox2(data.Points);
-    auto minX = static_cast<unsigned int>((bbox.min()[0] - orig[0]) / cellSize);
-    auto maxX = static_cast<unsigned int>((bbox.max()[0] - orig[0]) / cellSize);
-    auto minY = static_cast<unsigned int>((bbox.min()[1] - orig[1]) / cellSize);
-    auto maxY = static_cast<unsigned int>((bbox.max()[1] - orig[1]) / cellSize);
-
+    unsigned int minX = std::ceil((bbox.min()[0] - orig[0]) / cellSize);
+    unsigned int maxX = std::ceil((bbox.max()[0] - orig[0]) / cellSize);
+    unsigned int minY = std::ceil((bbox.min()[1] - orig[1]) / cellSize);
+    unsigned int maxY = std::ceil((bbox.max()[1] - orig[1]) / cellSize);
     minX = std::max(1u, minX);
     maxX = std::min(Nx - 2, maxX);
     minY = std::max(1u, minY);

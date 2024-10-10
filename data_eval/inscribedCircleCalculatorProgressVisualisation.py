@@ -5,6 +5,7 @@ import imageio
 import json
 import random
 import matplotlib.colors as mcolors
+import numpy as np
 
 # Function to convert hex color to RGB tuple
 def hex_to_rgb(hex_color):
@@ -93,10 +94,16 @@ def parse_log_file(json_file_path):
         raise ValueError("Unexpected JSON format.")
 
 
-# Helper function to convert grid indices to actual coordinates
-def index_to_coordinates(min_idx, max_idx, bbox_min, cell_size):
-    min_coord = bbox_min + min_idx * cell_size - 1.5 * cell_size
-    max_coord = bbox_min + max_idx * cell_size + 1.5 * cell_size
+# Helper function to convert grid indices to coordinate bounds (with flipped Y-axis)
+def index_to_coord(min_idx, max_idx, bbox_min, bbox_max, cell_size, is_y=False):
+    # Calculate the minimum and maximum coordinates
+    min_coord = bbox_min + (min_idx - 1) * cell_size #+ cell_size * (1 if is_y else -1)
+    max_coord = bbox_min + (max_idx - 1) * cell_size #+ cell_size * (2 if is_y else -1)
+    # # Flip the Y-axis if needed
+    # if is_y:
+    #     max_coord = bbox_max - min_idx * cell_size
+    #     min_coord = bbox_max - max_idx * cell_size
+
     return min_coord, max_coord
 
 # Function to calculate the maximum depth of regions
@@ -128,7 +135,7 @@ base_color = '#255c27'
 end_color = '#511d6b'
 
 # Function to plot regions from lowest to highest depth, with optional min_depth
-def plot_hierarchical_regions(ax, regions, bbox_min, cell_size, max_depth, min_depth=0, plot_maxima=False):
+def plot_hierarchical_regions(ax, regions, bbox_min, bbox_max, cell_size, max_depth, min_depth=0, plot_maxima=False):
     print("min_depth: ", min_depth, ", max_depth: ", max_depth)
     use_single_depth = max_depth == min_depth
 
@@ -148,13 +155,13 @@ def plot_hierarchical_regions(ax, regions, bbox_min, cell_size, max_depth, min_d
 
         if region["bounds"]:
             minX, maxX, minY, maxY = region["bounds"]
-            min_coord_x, max_coord_x = index_to_coordinates(minX, maxX, bbox_min[0], cell_size)
-            min_coord_y, max_coord_y = index_to_coordinates(minY, maxY, bbox_min[1], cell_size)
+            min_coord_x, max_coord_x = index_to_coord(minX, maxX, bbox_min[0], bbox_max[0], cell_size, False)
+            min_coord_y, max_coord_y = index_to_coord(minY, maxY, bbox_min[1], bbox_max[1], cell_size, True)
 
             interp = 1 if max_depth == min_depth else 1 - (depth - min_depth) / (max_depth - min_depth)
 
             alpha = ((1 - interp) * alpha_base + interp * alpha_max) * 1
-            width = 1
+            width = 2
             
             # Interpolate color between base_color and end_color
             #color = interpolate_color(base_color, end_color, interp)
@@ -170,7 +177,7 @@ def plot_hierarchical_regions(ax, regions, bbox_min, cell_size, max_depth, min_d
             ax.add_patch(rect)
 
 # Function to plot maximal regions from min_depth to max_depth
-def plot_maximal_regions(ax, regions, bbox_min, cell_size, max_depth, min_depth=0):
+def plot_maximal_regions(ax, regions, bbox_min, bbox_max, cell_size, max_depth, min_depth=0):
     print("min_depth: ", min_depth, ", max_depth: ", max_depth)
     use_single_depth = max_depth == min_depth
 
@@ -190,8 +197,8 @@ def plot_maximal_regions(ax, regions, bbox_min, cell_size, max_depth, min_depth=
 
         if region["bounds"] and region["is_maximum"]:
             minX, maxX, minY, maxY = region["bounds"]
-            min_coord_x, max_coord_x = index_to_coordinates(minX, maxX, bbox_min[0], cell_size)
-            min_coord_y, max_coord_y = index_to_coordinates(minY, maxY, bbox_min[1], cell_size)
+            min_coord_x, max_coord_x = index_to_coord(minX, maxX, bbox_min[0], bbox_max[0], cell_size, False)
+            min_coord_y, max_coord_y = index_to_coord(minY, maxY, bbox_min[1], bbox_max[1], cell_size, True)
             #center_x, center_y = 0.5 * (min_coord_x + max_coord_x), 0.5 * (min_coord_y + max_coord_y)
             rect = patches.Rectangle((min_coord_x, min_coord_y), max_coord_x - min_coord_x,
                                      max_coord_y - min_coord_y, linewidth=2, edgecolor='red', 
@@ -212,8 +219,23 @@ def print_region_depths(regions):
 
     recurse(regions, 0)  # Start with depth 0
 
+grid_color = '#ffffff'  # White
+#grid_color = '#3b3b3b'  # Dark Gray
+
+# Function to draw white grid lines
+def draw_grid_lines(ax, bbox_min, bbox_max, nx, ny, cell_size):
+    # Draw vertical lines
+    for i in range(nx):
+        x = bbox_min[0] + i * cell_size
+        ax.plot([x, x], [bbox_min[1], bbox_max[1]], color=grid_color, linewidth=2, alpha=0.2)
+    
+    # Draw horizontal lines
+    for i in range(ny):
+        y = bbox_min[1] + i * cell_size
+        ax.plot([bbox_min[0], bbox_max[0]], [y, y], color=grid_color, linewidth=2, alpha=0.2)
+
 # Main function to visualize the progress
-def visualize_inscribed_circle_calculation(procedure_name, data_dir, target_depth=None):
+def visualize_inscribed_circle_calculation(procedure_name, data_dir, target_depth=None, grid_overlay=False):
     background_image_path = os.path.join(data_dir, f"{procedure_name}.png")
     gdim2d_path = os.path.join(data_dir, f"{procedure_name}.gdim2d")
     log_file_path = os.path.join(data_dir, f"{procedure_name}_HierarchicalLog.json")
@@ -230,7 +252,16 @@ def visualize_inscribed_circle_calculation(procedure_name, data_dir, target_dept
 
     # Load background image
     background_img = imageio.imread(background_image_path)
-    extent = [bbox_min[0], bbox_max[0], bbox_max[1], bbox_min[1]]  # Flip Y-axis
+    background_img = np.flipud(background_img)  # Flip the image data vertically
+
+    # Adjust the extent using the real-world coordinates, scaled by pixel dimensions
+    # The extent is calculated as bbox_min to (bbox_min + (number of cells * cell size))
+    extent = [
+        bbox_min[0],  # X-min
+        bbox_min[0] + nx * cell_size,  # X-max
+        bbox_min[1],  # Y-min
+        bbox_min[1] + ny * cell_size  # Y-max
+    ]
 
     # Parse hierarchical log file
     hierarchical_regions = parse_log_file(log_file_path)
@@ -238,6 +269,10 @@ def visualize_inscribed_circle_calculation(procedure_name, data_dir, target_dept
     # Plot the image and hierarchical regions
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.imshow(background_img, extent=extent, origin='upper')
+
+    if grid_overlay:
+        # Draw white grid lines based on grid dimensions
+        draw_grid_lines(ax, bbox_min, bbox_max, nx, ny, cell_size)
 
     # Calculate the maximum depth of the hierarchy
     max_depth = calculate_max_depth(hierarchical_regions)
@@ -249,8 +284,8 @@ def visualize_inscribed_circle_calculation(procedure_name, data_dir, target_dept
     print_region_depths(hierarchical_regions)
 
     # Plot using the max depth
-    #plot_hierarchical_regions(ax, hierarchical_regions, bbox_min, cell_size, max_depth=max_depth, min_depth=min_depth)
-    plot_maximal_regions(ax, hierarchical_regions, bbox_min, cell_size, max_depth=max_depth, min_depth=min_depth)
+    #plot_hierarchical_regions(ax, hierarchical_regions, bbox_min, bbox_max, cell_size, max_depth=max_depth, min_depth=min_depth)
+    plot_maximal_regions(ax, hierarchical_regions, bbox_min, bbox_max, cell_size, max_depth=max_depth, min_depth=min_depth)
 
     plt.title(f"Inscribed Circle Calculation Progress: {procedure_name}")
     plt.xlabel("X")
@@ -258,4 +293,4 @@ def visualize_inscribed_circle_calculation(procedure_name, data_dir, target_dept
     plt.show()
 
 # Call the function with procedure name
-visualize_inscribed_circle_calculation("incompleteCircleDF", "../output", target_depth=4)
+visualize_inscribed_circle_calculation("incompleteCircleDF", "../output", target_depth=4, grid_overlay=True)

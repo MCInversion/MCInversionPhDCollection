@@ -4916,7 +4916,25 @@ void InscribedCircleCalculatorVisualization()
 	inputData.DistanceField = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(inputData.Points, sdfSettings));
 	// export png and gdim2d
 	ExportScalarGridDimInfo2D(dataOutPath + "incompleteCircleDF.gdim2d", *inputData.DistanceField);
-	ExportScalarGrid2DToPNG(dataOutPath + "incompleteCircleDF.png", *inputData.DistanceField, Geometry::BilinearInterpolateScalarValue, 10, 10, RAINBOW_TO_WHITE_MAP);
+	constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+	ExportScalarGrid2DToPNG(dataOutPath + "incompleteCircleDF.png", *inputData.DistanceField,
+		Geometry::BilinearInterpolateScalarValue, 
+		//Geometry::GetNearestNeighborScalarValue2D,
+		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+
+	//const auto [dfMin, dfMax] = std::ranges::minmax_element(inputData.DistanceField->Values());
+	//constexpr double colorLegendScaleFactor = 2.0; // stretch color map keys (ratios) to fit the gradient to the full legend bar
+	//constexpr double dfValueClampFactor = colorMapPlotScaleFactor / colorLegendScaleFactor; // value cutoff for the chosen color legend.
+	//constexpr bool verticalLegend = true;
+	//constexpr unsigned int resolutionFactor = 4;
+	//constexpr unsigned int legendPxHeight = (verticalLegend ? 400 : 100) * resolutionFactor;
+	//constexpr unsigned int legendPxWidth = (verticalLegend ? 100 : 600) * resolutionFactor;
+	//ExportColorScaleToPNG(
+	//	dataOutPath + "incompleteCircleDF_Scale.png",
+	//	(*dfMin),
+	//	dfValueClampFactor * (*dfMax),
+	//	RAINBOW_TO_WHITE_MAP * colorLegendScaleFactor,
+	//	legendPxHeight, legendPxWidth);
 
 	// Distance field (brute force)
 	std::cout << "DistanceFieldInscribedCircleCalculator::Calculate ... ";
@@ -4945,4 +4963,33 @@ void InscribedCircleCalculatorVisualization()
 	const auto psCircles = psCalculator.Calculate(inputData);
 	psCalculatorFile.close();
 	std::cout << "done.\n";
+
+	// =============================================================
+	// Ellipsoid
+
+	Geometry::IcoSphereBuilder icoBuilder({ 2, 1.0f });
+	icoBuilder.BuildBaseData();
+	icoBuilder.BuildPMPSurfaceMesh();
+	auto sphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
+	constexpr float a = 1.0f;
+	constexpr float b = 1.5f;
+	constexpr float c = 2.0f;
+	const auto scalingMat = scaling_matrix(pmp::vec3{ a, b, c });
+	sphereMesh *= scalingMat;
+	
+	const auto points = sphereMesh.positions();
+	const auto pointBBox = pmp::BoundingBox(points);
+	const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+	const float minSize = std::min({ pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2] });
+	const float cellSize = minSize / 20.0f;
+
+	const SDF::PointCloudDistanceFieldSettings ellipsoidDfSettings{
+		cellSize,
+		0.5f,
+		DBL_MAX
+	};
+	const auto dfEllipsoid = std::make_shared<Geometry::ScalarGrid>(SDF::PointCloudDistanceFieldGenerator::Generate(points, ellipsoidDfSettings));
+
+	ExportToVTI(dataOutPath + "\\EllipsoidSampling_DF", *dfEllipsoid);
+	// =============================================================
 }
