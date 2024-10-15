@@ -897,6 +897,41 @@ namespace Geometry
 		return resultPts;
 	}
 
+	std::vector<std::pair<pmp::Point, pmp::vec3>> SamplePointsWithNormalsFromMeshData(const BaseMeshGeometryData& meshData, size_t nVerts, const std::optional<unsigned int>& seed)
+	{
+		const unsigned int nVertsTotal = meshData.Vertices.size();
+
+		// Determine the actual number of vertices to sample
+		const size_t numVertsToSample = std::min(nVerts, static_cast<size_t>(nVertsTotal));
+
+		// Generate a list of all vertex indices
+		std::vector<size_t> indices(nVertsTotal);
+		std::iota(indices.begin(), indices.end(), 0);
+
+		// Create a generator with the given seed or a random device
+		std::mt19937 gen(seed ? *seed : std::random_device{}());
+
+		// Perform a partial Fisher-Yates shuffle to get numVertsToSample indices
+		for (size_t i = 0; i < numVertsToSample; ++i)
+		{
+			std::uniform_int_distribution<size_t> distrib(i, nVertsTotal - 1);
+			size_t j = distrib(gen);
+			std::swap(indices[i], indices[j]);
+		}
+
+		// Extract the sampled points based on the first numVertsToSample indices
+		std::vector<std::pair<pmp::Point, pmp::vec3>> resultPts;
+		resultPts.reserve(numVertsToSample);
+
+		for (size_t i = 0; i < numVertsToSample; ++i)
+		{
+			resultPts.push_back({ meshData.Vertices[indices[i]], meshData.VertexNormals[indices[i]] });
+		}
+
+		return resultPts;
+	
+	}
+
 	bool ExportSampledVerticesToPLY(const BaseMeshGeometryData& meshData, size_t nVerts, const std::string& absFileName, const std::optional<unsigned int>& seed)
 	{
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
@@ -1163,6 +1198,7 @@ namespace Geometry
 		}
 
 		const unsigned int nVerts = meshData.Vertices.size();
+		const bool hasNormals = !meshData.VertexNormals.empty();
 
 		// PLY header
 		outFile << "ply\n";
@@ -1171,12 +1207,25 @@ namespace Geometry
 		outFile << "property float x\n";
 		outFile << "property float y\n";
 		outFile << "property float z\n";
+		if (hasNormals)
+		{
+			outFile << "property float nx\n";
+			outFile << "property float ny\n";
+			outFile << "property float nz\n";
+		}
 		outFile << "end_header\n";
 
-		// Write sampled vertices
-		for (const auto& vertex : meshData.Vertices)
+		// Write vertices and optionally normals
+		for (unsigned int i = 0; i < nVerts; ++i)
 		{
-			outFile << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+			const auto& vertex = meshData.Vertices[i];
+			outFile << vertex[0] << " " << vertex[1] << " " << vertex[2];
+			if (hasNormals)
+			{
+				const auto& normal = meshData.VertexNormals[i];
+				outFile << " " << normal[0] << " " << normal[1] << " " << normal[2];
+			}
+			outFile << "\n";
 		}
 
 		outFile.close();

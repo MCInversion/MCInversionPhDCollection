@@ -120,7 +120,8 @@ int main()
 		// "MedialAxisTests",
 		// "HyperellipseEllipsoidEquilibriumTests",
         // "JunkCan2DTests",
-        "InscribedCircleCalculatorVisualization",
+        // "InscribedCircleCalculatorVisualization",
+		"StandardMeshesExportWithNormals",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

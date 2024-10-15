@@ -211,6 +211,7 @@ void MedialAxisTests();
 void HyperellipseEllipsoidEquilibriumTests();
 void JunkCan2DTests();
 void InscribedCircleCalculatorVisualization();
+void StandardMeshesExportWithNormals();
 
 //
 // =================================================================================
@@ -327,6 +328,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"HyperellipseEllipsoidEquilibriumTests", HyperellipseEllipsoidEquilibriumTests },
     {"JunkCan2DTests", JunkCan2DTests },
     {"InscribedCircleCalculatorVisualization", InscribedCircleCalculatorVisualization },
+    {"StandardMeshesExportWithNormals", StandardMeshesExportWithNormals },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

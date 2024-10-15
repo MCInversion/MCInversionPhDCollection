@@ -634,6 +634,22 @@ void DeletePointsContainedInSpheres(std::vector<pmp::Point>& pointsToFilter, con
 	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnySphere).begin(), pointsToFilter.end());
 }
 
+void DeletePointsWithNormalsContainedInSpheres(std::vector<std::pair<pmp::Point, pmp::vec3>>& pointsToFilter, const std::vector<Sphere3D>& cutSpheres)
+{
+	auto isPointInSphere = [](const pmp::Point& point, const Sphere3D& sphere) {
+		return sqrnorm(point - sphere.Center) <= (sphere.Radius * sphere.Radius);
+	};
+
+	auto isInAnySphere = [&cutSpheres, &isPointInSphere](const std::pair<pmp::Point, pmp::vec3>& point) {
+		for (const auto& sphere : cutSpheres) {
+			if (isPointInSphere(point.first, sphere)) return true;
+		}
+		return false;
+	};
+
+	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnySphere).begin(), pointsToFilter.end());
+}
+
 
 void OldVsNewLSWTests()
 {
@@ -3857,7 +3873,7 @@ void StandardMeshesIOLSWTests()
 		//"armadillo",
 		//"blub",
 		"bunny",
-		//"maxPlanck",
+		"maxPlanck",
 		//"nefertiti",
 		//"ogre",
 		//"spot"
@@ -3946,9 +3962,9 @@ void StandardMeshesIOLSWTests()
 	constexpr unsigned int NTimeSteps = 180;
 
 	constexpr bool executeCurveLSW = false;
-	constexpr bool executeCurveIOLSW = false;
+	constexpr bool executeCurveIOLSW = true;
 	constexpr bool executeSurfaceLSW = false;
-	constexpr bool executeSurfaceIOLSW = true;
+	constexpr bool executeSurfaceIOLSW = false;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
@@ -4967,29 +4983,101 @@ void InscribedCircleCalculatorVisualization()
 	// =============================================================
 	// Ellipsoid
 
-	Geometry::IcoSphereBuilder icoBuilder({ 2, 1.0f });
-	icoBuilder.BuildBaseData();
-	icoBuilder.BuildPMPSurfaceMesh();
-	auto sphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
-	constexpr float a = 1.0f;
-	constexpr float b = 1.5f;
-	constexpr float c = 2.0f;
-	const auto scalingMat = scaling_matrix(pmp::vec3{ a, b, c });
-	sphereMesh *= scalingMat;
+	{
+		Geometry::IcoSphereBuilder icoBuilder({ 2, 1.0f });
+		icoBuilder.BuildBaseData();
+		icoBuilder.BuildPMPSurfaceMesh();
+		auto sphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
+		constexpr float a = 1.0f;
+		constexpr float b = 1.5f;
+		constexpr float c = 2.0f;
+		const auto scalingMat = scaling_matrix(pmp::vec3{ a, b, c });
+		sphereMesh *= scalingMat;
 	
-	const auto points = sphereMesh.positions();
-	const auto pointBBox = pmp::BoundingBox(points);
-	const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-	const float minSize = std::min({ pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2] });
-	const float cellSize = minSize / 20.0f;
+		const auto points = sphereMesh.positions();
+		const auto pointBBox = pmp::BoundingBox(points);
+		const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+		const float minSize = std::min({ pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2] });
+		const float cellSize = minSize / 20.0f;
 
-	const SDF::PointCloudDistanceFieldSettings ellipsoidDfSettings{
-		cellSize,
-		0.5f,
-		DBL_MAX
-	};
-	const auto dfEllipsoid = std::make_shared<Geometry::ScalarGrid>(SDF::PointCloudDistanceFieldGenerator::Generate(points, ellipsoidDfSettings));
+		const SDF::PointCloudDistanceFieldSettings ellipsoidDfSettings{
+			cellSize,
+			0.5f,
+			DBL_MAX
+		};
+		const auto dfEllipsoid = std::make_shared<Geometry::ScalarGrid>(SDF::PointCloudDistanceFieldGenerator::Generate(points, ellipsoidDfSettings));
 
-	ExportToVTI(dataOutPath + "\\EllipsoidSampling_DF", *dfEllipsoid);
+		ExportToVTI(dataOutPath + "\\EllipsoidSampling_DF", *dfEllipsoid);
+	}
 	// =============================================================
+}
+
+void StandardMeshesExportWithNormals()
+{
+	const std::vector<std::string> meshForPtCloudNames{
+		"bunnyWNormals",
+		"maxPlanckWNormals",
+	};
+
+	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
+		{"bunnyWNormals", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f}, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}/**/}},
+		{"maxPlanckWNormals", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f, 0.0f}, 50.0f}, Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} /**/}},
+	};
+
+	constexpr size_t samplingLevel = 3;
+	constexpr size_t nSamplings = 10;
+	constexpr size_t minVerts = 9; // Minimum number of vertices to sample
+
+	constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
+
+	for (const auto& meshName : meshForPtCloudNames)
+	{
+		// =======================================================================
+		//   - - - - - - - - - - - - -   Data   Prep   - - - - - - - - - - - -
+		// -----------------------------------------------------------------------
+
+		std::cout << "==================================================================\n";
+		std::cout << "Mesh To Pt Cloud: " << meshName << ".obj -> " << meshName << "Pts_" << samplingLevel << ".ply\n";
+		std::cout << "------------------------------------------------------------------\n";
+		const auto baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", false);
+		if (!baseDataOpt.has_value())
+		{
+			std::cerr << "baseDataOpt == nullopt!\n";
+			break;
+		}
+		std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+		const auto& baseData = baseDataOpt.value();
+		const size_t maxVerts = baseData.Vertices.size(); // Maximum number of vertices available
+		size_t nVerts = minVerts + (maxVerts - minVerts) * samplingLevel / (nSamplings - 1);
+		nVerts = std::max(minVerts, std::min(nVerts, maxVerts));
+
+		std::cout << "Sampling " << nVerts << "/" << maxVerts << " vertices...\n";
+
+		auto orientedPtCloud = SamplePointsWithNormalsFromMeshData(baseData, nVerts, seed);
+		const auto ptCloudName = meshName + "PtsWNormals_" + std::to_string(samplingLevel);
+
+		if (!cutSpheres.contains(meshName))
+		{
+			std::cerr << "!cutSpheres.contains(\"" << meshName << "\") ... skipping.\n";
+			continue;
+		}
+
+		DeletePointsWithNormalsContainedInSpheres(orientedPtCloud, cutSpheres.at(meshName));
+
+		std::cout << "Cutting " << nVerts - orientedPtCloud.size() << " / " << nVerts << " points ... \n";
+
+		std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
+		Geometry::BaseMeshGeometryData ptData;
+        ptData.Vertices.resize(orientedPtCloud.size());
+        ptData.VertexNormals.resize(orientedPtCloud.size());
+        // Extract vertices and vertex normals from orientedPtCloud
+        std::ranges::transform(orientedPtCloud, ptData.Vertices.begin(), [](const auto& pair) { return pair.first; });
+        std::ranges::transform(orientedPtCloud, ptData.VertexNormals.begin(), [](const auto& pair) { return pair.second; });
+
+		if (!ExportPointsToPLY(ptData, filename))
+		{
+			std::cerr << "ExportPointsToPLY failed!\n";
+			break;
+		}
+	}
 }

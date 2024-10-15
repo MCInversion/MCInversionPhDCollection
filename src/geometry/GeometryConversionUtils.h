@@ -100,6 +100,15 @@ namespace Geometry
 	[[nodiscard]] std::vector<pmp::Point> SamplePointsFromMeshData(const BaseMeshGeometryData& meshData, size_t nVerts, const std::optional<unsigned int>& seed = std::nullopt);
 
 	/**
+	 * \brief Randomly sample vertices with normals from given mesh data.
+	 * \param meshData       input geom data.
+	 * \param nVerts         the number of vertex normals to be sampled from meshData.
+	 * \param seed           seed value for random index generation.
+	 * \return The resulting point cloud with normals.
+	 */
+	[[nodiscard]] std::vector<std::pair<pmp::Point, pmp::vec3>> SamplePointsWithNormalsFromMeshData(const BaseMeshGeometryData& meshData, size_t nVerts, const std::optional<unsigned int>& seed = std::nullopt);
+
+	/**
 	 * \brief Randomly sample vertices and export them as *.ply point cloud.
 	 * \param meshData       input geom data.
 	 * \param nVerts         the number of vertices to be sampled from meshData.
