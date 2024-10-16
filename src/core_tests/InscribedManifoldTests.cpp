@@ -535,7 +535,7 @@ TEST_F(DistanceFieldInscribedSphereCalculatorTests, EllipsoidSampling)
     EXPECT_TRUE(inputData.DistanceField != nullptr);
     const auto epsilon = inputData.DistanceField->CellSize();
 
-    ExportToVTI(dataOutPath + "\\core_tests\\EllipsoidSampling_SDF", *inputData.DistanceField);
+    //ExportToVTI(dataOutPath + "\\core_tests\\EllipsoidSampling_SDF", *inputData.DistanceField);
 
     // Act
     const auto spheres = calculator.Calculate(inputData);

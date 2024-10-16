@@ -121,7 +121,7 @@ int main()
 		// "HyperellipseEllipsoidEquilibriumTests",
         // "JunkCan2DTests",
         // "InscribedCircleCalculatorVisualization",
-		"StandardMeshesExportWithNormals",
+		// "StandardMeshesExportWithNormals",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

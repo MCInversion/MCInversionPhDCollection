@@ -3946,7 +3946,7 @@ void StandardMeshesIOLSWTests()
 		{"nefertiti", {}}
 	};
 
-	constexpr unsigned int nVoxelsPerMinDimension = 30;
+	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
 	constexpr double defaultOffsetFactor = 1.5;
 
@@ -4170,6 +4170,8 @@ void StandardMeshesIOLSWTests()
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			strategySettings.ExportVariableScalarFieldsDimInfo = true;
 
 			std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
@@ -4993,15 +4995,15 @@ void InscribedCircleCalculatorVisualization()
 		constexpr float c = 2.0f;
 		const auto scalingMat = scaling_matrix(pmp::vec3{ a, b, c });
 		sphereMesh *= scalingMat;
-	
+
 		const auto points = sphereMesh.positions();
-		const auto pointBBox = pmp::BoundingBox(points);
-		const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-		const float minSize = std::min({ pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2] });
-		const float cellSize = minSize / 20.0f;
+		const auto pointBBox3D = pmp::BoundingBox(points);
+		const auto pointBBox3DSize = pointBBox3D.max() - pointBBox3D.min();
+		const float minSize3D = std::min({ pointBBox3DSize[0], pointBBox3DSize[1], pointBBox3DSize[2] });
+		const float cellSize3D = minSize3D / 20.0f;
 
 		const SDF::PointCloudDistanceFieldSettings ellipsoidDfSettings{
-			cellSize,
+			cellSize3D,
 			0.5f,
 			DBL_MAX
 		};

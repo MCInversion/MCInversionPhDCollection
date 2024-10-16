@@ -101,8 +101,8 @@ import matplotlib.patches as patches
 #procedure_name = "bunny_CurveLSW"
 #procedure_name = "maxPlanck_CurveLSW"
 
-#procedure_name = "bunny_CurveIOLSW"
-procedure_name = "maxPlanck_CurveIOLSW"
+procedure_name = "bunny_CurveIOLSW"
+#procedure_name = "maxPlanck_CurveIOLSW"
 
 #procedure_name = "maxPlanck_CurveIOLSW"
 
@@ -124,10 +124,11 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 
 # a specified time step container for exporting a single png with opaque curve polylines (except the last one). If empty, no png will be exported
 #multi_png_time_steps = []
+multi_png_time_steps = [0]
 #multi_png_time_steps = [0, 2, 4, 8, 12, 16, 22]
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
 #multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
-multi_png_time_steps = [0, 4, 10, 40, 100, 180]
+#multi_png_time_steps = [0, 4, 10, 40, 100, 180]
 #multi_png_time_steps = [0, 2, 4, 8, 10]
 #multi_png_time_steps = [0, 10, 100] 
 #multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
@@ -675,7 +676,7 @@ def plot_curves_with_increasing_opacity(frames):
 
     for frame_idx, frame in enumerate(frames):
 
-        alpha = min_opacity + (1.0 - min_opacity) * (frame_idx / (n_frames - 1))  # linear interpolation for opacity
+        alpha = min_opacity + (1.0 - min_opacity) * (frame_idx / (n_frames - 1)) if n_frames > 1 else 1  # linear interpolation for opacity
         # alpha = min_opacity + (1.0 - min_opacity) * (1.0 - np.exp(-frame_idx / (n_frames - 1)))  # exponential interpolation for opacity
 
         # Update outer curve
