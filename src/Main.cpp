@@ -122,6 +122,8 @@ int main()
         // "JunkCan2DTests",
         // "InscribedCircleCalculatorVisualization",
 		// "StandardMeshesExportWithNormals",
+        // "ExportBallPivotingBoundaryEdges",
+        "TestProblematicMedialAxisPtClouds",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

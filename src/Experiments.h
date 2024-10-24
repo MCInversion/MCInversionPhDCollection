@@ -212,6 +212,8 @@ void HyperellipseEllipsoidEquilibriumTests();
 void JunkCan2DTests();
 void InscribedCircleCalculatorVisualization();
 void StandardMeshesExportWithNormals();
+void ExportBallPivotingBoundaryEdges();
+void TestProblematicMedialAxisPtClouds();
 
 //
 // =================================================================================
@@ -329,6 +331,8 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"JunkCan2DTests", JunkCan2DTests },
     {"InscribedCircleCalculatorVisualization", InscribedCircleCalculatorVisualization },
     {"StandardMeshesExportWithNormals", StandardMeshesExportWithNormals },
+    {"ExportBallPivotingBoundaryEdges", ExportBallPivotingBoundaryEdges },
+    {"TestProblematicMedialAxisPtClouds", TestProblematicMedialAxisPtClouds },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

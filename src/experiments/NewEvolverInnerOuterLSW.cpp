@@ -3946,7 +3946,7 @@ void StandardMeshesIOLSWTests()
 		{"nefertiti", {}}
 	};
 
-	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	constexpr unsigned int nVoxelsPerMinDimension = 30;
 	constexpr double defaultTimeStep = 0.05;
 	constexpr double defaultOffsetFactor = 1.5;
 
@@ -3962,9 +3962,9 @@ void StandardMeshesIOLSWTests()
 	constexpr unsigned int NTimeSteps = 180;
 
 	constexpr bool executeCurveLSW = false;
-	constexpr bool executeCurveIOLSW = true;
+	constexpr bool executeCurveIOLSW = false;
 	constexpr bool executeSurfaceLSW = false;
-	constexpr bool executeSurfaceIOLSW = false;
+	constexpr bool executeSurfaceIOLSW = true;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
@@ -5081,5 +5081,171 @@ void StandardMeshesExportWithNormals()
 			std::cerr << "ExportPointsToPLY failed!\n";
 			break;
 		}
+	}
+}
+
+void ExportBallPivotingBoundaryEdges()
+{
+	const std::vector<std::string> meshNames{
+		"bunnyPts_3_BallPivoting",
+		"maxPlanckPts_3_BallPivoting10",
+	};
+
+	for (const auto& meshName : meshNames)
+	{
+		std::cout << "==================================================================\n";
+		std::cout << "Mesh: " << meshName << ".obj\n";
+		std::cout << "------------------------------------------------------------------\n";
+		
+		pmp::SurfaceMesh mesh;
+		//mesh.read(dataDirPath + meshName + ".obj");
+		// TODO: implement for BaseMeshGeometryData because this data is non-manifold
+
+		//if (!Geometry::ExportBoundaryEdgesToPLY(mesh, dataOutPath + meshName + "_boundaries.ply"))
+		//{
+		//	std::cerr << "Error while exporting " << (dataOutPath + meshName + "_boundaries.ply") << "!\n";
+		//	continue;
+		//}
+
+		std::cout << "meshName.obj" << " imported as BaseMeshGeometryData.\n";
+	}
+}
+
+void TestProblematicMedialAxisPtClouds()
+{
+	const std::vector unevenCrossPolyPts{
+		pmp::Point2{39.507142f, 14.544772f},
+		pmp::Point2{46.104261f, 5.542495f},
+		pmp::Point2{61.36143f, 4.906308f},
+		pmp::Point2{68.282948f, 13.11281f},
+		pmp::Point2{66.153916f, 31.426095f},
+		pmp::Point2{69.924933f, 39.754365f},
+		pmp::Point2{111.082270f, 39.723965f},
+		pmp::Point2{117.795930f, 46.528945f},
+		pmp::Point2{117.765430f, 66.419005f},
+		pmp::Point2{113.358230f, 72.215125f},
+		pmp::Point2{89.030514f, 71.743755f},
+		pmp::Point2{82.788235f, 77.337235f},
+		pmp::Point2{87.565954f, 122.613040f},
+		pmp::Point2{80.332640f, 129.222760f},
+		pmp::Point2{68.372952f, 128.366110f},
+		pmp::Point2{61.451434f, 122.392570f},
+		pmp::Point2{57.089489f, 85.394595f},
+		pmp::Point2{36.929786f, 84.297475f},
+		pmp::Point2{10.835265f, 83.544745f},
+		pmp::Point2{3.558908f, 76.519305f},
+		pmp::Point2{3.558908f, 57.450225f},
+		pmp::Point2{10.584357f, 47.664785f},
+		pmp::Point2{32.413427f, 48.166595f},
+		pmp::Point2{40.865615f, 41.985195f}
+	};
+	pmp::ManifoldCurve2D unevenCrossCurve = pmp::CurveFactory::sampled_polygon(unevenCrossPolyPts, 100, false);
+	if (!pmp::write_to_ply(unevenCrossCurve, dataOutPath + "unevenCrossCurve.ply"))
+		std::cerr << "Error writing unevenCrossCurve.ply!\n";
+
+	const auto unevenCrossPts = unevenCrossCurve.positions();
+
+	const std::vector<Circle2D> testInnerCircles{
+		{ pmp::Point2{ 60.322582f, 63.604839f }, 6.6532254f },
+		{ pmp::Point2{ 87.733871f, 55.975807f }, 9.08871 },
+		{ pmp::Point2{ 62.3629f, 61.741936f }, 19.161289f },
+		{ pmp::Point2{ 73.274193f, 103.87903f }, 8.5161285f },
+		{ pmp::Point2{ 24.749998f, 67.330643f }, 10.733871f },
+		{ pmp::Point2{ 53.935482f, 24.129032f }, 7.6290321f },
+	};
+
+	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	constexpr double defaultTimeStep = 0.05;
+	constexpr double defaultOffsetFactor = 1.5;
+	constexpr unsigned int NTimeSteps = 400;
+	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
+
+	for (size_t unevenCrossId = 0; const auto & innerCircle : testInnerCircles)
+	{
+		std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+		ManifoldEvolutionSettings strategySettings;
+		strategySettings.UseInnerManifolds = true;
+		//strategySettings.AdvectionInteractWithOtherManifolds = true;
+		//strategySettings.OuterManifoldEpsilon = [](double distance)
+		//{
+		//	return 0.00; // * (1.0 - exp(-distance * distance / 1.0));
+		//};
+		//strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+		//{
+		//	return 0.00; // * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//};
+		strategySettings.InnerManifoldEpsilon = [](double distance)
+		{
+			return 0.0025 * TRIVIAL_EPSILON(distance);
+		};
+		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+		{
+			return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		};
+		strategySettings.TimeStep = defaultTimeStep;
+		strategySettings.LevelOfDetail = 4;
+		strategySettings.TangentialVelocityWeight = 0.05;
+
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+		strategySettings.RemeshingSettings.UseBackProjection = false;
+
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+
+		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+		strategySettings.FieldSettings.FieldExpansionFactor = 0.5f;
+
+		std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+		GlobalManifoldEvolutionSettings globalSettings;
+		globalSettings.NSteps = NTimeSteps;
+		globalSettings.DoRemeshing = true;
+		globalSettings.DetectFeatures = false;
+		globalSettings.ExportPerTimeStep = true;
+		globalSettings.ExportTargetDistanceFieldAsImage = true;
+		globalSettings.ProcedureName = "unevenCross" + std::to_string(unevenCrossId);
+		globalSettings.OutputPath = dataOutPath;
+		globalSettings.ExportResult = false;
+
+		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+		const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+
+		std::vector<pmp::ManifoldCurve2D> innerCurves{
+			pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nSegments)
+		};
+		innerCurves[0].negate_orientation();
+
+		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+			strategySettings, std::nullopt, innerCurves, 
+			std::make_shared<std::vector<pmp::Point2>>(unevenCrossPts));
+
+		std::cout << "Setting up ManifoldEvolver.\n";
+
+		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+		std::cout << "ManifoldEvolver::Evolve ... ";
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (std::invalid_argument& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (std::runtime_error& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+
+		unevenCrossId++;
 	}
 }

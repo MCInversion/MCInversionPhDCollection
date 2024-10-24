@@ -1273,6 +1273,91 @@ namespace Geometry
 		return true;
 	}
 
+	bool ExportBoundaryEdgesToPLY(const pmp::SurfaceMesh& mesh, const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "ply")
+		{
+			std::cerr << "Geometry::ExportBoundaryEdgesToPLY: " << absFileName << " has invalid extension!" << std::endl;
+			return false;
+		}
+
+		// Create a file stream
+		std::ofstream outFile(absFileName);
+		if (!outFile.is_open())
+		{
+			std::cerr << "Geometry::ExportBoundaryEdgesToPLY: Unable to open file: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Collect boundary vertices and their indices
+		std::vector<pmp::Vertex> boundaryVertices;
+		std::unordered_map<unsigned int, unsigned int> vertexIndexMap;
+		unsigned int vertexCounter = 0;
+
+		for (const auto v : mesh.vertices())
+		{
+			if (mesh.is_boundary(v))
+			{
+				boundaryVertices.push_back(v);
+				vertexIndexMap[v.idx()] = vertexCounter++;
+			}
+		}
+
+		const unsigned int nBoundaryVertices = boundaryVertices.size();
+
+		if (nBoundaryVertices == 0)
+		{
+			std::cerr << "Geometry::ExportBoundaryEdgesToPLY: No boundary vertices found!\n";
+			outFile.close();
+			return false;
+		}
+
+		// PLY header
+		outFile << "ply\n";
+		outFile << "format ascii 1.0\n";
+		outFile << "element vertex " << nBoundaryVertices << "\n";
+		outFile << "property float x\n";
+		outFile << "property float y\n";
+		outFile << "property float z\n";
+
+		// Now count the boundary edges
+		unsigned int nBoundaryEdges = 0;
+		for (const auto e : mesh.edges())
+		{
+			if (mesh.is_boundary(e))
+				++nBoundaryEdges;
+		}
+
+		// Write edge count in PLY format (each edge is represented as a polyline of two vertices)
+		outFile << "element edge " << nBoundaryEdges << "\n";
+		outFile << "property int vertex1\n";
+		outFile << "property int vertex2\n";
+		outFile << "end_header\n";
+
+		// Write boundary vertex positions
+		for (const auto& v : boundaryVertices)
+		{
+			const auto& point = mesh.position(v);
+			outFile << point[0] << " " << point[1] << " " << point[2] << "\n";
+		}
+
+		// Write boundary edges as polylines using vertex indices
+		for (const auto e : mesh.edges())
+		{
+			if (mesh.is_boundary(e))
+			{
+				const auto v0 = mesh.vertex(e, 0); // First vertex of the edge
+				const auto v1 = mesh.vertex(e, 1); // Second vertex of the edge
+				outFile << vertexIndexMap[v0.idx()] << " " << vertexIndexMap[v1.idx()] << "\n";
+			}
+		}
+
+		outFile.close();
+		return true;
+	}
+
+
 	std::optional<BaseMeshGeometryData> ComputeConvexHullFromPoints(const std::vector<pmp::Point>& points)
 	{
 		if (points.size() < 4)

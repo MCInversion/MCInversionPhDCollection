@@ -154,6 +154,13 @@ namespace Geometry
 	[[nodiscard]] bool ExportPolylinesToOBJ(const std::vector<std::vector<pmp::vec3>>& polylines, const std::string& absFileName);
 
 	/**
+	 * \brief A utility for boundary edges as PLY polylines
+	 * \param mesh           mesh to be examined and processed.
+	 * \param absFileName    absolute file path for the opened file.
+	 */
+	[[nodiscard]] bool ExportBoundaryEdgesToPLY(const pmp::SurfaceMesh& mesh, const std::string& absFileName);
+
+	/**
 	 * \brief Computes the convex hull of an input point cloud.
 	 * \param points           input point cloud.
 	 * \return optional resulting pmp::SurfaceMesh if the computation is successful.
