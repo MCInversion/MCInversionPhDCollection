@@ -101,7 +101,9 @@ import matplotlib.patches as patches
 #procedure_name = "unevenCross2"
 #procedure_name = "unevenCross3"
 #procedure_name = "unevenCross4"
-procedure_name = "unevenCross5"
+#procedure_name = "unevenCross5"
+#procedure_name = "unevenCross6"
+procedure_name = "unevenCross7"
 
 #procedure_name = "boxWithAHole_CurveIOLSW"
 
@@ -136,8 +138,10 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
 #multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
 #multi_png_time_steps = [0, 4, 10, 40, 100, 180]
-multi_png_time_steps = [200, 250, 300, 350, 400]
-#multi_png_time_steps = [0, 2, 4, 8, 10]
+#multi_png_time_steps = [200, 250, 300, 350, 400]
+#multi_png_time_steps = [0, 4, 10, 40, 100, 180, 200, 250, 300, 350, 400]
+multi_png_time_steps = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800]
+#multi_png_time_steps = [0, 2, 4, 8, 10, 11]
 #multi_png_time_steps = [0, 10, 100] 
 #multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
 

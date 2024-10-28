@@ -5157,7 +5157,7 @@ void TestProblematicMedialAxisPtClouds()
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
 	constexpr double defaultOffsetFactor = 1.5;
-	constexpr unsigned int NTimeSteps = 400;
+	constexpr unsigned int NTimeSteps = 800;
 	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
 
 	for (size_t unevenCrossId = 0; const auto & innerCircle : testInnerCircles)
@@ -5181,7 +5181,7 @@ void TestProblematicMedialAxisPtClouds()
 		};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 		{
-			return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		};
 		strategySettings.TimeStep = defaultTimeStep;
 		strategySettings.LevelOfDetail = 4;
