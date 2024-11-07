@@ -1291,4 +1291,43 @@ namespace Geometry
 		return onSegment1 && onSegment2;
 	}
 
+	namespace
+	{
+		/// \brief Calculates the parametric distance at which two 2D rays intersect.
+		[[nodiscard]] float CalculateIntersectionParametricDistance(const Ray2D& ray1, const Ray2D& ray2)
+		{
+			// Represent rays as parametric equations: P1 = StartPt1 + t1 * Direction1, P2 = StartPt2 + t2 * Direction2
+			pmp::vec2 dirCross = pmp::vec2(-ray2.Direction[1], ray2.Direction[0]); // Perpendicular direction to ray2
+			float det = dirCross[0] * ray1.Direction[0] + dirCross[1] * ray1.Direction[1];
+
+			// If det is zero, rays are parallel and do not intersect
+			if (std::abs(det) < std::numeric_limits<float>::epsilon())
+			{
+				return FLT_MAX;
+			}
+
+			pmp::vec2 startDiff = ray2.StartPt - ray1.StartPt;
+			float t1 = (startDiff[0] * dirCross[0] + startDiff[1] * dirCross[1]) / det;
+
+			return t1;
+		}
+
+	} // anonymous namespace
+
+	Ray2D& Ray2D::operator+=(const Ray2D& other)
+	{
+		// Calculate intersection point between the two rays
+		float t1 = CalculateIntersectionParametricDistance(*this, other);
+
+		// Check if the intersection is within valid parametric range
+		if (t1 > ParamMin && t1 < ParamMax)
+		{
+			// Update HitParam and ParamMax if the intersection is closer
+			HitParam = std::min(HitParam, t1);
+			ParamMax = HitParam;
+		}
+
+		return *this;
+	}
+
 } // namespace Geometry

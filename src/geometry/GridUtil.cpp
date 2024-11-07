@@ -4,6 +4,113 @@
 #include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/TriangleKdTree.h"
 
+namespace
+{
+
+	/// \brief Utility function to generate a random float between min and max using a seeded generator
+	float RandomFloat(const float& min, const float& max, std::mt19937& gen)
+	{
+		std::uniform_real_distribution<> dis(min, max);
+		return dis(gen);
+	}
+
+	[[nodiscard]] std::vector<pmp::Point2> PoissonSamplePointsInGrid(
+		const pmp::BoundingBox2& bbox,
+		float samplingRadius,
+		unsigned int seed,
+		unsigned int samplingAttempts = 30)
+	{
+		std::mt19937 gen(seed); // Initialize the random number generator with the provided seed
+		std::vector<pmp::Point2> samples;
+		std::vector<pmp::Point2> activeList;
+		const float radiusSquared = samplingRadius * samplingRadius;
+		const float cellSize = samplingRadius / std::sqrt(2.0f);
+
+		// Get the bounding box dimensions
+		const pmp::Point2 minPoint = bbox.min();
+		const pmp::Point2 maxPoint = bbox.max();
+		const float minX = minPoint[0];
+		const float maxX = maxPoint[0];
+		const float minY = minPoint[1];
+		const float maxY = maxPoint[1];
+
+		const int gridWidth = static_cast<int>((maxX - minX) / cellSize) + 1;
+		const int gridHeight = static_cast<int>((maxY - minY) / cellSize) + 1;
+
+		// Initialize the grid and occupied status
+		std::vector<std::vector<pmp::Point2>> grid(gridWidth, std::vector<pmp::Point2>(gridHeight, pmp::Point2(-1, -1)));
+		std::vector<std::vector<bool>> occupied(gridWidth, std::vector<bool>(gridHeight, false));
+
+		// Helper function to add a point to the grid
+		auto AddPoint = [&](const pmp::Point2& point) {
+			samples.push_back(point);
+			activeList.push_back(point);
+			const int gridX = static_cast<int>((point[0] - minX) / cellSize);
+			const int gridY = static_cast<int>((point[1] - minY) / cellSize);
+			if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight)
+			{
+				grid[gridX][gridY] = point;
+				occupied[gridX][gridY] = true;
+			}
+		};
+
+		// Start with a random initial point
+		pmp::Point2 initialPoint(RandomFloat(minX, maxX, gen), RandomFloat(minY, maxY, gen));
+		AddPoint(initialPoint);
+
+		while (!activeList.empty())
+		{
+			// Randomly choose an active point
+			size_t randomIndex = static_cast<size_t>(RandomFloat(0.0f, static_cast<float>(activeList.size()), gen));
+			pmp::Point2 point = activeList[randomIndex];
+			bool found = false;
+
+			// Generate new points around the active point
+			for (unsigned int k = 0; k < samplingAttempts; ++k)
+			{
+				float angle = RandomFloat(0.0f, 2.0f * 3.14159265359f, gen);
+				float distance = RandomFloat(samplingRadius, 2.0f * samplingRadius, gen);
+				pmp::Point2 newPoint(point[0] + distance * std::cos(angle), point[1] + distance * std::sin(angle));
+
+				// Check if the new point is within the bounding box
+				if (newPoint[0] < minX || newPoint[0] > maxX || newPoint[1] < minY || newPoint[1] > maxY)
+				{
+					continue;
+				}
+
+				// Check for validity of the new point
+				int gridX = static_cast<int>((newPoint[0] - minX) / cellSize);
+				int gridY = static_cast<int>((newPoint[1] - minY) / cellSize);
+				bool valid = true;
+				for (int i = std::max(0, gridX - 2); i <= std::min(gridWidth - 1, gridX + 2) && valid; ++i)
+				{
+					for (int j = std::max(0, gridY - 2); j <= std::min(gridHeight - 1, gridY + 2) && valid; ++j)
+					{
+						if (occupied[i][j] && sqrnorm(newPoint - grid[i][j]) < radiusSquared)
+						{
+							valid = false;
+						}
+					}
+				}
+
+				if (valid)
+				{
+					AddPoint(newPoint);
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+			{
+				activeList.erase(activeList.begin() + randomIndex);
+			}
+		}
+
+		return samples;
+	}
+} // namespace
+
 namespace Geometry
 {
 	/// \brief constant for kernel radius of a "narrow" kernel.
@@ -675,6 +782,64 @@ namespace Geometry
 	//! tolerance for gradient vector norms
 	constexpr double NORM_EPSILON = 1e-6;
 
+	VectorGrid2D ComputeNormalizedGradient(const ScalarGrid2D& scalarGrid)
+	{
+		if (!scalarGrid.IsValid())
+			throw std::invalid_argument("ComputeGradient: scalarGrid to be processed is invalid!\n");
+
+		VectorGrid2D result(scalarGrid);
+		const auto cellSize = static_cast<double>(result.CellSize());
+		const auto& dim = result.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		const auto& gridValues = scalarGrid.Values();
+
+		auto& gradValsX = result.ValuesX();
+		auto& gradValsY = result.ValuesY();
+
+		for (unsigned int iy = 1; iy < Ny - 1; iy++) {
+			for (unsigned int ix = 1; ix < Nx - 1; ix++) {
+
+				const unsigned int gridPosPrevX = Nx * iy + (ix - 1);
+				const unsigned int gridPosNextX = Nx * iy + (ix + 1);
+
+				const unsigned int gridPosPrevY = Nx * (iy - 1) + ix;
+				const unsigned int gridPosNextY = Nx * (iy + 1) + ix;
+
+				const unsigned int gradPos = Nx * iy + ix;
+
+				// central difference for non-boundary pixels
+				const double grad_x = (gridValues[gridPosNextX] - gridValues[gridPosPrevX]) / (2.0 * cellSize);
+				const double grad_y = (gridValues[gridPosNextY] - gridValues[gridPosPrevY]) / (2.0 * cellSize);
+
+#if EXPECT_INVALID_VALUES
+				if (std::isnan(grad_x) || std::isinf(grad_x) ||
+					std::isnan(grad_y) || std::isinf(grad_y))
+				{
+					const std::string msg = "ComputeGradient: nans or infs encountered for cell " + std::to_string(gradPos) + "! Setting value to zero.\n";
+					assert(false);
+					std::cerr << msg;
+					continue;
+				}
+#endif
+
+				const double norm = sqrt(grad_x * grad_x + grad_y * grad_y);
+
+				assert(!std::isnan(norm) && !std::isinf(norm));
+
+				if (norm < NORM_EPSILON)
+					continue; // keep zero init val
+
+				gradValsX[gradPos] = grad_x / norm;
+				gradValsY[gradPos] = grad_y / norm;
+			}
+		}
+
+		return result;
+	}
+
 	VectorGrid ComputeNormalizedGradient(const ScalarGrid& scalarGrid)
 	{
 		if (!scalarGrid.IsValid())
@@ -903,6 +1068,35 @@ namespace Geometry
 		return divergenceField;
 	}
 
+	std::vector<std::vector<pmp::Point2>> CalculateStreamLines(const VectorGrid2D& vectorGrid, const StreamLineSettings& settings)
+	{
+		// Calculate grid-related properties
+		const auto& gridBox = vectorGrid.Box();
+		const auto gridBoxSize = gridBox.max() - gridBox.min();
+		const float minSize = std::min(gridBoxSize[0], gridBoxSize[1]);
+		const float maxSize = std::max(gridBoxSize[0], gridBoxSize[1]);
+		const float area = minSize * maxSize;
+
+		// Estimate total number of sample points (based on NSamplePts setting)
+		unsigned int totalSamplePoints = settings.NSamplePts;
+
+		// Calculate the area per sample point
+		float areaPerPoint = area / static_cast<float>(totalSamplePoints);
+
+		// Calculate the sampling radius assuming uniform distribution
+		float samplingRadius = std::sqrt(areaPerPoint / 3.14159265359f);
+
+		// Generate seed points using Poisson disk sampling
+		std::vector<pmp::Point2> seedPoints = PoissonSamplePointsInGrid(
+			gridBox, samplingRadius, settings.Seed, settings.NSamplingAttempts);
+
+		// Calculate and return the streamlines using the seed points and settings
+		return CalculateStreamLines(
+			vectorGrid, seedPoints,
+			settings.NSteps, settings.StepSize,
+			settings.UseAdaptiveStepSize, settings.Tolerance, settings.MaxIterations);
+	}
+
 	std::vector<std::vector<pmp::Point2>> CalculateStreamLines(const VectorGrid2D& vectorGrid, const std::vector<pmp::Point2>& seedPoints, unsigned int numSteps, double stepSize, bool useAdaptiveStepSize, double tolerance, unsigned int maxIterations)
 	{
 		std::vector<std::vector<pmp::Point2>> streamLines;
@@ -965,6 +1159,74 @@ namespace Geometry
 			}
 
 			streamLines.push_back(streamline);
+		}
+
+		return streamLines;
+	}
+
+	std::vector<std::vector<pmp::Point2>> CalculateStreamLinesEuler(const VectorGrid2D& vectorGrid, const EulerStreamLineSettings& settings)
+	{
+		// Calculate grid-related properties
+		const auto& gridBox = vectorGrid.Box();
+		const auto gridBoxSize = gridBox.max() - gridBox.min();
+		const float minSize = std::min(gridBoxSize[0], gridBoxSize[1]);
+		const float maxSize = std::max(gridBoxSize[0], gridBoxSize[1]);
+		const float area = minSize * maxSize;
+
+		// Estimate total number of sample points based on the settings
+		unsigned int totalSamplePoints = settings.NSamplePts;
+
+		// Calculate the area per sample point
+		float areaPerPoint = area / static_cast<float>(totalSamplePoints);
+
+		// Calculate the sampling radius assuming uniform distribution
+		float samplingRadius = std::sqrt(areaPerPoint / 3.14159265359f);
+
+		// Generate seed points using Poisson disk sampling
+		std::vector<pmp::Point2> seedPoints = PoissonSamplePointsInGrid(
+			gridBox, samplingRadius, settings.Seed, settings.NSamplingAttempts);
+
+		// Calculate and return the stream lines using the generated seed points and settings
+		return CalculateStreamLinesEuler(
+			vectorGrid, seedPoints,
+			settings.NSteps, settings.StepSize, settings.MaxIterations);
+	}
+
+	std::vector<std::vector<pmp::Point2>> CalculateStreamLinesEuler(const VectorGrid2D& vectorGrid, const std::vector<pmp::Point2>& seedPoints, unsigned int numSteps, double stepSize, unsigned int maxIterations)
+	{
+		std::vector<std::vector<pmp::Point2>> streamLines;
+
+		const auto& box = vectorGrid.Box();
+
+		for (const auto& seed : seedPoints) 
+		{
+			std::vector<pmp::Point2> streamLine;
+			pmp::dvec2 currentPoint(seed[0], seed[1]);
+			streamLine.emplace_back(currentPoint[0], currentPoint[1]);
+
+			for (unsigned int step = 0; step < numSteps; ++step)
+			{
+				if (!box.Contains(pmp::Point2(currentPoint[0], currentPoint[1]))) 
+				{
+					break; // Stop if the point goes out of bounds
+				}
+
+				// Get the gradient at the current point
+				pmp::dvec2 gradient = BilinearInterpolateVectorValue(pmp::Point2(currentPoint[0], currentPoint[1]), vectorGrid);
+				if (norm(gradient) < std::numeric_limits<double>::epsilon()) 
+				{
+					break; // Stop if the gradient is zero
+				}
+
+				// Normalize the gradient for consistent step size
+				gradient /= norm(gradient);
+
+				// Move to the next point using the ray-casting approach
+				currentPoint += stepSize * gradient;
+				streamLine.emplace_back(currentPoint[0], currentPoint[1]);
+			}
+
+			streamLines.push_back(streamLine);
 		}
 
 		return streamLines;
@@ -1408,6 +1670,95 @@ namespace Geometry
 			dx * (1 - dy) * surrCellVals.Val10 +
 			(1 - dx) * dy * surrCellVals.Val01 +
 			dx * dy * surrCellVals.Val11;
+	}
+
+	// --------------------------------------------------------------------------------------------
+
+	/// \brief A wrapper for grid interpolation vector values including 8 neighboring cells
+	struct SurroundingVectorNeighborhood2D
+	{
+		pmp::vec2 CenterPt{};
+		std::array<pmp::vec2, 8> NeighborPts{};
+		pmp::dvec2 CenterVal{ 0.0 };
+		std::array<pmp::dvec2, 8> NeighborVals{};
+	};
+
+	[[nodiscard]] SurroundingVectorNeighborhood2D GetNeighborhoodCells2D(const pmp::vec2& samplePt, const VectorGrid2D& grid)
+	{
+		const auto& [Nx, Ny] = grid.Dimensions();
+		const auto& boxMin = grid.Box().min();
+		const float cellSize = grid.CellSize();
+
+		// Find the closest grid point
+		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
+		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
+
+		// Indices for neighboring points (with bounds checking)
+		std::array<int, 8> dx = { -1, 1, 0, 0, -1, -1, 1, 1 };
+		std::array<int, 8> dy = { 0, 0, -1, 1, -1, 1, -1, 1 };
+
+		std::array<pmp::vec2, 8> neighborPts{};
+		std::array<pmp::dvec2, 8> neighborVals{};
+
+		const auto& valuesX = grid.ValuesX();
+		const auto& valuesY = grid.ValuesY();
+
+		for (size_t i = 0; i < 8; ++i) 
+		{
+			size_t neighborX = static_cast<size_t>(std::max(0, std::min(static_cast<int>(ix) + dx[i], static_cast<int>(Nx - 1))));
+			size_t neighborY = static_cast<size_t>(std::max(0, std::min(static_cast<int>(iy) + dy[i], static_cast<int>(Ny - 1))));
+
+			size_t neighborIndex = Nx * neighborY + neighborX;
+
+			neighborPts[i] = pmp::vec2{
+				boxMin[0] + static_cast<float>(neighborX) * cellSize,
+				boxMin[1] + static_cast<float>(neighborY) * cellSize
+			};
+
+			neighborVals[i] = pmp::dvec2{ valuesX[neighborIndex], valuesY[neighborIndex] };
+		}
+
+		// Center point and value
+		size_t centerIndex = Nx * iy + ix;
+		pmp::vec2 centerPt{
+			boxMin[0] + static_cast<float>(ix) * cellSize,
+			boxMin[1] + static_cast<float>(iy) * cellSize
+		};
+		pmp::dvec2 centerVal{ valuesX[centerIndex], valuesY[centerIndex] };
+
+		return { centerPt, neighborPts, centerVal, neighborVals };
+	}
+
+	// ..........................................................................................
+
+	FieldDirectionsOctet GetFieldDirectionsAroundPoint(const pmp::Point2& samplePt, const VectorGrid2D& vectorGrid)
+	{
+		// Get the 8 neighboring cells and center point around the sample point
+		auto neighborhood = GetNeighborhoodCells2D(samplePt, vectorGrid);
+
+		FieldDirectionsOctet normalizedDirections;
+
+		// Normalize each neighboring vector
+		for (size_t i = 0; i < 8; ++i)
+		{
+			pmp::dvec2& vec = neighborhood.NeighborVals[i];
+			double magnitude = norm(vec);
+
+			// Check if the magnitude is above a small threshold to avoid division by zero
+			if (magnitude > std::numeric_limits<double>::epsilon())
+			{
+				normalizedDirections.Directions[i] = vec / magnitude;
+			}
+			else
+			{
+				// If the magnitude is zero, set a default zero vector
+				normalizedDirections.Directions[i] = pmp::dvec2(0.0, 0.0);
+			}
+
+			normalizedDirections.GridPts[i] = neighborhood.NeighborPts[i];
+		}
+
+		return normalizedDirections;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -2696,7 +3047,5 @@ namespace Geometry
 
 		return subGrid;
 	}
-
-
 
 } // namespace Geometry

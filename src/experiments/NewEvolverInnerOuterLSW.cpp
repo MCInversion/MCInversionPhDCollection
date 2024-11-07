@@ -32,6 +32,7 @@
 #include "core/InscribedManifold.h"
 #include "core/ManifoldEvolver.h"
 #include "core/SurfaceEvolver.h"
+#include "core/CharacteristicsBuilder.h"
 
 #include "IOEnvironment.h"
 #include "../Experiments.h"
@@ -5281,7 +5282,7 @@ void TestDFDivergence2D()
 	pmp::ManifoldCurve2D unevenCrossCurve = pmp::CurveFactory::sampled_polygon(unevenCrossPolyPts, 100, false);
 	const auto unevenCrossPts = unevenCrossCurve.positions();
 
-	constexpr unsigned int nVoxelsPerMinDimension = 300;
+	constexpr unsigned int nVoxelsPerMinDimension = 40;
 
 	const pmp::BoundingBox2 ptCloudBBox(unevenCrossPts);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
@@ -5296,9 +5297,31 @@ void TestDFDivergence2D()
 	const auto df = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(unevenCrossPts, dfSettings);
 
 	auto blurredDf = df;
-	ApplyWideGaussianBlur2D(blurredDf);
+	//ApplyWideGaussianBlur2D(blurredDf);
 
 	const auto negGradDF = ComputeNormalizedNegativeGradient(blurredDf);
+
+	// Calculate stream lines
+	Geometry::StreamLineSettings slSettings{};
+	slSettings.NSamplePts = 1000;
+	slSettings.StepSize = 0.5 * cellSize;
+	slSettings.NSteps = 100;
+	const auto streamLines = CalculateStreamLines(negGradDF, slSettings);
+	ExportPolyLinesToPLY(streamLines, dataOutPath + "unevenCrossNegGradDF_Streamlines.ply");
+
+	// Calculate euler stream lines
+	//Geometry::EulerStreamLineSettings eslSettings{};
+	//eslSettings.NSamplePts = 1000;
+	//eslSettings.StepSize = 0.5 * cellSize;
+	//eslSettings.NSteps = 100;
+	//const auto characteristics = CalculateStreamLinesEuler(negGradDF, eslSettings);
+	//ExportPolyLinesToPLY(characteristics, dataOutPath + "unevenCrossNegGradDF_StreamlinesEuler.ply");
+
+	// Calculate characteristics
+	PlanarPointCloudCharacteristicsBuilder charBuilder{ unevenCrossPts, dfSettings };
+	const auto characteristics = charBuilder.Build();
+	ExportPolyLinesToPLY(characteristics, dataOutPath + "unevenCrossNegGradDF_Characteristics.ply");
+
 	//auto negGradDF = ComputeGradient(blurredDf);
 	//NegateGrid(negGradDF);
 	const auto divNegGradDF = ComputeDivergenceField(negGradDF);

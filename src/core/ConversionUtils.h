@@ -105,3 +105,6 @@ void ExportColorScaleToPNG(const std::string& filename,
 	const double& minValue, const double& maxValue, 
 	const RGBColorScheme& colorMap,
 	const unsigned int& imageHeight, const unsigned int& imageWidth);
+
+/// \brief Exports polylines to ply
+void ExportPolyLinesToPLY(const std::vector<std::vector<pmp::Point2>>& polyLines, const std::string& fileName);

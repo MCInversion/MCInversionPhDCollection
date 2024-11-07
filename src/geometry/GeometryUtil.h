@@ -151,4 +151,21 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool SphereIntersectsSphere3D(const pmp::Point& center1, const pmp::Scalar& radius1, const pmp::Point& center2, const pmp::Scalar& radius2);
 
+	/// \brief a wrapper for the parameters of 2D ray intersecting
+	struct Ray2D
+	{
+		pmp::Point2 StartPt;    //>! Starting point of the ray
+		pmp::vec2 Direction;    //>! Unit direction vector
+		float ParamMin{ 0.0f }; //>! Minimum parametric distance (usually 0 for the start)
+		float ParamMax{ FLT_MAX }; //>! Maximum parametric distance (initially set to a large value)
+		float HitParam{ FLT_MAX }; //>! Parametric distance of the closest intersection (initially set to a large value)
+
+		Ray2D(const pmp::Point2& startPt, const pmp::vec2& direction)
+			: StartPt(startPt), Direction(direction) {}
+
+		/// \brief Operator to handle intersection evaluation
+		Ray2D& operator+=(const Ray2D& other);
+	};
+
+
 } // namespace Geometry

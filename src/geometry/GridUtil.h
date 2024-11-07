@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <optional>
+#include <random>
 
 namespace pmp
 {
@@ -126,6 +127,15 @@ namespace Geometry
 	 * \param scalarGrid     input grid.
 	 * \return normalized gradient field.
 	 *
+	 * DISCLAIMER: This function uses central difference for approximating partial derivatives of scalarGrid values. Boundary pixels are skipped and contain default vector values.
+	 */
+	[[nodiscard]] VectorGrid2D ComputeNormalizedGradient(const ScalarGrid2D& scalarGrid);
+
+	/**
+	 * \brief Computes a normalized gradient from a given scalar grid.
+	 * \param scalarGrid     input grid.
+	 * \return normalized gradient field.
+	 *
 	 * DISCLAIMER: This function uses central difference for approximating partial derivatives of scalarGrid values. Boundary voxels are skipped and contain default vector values.
 	 */
 	[[nodiscard]] VectorGrid ComputeNormalizedGradient(const ScalarGrid& scalarGrid);
@@ -157,11 +167,36 @@ namespace Geometry
 	 */
 	[[nodiscard]] ScalarGrid2D ComputeDivergenceField(const VectorGrid2D& vectorGrid);
 
-	
-	//[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLines(const VectorGrid2D& vectorGrid, 
+	/**
+	 * \brief A parameter container for the generation of streamline paths on a vector grid
+	 * \struct StreamLineSettings
+	 */
+	struct StreamLineSettings
+	{
+		unsigned int NSamplePts{ 10 }; //>! determines the sampling density for Poisson sampling.
+
+		unsigned int NSamplingAttempts{ 30 }; //>! The number of attempts for Poisson sampling.
+
+		unsigned int NSteps{ 20 }; //>! The number of steps for the Runge-Kutta integration
+		double StepSize{ 0.1 }; //>! The step size for the Runge-Kutta integration.
+		bool UseAdaptiveStepSize{ true }; //>! Whether to use adaptive step size for the Runge-Kutta integration.
+		double Tolerance{ 1e-6 }; //>! The tolerance for the Runge-Kutta integration.
+		unsigned int MaxIterations{ 10'000 }; //>! The maximum number of iterations for the Runge-Kutta method.
+
+		unsigned int Seed{ std::random_device{}() }; // Default seed is random
+	};
 
 	/**
 	* \brief Computes a stream line from a given vector field.
+	* \param vectorGrid      input grid.
+	* \param settings        settings for streamlines
+	*
+	* \return a list of stream lines.
+	*/
+	[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLines(const VectorGrid2D& vectorGrid, const StreamLineSettings& settings);
+
+	/**
+	* \brief Computes a list of stream lines from a given vector field (using RK4 Method).
 	* \param vectorGrid     input grid.
 	* \param seedPoints     starting points of the stream lines.
 	* \param numSteps       number of steps to take.
@@ -171,7 +206,6 @@ namespace Geometry
 	* \param maxIterations  maximum number of iterations for adaptive step size.
 	* 
 	* \return a list of stream lines.
-	* 
 	*/
 	[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLines(
 		const VectorGrid2D& vectorGrid,
@@ -180,8 +214,65 @@ namespace Geometry
 		double stepSize,
 		bool useAdaptiveStepSize = false,
 		double tolerance = 1e-5,
-		unsigned int maxIterations = 1000
-	);
+		unsigned int maxIterations = 1000);
+
+	/**
+	 * \brief A parameter container for the generation of Euler stream line paths on a vector grid
+	 * \struct EulerStreamLineSettings
+	 */
+	struct EulerStreamLineSettings
+	{
+		unsigned int NSamplePts{ 10 };         // Number of seed points for Poisson disk sampling
+		unsigned int NSamplingAttempts{ 30 };  // Number of attempts for Poisson sampling
+		unsigned int NSteps{ 100 };            // Number of steps for path integration
+		double StepSize{ 0.1 };                // Step size for path integration
+		unsigned int MaxIterations{ 10'000 };    // Maximum number of iterations per path
+		unsigned int Seed{ std::random_device{}() }; // Seed for reproducibility
+	};
+
+	/**
+	* \brief Computes a list of stream lines from a given vector field (using Euler method).
+	* \param vectorGrid      input grid.
+	* \param settings        settings for stream lines
+	*
+	* \return a list of stream lines.
+	*/
+	[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLinesEuler(const VectorGrid2D& vectorGrid, const EulerStreamLineSettings& settings);
+
+	/**
+	* \brief Computes a list of stream lines from a given vector field (using Euler method).
+	* \param vectorGrid     input grid.
+	* \param seedPoints     starting points of the stream lines.
+	* \param numSteps       number of steps to take.
+	* \param stepSize       size of each step.
+	* \param maxIterations  maximum number of iterations for adaptive step size.
+	*
+	* \return a list of stream lines.
+	*/
+	[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLinesEuler(
+		const VectorGrid2D& vectorGrid,
+		const std::vector<pmp::Point2>& seedPoints,
+		unsigned int numSteps,
+		double stepSize,
+		unsigned int maxIterations = 1000);
+
+	// ..........................................................................................
+
+	/// \brief A wrapper for the 8 direction vectors and their corresponding grid points
+	struct FieldDirectionsOctet
+	{
+		std::array<pmp::vec2, 8> GridPts{};
+		std::array<pmp::dvec2, 8> Directions{};
+	};
+
+	/**
+	* \brief Finds the closest grid point near samplePt and its 8 neighboring points where the normalized field directions are extracted.
+	* \param samplePt        point whose 8 neighboring cells are going to be evaluated
+	* \param vectorGrid      input grid.
+	*
+	* \return the evaluated FieldDirectionsOctet
+	*/
+	[[nodiscard]] FieldDirectionsOctet GetFieldDirectionsAroundPoint(const pmp::Point2& samplePt, const VectorGrid2D& vectorGrid);
 
 	// ==========================================================================================
 	//             Interpolation

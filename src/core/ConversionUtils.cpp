@@ -1186,3 +1186,81 @@ void ExportColorScaleToPNG(const std::string& filename, const double& minValue, 
 		throw std::runtime_error("ExportColorScaleToPNG: Failed to save image to file!");
 	}
 }
+
+void ExportPolyLinesToPLY(const std::vector<std::vector<pmp::Point2>>& polyLines, const std::string& fileName)
+{
+	// Ensure the file has the correct extension
+	const size_t lastSlash = fileName.find_last_of("/\\");
+	const size_t dot = fileName.rfind('.');
+
+	if (dot == std::string::npos || (lastSlash != std::string::npos && dot < lastSlash))
+	{
+		std::cerr << "ExportPolyLinesToPLY [ERROR]: Invalid file extension or path!\n";
+		return;
+	}
+
+	std::string ext = fileName.substr(dot + 1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+	if (ext != "ply")
+	{
+		std::cerr << "ExportPolyLinesToPLY: Invalid file extension. Expected '.ply'!" << std::endl;
+		return;
+	}
+
+	std::ofstream file(fileName);
+	if (!file.is_open()) 
+	{
+		std::cerr << "ExportPolyLinesToPLY: Failed to open file for writing: " << fileName << std::endl;
+		return;
+	}
+
+	// Calculate total number of vertices and edges
+	size_t totalVertices = 0;
+	size_t totalEdges = 0;
+	for (const auto& polyline : polyLines)
+	{
+		totalVertices += polyline.size();
+		if (polyline.size() > 1)
+		{
+			totalEdges += (polyline.size() - 1);
+		}
+	}
+
+	// Write the PLY header
+	file << "ply" << std::endl;
+	file << "format ascii 1.0" << std::endl;
+	file << "element vertex " << totalVertices << std::endl;
+	file << "property float x" << std::endl;
+	file << "property float y" << std::endl;
+	file << "property float z" << std::endl;
+	file << "element edge " << totalEdges << std::endl;
+	file << "property int vertex1" << std::endl;
+	file << "property int vertex2" << std::endl;
+	file << "end_header" << std::endl;
+
+	// Write vertex data
+	size_t vertexIndex = 0;
+	std::vector<size_t> vertexIndices; // Store vertex indices for edges
+	for (const auto& polyline : polyLines) 
+	{
+		for (const auto& point : polyline)
+		{
+			file << point[0] << " " << point[1] << " 0.0" << std::endl; // z = 0 for 2D points
+			vertexIndices.push_back(vertexIndex++);
+		}
+	}
+
+	// Write edge data
+	size_t indexOffset = 0;
+	for (const auto& polyline : polyLines)
+	{
+		for (size_t i = 1; i < polyline.size(); ++i) 
+		{
+			file << (indexOffset + i - 1) << " " << (indexOffset + i) << std::endl;
+		}
+		indexOffset += polyline.size();
+	}
+
+	// File closes automatically when going out of scope (RAII)
+}
