@@ -625,7 +625,76 @@ namespace
 }
 
 
-void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid, 
+double CalculateSymmetricColorMapScalingFactor(double minVal, double maxVal)
+{
+	if (minVal >= maxVal) {
+		throw std::invalid_argument("CalculateMidpointScalingFactor: minVal must be less than maxVal.\n");
+	}
+
+	// Calculate the offset to center the range around zero
+	double rangeMidpoint = (minVal + maxVal) / 2.0;
+	double centeredMinVal = minVal - rangeMidpoint;
+	double centeredMaxVal = maxVal - rangeMidpoint;
+
+	// Calculate the absolute maximum for symmetrical scaling
+	double maxAbsVal = std::max(std::abs(centeredMinVal), std::abs(centeredMaxVal));
+
+	// If the maximum value is zero or near zero, return 1.0 to avoid division by zero
+	if (maxAbsVal < std::numeric_limits<double>::epsilon()) {
+		return 1.0;
+	}
+
+	// Calculate scaling factor to map values symmetrically to the [0, 1] range
+	double scalingFactor = 1.0 / maxAbsVal;
+
+	return scalingFactor;
+}
+
+RGBColorScheme AdjustColorMapForZeroMidpoint(const RGBColorScheme& scheme, double minVal, double maxVal)
+{
+	if (minVal >= maxVal)
+	{
+		throw std::invalid_argument("AdjustColorMapForMidpoint: minVal must be less than maxVal.\n");
+	}
+
+	// Check if 0.0 is within the range
+	if (minVal > 0.0 || maxVal < 0.0) 
+	{
+		// Exit early if 0.0 is not in the range
+		std::cerr << "AdjustColorMapForMidpoint: 0.0 is not within the range. No adjustment applied.\n";
+		return scheme; // Return the original scheme unmodified
+	}
+
+	double rangeMidpoint = 0.0; // Centering around zero
+	double maxAbsVal = std::max(std::abs(minVal), std::abs(maxVal));
+
+	if (maxAbsVal < std::numeric_limits<double>::epsilon()) 
+	{
+		throw std::invalid_argument("AdjustColorMapForMidpoint: Range is too small to adjust.\n");
+	}
+
+	RGBColorScheme adjustedScheme;
+	for (const auto& [key, color] : scheme) 
+	{
+		// Adjust keys symmetrically around 0.0 so that 0.0 maps to 0.5
+		double adjustedKey;
+		if (key < 0.5)
+		{
+			// Keys below 0.5 (negative side)
+			adjustedKey = 0.5 * (key / 0.5) * (std::abs(minVal) / maxAbsVal);
+		}
+		else 
+		{
+			// Keys above 0.5 (positive side)
+			adjustedKey = 0.5 + 0.5 * ((key - 0.5) / 0.5) * (std::abs(maxVal) / maxAbsVal);
+		}
+		adjustedScheme[adjustedKey] = color;
+	}
+
+	return adjustedScheme;
+}
+
+void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid,
 	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate,
 	float nPixelsPerCellX, float nPixelsPerCellY, const RGBColorScheme& colorMap)
 {

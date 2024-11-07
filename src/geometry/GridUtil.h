@@ -148,6 +148,18 @@ namespace Geometry
 	 */
 	[[nodiscard]] VectorGrid2D ComputeNormalizedNegativeGradient(const ScalarGrid2D& scalarGrid);
 
+	/**
+	 * \brief Computes a divergence field from the given vector field.
+	 * \param vectorGrid     input grid.
+	 * \return divergence field.
+	 *
+	 * DISCLAIMER: This function uses central difference for approximating partial derivatives of scalarGrid values. Boundary voxels are skipped and contain default vector values.
+	 */
+	[[nodiscard]] ScalarGrid2D ComputeDivergenceField(const VectorGrid2D& vectorGrid);
+
+	/// \brief Experimental evaluation of a given scalar function on a grid.
+	//[[nodiscard]] ScalarGrid2D EvaluateScalarFunction(const std::function<double()>& fn, const float cellSize, const pmp::BoundingBox2& box);
+
 	// ==========================================================================================
 	//             Interpolation
 	// ------------------------------------------------------------------------------------------

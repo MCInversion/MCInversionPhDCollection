@@ -869,6 +869,40 @@ namespace Geometry
 		return result;
 	}
 
+	ScalarGrid2D ComputeDivergenceField(const VectorGrid2D& vectorGrid)
+	{
+		if (!vectorGrid.IsValid())
+			throw std::invalid_argument("ComputDivergenceField: vectorGrid to be processed is invalid!\n");
+
+		ScalarGrid2D divergenceField(vectorGrid.CellSize(), vectorGrid.Box(), 0.0);
+		const auto cellSize = static_cast<double>(vectorGrid.CellSize());
+		const auto& dim = vectorGrid.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		const auto& valuesX = vectorGrid.ValuesX();
+		const auto& valuesY = vectorGrid.ValuesY();
+		auto& divergenceValues = divergenceField.Values();
+
+		for (unsigned int iy = 1; iy < Ny - 1; iy++) 
+		{
+			for (unsigned int ix = 1; ix < Nx - 1; ix++)
+			{
+				const unsigned int pos = Nx * iy + ix;
+
+				// Central difference approximation for partial derivatives
+				double d_dx = (valuesX[Nx * iy + (ix + 1)] - valuesX[Nx * iy + (ix - 1)]) / (2.0 * cellSize);
+				double d_dy = (valuesY[Nx * (iy + 1) + ix] - valuesY[Nx * (iy - 1) + ix]) / (2.0 * cellSize);
+
+				// Compute divergence at the current position
+				divergenceValues[pos] = d_dx + d_dy;
+			}
+		}
+
+		return divergenceField;
+	}
+
 	// ==================================================================================================
 	//                                     Interpolation utils 
 	// --------------------------------------------------------------------------------------------------

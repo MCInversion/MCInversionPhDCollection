@@ -214,6 +214,7 @@ void InscribedCircleCalculatorVisualization();
 void StandardMeshesExportWithNormals();
 void ExportBallPivotingBoundaryEdges();
 void TestProblematicMedialAxisPtClouds();
+void TestDFDivergence2D();
 
 //
 // =================================================================================
@@ -333,6 +334,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"StandardMeshesExportWithNormals", StandardMeshesExportWithNormals },
     {"ExportBallPivotingBoundaryEdges", ExportBallPivotingBoundaryEdges },
     {"TestProblematicMedialAxisPtClouds", TestProblematicMedialAxisPtClouds },
+    {"TestDFDivergence2D", TestDFDivergence2D },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

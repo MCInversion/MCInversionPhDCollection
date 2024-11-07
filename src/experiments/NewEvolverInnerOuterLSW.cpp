@@ -5249,3 +5249,77 @@ void TestProblematicMedialAxisPtClouds()
 		unevenCrossId++;
 	}
 }
+
+void TestDFDivergence2D()
+{
+	const std::vector unevenCrossPolyPts{
+		pmp::Point2{39.507142f, 14.544772f},
+		pmp::Point2{46.104261f, 5.542495f},
+		pmp::Point2{61.36143f, 4.906308f},
+		pmp::Point2{68.282948f, 13.11281f},
+		pmp::Point2{66.153916f, 31.426095f},
+		pmp::Point2{69.924933f, 39.754365f},
+		pmp::Point2{111.082270f, 39.723965f},
+		pmp::Point2{117.795930f, 46.528945f},
+		pmp::Point2{117.765430f, 66.419005f},
+		pmp::Point2{113.358230f, 72.215125f},
+		pmp::Point2{89.030514f, 71.743755f},
+		pmp::Point2{82.788235f, 77.337235f},
+		pmp::Point2{87.565954f, 122.613040f},
+		pmp::Point2{80.332640f, 129.222760f},
+		pmp::Point2{68.372952f, 128.366110f},
+		pmp::Point2{61.451434f, 122.392570f},
+		pmp::Point2{57.089489f, 85.394595f},
+		pmp::Point2{36.929786f, 84.297475f},
+		pmp::Point2{10.835265f, 83.544745f},
+		pmp::Point2{3.558908f, 76.519305f},
+		pmp::Point2{3.558908f, 57.450225f},
+		pmp::Point2{10.584357f, 47.664785f},
+		pmp::Point2{32.413427f, 48.166595f},
+		pmp::Point2{40.865615f, 41.985195f}
+	};
+	pmp::ManifoldCurve2D unevenCrossCurve = pmp::CurveFactory::sampled_polygon(unevenCrossPolyPts, 100, false);
+	const auto unevenCrossPts = unevenCrossCurve.positions();
+
+	constexpr unsigned int nVoxelsPerMinDimension = 300;
+
+	const pmp::BoundingBox2 ptCloudBBox(unevenCrossPts);
+	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+	const float minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const float maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const float cellSize = minSize / static_cast<float>(nVoxelsPerMinDimension);
+	const SDF::PointCloudDistanceField2DSettings dfSettings{
+		cellSize,
+		0.6,
+		DBL_MAX
+	};
+	const auto df = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(unevenCrossPts, dfSettings);
+
+	auto blurredDf = df;
+	ApplyWideGaussianBlur2D(blurredDf);
+
+	const auto negGradDF = ComputeNormalizedNegativeGradient(blurredDf);
+	//auto negGradDF = ComputeGradient(blurredDf);
+	//NegateGrid(negGradDF);
+	const auto divNegGradDF = ComputeDivergenceField(negGradDF);
+	const auto [dMin, dMax] = std::ranges::minmax_element(divNegGradDF.Values());
+	std::cout << "divNegGradDF value range: [" << *dMin << ", " << *dMax << "]\n";
+	const auto colorMap = AdjustColorMapForZeroMidpoint(SIGN_TEMP_MAP, *dMin, *dMax);
+	const double rangeVal = std::min(std::abs(*dMin), *dMax);
+	ExportScalarGridDimInfo2D(dataOutPath + "unevenCrossDivNegGradDF.gdim2d", divNegGradDF);
+	const unsigned int nPx = 2;
+	ExportScalarGrid2DToPNG(dataOutPath + "unevenCrossDivNegGradDF.png", divNegGradDF,
+		Geometry::BilinearInterpolateScalarValue,
+		//Geometry::GetNearestNeighborScalarValue2D,
+		nPx, nPx, colorMap);
+	constexpr bool verticalLegend = true;
+	constexpr unsigned int resolutionFactor = 4;
+	constexpr unsigned int legendPxHeight = (verticalLegend ? 400 : 100) * resolutionFactor;
+	constexpr unsigned int legendPxWidth = (verticalLegend ? 100 : 600) * resolutionFactor;
+	ExportColorScaleToPNG(
+		dataOutPath + "unevenCrossDivNegGradDF_Scale.png",
+		-rangeVal,
+		rangeVal,
+		colorMap,
+		legendPxHeight, legendPxWidth);
+}

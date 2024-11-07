@@ -75,6 +75,17 @@ const RGBColorScheme RAINBOW_TO_WHITE_MAP = {
 	{ 1.0, { 1.0f, 1.0f, 1.0f } }  // White 2
 };
 
+const RGBColorScheme SIGN_TEMP_MAP = {
+	{ 0.0, { 0.498f, 0.859f, 0.961f } }, // Light Blue (127, 219, 245)
+	{ 0.4, {0.0f, 0.0f, 1.0f}}, // Blue
+	{ 0.5, { 1.0f, 1.0f, 1.0f } },  // White
+	{ 0.6, { 1.0f, 0.0f, 0.0f } }, // Red
+	{ 1.0, { 0.988f, 0.518f, 0.012f } } // Orange (252, 132, 3)
+};
+
+/// \brief Scales the color map so that zero is in the middle
+[[nodiscard]] RGBColorScheme AdjustColorMapForZeroMidpoint(const RGBColorScheme& scheme, double minVal, double maxVal);
+
 /// \brief Export a 2D scalar field as an RGB PNG image
 void ExportScalarGrid2DToPNG(const std::string& filename, const Geometry::ScalarGrid2D& grid,
 	const std::function<double(const pmp::vec2&, const Geometry::ScalarGrid2D&)>& interpolate, 

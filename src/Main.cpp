@@ -123,7 +123,8 @@ int main()
         // "InscribedCircleCalculatorVisualization",
 		// "StandardMeshesExportWithNormals",
         // "ExportBallPivotingBoundaryEdges",
-        "TestProblematicMedialAxisPtClouds",
+        // "TestProblematicMedialAxisPtClouds",
+        "TestDFDivergence2D",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here
