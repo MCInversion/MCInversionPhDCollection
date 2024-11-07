@@ -157,8 +157,31 @@ namespace Geometry
 	 */
 	[[nodiscard]] ScalarGrid2D ComputeDivergenceField(const VectorGrid2D& vectorGrid);
 
-	/// \brief Experimental evaluation of a given scalar function on a grid.
-	//[[nodiscard]] ScalarGrid2D EvaluateScalarFunction(const std::function<double()>& fn, const float cellSize, const pmp::BoundingBox2& box);
+	
+	//[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLines(const VectorGrid2D& vectorGrid, 
+
+	/**
+	* \brief Computes a stream line from a given vector field.
+	* \param vectorGrid     input grid.
+	* \param seedPoints     starting points of the stream lines.
+	* \param numSteps       number of steps to take.
+	* \param stepSize       size of each step.
+	* \param useAdaptiveStepSize    whether to use adaptive step size.
+	* \param tolerance      tolerance for adaptive step size.
+	* \param maxIterations  maximum number of iterations for adaptive step size.
+	* 
+	* \return a list of stream lines.
+	* 
+	*/
+	[[nodiscard]] std::vector<std::vector<pmp::Point2>> CalculateStreamLines(
+		const VectorGrid2D& vectorGrid,
+		const std::vector<pmp::Point2>& seedPoints,
+		unsigned int numSteps,
+		double stepSize,
+		bool useAdaptiveStepSize = false,
+		double tolerance = 1e-5,
+		unsigned int maxIterations = 1000
+	);
 
 	// ==========================================================================================
 	//             Interpolation

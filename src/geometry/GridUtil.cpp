@@ -903,6 +903,73 @@ namespace Geometry
 		return divergenceField;
 	}
 
+	std::vector<std::vector<pmp::Point2>> CalculateStreamLines(const VectorGrid2D& vectorGrid, const std::vector<pmp::Point2>& seedPoints, unsigned int numSteps, double stepSize, bool useAdaptiveStepSize, double tolerance, unsigned int maxIterations)
+	{
+		std::vector<std::vector<pmp::Point2>> streamLines;
+
+		const auto& box = vectorGrid.Box();
+
+		// Iterate over each seed point to generate a streamline
+		for (const auto& seed : seedPoints)
+		{
+			std::vector<pmp::Point2> streamline;
+			pmp::Point2 currentPoint = seed;
+			streamline.push_back(currentPoint);
+
+			for (unsigned int step = 0; step < numSteps; ++step) 
+			{
+				if (!box.Contains(currentPoint))
+				{
+					break; // Stop if we leave the bounds of the grid
+				}
+
+				// Get the gradient (vector field value) at the current point
+				const auto gradient = BilinearInterpolateVectorValue(currentPoint, vectorGrid);
+
+				// Check for zero gradient (stagnation point)
+				if (norm(gradient) < std::numeric_limits<double>::epsilon())
+				{
+					break; // Stop if there's no movement
+				}
+
+				// convert current point to dvec2
+				pmp::dvec2 currentPointDVec2{ currentPoint[0], currentPoint[1] };
+
+				// Runge-Kutta 4th order integration
+				pmp::dvec2 k1 = stepSize * gradient;
+				pmp::dvec2 k2 = stepSize * BilinearInterpolateVectorValue(pmp::vec2{ currentPointDVec2 + 0.5 * k1 }, vectorGrid);
+				pmp::dvec2 k3 = stepSize * BilinearInterpolateVectorValue(pmp::vec2{ currentPointDVec2 + 0.5 * k2 }, vectorGrid);
+				pmp::dvec2 k4 = stepSize * BilinearInterpolateVectorValue(pmp::vec2{ currentPointDVec2 + k3 }, vectorGrid);
+
+				// Update the current point using RK4 integration
+				pmp::Point2 nextPoint = currentPoint + pmp::vec2{ (1.0 / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4) };
+
+				// Add the next point to the streamline and update the current point
+				streamline.push_back(nextPoint);
+				currentPoint = nextPoint;
+
+				// Check for convergence or iteration limit
+				if (useAdaptiveStepSize)
+				{
+					double estimatedError = norm(k1 - k4); // Simple error estimate
+					if (estimatedError < tolerance)
+					{
+						break; // Stop if the error is below the threshold
+					}
+				}
+
+				if (streamline.size() >= maxIterations)
+				{
+					break; // Prevent infinite loops
+				}
+			}
+
+			streamLines.push_back(streamline);
+		}
+
+		return streamLines;
+	}
+
 	// ==================================================================================================
 	//                                     Interpolation utils 
 	// --------------------------------------------------------------------------------------------------
