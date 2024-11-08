@@ -1293,6 +1293,7 @@ namespace Geometry
 
 	namespace
 	{
+
 		/// \brief Calculates the parametric distance at which two 2D rays intersect.
 		[[nodiscard]] float CalculateIntersectionParametricDistance(const Ray2D& ray1, const Ray2D& ray2)
 		{
@@ -1301,15 +1302,13 @@ namespace Geometry
 			float det = dirCross[0] * ray1.Direction[0] + dirCross[1] * ray1.Direction[1];
 
 			// If det is zero, rays are parallel and do not intersect
-			if (std::abs(det) < std::numeric_limits<float>::epsilon())
+			if (std::abs(det) < INTERSECTION_EPSILON)
 			{
 				return FLT_MAX;
 			}
 
 			pmp::vec2 startDiff = ray2.StartPt - ray1.StartPt;
-			float t1 = (startDiff[0] * dirCross[0] + startDiff[1] * dirCross[1]) / det;
-
-			return t1;
+			return (startDiff[0] * dirCross[0] + startDiff[1] * dirCross[1]) / det;
 		}
 
 	} // anonymous namespace
@@ -1317,7 +1316,7 @@ namespace Geometry
 	Ray2D& Ray2D::operator+=(const Ray2D& other)
 	{
 		// Calculate intersection point between the two rays
-		float t1 = CalculateIntersectionParametricDistance(*this, other);
+		const auto t1 = CalculateIntersectionParametricDistance(*this, other);
 
 		// Check if the intersection is within valid parametric range
 		if (t1 > ParamMin && t1 < ParamMax)
@@ -1328,6 +1327,48 @@ namespace Geometry
 		}
 
 		return *this;
+	}
+
+	bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, float& tMinOut, float& tMaxOut)
+	{
+		// Initialize parameters for the intersection distances
+		float tMin = 0.0f;
+		float tMax = std::numeric_limits<float>::infinity();
+
+		// Get the min and max points of the bounding box
+		pmp::Point2 boxMin = box.min();
+		pmp::Point2 boxMax = box.max();
+
+		// Check for intersection with each axis (x and y)
+		for (int i = 0; i < 2; ++i) // 0 for x-axis, 1 for y-axis
+		{
+			if (std::abs(direction[i]) > INTERSECTION_EPSILON) // Avoid division by zero
+			{
+				// Calculate intersection distances with the slab boundaries
+				float t1 = (boxMin[i] - startPt[i]) / direction[i];
+				float t2 = (boxMax[i] - startPt[i]) / direction[i];
+
+				// Ensure t1 is the min and t2 is the max distance
+				if (t1 > t2) std::swap(t1, t2);
+
+				// Update tMin and tMax to include the current axis
+				tMin = std::max(tMin, t1);
+				tMax = std::min(tMax, t2);
+
+				// Check for no intersection
+				if (tMin > tMax) return false;
+			}
+			else
+			{
+				// The ray is parallel to the current axis; check if it's outside the box
+				if (startPt[i] < boxMin[i] || startPt[i] > boxMax[i]) return false;
+			}
+		}
+
+		// If we reach here, the ray intersects the bounding box
+		tMinOut = tMin;
+		tMaxOut = tMax;
+		return true;
 	}
 
 } // namespace Geometry

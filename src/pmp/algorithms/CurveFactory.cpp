@@ -166,7 +166,7 @@ namespace pmp
             // Reduce the number of segments by removing them from the longest edges
             while (totalAssignedSegments > nSegments)
             {
-                auto maxIt = std::max_element(nSegmentsPerEdge.begin(), nSegmentsPerEdge.end());
+                auto maxIt = std::ranges::max_element(nSegmentsPerEdge);
                 if (*maxIt > 1)
                 {
                     (*maxIt)--;
@@ -179,7 +179,7 @@ namespace pmp
             // Increase the number of segments by adding them to the longest edges
             while (totalAssignedSegments < nSegments)
             {
-                auto maxIt = std::max_element(nSegmentsPerEdge.begin(), nSegmentsPerEdge.end());
+                auto maxIt = std::ranges::max_element(nSegmentsPerEdge);
                 (*maxIt)++;
                 totalAssignedSegments++;
             }
@@ -197,7 +197,7 @@ namespace pmp
 
             for (size_t j = 0; j <= segmentsOnEdge; ++j)
             {
-                const Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(segmentsOnEdge);
+                const Scalar t = static_cast<Scalar>(j) / static_cast<Scalar>(segmentsOnEdge + 1);
                 Point2 sampledPoint = (1 - t) * startVertex + t * endVertex;
 
                 // Chamfer logic: Skip corner points

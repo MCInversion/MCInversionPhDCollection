@@ -8,6 +8,7 @@
 // forward declarations
 namespace pmp
 {
+	class BoundingBox2;
 	class BoundingBox;
 }
 
@@ -151,12 +152,14 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool SphereIntersectsSphere3D(const pmp::Point& center1, const pmp::Scalar& radius1, const pmp::Point& center2, const pmp::Scalar& radius2);
 
+	constexpr float INTERSECTION_EPSILON{ 1e-5f };
+
 	/// \brief a wrapper for the parameters of 2D ray intersecting
 	struct Ray2D
 	{
 		pmp::Point2 StartPt;    //>! Starting point of the ray
 		pmp::vec2 Direction;    //>! Unit direction vector
-		float ParamMin{ 0.0f }; //>! Minimum parametric distance (usually 0 for the start)
+		float ParamMin{ INTERSECTION_EPSILON }; //>! Minimum parametric distance (slightly farther from the origin to avoid intersection of ray fans)
 		float ParamMax{ FLT_MAX }; //>! Maximum parametric distance (initially set to a large value)
 		float HitParam{ FLT_MAX }; //>! Parametric distance of the closest intersection (initially set to a large value)
 
@@ -167,5 +170,15 @@ namespace Geometry
 		Ray2D& operator+=(const Ray2D& other);
 	};
 
+	/**
+	 * \brief Checks if a 2D ray intersects with an axis-aligned bounding box and calculates the parametric distances.
+	 * \param startPt       The starting point of the ray.
+	 * \param direction     The unit direction vector of the ray.
+	 * \param box           The axis-aligned bounding box to test against.
+	 * \param tMinOut       The minimum parametric distance of intersection.
+	 * \param tMaxOut       The maximum parametric distance of intersection.
+	 * \return              True if the ray intersects the bounding box, false otherwise.
+	 */
+	[[nodiscard]] bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, float& tMinOut, float& tMaxOut);
 
 } // namespace Geometry

@@ -1130,7 +1130,7 @@ namespace Geometry
 
 	pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v)
 	{
-		const auto curvature = vertex_curvature(curve, v);
+		const auto curvature = std::fabs(vertex_curvature(curve, v));
 
 		if (curvature < CURVATURE_EPSILON)
 		{

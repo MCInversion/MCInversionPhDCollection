@@ -482,18 +482,28 @@ Scalar vertex_curvature(const ManifoldCurve2D& curve, Vertex v)
     const auto pNext = curve.position(vNext);
 
     // Calculate the area of triangle (pPrev, p, pNext) using the determinant method
-    const Scalar area = std::fabs((pPrev[0] * (p[1] - pNext[1]) +
+    const Scalar area = (pPrev[0] * (p[1] - pNext[1]) +
         p[0] * (pNext[1] - pPrev[1]) +
-        pNext[0] * (pPrev[1] - p[1])) * 0.5f);
+        pNext[0] * (pPrev[1] - p[1])) * 0.5f;
 
     const Scalar l2 = norm(pNext - pPrev); // triangle hypotenuse
 
     Scalar curvature = 0.0;
-    if (l0 > 0 && l1 > 0 && l2 > 0 && area > 0.0)
+    if (l0 > 0 && l1 > 0 && l2 > 0 && std::fabs(area) > 0.0)
     {
-		// Calculate circumradius
-        const Scalar R = (l0 * l1 * l2) / (4.0 * area);
+        // Calculate circumradius
+        const Scalar R = (l0 * l1 * l2) / (4.0 * std::fabs(area));
         curvature = 1.0 / R;
+
+        // Determine the sign of the curvature based on the area sign
+        if (area < 0.0)
+        {
+            curvature = -curvature; // Concave vertex
+        }
+        else
+        {
+            curvature = curvature; // Convex vertex (positive curvature)
+        }
     }
 
     return curvature;

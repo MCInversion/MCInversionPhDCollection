@@ -34,6 +34,20 @@ inline Scalar angle(const Point& v0, const Point& v1)
     return atan2(norm(cross(v0, v1)), dot(v0, v1));
 }
 
+//! compute angle between two (un-normalized) vectors
+inline Scalar angle(const Point2& v0, const Point2& v1)
+{
+    const Scalar denominator = sqrt(sqrnorm(v0) * sqrnorm(v1));
+    if (denominator < FLT_EPSILON)
+    {
+        // orthogonality by at least one vector being zero
+        return M_PI_2;
+    }
+
+    const Scalar cosAngle = dot(v0, v1) / denominator;
+    return acos(std::clamp(cosAngle, -1.0f, 1.0f));
+}
+
 //! compute sine of angle between two (un-normalized) vectors
 inline Scalar sin(const Point& v0, const Point& v1)
 {
