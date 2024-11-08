@@ -164,6 +164,9 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
 
         if (angleBetweenNormals > FLT_EPSILON && vCurvature > FLT_EPSILON)
         {
+            if (!m_ConstructOutwardCharacteristics)
+                continue;
+
 	        // normals of adjacent edges diverge, we need to create a fan of characteristics
             const size_t nAngleSegments = std::round(angleBetweenNormals / fanAngleStep);
             if (nAngleSegments < 2)
@@ -194,24 +197,27 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
         }
         else
         {
-            // outward pointing normals of adjacent edges converge, one characteristic suffices
-            const auto normal = (eToNormal + eFromNormal) * 0.5f;
-	        rays.emplace_back(pos, normal);
-            if (m_ConstructInwardCharacteristics)
-            {
-				rays.emplace_back(pos, -normal);	
-            }
+    //        // outward pointing normals of adjacent edges converge, one characteristic suffices
+    //        const auto normal = (eToNormal + eFromNormal) * 0.5f;
+    //        if (m_ConstructOutwardCharacteristics)
+    //        {
+				//rays.emplace_back(pos, normal);	            
+    //        }
+    //        if (m_ConstructInwardCharacteristics)
+    //        {
+				//rays.emplace_back(pos, -normal);	
+    //        }
         }
 
         if (m_ConstructInwardCharacteristics && angleBetweenNormals > FLT_EPSILON && vCurvature < -FLT_EPSILON)
         {
             // Inward characteristics for concave vertices
-            const size_t nAngleSegments = std::round(fanAngleStep / std::abs(angleBetweenNormals));
+            const size_t nAngleSegments = std::round(fanAngleStep / angleBetweenNormals);
             if (nAngleSegments < 2)
                 continue;
 
-            const float startAngle = std::atan2(-eToNormal[1], -eToNormal[0]);
-            float endAngle = std::atan2(-eFromNormal[1], -eFromNormal[0]);
+            const float startAngle = std::atan2(-eFromNormal[1], -eFromNormal[0]);
+            float endAngle = std::atan2(-eToNormal[1], -eToNormal[0]);
 
             if (endAngle < startAngle)
                 endAngle += 2.0f * static_cast<float>(M_PI);

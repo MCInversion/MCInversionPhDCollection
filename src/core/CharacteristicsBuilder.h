@@ -68,10 +68,12 @@ public:
 
     explicit PlanarManifoldCurveCharacteristicsBuilder(
         pmp::ManifoldCurve2D& curve, 
-        const bool& constructInwardCharacteristics = false, 
+        const bool& constructInwardCharacteristics = false,
+        const bool& constructOutwardCharacteristics = true,
         const float& boxExpansionFactor = 1.0f)
 	    : m_Curve(curve),
 	      m_ConstructInwardCharacteristics(constructInwardCharacteristics),
+		  m_ConstructOutwardCharacteristics(constructOutwardCharacteristics),
 	      m_ExpansionFactor(boxExpansionFactor)
     {
     }
@@ -89,5 +91,6 @@ private:
 
     pmp::ManifoldCurve2D& m_Curve;
     bool m_ConstructInwardCharacteristics;
+    bool m_ConstructOutwardCharacteristics;
     float m_ExpansionFactor;
 };

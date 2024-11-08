@@ -5319,7 +5319,7 @@ void TestDFDivergence2D()
 
 	// Calculate characteristics
 	//PlanarPointCloudCharacteristicsBuilder charBuilder{ unevenCrossPts, dfSettings };
-	PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve };
+	PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, true, false };
 	const auto characteristics = charBuilder.Build();
 	ExportPolyLinesToPLY(characteristics, dataOutPath + "unevenCrossNegGradDF_Characteristics.ply");
 
