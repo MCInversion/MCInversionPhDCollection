@@ -166,6 +166,12 @@ namespace Geometry
 		Ray2D(const pmp::Point2& startPt, const pmp::vec2& direction)
 			: StartPt(startPt), Direction(direction) {}
 
+		[[nodiscard]] pmp::vec2 GetVector() const;
+
+		[[nodiscard]] pmp::Point2 GetMin() const;
+
+		[[nodiscard]] pmp::Point2 GetMax() const;
+
 		/// \brief Operator to handle intersection evaluation
 		Ray2D& operator+=(const Ray2D& other);
 	};

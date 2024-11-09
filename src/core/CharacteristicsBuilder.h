@@ -14,6 +14,14 @@ namespace Geometry
     struct Ray2D;
 }
 
+struct CharacteristicsBuilderSettings
+{
+    SDF::PointCloudDistanceField2DSettings DFSettings;
+    bool ConstructInwardCharacteristics{ false };
+    bool ConstructOutwardCharacteristics{ true };
+    float DivFieldThresholdFactor{ 0.01f }; //>! during clipping of rays by divergence field this threshold is used for valuating whether a ray should be clipped.
+};
+
 /**
  * \brief A base builder for generating distance field characteristics from a given geometry using the ray-casting method.
  * \class PlanarPointCloudCharacteristicsBuilder
@@ -21,16 +29,25 @@ namespace Geometry
 class PlanarCharacteristicsBuilder
 {
 public:
+
+    explicit PlanarCharacteristicsBuilder(const CharacteristicsBuilderSettings& settings)
+        : m_Settings(settings) {}
+
     /// \brief Main method of the builder
     virtual [[nodiscard]] std::vector<std::vector<pmp::Point2>> Build() = 0;
 
 protected:
 
     /// \brief Culls rays by limiting their parametric length based on intersections with other rays.
-    static void CullRays(std::vector<Geometry::Ray2D>& rays, const pmp::BoundingBox2& clipBox);
+    void CullRays(std::vector<Geometry::Ray2D>& rays, const pmp::BoundingBox2& clipBox);
 
     /// \brief Converts rays to polylines.
     [[nodiscard]] std::vector<std::vector<pmp::Point2>> ConvertRaysToPolylines(const std::vector<Geometry::Ray2D>& rays) const;
+
+    // -----------------------------------------------------------------------------------
+
+    CharacteristicsBuilderSettings m_Settings;
+    std::shared_ptr<Geometry::ScalarGrid2D> m_DivergenceField{ nullptr };
 };
 
 /**
@@ -41,8 +58,8 @@ class PlanarPointCloudCharacteristicsBuilder : public PlanarCharacteristicsBuild
 {
 public:
     /// \brief Constructor
-    explicit PlanarPointCloudCharacteristicsBuilder(const std::vector<pmp::Point2>& points, const SDF::PointCloudDistanceField2DSettings& settings)
-        : m_Points(points), m_Settings(settings)
+    explicit PlanarPointCloudCharacteristicsBuilder(const std::vector<pmp::Point2>& points, const CharacteristicsBuilderSettings& settings)
+        : PlanarCharacteristicsBuilder(settings), m_Points(points)
     {}
 
     /// \brief Main method of the builder
@@ -55,7 +72,6 @@ private:
     // -----------------------------------------------------------------------------------
 
     std::vector<pmp::Point2> m_Points; //>! The input point cloud emanating the characteristics
-    SDF::PointCloudDistanceField2DSettings m_Settings; //>! Settings for distance field generation
 };
 
 /**
@@ -68,13 +84,8 @@ public:
 
     explicit PlanarManifoldCurveCharacteristicsBuilder(
         pmp::ManifoldCurve2D& curve, 
-        const bool& constructInwardCharacteristics = false,
-        const bool& constructOutwardCharacteristics = true,
-        const float& boxExpansionFactor = 1.0f)
-	    : m_Curve(curve),
-	      m_ConstructInwardCharacteristics(constructInwardCharacteristics),
-		  m_ConstructOutwardCharacteristics(constructOutwardCharacteristics),
-	      m_ExpansionFactor(boxExpansionFactor)
+        const CharacteristicsBuilderSettings& settings)
+	    : PlanarCharacteristicsBuilder(settings), m_Curve(curve)
     {
     }
 
@@ -90,7 +101,4 @@ private:
     // -------------------------------------------------------------------------------------
 
     pmp::ManifoldCurve2D& m_Curve;
-    bool m_ConstructInwardCharacteristics;
-    bool m_ConstructOutwardCharacteristics;
-    float m_ExpansionFactor;
 };

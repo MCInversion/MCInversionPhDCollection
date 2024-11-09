@@ -1329,6 +1329,27 @@ namespace Geometry
 		return *this;
 	}
 
+	pmp::vec2 Ray2D::GetVector() const
+	{
+		// Calculate the starting offset using ParamMin
+		pmp::vec2 offsetStart = StartPt + ParamMin * Direction;
+
+		// Calculate the vector representation using ParamMax and offsetStart
+		return offsetStart + (ParamMax - ParamMin) * Direction;
+	}
+
+	pmp::Point2 Ray2D::GetMin() const
+	{
+		// Calculate the point at the start offset using ParamMin
+		return StartPt + ParamMin * Direction;
+	}
+
+	pmp::Point2 Ray2D::GetMax() const
+	{
+		// Calculate the endpoint of the ray using ParamMax
+		return StartPt + ParamMax * Direction;
+	}
+
 	bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, float& tMinOut, float& tMaxOut)
 	{
 		// Initialize parameters for the intersection distances

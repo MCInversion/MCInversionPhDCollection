@@ -5280,9 +5280,11 @@ void TestDFDivergence2D()
 		pmp::Point2{40.865615f, 41.985195f}
 	};
 	pmp::ManifoldCurve2D unevenCrossCurve = pmp::CurveFactory::sampled_polygon(unevenCrossPolyPts, 100, false);
+	if (!pmp::write_to_ply(unevenCrossCurve, dataOutPath + "unevenCrossCurve.ply"))
+		std::cerr << "Error writing unevenCrossCurve.ply!\n";
 	const auto unevenCrossPts = unevenCrossCurve.positions();
 
-	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	constexpr unsigned int nVoxelsPerMinDimension = 200;
 
 	const pmp::BoundingBox2 ptCloudBBox(unevenCrossPts);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
@@ -5297,16 +5299,17 @@ void TestDFDivergence2D()
 	const auto df = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(unevenCrossPts, dfSettings);
 
 	auto blurredDf = df;
-	//ApplyWideGaussianBlur2D(blurredDf);
+	ApplyWideGaussianBlur2D(blurredDf);
 
-	const auto negGradDF = ComputeNormalizedNegativeGradient(blurredDf);
+	//const auto negGradDF = ComputeNormalizedNegativeGradient(blurredDf);
+	const auto gradDF = ComputeNormalizedGradient(blurredDf);
 
 	// Calculate stream lines
 	Geometry::StreamLineSettings slSettings{};
 	slSettings.NSamplePts = 1000;
 	slSettings.StepSize = 0.5 * cellSize;
 	slSettings.NSteps = 100;
-	const auto streamLines = CalculateStreamLines(negGradDF, slSettings);
+	const auto streamLines = CalculateStreamLines(gradDF, slSettings);
 	ExportPolyLinesToPLY(streamLines, dataOutPath + "unevenCrossNegGradDF_Streamlines.ply");
 
 	// Calculate euler stream lines
@@ -5319,13 +5322,20 @@ void TestDFDivergence2D()
 
 	// Calculate characteristics
 	//PlanarPointCloudCharacteristicsBuilder charBuilder{ unevenCrossPts, dfSettings };
-	PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, true, false };
+
+	CharacteristicsBuilderSettings chBuilderSettings;
+	chBuilderSettings.DFSettings = dfSettings;
+	chBuilderSettings.ConstructInwardCharacteristics = false;
+	chBuilderSettings.ConstructOutwardCharacteristics = true;
+	chBuilderSettings.DivFieldThresholdFactor = -0.0f;
+
+	PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, chBuilderSettings };
 	const auto characteristics = charBuilder.Build();
 	ExportPolyLinesToPLY(characteristics, dataOutPath + "unevenCrossNegGradDF_Characteristics.ply");
 
 	//auto negGradDF = ComputeGradient(blurredDf);
 	//NegateGrid(negGradDF);
-	const auto divNegGradDF = ComputeDivergenceField(negGradDF);
+	const auto divNegGradDF = ComputeDivergenceField(gradDF);
 	const auto [dMin, dMax] = std::ranges::minmax_element(divNegGradDF.Values());
 	std::cout << "divNegGradDF value range: [" << *dMin << ", " << *dMax << "]\n";
 	const auto colorMap = AdjustColorMapForZeroMidpoint(SIGN_TEMP_MAP, *dMin, *dMax);
