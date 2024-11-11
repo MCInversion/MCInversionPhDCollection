@@ -14,7 +14,7 @@ using namespace Geometry;
 namespace
 {
     constexpr float DEFAULT_FAN_STEP_ANGLE{ M_PI / 12.0f };
-    constexpr float ANGLE_STEP_FACTOR{ 4.0 };
+    constexpr float ANGLE_STEP_FACTOR{ 7.0 };
 
     /// \brief Calculates an angle step in radians considering the input curve is a uniformly sampled circle centered in the middle of the input box
     [[nodiscard]] float CalculateAngularFanSegmentSize(const pmp::BoundingBox2& box, const pmp::ManifoldCurve2D& curve)
@@ -44,89 +44,74 @@ namespace
         const auto cellSize = divField.CellSize();
         const auto& gridBox = divField.Box();
 
-        const auto rayVector = ray.GetVector();
-        auto currentPoint = ray.GetMin();
-        const auto rayMax = ray.GetMax();
+        // Convert the ray's start point to grid coordinates
+        int ix = static_cast<int>((ray.StartPt[0] - gridBox.min()[0]) / cellSize);
+        int iy = static_cast<int>((ray.StartPt[1] - gridBox.min()[1]) / cellSize);
 
-        std::cout << "----------------------------------------------\n";
-        std::cout << "ray min: " << currentPoint << "\n";
-        std::cout << "ray max: " << rayMax << "\n";
-        std::cout << "ray vector: " << rayVector << "\n";
+        // Check if the starting point is within grid bounds
+        if (ix < 0 || ix >= Nx || iy < 0 || iy >= Ny) return;
 
-        if (!gridBox.Contains(currentPoint) || !gridBox.Contains(rayMax))
-            return; // If the ray doesn't lie within the grid, exit early.
+        // Get ray direction components
+        float dx = ray.Direction[0];
+        float dy = ray.Direction[1];
 
-        // Determine the step and initial tMax values for traversing the grid cells
-        pmp::ivec2 step;
-        pmp::vec2 tMax;
-        pmp::vec2 tDelta;
+        // Determine step direction for x and y
+        int stepX = (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
+        int stepY = (dy > 0) ? 1 : (dy < 0) ? -1 : 0;
 
-        // Compute the grid cell indices for the current point
-        int ix = static_cast<int>((currentPoint[0] - gridBox.min()[0]) / cellSize);
-        int iy = static_cast<int>((currentPoint[1] - gridBox.min()[1]) / cellSize);
-
-        const auto gridEpsilon = 0.01f * cellSize;
-
-        // Compute the step direction and tDelta for both x and y directions
-        for (int i = 0; i < 2; ++i)
-        {
-            if (rayVector[i] > gridEpsilon)
-            {
-                step[i] = 1;
-                tMax[i] = ((ix + 1) * cellSize + gridBox.min()[i] - currentPoint[i]) / rayVector[i];
-                tDelta[i] = cellSize / rayVector[i];
-            }
-            else if (rayVector[i] < -gridEpsilon)
-            {
-                step[i] = -1;
-                tMax[i] = (ix * cellSize + gridBox.min()[i] - currentPoint[i]) / rayVector[i];
-                tDelta[i] = cellSize / -rayVector[i];
-            }
-            else
-            {
-                step[i] = 0;
-                tMax[i] = std::numeric_limits<float>::infinity();
-                tDelta[i] = std::numeric_limits<float>::infinity();
-            }
+        // Calculate initial tMax and tDelta values
+        float tMaxX, tMaxY;
+        if (dx != 0) {
+            float nextBoundaryX = gridBox.min()[0] + (ix + (stepX > 0 ? 1 : 0)) * cellSize;
+            tMaxX = (nextBoundaryX - ray.StartPt[0]) / dx;
+        }
+        else {
+            tMaxX = std::numeric_limits<float>::infinity();
         }
 
+        if (dy != 0) {
+            float nextBoundaryY = gridBox.min()[1] + (iy + (stepY > 0 ? 1 : 0)) * cellSize;
+            tMaxY = (nextBoundaryY - ray.StartPt[1]) / dy;
+        }
+        else {
+            tMaxY = std::numeric_limits<float>::infinity();
+        }
+
+        float tDeltaX = (dx != 0) ? cellSize / std::abs(dx) : std::numeric_limits<float>::infinity();
+        float tDeltaY = (dy != 0) ? cellSize / std::abs(dy) : std::numeric_limits<float>::infinity();
 
         // Traverse the grid cells along the ray path
-        while (gridBox.Contains(currentPoint))
+        while (ix >= 0 && ix < Nx && iy >= 0 && iy < Ny)
         {
-            // Get the divergence value at the current cell
-            if (ix >= 0 && ix < Nx && iy >= 0 && iy < Ny)
+            // Check divergence value at the current cell
+            const size_t cellIndex = ix + iy * Nx;
+            if (divField.Values()[cellIndex] < divFieldThreshold)
             {
-                const size_t cellIndex = ix + iy * Nx;
-                if (divField.Values()[cellIndex] > divFieldThreshold)
-                {
-                    // Clip the ray at this point
-                    float newHitParam = dot(currentPoint - ray.StartPt, ray.Direction);
-                    ray.HitParam = std::min(ray.HitParam, newHitParam);
-                    return;
-                }
+                // Calculate the world coordinates of the critical grid point
+                pmp::Point2 criticalPoint{
+                    gridBox.min()[0] + ix * cellSize,
+                    gridBox.min()[1] + iy * cellSize
+                };
+
+                // Project the critical grid point onto the ray to compute HitParam
+                ray.HitParam = dot(criticalPoint - ray.StartPt, ray.Direction);
+                return;
             }
 
-            // Move to the next cell
-            if (tMax[0] < tMax[1])
+            // Move to the next cell in the grid
+            if (tMaxX < tMaxY)
             {
-                ix += step[0];
-                tMax[0] += tDelta[0];
+                tMaxX += tDeltaX;
+                ix += stepX;
             }
             else
             {
-                iy += step[1];
-                tMax[1] += tDelta[1];
+                tMaxY += tDeltaY;
+                iy += stepY;
             }
-
-            // Update the current point position
-            currentPoint = ray.StartPt + std::min(tMax[0], tMax[1]) * ray.Direction;
-
-            // Stop if the current point exceeds the maximum distance
-            if (norm(currentPoint - ray.StartPt) > ray.HitParam)
-                return;
         }
     }
+
 	
 } // anonymous namespace
 
@@ -273,7 +258,7 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
             if (endAngle < startAngle)
                 endAngle += 2.0f * static_cast<float>(M_PI);
 
-            for (size_t i = 1; i < nAngleSegments; ++i)
+            for (size_t i = 0; i <= nAngleSegments; ++i)
             {
                 const float currentAngle = startAngle + i * fanAngleStep;
 
@@ -315,7 +300,7 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
             if (endAngle < startAngle)
                 endAngle += 2.0f * static_cast<float>(M_PI);
 
-            for (size_t i = 1; i < nAngleSegments; ++i)
+            for (size_t i = 0; i <= nAngleSegments; ++i)
             {
                 const float currentAngle = startAngle + i * fanAngleStep;
                 if (currentAngle > endAngle)

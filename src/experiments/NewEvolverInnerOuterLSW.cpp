@@ -5284,7 +5284,7 @@ void TestDFDivergence2D()
 		std::cerr << "Error writing unevenCrossCurve.ply!\n";
 	const auto unevenCrossPts = unevenCrossCurve.positions();
 
-	constexpr unsigned int nVoxelsPerMinDimension = 200;
+	constexpr unsigned int nVoxelsPerMinDimension = 350;
 
 	const pmp::BoundingBox2 ptCloudBBox(unevenCrossPts);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
@@ -5300,6 +5300,11 @@ void TestDFDivergence2D()
 
 	auto blurredDf = df;
 	ApplyWideGaussianBlur2D(blurredDf);
+	const unsigned int nPx = 2;
+	ExportScalarGrid2DToPNG(dataOutPath + "unevenCrossDF.png", blurredDf,
+		Geometry::BilinearInterpolateScalarValue,
+		//Geometry::GetNearestNeighborScalarValue2D,
+		nPx, nPx, RAINBOW_TO_WHITE_MAP);
 
 	//const auto negGradDF = ComputeNormalizedNegativeGradient(blurredDf);
 	const auto gradDF = ComputeNormalizedGradient(blurredDf);
@@ -5325,9 +5330,9 @@ void TestDFDivergence2D()
 
 	CharacteristicsBuilderSettings chBuilderSettings;
 	chBuilderSettings.DFSettings = dfSettings;
-	chBuilderSettings.ConstructInwardCharacteristics = false;
+	chBuilderSettings.ConstructInwardCharacteristics = true;
 	chBuilderSettings.ConstructOutwardCharacteristics = true;
-	chBuilderSettings.DivFieldThresholdFactor = -0.0f;
+	chBuilderSettings.DivFieldThresholdFactor = -0.15f;
 
 	PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, chBuilderSettings };
 	const auto characteristics = charBuilder.Build();
@@ -5341,7 +5346,6 @@ void TestDFDivergence2D()
 	const auto colorMap = AdjustColorMapForZeroMidpoint(SIGN_TEMP_MAP, *dMin, *dMax);
 	const double rangeVal = std::min(std::abs(*dMin), *dMax);
 	ExportScalarGridDimInfo2D(dataOutPath + "unevenCrossDivNegGradDF.gdim2d", divNegGradDF);
-	const unsigned int nPx = 2;
 	ExportScalarGrid2DToPNG(dataOutPath + "unevenCrossDivNegGradDF.png", divNegGradDF,
 		Geometry::BilinearInterpolateScalarValue,
 		//Geometry::GetNearestNeighborScalarValue2D,
