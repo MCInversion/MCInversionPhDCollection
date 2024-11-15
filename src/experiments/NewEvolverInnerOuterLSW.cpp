@@ -4562,10 +4562,10 @@ void HyperellipseEllipsoidEquilibriumTests()
 	remesher.adaptive_remeshing(settings);	
 
 	const std::vector<Circle2D> testInnerCircles{
-		//{ pmp::Point2{ 0.0f, 0.0f }, 70.0f },
-		//{ pmp::Point2{ 100.0f, 0.0f }, 60.0f },
-		//{ pmp::Point2{ 140.0f, 0.0f }, 40.0f }
-		//{ pmp::Point2{ 130.0f, 0.0f }, 60.0f },
+		{ pmp::Point2{ 0.0f, 0.0f }, 70.0f },
+		{ pmp::Point2{ 100.0f, 0.0f }, 60.0f },
+		{ pmp::Point2{ 140.0f, 0.0f }, 40.0f },
+		{ pmp::Point2{ 130.0f, 0.0f }, 60.0f },
 		{ pmp::Point2{ 130.0f, 40.0f }, 40.0f }
 	};
 
@@ -4596,7 +4596,7 @@ void HyperellipseEllipsoidEquilibriumTests()
 			};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 		strategySettings.TimeStep = defaultTimeStep;
 		strategySettings.LevelOfDetail = 4;
@@ -5147,21 +5147,23 @@ void TestProblematicMedialAxisPtClouds()
 	const auto unevenCrossPts = unevenCrossCurve.positions();
 
 	const std::vector<Circle2D> testInnerCircles{
-		{ pmp::Point2{ 60.322582f, 63.604839f }, 6.6532254f },
-		{ pmp::Point2{ 87.733871f, 55.975807f }, 9.08871 },
-		{ pmp::Point2{ 62.3629f, 61.741936f }, 19.161289f },
-		{ pmp::Point2{ 73.274193f, 103.87903f }, 8.5161285f },
-		{ pmp::Point2{ 24.749998f, 67.330643f }, 10.733871f },
-		{ pmp::Point2{ 53.935482f, 24.129032f }, 7.6290321f },
+		//{ pmp::Point2{ 60.322582f, 63.604839f }, 6.6532254f },
+		//{ pmp::Point2{ 87.733871f, 55.975807f }, 9.08871 },
+		//{ pmp::Point2{ 62.3629f, 61.741936f }, 19.161289f },
+		//{ pmp::Point2{ 73.274193f, 103.87903f }, 8.5161285f },
+		//{ pmp::Point2{ 24.749998f, 67.330643f }, 10.733871f },
+		{ pmp::Point2{ 53.935482f, 30.129032f }, 7.6290321f },
+		//{ pmp::Point2{ 51.0f, 72.0f }, 5.0f },
+
 	};
 
-	constexpr unsigned int nVoxelsPerMinDimension = 40;
-	constexpr double defaultTimeStep = 0.05;
-	constexpr double defaultOffsetFactor = 1.5;
-	constexpr unsigned int NTimeSteps = 800;
+	constexpr unsigned int nVoxelsPerMinDimension = 80;
+	constexpr double defaultTimeStep = 0.025;
+	constexpr double defaultOffsetFactor = 0.5;
+	constexpr unsigned int NTimeSteps = 1500;
 	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
 
-	for (size_t unevenCrossId = 0; const auto & innerCircle : testInnerCircles)
+	for (size_t unevenCrossId = 10; const auto & innerCircle : testInnerCircles)
 	{
 		std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -5178,18 +5180,20 @@ void TestProblematicMedialAxisPtClouds()
 		//};
 		strategySettings.InnerManifoldEpsilon = [](double distance)
 		{
+			if (distance < 0.1)
+				return 0.0;
 			return 0.0025 * TRIVIAL_EPSILON(distance);
 		};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 		{
-			return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			return -1.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		};
 		strategySettings.TimeStep = defaultTimeStep;
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
-		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
-		strategySettings.RemeshingSettings.UseBackProjection = false;
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0f;
+		strategySettings.RemeshingSettings.UseBackProjection = true;
 
 		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);

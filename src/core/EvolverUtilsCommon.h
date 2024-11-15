@@ -251,7 +251,7 @@ private:
 struct ManifoldAdaptiveRemeshingParams
 {
 	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
-	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
+	unsigned int NRemeshingIters{ 6 }; //>! the number of iterations for pmp::Remeshing.
 	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ true }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
 };

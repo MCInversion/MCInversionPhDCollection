@@ -118,13 +118,13 @@ int main()
         // "SimpleMeshesIOLSWTests",
         // "StandardMeshesIOLSWTests",
 		// "MedialAxisTests",
-		// "HyperellipseEllipsoidEquilibriumTests",
+		//"HyperellipseEllipsoidEquilibriumTests",
         // "JunkCan2DTests",
         // "InscribedCircleCalculatorVisualization",
 		// "StandardMeshesExportWithNormals",
         // "ExportBallPivotingBoundaryEdges",
-        // "TestProblematicMedialAxisPtClouds",
-        "TestDFDivergence2D",
+    	"TestProblematicMedialAxisPtClouds",
+        //"TestDFDivergence2D",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here
