@@ -5158,8 +5158,8 @@ void TestProblematicMedialAxisPtClouds()
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 80;
-	constexpr double defaultTimeStep = 0.025;
-	constexpr double defaultOffsetFactor = 0.5;
+	constexpr double defaultTimeStep = 0.05;
+	constexpr double defaultOffsetFactor = 1.0;
 	constexpr unsigned int NTimeSteps = 1500;
 	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
 
@@ -5180,8 +5180,6 @@ void TestProblematicMedialAxisPtClouds()
 		//};
 		strategySettings.InnerManifoldEpsilon = [](double distance)
 		{
-			if (distance < 0.1)
-				return 0.0;
 			return 0.0025 * TRIVIAL_EPSILON(distance);
 		};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)

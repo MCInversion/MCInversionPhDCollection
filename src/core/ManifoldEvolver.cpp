@@ -462,21 +462,36 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		}
 
 		// update vertex positions & verify mesh within bounds
+		bool hasProblematicVertices = false;
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i)
-					+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ") outside m_EvolBox: {"
-					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
-					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
-					+ ")} for time step id: " + std::to_string(step) + "!\n";
-				std::cerr << msg;
-				throw std::runtime_error(msg);
+				const auto newPosInOrigScale = affine_transform(m_TransformToOriginal, pmp::Point2(newPos));
+				std::cout << "\nv" << i << " = (" + std::to_string(newPosInOrigScale[0]) + ", " + std::to_string(newPosInOrigScale[1]) + ") outside bounds!\n";
+				hasProblematicVertices = true;
+				//const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i)
+				//	+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ") outside m_EvolBox: {"
+				//	+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
+				//	+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
+				//	+ ")} for time step id: " + std::to_string(step) + "!\n";
+				//std::cerr << msg;
+				//throw std::runtime_error(msg);
 			}
-			innerCurve->position(pmp::Vertex(i)) = newPos;
+
+			if (!hasProblematicVertices)
+				innerCurve->position(pmp::Vertex(i)) = newPos;
 		}
+
+		if (hasProblematicVertices)
+		{
+			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: found problematic vertices for time step id: " + std::to_string(step) + "!\n";
+			std::cerr << msg;
+			throw std::runtime_error(msg);
+		}
+
+
 	}
 }
 
@@ -988,16 +1003,27 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	}
 	else
 	{
-		for (const auto& innerCurve : GetInnerCurves())
+		if (GetDistanceField())
 		{
-			const auto innerBounds = innerCurve->bounds();
-			const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
-			radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.8f, radius);
-			origin += innerBounds.center();
+			// non-empty target distance field
+			const auto& dfBox = GetDistanceField()->Box();
+			const auto dfBoxSize = dfBox.max() - dfBox.min();
+			radius = std::max(std::max(dfBoxSize[0], dfBoxSize[1]), radius);
+			origin = dfBox.center();
 		}
-		// mean bounds center position for all initial curves
-		if (!GetInnerCurves().empty())
-			origin /= static_cast<pmp::Scalar>(GetInnerCurves().size());
+		else
+		{
+			for (const auto& innerCurve : GetInnerCurves())
+			{
+				const auto innerBounds = innerCurve->bounds();
+				const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
+				radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.8f, radius);
+				origin += innerBounds.center();
+			}
+			// mean bounds center position for all initial curves
+			if (!GetInnerCurves().empty())
+				origin /= static_cast<pmp::Scalar>(GetInnerCurves().size());
+		}
 	}
 
 	const pmp::mat3 transfMatrixGeomMove{
