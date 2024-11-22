@@ -109,7 +109,7 @@ int main()
         // "AdvectionDrivenInnerCircleTests",
         // "ConcentricCirclesTests",
         // "NonConcentricCirclesTest",
-        // "EquilibriumPairedManifoldTests",
+        "EquilibriumPairedManifoldTests",
         // "VisualizeMCF",
         // "VisualizeMultipleInnerCurves",
         // "ExportSlicingPlanes",
@@ -118,12 +118,12 @@ int main()
         // "SimpleMeshesIOLSWTests",
         // "StandardMeshesIOLSWTests",
 		// "MedialAxisTests",
-		//"HyperellipseEllipsoidEquilibriumTests",
+		// "HyperellipseEllipsoidEquilibriumTests",
         // "JunkCan2DTests",
         // "InscribedCircleCalculatorVisualization",
 		// "StandardMeshesExportWithNormals",
         // "ExportBallPivotingBoundaryEdges",
-    	"TestProblematicMedialAxisPtClouds",
+    	// "TestProblematicMedialAxisPtClouds",
         //"TestDFDivergence2D",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------

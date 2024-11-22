@@ -314,7 +314,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // * (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -428,7 +428,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
 			if (tanRedistWeight > 0.0f)
 			{
 				// compute tangential velocity
@@ -450,6 +450,14 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		if (IsRemeshingNecessary(*innerCurve, m_RemeshingSettings[innerCurve.get()]))
 			m_RemeshTracker.AddManifold(innerCurve.get());
 
+		////PrintSparseMatrix(sysMat);
+		//if (!IsDiagonallyDominant(sysMat))
+		//{
+		//	constexpr double lambda = 0.01; // Example regularization parameter
+		//	RegularizeMatrixInPlace(sysMat, lambda);
+		//	//std::cout << "step " << step << ": sysMat(" << NVertices << ", " << NVertices << ") is NOT diagonally-dominant!\n";
+		//}
+
 		// solve
 		Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double>> solver(sysMat);
 		Eigen::MatrixXd x = solver.solve(sysRhs);
@@ -462,36 +470,35 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		}
 
 		// update vertex positions & verify mesh within bounds
-		bool hasProblematicVertices = false;
+		//bool hasProblematicVertices = false;
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
 			if (!m_EvolBox.Contains(newPos))
 			{
-				const auto newPosInOrigScale = affine_transform(m_TransformToOriginal, pmp::Point2(newPos));
-				std::cout << "\nv" << i << " = (" + std::to_string(newPosInOrigScale[0]) + ", " + std::to_string(newPosInOrigScale[1]) + ") outside bounds!\n";
-				hasProblematicVertices = true;
-				//const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i)
-				//	+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ") outside m_EvolBox: {"
-				//	+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
-				//	+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
-				//	+ ")} for time step id: " + std::to_string(step) + "!\n";
-				//std::cerr << msg;
-				//throw std::runtime_error(msg);
+				//const auto newPosInOrigScale = affine_transform(m_TransformToOriginal, pmp::Point2(newPos));
+				//std::cout << "\nv" << i << " = (" + std::to_string(newPosInOrigScale[0]) + ", " + std::to_string(newPosInOrigScale[1]) + ") outside bounds!\n";
+				//hasProblematicVertices = true;
+				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: innerCurve vertex " + std::to_string(i)
+					+ ": (" + std::to_string(newPos[0]) + ", " + std::to_string(newPos[1]) + ") outside m_EvolBox: {"
+					+ "min_=(" + std::to_string(m_EvolBox.min()[0]) + ", " + std::to_string(m_EvolBox.min()[1])
+					+ "), max_=(" + std::to_string(m_EvolBox.max()[0]) + ", " + std::to_string(m_EvolBox.max()[1])
+					+ ")} for time step id: " + std::to_string(step) + "!\n";
+				std::cerr << msg;
+				throw std::runtime_error(msg);
 			}
 
-			if (!hasProblematicVertices)
-				innerCurve->position(pmp::Vertex(i)) = newPos;
+			//if (!hasProblematicVertices)
+			//	innerCurve->position(pmp::Vertex(i)) = newPos;
+			innerCurve->position(pmp::Vertex(i)) = newPos;
 		}
 
-		if (hasProblematicVertices)
-		{
-			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: found problematic vertices for time step id: " + std::to_string(step) + "!\n";
-			std::cerr << msg;
-			throw std::runtime_error(msg);
-		}
-
-
+		//if (hasProblematicVertices)
+		//{
+		//	const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: found problematic vertices for time step id: " + std::to_string(step) + "!\n";
+		//	std::cerr << msg;
+		//	throw std::runtime_error(msg);
+		//}
 	}
 }
 

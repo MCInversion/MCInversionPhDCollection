@@ -2376,8 +2376,8 @@ void NonConcentricCirclesTest()
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
-	constexpr double defaultOffsetFactor = 0.25; //1.5;
-	constexpr unsigned int NTimeSteps = 180;
+	constexpr double defaultOffsetFactor = 1.5;
+	constexpr unsigned int NTimeSteps = 1500;
 
 	for (unsigned int curveId = 0; const auto & circlePair : circlePairs)
 	{
@@ -2425,18 +2425,18 @@ void NonConcentricCirclesTest()
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				return 0.001 * TRIVIAL_EPSILON(distance);
+				return 0.0025 * (1.0 - exp(-distance * distance / 1.0)); //TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 2.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return -1.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
-			strategySettings.RemeshingSettings.UseBackProjection = false;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			strategySettings.RemeshingSettings.UseBackProjection = true;
 
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
@@ -2557,7 +2557,7 @@ void EquilibriumPairedManifoldTests()
 	// use PreComputeAdvectionDiffusionParams?
 	strategySettings.OuterManifoldEpsilon = [](double distance)
 	{
-		return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+		return 0.0 * (1.0 - exp(-distance * distance / 1.0));
 	};
 	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 	{
@@ -2565,30 +2565,29 @@ void EquilibriumPairedManifoldTests()
 	};
 	strategySettings.InnerManifoldEpsilon = [](double distance)
 	{
-		return 0.001 * TRIVIAL_EPSILON(distance);
+		return 0.0 * TRIVIAL_EPSILON(distance);
 	};
 	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -1.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.LevelOfDetail = 3;
-	strategySettings.TangentialVelocityWeight = 0.05;
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
-	strategySettings.RemeshingSettings.UseBackProjection = false;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
-	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
+	strategySettings.FieldSettings.FieldIsoLevel = 4.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	globalSettings.NSteps = 180;
+	globalSettings.NSteps = 1500;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
 	globalSettings.ExportPerTimeStep = true;

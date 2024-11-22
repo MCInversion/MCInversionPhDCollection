@@ -12,6 +12,7 @@
 
 #include <ranges>
 #include <fstream>
+#include <iomanip>
 
 namespace pmp
 {
@@ -54,6 +55,87 @@ using AreaFunction = std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)>
 
 /// \brief identifier for sparse matrix.
 using SparseMatrix = Eigen::SparseMatrix<double>;
+
+/**
+ * @brief Utility to print the entire SparseMatrix, including zeros, in a matrix-like format.
+ *
+ * @param matrix The sparse matrix to print.
+ */
+inline void PrintSparseMatrix(const SparseMatrix& matrix)
+{
+	std::cout << "SparseMatrix (" << matrix.rows() << " x " << matrix.cols() << "):" << std::endl;
+
+	// Set output formatting for better readability
+	std::cout << std::fixed << std::setprecision(6);
+
+	for (int i = 0; i < matrix.rows(); ++i)
+	{
+		for (int j = 0; j < matrix.cols(); ++j)
+		{
+			// Get the value at (i, j)
+			double value = matrix.coeff(i, j);
+			std::cout << std::setw(10) << value << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
+/**
+ * @brief Check if a sparse matrix is diagonally dominant.
+ *
+ * @param matrix The sparse matrix to check.
+ * @return true if the matrix is diagonally dominant, false otherwise.
+ */
+inline bool IsDiagonallyDominant(const SparseMatrix& matrix)
+{
+	if (matrix.rows() != matrix.cols())
+	{
+		std::cerr << "Matrix must be square to check diagonal dominance!" << std::endl;
+		return false;
+	}
+
+	for (int i = 0; i < matrix.rows(); ++i)
+	{
+		double diagonalValue = std::abs(matrix.coeff(i, i));
+		double offDiagonalSum = 0.0;
+
+		for (SparseMatrix::InnerIterator it(matrix, i); it; ++it)
+		{
+			if (it.row() != it.col()) // Skip diagonal element
+			{
+				offDiagonalSum += std::abs(it.value());
+			}
+		}
+
+		if (diagonalValue < offDiagonalSum)
+		{
+			return false; // Not diagonally dominant
+		}
+	}
+
+	return true; // All rows satisfy the condition
+}
+
+/**
+ * @brief Regularize a sparse matrix in place by adding lambda times the identity matrix.
+ *
+ * @param matrix The sparse matrix to regularize (modified in place).
+ * @param lambda The regularization parameter.
+ */
+inline void RegularizeMatrixInPlace(SparseMatrix& matrix, double lambda)
+{
+	// Ensure the matrix is square
+	if (matrix.rows() != matrix.cols())
+	{
+		throw std::invalid_argument("Matrix must be square for regularization!");
+	}
+
+	// Add lambda * I to the diagonal in place
+	for (int i = 0; i < matrix.rows(); ++i)
+	{
+		matrix.coeffRef(i, i) += lambda;
+	}
+}
 
 /// \brief A utility for converting Eigen::ComputationInfo to a string message.
 [[nodiscard]] std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo);
