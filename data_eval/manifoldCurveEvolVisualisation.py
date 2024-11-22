@@ -47,8 +47,8 @@ import matplotlib.patches as patches
 #procedure_name = "curve6_Repulsionless"
 #procedure_name = "curve7_Repulsionless"
 
-#procedure_name = "equilibriumPair0"
-procedure_name = "equilibriumPair1"
+procedure_name = "equilibriumPair0"
+#procedure_name = "equilibriumPair1"
 #procedure_name = "equilibriumPair2"
 #procedure_name = "equilibriumPair3"
 
@@ -155,9 +155,16 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 200, 300, 400, 500]
 #multi_png_time_steps = [0, 1, 2]
 #multi_png_time_steps = [0, 2, 4, 6]
+multi_png_time_steps = [0, 10, 25, 50, 100, 200, 300, 500] #262
+#multi_png_time_steps = [0, 4, 10, 40, 100, 180, 200, 250, 300, 350, 400]
+#multi_png_time_steps = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500]
+#multi_png_time_steps = [0, 500, 1000, 1500]
+#multi_png_time_steps = [0, 250, 500, 750, 1000, 1250, 1500]
+#multi_png_time_steps = [0, 250, 500, 750] # , 949
+#multi_png_time_steps = [0, 2, 4, 8, 10, 11]
 #multi_png_time_steps = [0, 10, 100] 
 #multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
-multi_png_time_steps = [0, 20, 80, 200, 400, 800, 1250, 1500]
+#multi_png_time_steps = [0, 20, 80, 200, 400, 800, 1250, 1500]
 #multi_png_time_steps = [0, 20, 80, 200, 400, 800, 829]
 #multi_png_time_steps = [0, 20, 80, 200, 400, 500]
 #multi_png_time_steps = [0, 20, 80, 100, 200, 300, 400, 500, 600, 700, 800, 1000]

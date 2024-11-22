@@ -2290,7 +2290,7 @@ void ConcentricCirclesTests()
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				return 2.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
@@ -2417,7 +2417,8 @@ void NonConcentricCirclesTest()
 			// use PreComputeAdvectionDiffusionParams?
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
-				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				//return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				return 0.0;
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
@@ -2426,6 +2427,8 @@ void NonConcentricCirclesTest()
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
 				return 0.0025 * (1.0 - exp(-distance * distance / 1.0)); //TRIVIAL_EPSILON(distance);
+				//return 0.001 * TRIVIAL_EPSILON(distance);
+				// return 0.0;
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
@@ -2434,8 +2437,8 @@ void NonConcentricCirclesTest()
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
-
 			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+
 			strategySettings.RemeshingSettings.UseBackProjection = true;
 
 			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
@@ -2569,7 +2572,7 @@ void EquilibriumPairedManifoldTests()
 	};
 	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		return -1.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -2.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.LevelOfDetail = 3;
 
@@ -2582,12 +2585,13 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
 	strategySettings.FieldSettings.FieldIsoLevel = 4.0;
 
-	strategySettings.ExportVariableScalarFieldsDimInfo = true;
-	strategySettings.ExportVariableVectorFieldsDimInfo = true;
+	strategySettings.ExportVariableScalarFieldsDimInfo = false;
+	strategySettings.ExportVariableVectorFieldsDimInfo = false;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	globalSettings.NSteps = 1500;
+	//globalSettings.NSteps = 1500;
+	globalSettings.NSteps = 500;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
 	globalSettings.ExportPerTimeStep = true;
@@ -5179,10 +5183,12 @@ void TestProblematicMedialAxisPtClouds()
 		//};
 		strategySettings.InnerManifoldEpsilon = [](double distance)
 		{
-			return 0.0025 * TRIVIAL_EPSILON(distance);
+			//return 0.0025 * TRIVIAL_EPSILON(distance);
+			return 0.0;
 		};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 		{
+			// return 1.5 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			return -1.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		};
 		strategySettings.TimeStep = defaultTimeStep;
