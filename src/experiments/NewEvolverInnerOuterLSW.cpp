@@ -2564,7 +2564,10 @@ void EquilibriumPairedManifoldTests()
 	};
 	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 	{
+		if (distance < 0.015)
+			return 0.0;
 		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.InnerManifoldEpsilon = [](double distance)
 	{
@@ -2572,7 +2575,10 @@ void EquilibriumPairedManifoldTests()
 	};
 	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		return -2.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		if (distance < 0.015)
+			return 0.0;
+		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.LevelOfDetail = 3;
 
@@ -2583,15 +2589,16 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
-	strategySettings.FieldSettings.FieldIsoLevel = 4.0;
+	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
 
-	strategySettings.ExportVariableScalarFieldsDimInfo = false;
-	strategySettings.ExportVariableVectorFieldsDimInfo = false;
+	strategySettings.ExportVariableScalarFieldsDimInfo = true;
+	strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	//globalSettings.NSteps = 1500;
-	globalSettings.NSteps = 500;
+	globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 1000;
+	//globalSettings.NSteps = 500;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
 	globalSettings.ExportPerTimeStep = true;

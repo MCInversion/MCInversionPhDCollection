@@ -316,7 +316,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			sysRhs.row(v.idx()) = vertexRhs;
 
 			//const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // * (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * (1.0 - exp(-interaction.Distance * interaction.Distance));
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); // (1.0 - exp(-interaction.Distance * interaction.Distance));
 
 			if (tanRedistWeight > 0.0f)
 			{
@@ -432,7 +432,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
 			//const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * (1.0 - exp(-interaction.Distance * interaction.Distance));
+			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); //(1.0 - exp(-interaction.Distance * interaction.Distance));
 
 			if (tanRedistWeight > 0.0f)
 			{
