@@ -50,7 +50,30 @@ import matplotlib.patches as patches
 #procedure_name = "equilibriumPair0"
 #procedure_name = "equilibriumPair1"
 #procedure_name = "equilibriumPair2"
-procedure_name = "equilibriumPair3"
+#procedure_name = "equilibriumPair3"
+
+#procedure_name = "equilibriumConcavePair0"
+#procedure_name = "equilibriumConcavePair1"
+#procedure_name = "equilibriumConcavePair2"
+#procedure_name = "equilibriumConcavePair3"
+#procedure_name = "equilibriumConcavePair4"
+#procedure_name = "equilibriumConcavePair5"
+#procedure_name = "equilibriumConcavePair6"
+#procedure_name = "equilibriumConcavePair7"
+
+#procedure_name = "equilibriumConcavePair8" # not really concave, but from the same experiment
+#procedure_name = "equilibriumConcavePair9"
+#procedure_name = "equilibriumConcavePair10"
+#procedure_name = "equilibriumConcavePair11"
+#procedure_name = "equilibriumConcavePair12"
+#procedure_name = "equilibriumConcavePair13"
+
+#procedure_name = "equilibriumConcavePair14"
+#procedure_name = "equilibriumConcavePair15"
+
+procedure_name = "equilibriumConcavePair16"
+#procedure_name = "equilibriumConcavePair17"
+#procedure_name = "equilibriumConcavePair18"
 
 #procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
@@ -58,6 +81,7 @@ procedure_name = "equilibriumPair3"
 #procedure_name = "concentricCircles3_Repulsionless"
 
 #procedure_name = "singleInnerCircleTest"
+#procedure_name = "singleInnerCircleTestPhaseTwo"
 #procedure_name = "innerCircleOuterCirclePtsTest"
 
 #procedure_name = "innerCircle_circle_PtsTest"
@@ -137,6 +161,7 @@ directory = "../output"  # Adjust this path accordingly
 
 fps = 20
 box_expansion = 0.1
+#box_expansion = 0.25
 #box_expansion = 0.5
 #box_expansion = 1.0
 
@@ -156,10 +181,12 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 #multi_png_time_steps = [0, 1, 2]
 #multi_png_time_steps = [0, 2, 4, 6]
 #multi_png_time_steps = [0, 10, 25, 50, 100, 200, 300, 500] #262
+#multi_png_time_steps = [0, 10, 50, 200, 300, 500]
+#multi_png_time_steps = [0, 10, 50, 200, 300, 328]
 #multi_png_time_steps = [0, 4, 10, 40, 100, 180, 200, 250, 300, 350, 400]
 #multi_png_time_steps = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500]
 #multi_png_time_steps = [0, 500, 1000, 1500]
-multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
+#multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
 #multi_png_time_steps = [0, 250, 500, 750] # , 949
 #multi_png_time_steps = [0, 2, 4, 8, 10, 11]
@@ -167,8 +194,12 @@ multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
 #multi_png_time_steps = [0, 4, 8, 12, 16, 20, 24, 26, 30] 
 #multi_png_time_steps = [0, 20, 80, 200, 400, 800, 1250, 1500]
 #multi_png_time_steps = [0, 20, 80, 200, 400, 800, 829]
-#multi_png_time_steps = [0, 20, 80, 200, 400, 500]
+multi_png_time_steps = [0, 20, 80, 200, 400, 500]
+#multi_png_time_steps = [0, 20, 80, 200, 300, 385]
+#multi_png_time_steps = [0, 20, 80, 200, 264]
+#multi_png_time_steps = [0, 2, 4, 6, 7, 10, 12, 14]
 #multi_png_time_steps = [0, 20, 80, 100, 200, 300, 400, 500, 600, 700, 800, 1000]
+#multi_png_time_steps = [0, 2, 4, 6, 7]
 
 
 inner_curves_color_palette = [
@@ -395,6 +426,8 @@ def read_ply(file_path):
         polyline.append(vertices[current_vertex])
         visited_vertices.add(current_vertex)
 
+        #print(edges)
+
         # Build the polyline by following the edges in sequence
         while len(visited_edges) < len(edges):
             for i, edge in enumerate(edges):
@@ -570,7 +603,7 @@ else:
         ax_main.set_xlim(x_bounds)
         ax_main.set_ylim(y_bounds)
         
-        ax_main.invert_yaxis()  # Reverse the direction of the y-axis
+        #ax_main.invert_yaxis()  # Reverse the direction of the y-axis
     elif inner_curves:
         # Use the first inner curve if outer curves are not available
         first_inner_curve_group = next(iter(inner_curves.values()))[0]
@@ -588,7 +621,7 @@ else:
         ax_main.set_xlim(x_bounds)
         ax_main.set_ylim(y_bounds)
         
-        ax_main.invert_yaxis()  # Reverse the direction of the y-axis
+        #ax_main.invert_yaxis()  # Reverse the direction of the y-axis
     else:
         raise ValueError("No curves (outer or inner) are available to set plot bounds.")
 

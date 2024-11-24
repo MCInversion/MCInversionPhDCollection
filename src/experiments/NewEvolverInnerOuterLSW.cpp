@@ -35,6 +35,8 @@
 #include "core/CharacteristicsBuilder.h"
 
 #include "IOEnvironment.h"
+#include "PolygonalDatasets.h"
+
 #include "../Experiments.h"
 
 #include <random>
@@ -1957,7 +1959,7 @@ void OutwardEvolvingInnerCircleTest()
 			return -0.05 * TRIVIAL_EPSILON(distance);
 		};
 		strategySettings.TimeStep = defaultTimeStep;
-		strategySettings.LevelOfDetail = 3;
+		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
 		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
@@ -1968,6 +1970,9 @@ void OutwardEvolvingInnerCircleTest()
 
 		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+		strategySettings.ExportVariableScalarFieldsDimInfo = true;
+		strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
 		std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
@@ -2596,8 +2601,8 @@ void EquilibriumPairedManifoldTests()
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	globalSettings.NSteps = 2500;
-	//globalSettings.NSteps = 1000;
+	//globalSettings.NSteps = 2500;
+	globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
@@ -2614,6 +2619,306 @@ void EquilibriumPairedManifoldTests()
 		std::cout << "EquilibriumPairedManifoldTest for pair: " << pairId << "\n";
 
 		globalSettings.ProcedureName = "equilibriumPair" + std::to_string(pairId);
+
+		std::vector innerCurves{ innerCurve };
+		innerCurves[0].negate_orientation();
+		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+			strategySettings, outerCurve, innerCurves, nullptr);
+
+		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+		try
+		{
+			evolver.Evolve();
+		}
+		catch (std::invalid_argument& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (std::runtime_error& ex)
+		{
+			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
+		}
+		catch (...)
+		{
+			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
+		}
+
+		pairId++;
+	}
+}
+
+namespace
+{
+	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve)
+	{
+		// DISCLAIMER: Some curves from svg paths might have duplicate points
+		constexpr float edgeLength = 2.0f;
+		constexpr unsigned int iterations = 10;
+		pmp::CurveRemeshing remesher(curve);
+		pmp::AdaptiveRemeshingSettings settings;
+		settings.MinEdgeLength = edgeLength;
+		settings.MaxEdgeLength = 1.5f * edgeLength;
+		settings.ApproxError = 0.05f * edgeLength;
+		settings.NRemeshingIterations = iterations;
+		settings.NTangentialSmoothingIters = 6;
+		settings.UseProjection = false;
+		remesher.adaptive_remeshing(settings);
+	}
+
+} // anonymous namespace
+
+void EquilibriumPairedConcaveManifoldTests()
+{
+	// Pair 0
+	const auto path00Vertices = ParsePolygonalSVGPath(svgPathPair00);
+	auto path00Curve = pmp::CurveFactory::sampled_polygon(path00Vertices, 140, false);
+	RemeshWithDefaultSettings(path00Curve);
+	if (!pmp::write_to_ply(path00Curve, dataOutPath + "path00Curve.ply"))
+		std::cerr << "Error writing path00Curve.ply!\n";
+
+	const auto path01Vertices = ParsePolygonalSVGPath(svgPathPair01);
+	auto path01Curve = pmp::CurveFactory::sampled_polygon(path01Vertices, 80, false);
+	RemeshWithDefaultSettings(path01Curve);
+	if (!pmp::write_to_ply(path01Curve, dataOutPath + "path01Curve.ply"))
+		std::cerr << "Error writing path01Curve.ply!\n";
+
+	// Pair 1
+	const auto path10Vertices = ParsePolygonalSVGPath(svgPathPair10);
+	auto path10Curve = pmp::CurveFactory::sampled_polygon(path10Vertices, 140, false);
+	RemeshWithDefaultSettings(path10Curve);
+	if (!pmp::write_to_ply(path10Curve, dataOutPath + "path10Curve.ply"))
+		std::cerr << "Error writing path10Curve.ply!\n";
+
+	const auto path11Vertices = ParsePolygonalSVGPath(svgPathPair11);
+	auto path11Curve = pmp::CurveFactory::sampled_polygon(path11Vertices, 80, false);
+	RemeshWithDefaultSettings(path11Curve);
+	if (!pmp::write_to_ply(path11Curve, dataOutPath + "path11Curve.ply"))
+		std::cerr << "Error writing path11Curve.ply!\n";
+
+	// Pair 2
+	const auto path20Vertices = ParsePolygonalSVGPath(svgPathPair20);
+	auto path20Curve = pmp::CurveFactory::sampled_polygon(path20Vertices, 100, true);
+	RemeshWithDefaultSettings(path20Curve);
+	if (!pmp::write_to_ply(path20Curve, dataOutPath + "path20Curve.ply"))
+		std::cerr << "Error writing path20Curve.ply!\n";
+
+	const auto path21Vertices = ParsePolygonalSVGPath(svgPathPair21);
+	auto path21Curve = pmp::CurveFactory::sampled_polygon(path21Vertices, 120, false);
+	RemeshWithDefaultSettings(path21Curve);
+	if (!pmp::write_to_ply(path21Curve, dataOutPath + "path21Curve.ply"))
+		std::cerr << "Error writing path21Curve.ply!\n";
+
+	// Pair 3
+	const auto path30Vertices = ParsePolygonalSVGPath(svgPathPair30);
+	auto path30Curve = pmp::CurveFactory::sampled_polygon(path30Vertices, 100, true);
+	RemeshWithDefaultSettings(path30Curve);
+	if (!pmp::write_to_ply(path30Curve, dataOutPath + "path30Curve.ply"))
+		std::cerr << "Error writing path30Curve.ply!\n";
+
+	const auto path31Vertices = ParsePolygonalSVGPath(svgPathPair31);
+	auto path31Curve = pmp::CurveFactory::sampled_polygon(path31Vertices, 100, false);
+	RemeshWithDefaultSettings(path31Curve);
+	if (!pmp::write_to_ply(path31Curve, dataOutPath + "path31Curve.ply"))
+		std::cerr << "Error writing path31Curve.ply!\n";
+
+	// Pair 4
+	const auto path40Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path40Curve = pmp::CurveFactory::sampled_polygon(path40Vertices, 100, true);
+	RemeshWithDefaultSettings(path40Curve);
+	if (!pmp::write_to_ply(path40Curve, dataOutPath + "path40Curve.ply"))
+		std::cerr << "Error writing path40Curve.ply!\n";
+
+	const auto path41Vertices = ParsePolygonalSVGPath(svgPathPair41);
+	auto path41Curve = pmp::CurveFactory::sampled_polygon(path41Vertices, 100, false);
+	RemeshWithDefaultSettings(path41Curve);
+	if (!pmp::write_to_ply(path41Curve, dataOutPath + "path41Curve.ply"))
+		std::cerr << "Error writing path41Curve.ply!\n";
+
+	// Pair 5
+	const auto path50Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path50Curve = pmp::CurveFactory::sampled_polygon(path50Vertices, 100, true);
+	RemeshWithDefaultSettings(path50Curve);
+	if (!pmp::write_to_ply(path50Curve, dataOutPath + "path50Curve.ply"))
+		std::cerr << "Error writing path50Curve.ply!\n";
+
+	auto path51Curve = pmp::CurveFactory::circle(pmp::Point2{ 98.689514f, 54.600803f }, 9.625f, 80);
+	//auto path51Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.244923f, 60.766129f }, 14.346979f, 100);
+	if (!pmp::write_to_ply(path51Curve, dataOutPath + "path51Curve.ply"))
+		std::cerr << "Error writing path51Curve.ply!\n";
+
+	// Pair 6
+	const auto path60Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path60Curve = pmp::CurveFactory::sampled_polygon(path60Vertices, 100, true);
+	RemeshWithDefaultSettings(path60Curve);
+	if (!pmp::write_to_ply(path60Curve, dataOutPath + "path60Curve.ply"))
+		std::cerr << "Error writing path60Curve.ply!\n";
+
+	const auto path61Vertices = ParsePolygonalSVGPath(svgPathPair61);
+	auto path61Curve = pmp::CurveFactory::sampled_polygon(path61Vertices, 100, false);
+	RemeshWithDefaultSettings(path61Curve);
+	if (!pmp::write_to_ply(path61Curve, dataOutPath + "path61Curve.ply"))
+		std::cerr << "Error writing path61Curve.ply!\n";
+
+	// Pair 7
+	const auto path70Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path70Curve = pmp::CurveFactory::sampled_polygon(path70Vertices, 100, true);
+	RemeshWithDefaultSettings(path70Curve);
+	if (!pmp::write_to_ply(path70Curve, dataOutPath + "path70Curve.ply"))
+		std::cerr << "Error writing path70Curve.ply!\n";
+
+	const auto path71Vertices = ParsePolygonalSVGPath(svgPathPair71);
+	auto path71Curve = pmp::CurveFactory::sampled_polygon(path71Vertices, 100, false);
+	RemeshWithDefaultSettings(path71Curve);
+	if (!pmp::write_to_ply(path71Curve, dataOutPath + "path71Curve.ply"))
+		std::cerr << "Error writing path71Curve.ply!\n";
+
+	// Pair 8
+	const auto path80Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path80Curve = pmp::CurveFactory::sampled_polygon(path80Vertices, 100, true);
+	RemeshWithDefaultSettings(path80Curve);
+	if (!pmp::write_to_ply(path80Curve, dataOutPath + "path80Curve.ply"))
+		std::cerr << "Error writing path80Curve.ply!\n";
+
+	const auto path81Vertices = ParsePolygonalSVGPath(svgPathPair81);
+	auto path81Curve = pmp::CurveFactory::sampled_polygon(path81Vertices, 80, true);
+	RemeshWithDefaultSettings(path81Curve);
+	if (!pmp::write_to_ply(path81Curve, dataOutPath + "path81Curve.ply"))
+		std::cerr << "Error writing path81Curve.ply!\n";
+
+	// Pair 9
+	auto path90Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 180);
+	RemeshWithDefaultSettings(path90Curve);
+	if (!pmp::write_to_ply(path90Curve, dataOutPath + "path90Curve.ply"))
+		std::cerr << "Error writing path90Curve.ply!\n";
+
+	const auto path91Vertices = ParsePolygonalSVGPath(svgPathPair31);
+	auto path91Curve = pmp::CurveFactory::sampled_polygon(path91Vertices, 50, true);
+	RemeshWithDefaultSettings(path91Curve);
+	if (!pmp::write_to_ply(path91Curve, dataOutPath + "path91Curve.ply"))
+		std::cerr << "Error writing path91Curve.ply!\n";
+
+	// Pair 10
+	auto path100Curve = pmp::CurveFactory::circle(pmp::Point2{ 61.653221f, 60.588707f }, 56.508064f, 180);
+	RemeshWithDefaultSettings(path100Curve);
+	if (!pmp::write_to_ply(path100Curve, dataOutPath + "path100Curve.ply"))
+		std::cerr << "Error writing path90Curve.ply!\n";
+
+	const auto path101Vertices = ParsePolygonalSVGPath(svgPathPair31);
+	auto path101Curve = pmp::CurveFactory::sampled_polygon(path101Vertices, 50, true);
+	RemeshWithDefaultSettings(path101Curve);
+	if (!pmp::write_to_ply(path101Curve, dataOutPath + "path101Curve.ply"))
+		std::cerr << "Error writing path101Curve.ply!\n";
+
+	// Pair 11 // TODO: Re-run
+	const auto path110Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path110Curve = pmp::CurveFactory::sampled_polygon(path110Vertices, 100, true);
+	RemeshWithDefaultSettings(path110Curve);
+	if (!pmp::write_to_ply(path110Curve, dataOutPath + "path110Curve.ply"))
+		std::cerr << "Error writing path110Curve.ply!\n";
+
+	const auto path111Vertices = ParsePolygonalSVGPath(svgPathPair111);
+	auto path111Curve = pmp::CurveFactory::sampled_polygon(path111Vertices, 80, false);
+	RemeshWithDefaultSettings(path111Curve);
+	if (!pmp::write_to_ply(path111Curve, dataOutPath + "path111Curve.ply"))
+		std::cerr << "Error writing path111Curve.ply!\n";
+
+	// Pair 12
+	const auto path120Vertices = ParsePolygonalSVGPath(svgPathPair40);
+	auto path120Curve = pmp::CurveFactory::sampled_polygon(path120Vertices, 100, true);
+	RemeshWithDefaultSettings(path120Curve);
+	if (!pmp::write_to_ply(path120Curve, dataOutPath + "path120Curve.ply"))
+		std::cerr << "Error writing path120Curve.ply!\n";
+
+	const auto path121Vertices = ParsePolygonalSVGPath(svgPathPair121);
+	auto path121Curve = pmp::CurveFactory::sampled_polygon(path121Vertices, 80, false);
+	RemeshWithDefaultSettings(path121Curve);
+	if (!pmp::write_to_ply(path121Curve, dataOutPath + "path121Curve.ply"))
+		std::cerr << "Error writing path121Curve.ply!\n";
+
+	// List of curve pairs to evolve
+	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
+		//{path00Curve, path01Curve},
+		//{path10Curve, path11Curve},
+		//{path20Curve, path21Curve}, // TODO: rerun again with proper remeshing
+		//{path30Curve, path31Curve},
+		//{path40Curve, path41Curve},
+		{path50Curve, path51Curve},
+		//{path60Curve, path61Curve},
+		//{path70Curve, path71Curve},
+		//{path80Curve, path81Curve},
+		//{path90Curve, path91Curve},
+		//{path100Curve, path101Curve},
+		//{path110Curve, path111Curve},
+		//{path120Curve, path121Curve},
+	};
+
+	// Prepare the settings for the evolver
+	ManifoldEvolutionSettings strategySettings;
+	strategySettings.UseInnerManifolds = true;
+
+	strategySettings.AdvectionInteractWithOtherManifolds = true;
+	// use PreComputeAdvectionDiffusionParams?
+	strategySettings.OuterManifoldEpsilon = [](double distance)
+	{
+		return 0.0 * (1.0 - exp(-distance * distance / 1.0));
+	};
+	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+	{
+		return 0.0;
+		//if (distance < 0.015)
+		//	return 0.0;
+		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	};
+	strategySettings.InnerManifoldEpsilon = [](double distance)
+	{
+		return 0.0 * TRIVIAL_EPSILON(distance);
+	};
+	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+	{
+		if (distance < 0.015)
+			return 0.0;
+		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -0.2 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		// return 1.0 * distance * (std::fabs(negGradDotNormal) - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	};
+	strategySettings.LevelOfDetail = 4;
+
+	strategySettings.TimeStep = 0.05;
+	strategySettings.TangentialVelocityWeight = 0.05;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.6f;
+	strategySettings.RemeshingSettings.UseBackProjection = true;
+	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
+	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
+	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
+
+	strategySettings.ExportVariableScalarFieldsDimInfo = true;
+	strategySettings.ExportVariableVectorFieldsDimInfo = true;
+
+	// Global settings
+	GlobalManifoldEvolutionSettings globalSettings;
+	//globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 1000;
+	globalSettings.NSteps = 500;
+	//globalSettings.NSteps = 20;
+	globalSettings.DoRemeshing = true;
+	globalSettings.DetectFeatures = false;
+	globalSettings.ExportPerTimeStep = true;
+	globalSettings.ExportTargetDistanceFieldAsImage = true;
+	globalSettings.OutputPath = dataOutPath;
+	globalSettings.ExportResult = false;
+
+	globalSettings.RemeshingResizeFactor = 0.7f;
+	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+	for (unsigned int pairId = 16; const auto& [outerCurve, innerCurve] : curvePairs)
+	{
+		std::cout << "EquilibriumPairedConcaveManifoldTests for pair: " << pairId << "\n";
+
+		globalSettings.ProcedureName = "equilibriumConcavePair" + std::to_string(pairId);
 
 		std::vector innerCurves{ innerCurve };
 		innerCurves[0].negate_orientation();
@@ -5124,32 +5429,6 @@ void ExportBallPivotingBoundaryEdges()
 
 void TestProblematicMedialAxisPtClouds()
 {
-	const std::vector unevenCrossPolyPts{
-		pmp::Point2{39.507142f, 14.544772f},
-		pmp::Point2{46.104261f, 5.542495f},
-		pmp::Point2{61.36143f, 4.906308f},
-		pmp::Point2{68.282948f, 13.11281f},
-		pmp::Point2{66.153916f, 31.426095f},
-		pmp::Point2{69.924933f, 39.754365f},
-		pmp::Point2{111.082270f, 39.723965f},
-		pmp::Point2{117.795930f, 46.528945f},
-		pmp::Point2{117.765430f, 66.419005f},
-		pmp::Point2{113.358230f, 72.215125f},
-		pmp::Point2{89.030514f, 71.743755f},
-		pmp::Point2{82.788235f, 77.337235f},
-		pmp::Point2{87.565954f, 122.613040f},
-		pmp::Point2{80.332640f, 129.222760f},
-		pmp::Point2{68.372952f, 128.366110f},
-		pmp::Point2{61.451434f, 122.392570f},
-		pmp::Point2{57.089489f, 85.394595f},
-		pmp::Point2{36.929786f, 84.297475f},
-		pmp::Point2{10.835265f, 83.544745f},
-		pmp::Point2{3.558908f, 76.519305f},
-		pmp::Point2{3.558908f, 57.450225f},
-		pmp::Point2{10.584357f, 47.664785f},
-		pmp::Point2{32.413427f, 48.166595f},
-		pmp::Point2{40.865615f, 41.985195f}
-	};
 	pmp::ManifoldCurve2D unevenCrossCurve = pmp::CurveFactory::sampled_polygon(unevenCrossPolyPts, 100, false);
 	if (!pmp::write_to_ply(unevenCrossCurve, dataOutPath + "unevenCrossCurve.ply"))
 		std::cerr << "Error writing unevenCrossCurve.ply!\n";
