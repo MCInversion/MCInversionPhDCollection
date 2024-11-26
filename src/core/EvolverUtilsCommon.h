@@ -1,18 +1,20 @@
 #pragma once
 
 #include "pmp/Types.h"
+#include "pmp/ManifoldCurve2D.h"
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include <functional>
-#include <unordered_set>
 
 #include "geometry/MeshAnalysis.h"
-#include "pmp/ManifoldCurve2D.h"
+
+#include "utils/nlohmann/json.hpp"
 
 #include <ranges>
 #include <fstream>
 #include <iomanip>
+#include <functional>
+#include <unordered_set>
 
 namespace pmp
 {
@@ -536,77 +538,78 @@ public:
 // * \class VertexValueLogger
 // * \tparam ManifoldType   The type of the manifold (pmp::ManifoldCurve2D or pmp::SurfaceMesh).
 // */
-//template<typename ManifoldType>
-//class VertexValueLogger
-//{
-//public:
-//	/// \brief Initialize the logger with a file name.
-//	void Init(const std::string& fileName)
-//	{
-//		m_File.open(fileName, std::ios_base::app);
-//		if (!m_File.is_open())
-//		{
-//			throw std::runtime_error("VertexValueLogger::Init: Failed to open file: " + fileName);
-//		}
-//	}
-//
-//	/// \brief Reset the values for a new time step.
-//	void ResetValues()
-//	{
-//		m_ManifoldValues.clear();
-//	}
-//
-//	/// \brief Add a new manifold to the logger.
-//	void AddManifold(const ManifoldType* manifold)
-//	{
-//		size_t nVertices = manifold->n_vertices();
-//		m_ManifoldValues[manifold].reserve(nVertices);
-//	}
-//
-//	/// \brief Log a value for a specific manifold and vertex.
-//	void LogValue(const ManifoldType* manifold, const std::string& valueId, double value)
-//	{
-//		m_ManifoldValues[manifold][valueId].push_back(value);
-//	}
-//
-//	/// \brief Save the logged values to the file.
-//	void Save(unsigned int timeStep)
-//	{
-//		if (!m_File)
-//		{
-//			throw std::logic_error("VertexValueLogger::Save: File not opened!\n");
-//		}
-//
-//		// Write a header for the time step
-//		m_File << "# Time Step: " << timeStep << "\n";
-//
-//		for (const auto& [manifold, valuesMap] : m_ManifoldValues)
-//		{
-//			// Write values for each manifold, keyed by type (e.g., epsilonCtrlWeight, etaCtrlWeight)
-//			m_File << "Manifold: " << manifold << "\n";
-//
-//			for (const auto& [key, values] : valuesMap)
-//			{
-//				m_File << key << ": VertexIndex, Value\n";
-//				for (size_t i = 0; i < values.size(); ++i)
-//				{
-//					m_File << i << ", " << values[i] << "\n";
-//				}
-//				m_File << "\n";  // Separate different value types by a line
-//			}
-//		}
-//
-//		// Optionally add a separator between time steps
-//		m_File << "\n";
-//	}
-//
-//	/// \brief Close the log file.
-//	void Close()
-//	{
-//		m_File.close();
-//	}
-//
-//private:
-//	std::ofstream m_File;  //!< Log file
-//	std::unordered_map<ManifoldType*, std::map<std::string, std::vector<double>>> m_ManifoldValues;  //!< Map of manifold to its vertex values
-//};
+template<typename ManifoldType>
+class VertexValueLogger
+{
+public:
+	/// \brief Initialize the logger with a file name
+	void Init(const std::string& fileName)
+	{
+		m_FileName = fileName;
+	}
+
+	/// \brief Reset the values for a new time step
+	void StartNewTimeStep(unsigned int timeStep)
+	{
+		m_CurrentTimeStep = timeStep;
+		m_TimeStepData[timeStep] = nlohmann::json::object();
+	}
+
+	/// \brief Add a new manifold to the logger
+	void AddManifold(const ManifoldType* manifold)
+	{
+		m_ManifoldKeys[manifold] = "Manifold_" + std::to_string(m_ManifoldCounter++);
+	}
+
+	/// \brief Log a value for a specific manifold and vertex
+	void LogValue(const ManifoldType* manifold, const std::string& valueId, unsigned int vertexIndex, double value)
+	{
+		auto& timeStepJson = m_TimeStepData[m_CurrentTimeStep];
+		std::string manifoldKey = m_ManifoldKeys[manifold];
+
+		// Initialize structure for manifold if it doesn't exist
+		if (!timeStepJson.contains(manifoldKey))
+			timeStepJson[manifoldKey] = nlohmann::json::object();
+
+		auto& manifoldJson = timeStepJson[manifoldKey];
+
+		// Initialize structure for value type if it doesn't exist
+		if (!manifoldJson.contains(valueId))
+			manifoldJson[valueId] = nlohmann::json::object();
+
+		// Add value for vertex
+		manifoldJson[valueId][std::to_string(vertexIndex)] = value;
+	}
+
+	/// \brief Save all logged data to JSON format
+	void Save()
+	{
+		nlohmann::json outputJson;
+		for (const auto& [timeStep, data] : m_TimeStepData)
+		{
+			outputJson["TimeStep_" + std::to_string(timeStep)] = data;
+		}
+
+		std::ofstream file(m_FileName);
+		if (!file.is_open())
+		{
+			throw std::runtime_error("VertexValueLogger::Save: Failed to open file: " + m_FileName);
+		}
+
+		file << outputJson.dump(4); // Pretty-print with 4 spaces
+		file.close();
+	}
+
+	/// \brief Close the logger
+	void Close()
+	{
+		Save(); // Save when closing
+	}
+
+private:
+	std::string m_FileName; //!< Log file name
+	unsigned int m_CurrentTimeStep = 0; //!< Current time step being logged
+	unsigned int m_ManifoldCounter = 0; //!< Counter for assigning manifold keys
+	std::unordered_map<const ManifoldType*, std::string> m_ManifoldKeys; //!< Map from manifold pointer to unique key
+	std::map<unsigned int, nlohmann::json> m_TimeStepData; //!< Map from time step to JSON data
+};

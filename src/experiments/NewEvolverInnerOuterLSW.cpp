@@ -2843,11 +2843,11 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path20Curve, path21Curve}, // TODO: rerun again with proper remeshing
 		//{path30Curve, path31Curve},
 		//{path40Curve, path41Curve},
-		{path50Curve, path51Curve},
+		//{path50Curve, path51Curve},
 		//{path60Curve, path61Curve},
 		//{path70Curve, path71Curve},
 		//{path80Curve, path81Curve},
-		//{path90Curve, path91Curve},
+		{path90Curve, path91Curve},
 		//{path100Curve, path101Curve},
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},

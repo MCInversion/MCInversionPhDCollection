@@ -91,6 +91,18 @@ struct FaceQualitySettings
 };
 
 /**
+ * \brief Settings for printing out debug info into a specified log file.
+ * \struct DiagnosticSettings
+ */
+struct DiagnosticSettings
+{
+    bool LogOuterManifoldEpsilon{ false }; //>! whether to log values of epsilon (curvature control function) for each vertex and each time step for the outer manifold.
+    bool LogInnerManifoldsEpsilon{ false }; //>! whether to log values of epsilon (curvature control function) for each vertex and each time step for each inner manifold.
+    bool LogOuterManifoldEta{ false };  //>! whether to log values of eta (advection control function) for each vertex and each time step for the outer manifold.
+    bool LogInnerManifoldsEta{ false }; //>! whether to log values of eta (advection control function) for each vertex and each time step for each inner manifold.
+};
+
+/**
  * \brief A wrapper for manifold evolution settings.
  * \struct ManifoldEvolutionSettings
  */
@@ -129,6 +141,8 @@ struct ManifoldEvolutionSettings
 
     bool ExportVariableScalarFieldsDimInfo{ false }; //>! whether to export the dimensions of the variable scalar fields.
     bool ExportVariableVectorFieldsDimInfo{ false }; //>! whether to export the dimensions of the variable vector fields.
+
+    DiagnosticSettings DiagSettings{}; //>! evolution diagnostics.
 };
 
 /**
@@ -537,6 +551,8 @@ private:
     ManifoldsToRemeshTracker<pmp::ManifoldCurve2D> m_RemeshTracker{}; //>! a utility which logs curves that need remeshing.
     ManifoldRemeshingSettingsWrapper<pmp::ManifoldCurve2D> m_RemeshingSettings{}; //>! a wrapper with remeshing settings assigned to evolving manifolds
     InitialSphereSettingsWrapper<pmp::ManifoldCurve2D, Circle2D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
+
+    VertexValueLogger<pmp::ManifoldCurve2D> m_Logger{}; //>! a utility for exporting the chosen vertex values to a file for debugging purposes.
 };
 
 /**
@@ -860,6 +876,8 @@ private:
     ManifoldsToRemeshTracker<pmp::SurfaceMesh> m_RemeshTracker{}; //>! a utility which logs surfaces that need remeshing.
     ManifoldRemeshingSettingsWrapper<pmp::SurfaceMesh> m_RemeshingSettings{}; //>! a wrapper with remeshing settings assigned to evolving manifolds
     InitialSphereSettingsWrapper<pmp::SurfaceMesh, Sphere3D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
+
+    VertexValueLogger<pmp::SurfaceMesh> m_Logger{}; //>! a utility for exporting the chosen vertex values to a file for debugging purposes.
 };
 
 /**
