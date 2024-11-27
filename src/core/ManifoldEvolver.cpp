@@ -18,6 +18,30 @@
 // --------------------------------------------------------------------------------------
 //
 
+void ManifoldCurveEvolutionStrategy::InitLogger(const std::string& baseOutputFileName)
+{
+	if (!LogManifoldValues())
+		return;
+
+	m_Logger.Init(baseOutputFileName + "_log.json");
+}
+
+void ManifoldCurveEvolutionStrategy::InitNewTimeStepLog(unsigned int stepId)
+{
+	if (!LogManifoldValues())
+		return;
+
+	m_Logger.StartNewTimeStep(stepId); // Explicitly start a new logging step
+}
+
+void ManifoldCurveEvolutionStrategy::SaveLog()
+{
+	if (!LogManifoldValues())
+		return;
+
+	m_Logger.Save();
+}
+
 void ManifoldCurveEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
@@ -44,6 +68,19 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	
 	//if (!HasValidInnerOuterManifolds())
 	//	throw std::invalid_argument("CustomManifoldCurveEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner curves are contained within the custom outer curve.\n");
+
+	if (LogManifoldValues())
+	{
+		if (GetOuterCurve())
+			GetLogger().AddManifold(GetOuterCurve().get());
+		for (auto& innerCurve : GetInnerCurves())
+		{
+			if (!innerCurve)
+				continue;
+
+			GetLogger().AddManifold(innerCurve.get());
+		}
+	}
 
 	if (NeedsFieldsCalculation())
 	{
@@ -74,6 +111,9 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 
 void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
+	if (LogManifoldValues())
+		InitNewTimeStepLog(stepId);
+
 	GetIntegrate()(stepId);
 }
 
@@ -83,6 +123,11 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 	{
 		pmp::CurveRemeshing remesher(*curveToRemesh);
 		remesher.adaptive_remeshing(m_RemeshingSettings[curveToRemesh]);
+
+		if (LogManifoldValues())
+		{
+			m_Logger.ReserveBuffers(curveToRemesh);
+		}
 	}
 	m_RemeshTracker.Reset();
 }
@@ -312,6 +357,14 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				((m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
 				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
 
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
+					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogOuterManifoldEta)
+					m_Logger.LogValue(m_OuterCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
+
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
 
@@ -429,8 +482,22 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				((m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
 
+			if (std::abs(etaCtrlWeight) < 1e-5)
+			{
+				std::cout << "Why is eta zero?!\n";
+			}
+
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogInnerManifoldsEpsilon)
+					m_Logger.LogValue(innerCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogInnerManifoldsEta)
+					m_Logger.LogValue(innerCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
+
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
+
 			//const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
 			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); //(1.0 - exp(-interaction.Distance * interaction.Distance));
 
@@ -560,6 +627,14 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
 				(m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
+
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
+					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogOuterManifoldEta)
+					m_Logger.LogValue(m_OuterCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
 
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*m_OuterCurve, v);
@@ -748,6 +823,9 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 		// DISCLAIMER: Since we want to evolve manifolds centered at the origin, we will not move the outer manifold into its "true" position.
 		// The "true" position will be stored in m_InitialSphereSettings:
 		m_InitialSphereSettings[m_OuterCurve.get()] = Circle2D{ targetBoundsCenter, outerCircleRadius };
+
+		if (LogManifoldValues())
+			m_Logger.AddManifold(m_OuterCurve.get());
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
@@ -1099,6 +1177,30 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 // ---------------------------------------------------------------------------------------
 //
 
+void ManifoldSurfaceEvolutionStrategy::InitLogger(const std::string& baseOutputFileName)
+{
+	if (!LogManifoldValues())
+		return;
+
+	m_Logger.Init(baseOutputFileName + "_log.json");
+}
+
+void ManifoldSurfaceEvolutionStrategy::InitNewTimeStepLog(unsigned int stepId)
+{
+	if (!LogManifoldValues())
+		return;
+
+	m_Logger.StartNewTimeStep(stepId); // Explicitly start a new logging step
+}
+
+void ManifoldSurfaceEvolutionStrategy::SaveLog()
+{
+	if (!LogManifoldValues())
+		return;
+
+	m_Logger.Save();
+}
+
 void ManifoldSurfaceEvolutionStrategy::Preprocess()
 {
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
@@ -1126,6 +1228,19 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 	//if (!HasValidInnerOuterManifolds())
 	//	throw std::invalid_argument("CustomManifoldSurfaceEvolutionStrategy::Preprocess: Invalid inner /outer manifold geometry! Not all custom inner surfaces are contained within the custom outer surface.\n");
 
+	if (LogManifoldValues())
+	{
+		if (GetOuterSurface())
+			GetLogger().AddManifold(GetOuterSurface().get());
+		for (auto& innerSurface : GetInnerSurfaces())
+		{
+			if (!innerSurface)
+				continue;
+
+			GetLogger().AddManifold(innerSurface.get());
+		}
+	}
+
 	if (NeedsFieldsCalculation())
 	{
 		GetEvolBox() = GetOuterSurface()->bounds();
@@ -1148,11 +1263,15 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		const auto [minAreaAfter, maxAreaAfter] = CalculateCoVolumeRange();
 		std::cout << "After stabilization: { minAreaAfter: " << minAreaAfter << ", maxAreaAfter: " << maxAreaAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
+
 	AssignRemeshingSettingsToEvolvingManifolds();
 }
 
 void ManifoldSurfaceEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
 {
+	if (LogManifoldValues())
+		InitNewTimeStepLog(stepId);
+
 	GetIntegrate()(stepId);
 }
 
@@ -1162,6 +1281,11 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 	{
 		pmp::Remeshing remesher(*surfaceToRemesh);
 		remesher.adaptive_remeshing(m_RemeshingSettings[surfaceToRemesh]);
+
+		if (LogManifoldValues())
+		{
+			m_Logger.ReserveBuffers(surfaceToRemesh);
+		}
 	}
 	m_RemeshTracker.Reset();
 }
@@ -1370,6 +1494,14 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const double etaCtrlWeight =
 				(m_DistanceField || !m_InnerSurfacesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
+					m_Logger.LogValue(m_OuterSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogOuterManifoldEta)
+					m_Logger.LogValue(m_OuterSurface.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
+
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
 			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
@@ -1484,6 +1616,14 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const double etaCtrlWeight =
 				(m_DistanceField || m_OuterSurfaceDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogInnerManifoldsEpsilon)
+					m_Logger.LogValue(innerSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogInnerManifoldsEta)
+					m_Logger.LogValue(innerSurface.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
+
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
 			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
@@ -1593,6 +1733,14 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const double etaCtrlWeight =
 				(m_DistanceField || !m_InnerSurfacesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
+					m_Logger.LogValue(m_OuterSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogOuterManifoldEta)
+					m_Logger.LogValue(m_OuterSurface.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
+
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*m_OuterSurface, v);
 
@@ -1669,6 +1817,14 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
 				(m_DistanceField || m_OuterSurfaceDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
+
+			if (LogManifoldValues())
+			{
+				if (GetSettings().DiagSettings.LogInnerManifoldsEpsilon)
+					m_Logger.LogValue(innerSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
+				if (GetSettings().DiagSettings.LogInnerManifoldsEta)
+					m_Logger.LogValue(innerSurface.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+			}
 
 			// Laplacian term (already weighted by epsilon and area)
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*innerSurface, v);
@@ -1785,6 +1941,9 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 		// DISCLAIMER: Since we want to evolve manifolds centered at the origin, we will not move the outer manifold into its "true" position.
 		// The "true" position will be stored in m_InitialSphereSettings:
 		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
+
+		if (LogManifoldValues())
+			m_Logger.AddManifold(m_OuterSurface.get());
 	}
 
 	if (!GetSettings().UseInnerManifolds || !m_TargetPointCloud || !m_DistanceField)
@@ -2121,3 +2280,9 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 }
 
 // ================================================
+
+bool ManifoldEvolutionStrategy::LogManifoldValues()
+{
+	return m_Settings.DiagSettings.LogOuterManifoldEpsilon || m_Settings.DiagSettings.LogInnerManifoldsEpsilon ||
+		m_Settings.DiagSettings.LogOuterManifoldEta || m_Settings.DiagSettings.LogInnerManifoldsEta;
+}

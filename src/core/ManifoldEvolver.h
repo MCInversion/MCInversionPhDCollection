@@ -198,6 +198,16 @@ public:
     virtual ~ManifoldEvolutionStrategy() = default;
 
     /**
+     * \brief Separate logging method for initializing value buffers for logging.
+     */
+    virtual void InitLogger(const std::string& baseOutputFileName) = 0;
+
+    /**
+     * \brief Separate method for passing the resulting logged data into the log file.
+     */
+    virtual void SaveLog() = 0;
+
+    /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
     virtual void Preprocess() = 0;
@@ -253,6 +263,11 @@ public:
 
 protected:
 
+    /**
+     * \brief Initializing value buffers for logging a new time step.
+     */
+    virtual void InitNewTimeStepLog(unsigned int stepId) = 0;
+
     /// \brief A getter for the stabilization scaling factor.
     pmp::Scalar& GetScalingFactor()
     {
@@ -289,6 +304,9 @@ protected:
 
     /// \brief Verifies whether target or variable fields need to be defined.
     virtual [[nodiscard]] bool NeedsFieldsCalculation() = 0;
+
+    /// \brief Checks the diagnostic flags in m_Settings.
+    [[nodiscard]] bool LogManifoldValues();
 
 private:
 
@@ -342,6 +360,16 @@ public:
             m_VectorInterpolate = Geometry::GetNearestNeighborVectorValue2D;
         }
     }
+
+    /**
+     * \brief Separate logging method for initializing value buffers for logging.
+     */
+    void InitLogger(const std::string& baseOutputFileName) override;
+
+    /**
+     * \brief Separate method for passing the resulting logged data into the log file.
+     */
+    void SaveLog() override;
 
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
@@ -398,6 +426,11 @@ public:
     void ComputeVariableDistanceFields() override;
 
 protected:
+
+    /**
+     * \brief Initializing value buffers for logging a new time step.
+     */
+    void InitNewTimeStepLog(unsigned int stepId) override;
 
     /// \brief Semi-implicit integration method step.
     void SemiImplicitIntegrationStep(unsigned int step) override;
@@ -523,6 +556,12 @@ protected:
 
     /// \brief Verifies whether target or variable fields need to be defined.
     [[nodiscard]] bool NeedsFieldsCalculation() override;
+
+    /// \brief A getter for the diagnostic logger
+    VertexValueLogger<pmp::ManifoldCurve2D>& GetLogger()
+    {
+        return m_Logger;
+    }
 
 private:
 
@@ -652,6 +691,16 @@ public:
     }
 
     /**
+     * \brief Separate logging method for initializing value buffers for logging.
+     */
+    void InitLogger(const std::string& baseOutputFileName) override;
+
+    /**
+     * \brief Separate method for passing the resulting logged data into the log file.
+     */
+    void SaveLog() override;
+
+    /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
      */
     void Preprocess() override;
@@ -706,6 +755,11 @@ public:
     void ComputeVariableDistanceFields() override;
 
 protected:
+
+    /**
+     * \brief Initializing value buffers for logging a new time step.
+     */
+    void InitNewTimeStepLog(unsigned int stepId) override;
 
     /// \brief Semi-implicit integration method step.
     void SemiImplicitIntegrationStep(unsigned int step) override;
@@ -844,6 +898,12 @@ protected:
     /// \brief Verifies whether target or variable fields need to be defined.
     [[nodiscard]] bool NeedsFieldsCalculation() override;
 
+    /// \brief A getter for the diagnostic logger
+    VertexValueLogger<pmp::SurfaceMesh>& GetLogger()
+    {
+        return m_Logger;
+    }
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -955,7 +1015,9 @@ public:
      */
     void Evolve() const
 	{
+        m_Strategy->InitLogger(m_Settings.OutputPath + m_Settings.ProcedureName);
         m_Strategy->Preprocess();
+
         if (m_Settings.ExportTargetDistanceFieldAsImage)
         {
             m_Strategy->ExportTargetDistanceFieldAsImage(m_Settings.OutputPath + m_Settings.ProcedureName);
@@ -996,6 +1058,7 @@ public:
         }
 
         m_Strategy->Postprocess();
+        m_Strategy->SaveLog();
 
         if (m_Settings.ExportResult) 
         {

@@ -2836,6 +2836,28 @@ void EquilibriumPairedConcaveManifoldTests()
 	if (!pmp::write_to_ply(path121Curve, dataOutPath + "path121Curve.ply"))
 		std::cerr << "Error writing path121Curve.ply!\n";
 
+	// Pair 13
+	auto path130Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 180);
+	RemeshWithDefaultSettings(path130Curve);
+	if (!pmp::write_to_ply(path130Curve, dataOutPath + "path130Curve.ply"))
+		std::cerr << "Error writing path130Curve.ply!\n";
+
+	auto path131Curve = pmp::CurveFactory::circle(pmp::Point2{ 59.879032f, 51.983871f }, 14.104838f, 100);
+	RemeshWithDefaultSettings(path131Curve);
+	if (!pmp::write_to_ply(path131Curve, dataOutPath + "path131Curve.ply"))
+		std::cerr << "Error writing path131Curve.ply!\n";
+
+	// Pair 14
+	auto path140Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 180);
+	RemeshWithDefaultSettings(path140Curve);
+	if (!pmp::write_to_ply(path140Curve, dataOutPath + "path140Curve.ply"))
+		std::cerr << "Error writing path140Curve.ply!\n";
+
+	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.056454f, 52.693546f }, 13.217741f, 100);
+	RemeshWithDefaultSettings(path141Curve);
+	if (!pmp::write_to_ply(path141Curve, dataOutPath + "path141Curve.ply"))
+		std::cerr << "Error writing path141Curve.ply!\n";
+
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		//{path00Curve, path01Curve},
@@ -2847,10 +2869,12 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path60Curve, path61Curve},
 		//{path70Curve, path71Curve},
 		//{path80Curve, path81Curve},
-		{path90Curve, path91Curve},
+		//{path90Curve, path91Curve},
 		//{path100Curve, path101Curve},
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},
+		//{path130Curve, path131Curve},
+		{path140Curve, path141Curve}
 	};
 
 	// Prepare the settings for the evolver
@@ -2880,7 +2904,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		if (distance < 0.015)
 			return 0.0;
 		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		return -0.2 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -0.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (std::fabs(negGradDotNormal) - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
@@ -2897,6 +2921,11 @@ void EquilibriumPairedConcaveManifoldTests()
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
+
+	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
+	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
+	//strategySettings.DiagSettings.LogOuterManifoldEta = true;
+	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;

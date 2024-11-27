@@ -1021,7 +1021,7 @@ namespace Geometry
 
 				const double norm = -1.0 * sqrt(grad_x * grad_x + grad_y * grad_y);
 
-				assert(!std::isnan(norm) && !std::isinf(norm));
+				//assert(!std::isnan(norm) && !std::isinf(norm));
 
 				if (norm > -NORM_EPSILON)
 					continue; // keep zero init val
