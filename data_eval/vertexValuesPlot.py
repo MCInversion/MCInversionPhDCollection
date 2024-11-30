@@ -9,7 +9,7 @@ procedure_name = "equilibriumConcavePair16"
 directory = "../output"  # Adjust this path accordingly
 json_file = f"{directory}/{procedure_name}_log.json"
 
-use_interactive_plot = False  # Toggle between slider and opacity visualization
+use_interactive_plot = True  # Toggle between slider and opacity visualization
 
 # Line style configuration
 inner_curves_color_palette = [
@@ -47,11 +47,21 @@ def extract_manifold_idx(manifold_name):
     match = re.search(r'\d+', manifold_name)  # Extract first numeric group
     return int(match.group()) if match else 0
 
-# Slider-based interactive plot
+# Slider-based interactive plot with fixed plot range
 def interactive_plot():
     n_steps = len(time_steps)
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
+
+    # Determine global min/max values across all time steps
+    global_min, global_max = float('inf'), float('-inf')
+    for step_key in time_steps:
+        step_data = data[step_key]
+        for manifold_name, values in step_data.items():
+            for value_type, value_list in values.items():
+                values = [v["value"] for v in value_list]
+                global_min = min(global_min, min(values))
+                global_max = max(global_max, max(values))
 
     # Plotting function for slider
     def plot_values(time_step_id):
@@ -89,6 +99,7 @@ def interactive_plot():
 
         ax.set_xlabel("Normalized Vertex Indices [0, 1]")
         ax.set_ylabel("Values")
+        ax.set_ylim(global_min, global_max)  # Fixed plot range
         ax.legend()
         ax.set_title(f"Time Step: {time_step_id}")
         plt.draw()
@@ -105,6 +116,7 @@ def interactive_plot():
 
     slider.on_changed(update)
     plt.show()
+
 
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):

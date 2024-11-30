@@ -124,10 +124,10 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 		pmp::CurveRemeshing remesher(*curveToRemesh);
 		remesher.adaptive_remeshing(m_RemeshingSettings[curveToRemesh]);
 
-		if (LogManifoldValues())
-		{
-			m_Logger.ReserveBuffers(curveToRemesh);
-		}
+		//if (LogManifoldValues())
+		//{
+		//	m_Logger.ReserveBuffers(curveToRemesh);
+		//}
 	}
 	m_RemeshTracker.Reset();
 }
@@ -481,11 +481,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			const double etaCtrlWeight = 
 				((m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
-
-			if (std::abs(etaCtrlWeight) < 1e-5)
-			{
-				std::cout << "Why is eta zero?!\n";
-			}
 
 			if (LogManifoldValues())
 			{
@@ -1282,10 +1277,10 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 		pmp::Remeshing remesher(*surfaceToRemesh);
 		remesher.adaptive_remeshing(m_RemeshingSettings[surfaceToRemesh]);
 
-		if (LogManifoldValues())
-		{
-			m_Logger.ReserveBuffers(surfaceToRemesh);
-		}
+		//if (LogManifoldValues())
+		//{
+		//	m_Logger.ReserveBuffers(surfaceToRemesh);
+		//}
 	}
 	m_RemeshTracker.Reset();
 }

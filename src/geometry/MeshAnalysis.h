@@ -125,6 +125,10 @@ namespace Geometry
 	/// \brief Uses circular approximation for determining the deviations of edges adjacent to vertex v.
 	[[nodiscard]] pmp::Scalar CalculateCircularApproximationErrorAtVertex(const pmp::ManifoldCurve2D& curve, pmp::Vertex v);
 
+	/// \brief Calculates the signed area of input curve.
+	/// \throw std::invalid_argument if curve has self-intersections, is open, or empty.
+	[[nodiscard]] pmp::Scalar CalculateSignedAreaOfASimpleClosedCurve(const pmp::ManifoldCurve2D& curve);
+
 	/// \brief face quality metric computation function.
 	using FaceQualityFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
 

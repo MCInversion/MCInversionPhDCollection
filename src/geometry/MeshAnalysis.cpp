@@ -1154,4 +1154,38 @@ namespace Geometry
 		);
 	}
 
+	pmp::Scalar CalculateSignedAreaOfASimpleClosedCurve(const pmp::ManifoldCurve2D& curve)
+	{
+		if (curve.is_empty())
+		{
+			throw std::invalid_argument("Geometry::CalculateSignedAreaOfASimpleClosedCurve: The curve is empty.");
+		}
+
+		if (!curve.is_closed()) 
+		{
+			throw std::invalid_argument("Geometry::CalculateSignedAreaOfASimpleClosedCurve: The curve is not closed.");
+		}
+
+		//if (PMPManifoldCurve2DHasSelfIntersections(curve))
+		//{
+		//	throw std::invalid_argument("Geometry::CalculateSignedAreaOfASimpleClosedCurve: The curve has self-intersections.");
+		//}
+
+		pmp::Scalar signedArea = 0.0;
+
+		// Iterate over edges and compute the signed area
+		for (const auto e : curve.edges())
+		{
+			const auto [vStart, vEnd] = curve.vertices(e);
+			const auto& startPos = curve.position(vStart);
+			const auto& endPos = curve.position(vEnd);
+
+			// Shoelace formula component
+			signedArea += (startPos[0] * endPos[1] - endPos[0] * startPos[1]);
+		}
+
+		signedArea *= 0.5; // Shoelace formula scaling factor
+		return signedArea;
+	}
+
 } // namespace Geometry

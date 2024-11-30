@@ -2810,7 +2810,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	if (!pmp::write_to_ply(path101Curve, dataOutPath + "path101Curve.ply"))
 		std::cerr << "Error writing path101Curve.ply!\n";
 
-	// Pair 11 // TODO: Re-run
+	// Pair 11
 	const auto path110Vertices = ParsePolygonalSVGPath(svgPathPair40);
 	auto path110Curve = pmp::CurveFactory::sampled_polygon(path110Vertices, 100, true);
 	RemeshWithDefaultSettings(path110Curve);
@@ -2869,12 +2869,12 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path60Curve, path61Curve},
 		//{path70Curve, path71Curve},
 		//{path80Curve, path81Curve},
-		//{path90Curve, path91Curve},
+		{path90Curve, path91Curve},
 		//{path100Curve, path101Curve},
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},
 		//{path130Curve, path131Curve},
-		{path140Curve, path141Curve}
+		//{path140Curve, path141Curve}
 	};
 
 	// Prepare the settings for the evolver

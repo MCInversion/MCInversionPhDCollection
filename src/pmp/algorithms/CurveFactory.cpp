@@ -20,6 +20,25 @@ namespace pmp
 	            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0f);
 	        }
 	    }
+
+        [[nodiscard]] Scalar CalculatePolyPointsSignedArea(const std::vector<Point2>& polyVertices)
+        {
+            if (polyVertices.size() < 3)
+            {
+                throw std::invalid_argument("CalculatePolyPointsSignedArea: At least 3 vertices are required.");
+            }
+
+            Scalar signedArea = 0.0;
+            for (size_t i = 0; i < polyVertices.size(); ++i)
+            {
+                const auto& current = polyVertices[i];
+                const auto& next = polyVertices[(i + 1) % polyVertices.size()]; // Wrap around to first vertex
+                signedArea += (current[0] * next[1] - next[0] * current[1]);
+            }
+
+            return 0.5 * signedArea;
+        }
+
 	} // anonymous namespace
 
 	ManifoldCurve2D CurveFactory::circle(
@@ -139,19 +158,25 @@ namespace pmp
             return curve;
         }
 
+        std::vector<Point2> polyVerticesCopy{ polyVertices };
+        if (CalculatePolyPointsSignedArea(polyVerticesCopy) < 0.0f)
+        {
+            std::ranges::reverse(polyVerticesCopy);
+        }
+
         // Step 1: Calculate total length of the polygon edges and the mean segment length
         Scalar totalLength = 0.0;
-        std::vector<Scalar> polyEdgeLengths(polyVertices.size());
-        for (size_t i = 0; i < polyVertices.size(); ++i)
+        std::vector<Scalar> polyEdgeLengths(polyVerticesCopy.size());
+        for (size_t i = 0; i < polyVerticesCopy.size(); ++i)
         {
-            polyEdgeLengths[i] = norm(polyVertices[(i + 1) % polyVertices.size()] - polyVertices[i]);
+            polyEdgeLengths[i] = norm(polyVerticesCopy[(i + 1) % polyVerticesCopy.size()] - polyVerticesCopy[i]);
             totalLength += polyEdgeLengths[i];
         }
         const Scalar meanSegmentLength = totalLength / static_cast<Scalar>(nSegments);
-        
+
         // Step 2: Calculate the number of segments per edge
         std::vector<size_t> nSegmentsPerEdge;
-        nSegmentsPerEdge.reserve(polyVertices.size());
+        nSegmentsPerEdge.reserve(polyVerticesCopy.size());
         size_t totalAssignedSegments = 0;
         for (size_t i = 0; i < polyEdgeLengths.size(); ++i)
         {
@@ -187,12 +212,12 @@ namespace pmp
 
         // Step 3: Tessellate the polygon
         std::vector<Vertex> vertices;
-        vertices.reserve(nSegments + (chamferCorners ? polyVertices.size() : 0));
-        const size_t mainPolySegments = polyVertices.size() - (closeLoop ? 0 : 1);
+        vertices.reserve(nSegments + (chamferCorners ? polyVerticesCopy.size() : 0));
+        const size_t mainPolySegments = polyVerticesCopy.size() - (closeLoop ? 0 : 1);
         for (size_t i = 0; i < mainPolySegments; ++i)
         {
-            Point2 startVertex = polyVertices[i];
-            Point2 endVertex = polyVertices[(i + 1) % polyVertices.size()];
+            Point2 startVertex = polyVerticesCopy[i];
+            Point2 endVertex = polyVerticesCopy[(i + 1) % polyVerticesCopy.size()];
             size_t segmentsOnEdge = nSegmentsPerEdge[i];
 
             for (size_t j = 0; j <= segmentsOnEdge; ++j)

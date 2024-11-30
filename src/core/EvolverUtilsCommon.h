@@ -551,10 +551,10 @@ public:
 	/// \brief Reset the values for a new time step
 	void StartNewTimeStep(unsigned int timeStep)
 	{
-		if (!EXPERIMENTAL_CheckValues())
-		{
-			std::cout << "VertexValueLogger::StartNewTimeStep: some values are incorrect!\n";
-		}
+		//if (!EXPERIMENTAL_CheckValues())
+		//{
+		//	std::cout << "VertexValueLogger::StartNewTimeStep: some values are incorrect!\n";
+		//}
 
 		m_CurrentTimeStep = timeStep;
 		m_TimeStepData[timeStep] = nlohmann::json::object();
@@ -566,33 +566,35 @@ public:
 		m_ManifoldKeys[manifold] = "Manifold_" + std::to_string(m_ManifoldCounter++);
 	}
 
-	/// \brief Reserve buffers for all value types for a manifold
-	void ReserveBuffers(const ManifoldType* manifold)
-	{
-		size_t nVertices = manifold->n_vertices();
-		std::string manifoldKey = m_ManifoldKeys[manifold];
+	///// \brief Reserve buffers for all value types for a manifold
+	//void ReserveBuffers(const ManifoldType* manifold)
+	//{
+	//	size_t nVertices = manifold->n_vertices();
+	//	std::string manifoldKey = m_ManifoldKeys[manifold];
 
-		for (auto& [timeStep, data] : m_TimeStepData)
-		{
-			auto& timeStepJson = data;
-			if (!timeStepJson.contains(manifoldKey))
-				continue;
+	//	for (auto& [timeStep, data] : m_TimeStepData)
+	//	{
+	//		auto& timeStepJson = data;
+	//		if (!timeStepJson.contains(manifoldKey))
+	//			continue;
 
-			auto& manifoldJson = timeStepJson[manifoldKey];
-			for (auto& [valueId, vertexValues] : manifoldJson.items())
-			{
-				// Resize JSON arrays to match the updated vertex count
-				while (vertexValues.size() < nVertices)
-				{
-					vertexValues[std::to_string(vertexValues.size())] = 0.0; // Default value
-				}
-				while (vertexValues.size() > nVertices)
-				{
-					vertexValues.erase(std::to_string(vertexValues.size() - 1)); // Remove excess
-				}
-			}
-		}
-	}
+	//		auto& manifoldJson = timeStepJson[manifoldKey];
+	//		for (auto& [valueId, vertexValues] : manifoldJson.items())
+	//		{
+	//			// Resize JSON arrays to match the updated vertex count
+	//			while (vertexValues.size() < nVertices)
+	//			{
+	//				vertexValues[std::to_string(vertexValues.size())] = 0.0; // Default value
+	//			}
+	//			while (vertexValues.size() > nVertices)
+	//			{
+	//				vertexValues.erase(std::to_string(vertexValues.size() - 1)); // Remove excess
+	//			}
+	//		}
+	//	}
+	//}
+
+	//double DBG_EPSILON{ 1e-6 };
 
 	/// \brief Log a value for a specific manifold and vertex
 	void LogValue(const ManifoldType* manifold, const std::string& valueId, unsigned int vertexIndex, double value)
@@ -613,6 +615,11 @@ public:
 		if (!manifoldJson.contains(valueId))
 			manifoldJson[valueId] = nlohmann::json::object();
 
+		//if (std::abs(value) < DBG_EPSILON)
+		//{
+		//	std::cout << "|" << value << "| < " << DBG_EPSILON << "\n";
+		//}
+
 		// Add value for vertex
 		manifoldJson[valueId][std::to_string(vertexIndex)] = value;
 	}
@@ -624,6 +631,7 @@ public:
 
 		for (const auto& [timeStep, data] : m_TimeStepData)
 		{
+			// TODO: time steps are also unsorted
 			auto& timeStepJson = outputJson["TimeStep_" + std::to_string(timeStep)];
 
 			for (const auto& [manifoldKey, manifoldData] : data.items())
@@ -636,7 +644,7 @@ public:
 					std::vector<std::pair<unsigned int, double>> sortedVertexValues;
 					for (const auto& [vertexIndex, value] : vertexValues.items())
 					{
-						sortedVertexValues.emplace_back(std::stoi(vertexIndex), value.get<double>());
+						sortedVertexValues.emplace_back(std::stoi(vertexIndex), value.template get<double>());
 					}
 					std::ranges::sort(sortedVertexValues, [](const auto& a, const auto& b) { return a.first < b.first; });
 
@@ -644,6 +652,11 @@ public:
 					nlohmann::json sortedArray = nlohmann::json::array();
 					for (const auto& [vertexIndex, value] : sortedVertexValues)
 					{
+						//if (std::abs(value) < DBG_EPSILON)
+						//{
+						//	std::cout << "|" << value << "| < " << DBG_EPSILON << "\n";
+						//}
+
 						sortedArray.push_back({ {"vertexIndex", vertexIndex}, {"value", value} });
 					}
 
@@ -652,6 +665,7 @@ public:
 			}
 		}
 
+		// Write the JSON to the output file
 		std::ofstream file(m_FileName);
 		if (!file.is_open())
 		{
@@ -666,46 +680,46 @@ public:
 private:
 
 	/// Experimental: Check if any logged values in the previous time step are below a given epsilon
-	bool EXPERIMENTAL_CheckValues(double epsilon = 1e-5) const
-	{
-		if (m_CurrentTimeStep == 0)
-		{
-			return true; // Nothing to check for the first time step
-		}
+	//bool EXPERIMENTAL_CheckValues(double epsilon = 1e-5) const
+	//{
+	//	if (m_CurrentTimeStep == 0)
+	//	{
+	//		return true; // Nothing to check for the first time step
+	//	}
 
-		auto prevTimeStep = m_TimeStepData.find(m_CurrentTimeStep - 1);
-		if (prevTimeStep == m_TimeStepData.end())
-		{
-			return true; // No data for the previous time step
-		}
+	//	auto prevTimeStep = m_TimeStepData.find(m_CurrentTimeStep - 1);
+	//	if (prevTimeStep == m_TimeStepData.end())
+	//	{
+	//		return true; // No data for the previous time step
+	//	}
 
-		const auto& timeStepJson = prevTimeStep->second;
+	//	const auto& timeStepJson = prevTimeStep->second;
 
-		for (const auto& [manifoldKey, manifoldJson] : timeStepJson.items())
-		{
-			for (const auto& [valueId, valueJson] : manifoldJson.items())
-			{
-				for (const auto& [vertexIndex, value] : valueJson.items())
-				{
-					if (value.is_number())
-					{
-						double val = value.get<double>();
-						if (std::abs(val) < epsilon)
-						{
-							std::cout << "CheckValues: Found value below epsilon (" << epsilon
-								<< ") in TimeStep: " << m_CurrentTimeStep - 1
-								<< ", Manifold: " << manifoldKey
-								<< ", ValueId: " << valueId
-								<< ", VertexIndex: " << vertexIndex
-								<< ", Value: " << val << "\n";
-							return false;
-						}
-					}
-				}
-			}
-		}
-		return true;
-	}
+	//	for (const auto& [manifoldKey, manifoldJson] : timeStepJson.items())
+	//	{
+	//		for (const auto& [valueId, valueJson] : manifoldJson.items())
+	//		{
+	//			for (const auto& [vertexIndex, value] : valueJson.items())
+	//			{
+	//				if (value.is_number())
+	//				{
+	//					double val = value.get<double>();
+	//					if (std::abs(val) < epsilon)
+	//					{
+	//						std::cout << "CheckValues: Found value below epsilon (" << epsilon
+	//							<< ") in TimeStep: " << m_CurrentTimeStep - 1
+	//							<< ", Manifold: " << manifoldKey
+	//							<< ", ValueId: " << valueId
+	//							<< ", VertexIndex: " << vertexIndex
+	//							<< ", Value: " << val << "\n";
+	//						return false;
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//	return true;
+	//}
 
 
 	std::string m_FileName; //!< Log file name
