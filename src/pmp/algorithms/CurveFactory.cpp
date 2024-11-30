@@ -149,7 +149,7 @@ namespace pmp
         return curve;
     }
 
-    ManifoldCurve2D CurveFactory::sampled_polygon(const std::vector<Point2>& polyVertices, size_t nSegments, bool chamferCorners, bool closeLoop)
+    ManifoldCurve2D CurveFactory::sampled_polygon(const std::vector<Point2>& polyVertices, size_t nSegments, bool chamferCorners, bool closeLoop, bool checkOrientation)
     {
         ManifoldCurve2D curve;
         if (polyVertices.size() < 3)
@@ -159,7 +159,7 @@ namespace pmp
         }
 
         std::vector<Point2> polyVerticesCopy{ polyVertices };
-        if (CalculatePolyPointsSignedArea(polyVerticesCopy) < 0.0f)
+        if (checkOrientation && CalculatePolyPointsSignedArea(polyVerticesCopy) < 0.0f)
         {
             std::ranges::reverse(polyVerticesCopy);
         }

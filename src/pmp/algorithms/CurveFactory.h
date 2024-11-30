@@ -49,7 +49,8 @@ namespace pmp {
             const std::vector<Point2>& polyVertices = BASE_EQUILATERAL_TRIANGLE_VERTS,
             size_t nSegments = 10,
             bool chamferCorners = true,
-            bool closeLoop = true);
+            bool closeLoop = true,
+            bool checkOrientation = true);
         //! Generate a hyperellipse centered at \p center with radii \p radiusX and \p radiusY of degree 
         //! \p degree, and with \p nSegments segments, start angle \p startAngle, and end angle \p endAngle
         static ManifoldCurve2D hyper_ellipse(
