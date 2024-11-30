@@ -9,7 +9,7 @@ procedure_name = "equilibriumConcavePair16"
 directory = "../output"  # Adjust this path accordingly
 json_file = f"{directory}/{procedure_name}_log.json"
 
-use_interactive_plot = True  # Toggle between slider and opacity visualization
+use_interactive_plot = False  # Toggle between slider and opacity visualization
 
 # Line style configuration
 inner_curves_color_palette = [

@@ -109,6 +109,86 @@ namespace
 
 		return samples;
 	}
+
+	/// \brief a validation helper for scalar grid values. Also increments nanCount and infCount if encountering nan or inf.
+	[[nodiscard]] bool IsGridValueValid(const double& val, size_t& nanCount, size_t& infCount)
+	{
+		if (std::isnan(val) || !std::isnormal(val))
+		{
+			nanCount++;
+			return false;
+		}
+
+		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
+		{
+			infCount++;
+			return false;
+		}
+
+		return true;
+	}
+
+	/// \brief a basic validation helper for scalar grid values.
+	[[nodiscard]] bool IsGridValueValidBasic(const double& val)
+	{
+		if (std::isnan(val) || !std::isnormal(val))
+		{
+			return false;
+		}
+
+		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	/// \brief a boundary validation helper for scalar grid values.
+	[[nodiscard]] bool IsABoundaryCell(
+		const int& gridPosPrevX, const int& gridPosNextX,
+		const int& gridPosPrevY, const int& gridPosNextY,
+		const int& gridPosPrevZ, const int& gridPosNextZ, const size_t& gridSize)
+	{
+		if (gridPosPrevX < 0)
+			return true;
+
+		if (gridPosPrevY < 0)
+			return true;
+
+		if (gridPosPrevZ < 0)
+			return true;
+
+		if (gridPosNextX >= static_cast<int>(gridSize))
+			return true;
+
+		if (gridPosNextY >= static_cast<int>(gridSize))
+			return true;
+
+		if (gridPosNextZ >= static_cast<int>(gridSize))
+			return true;
+
+		return false;
+	}
+
+	[[nodiscard]] bool IsABoundaryCell2D(
+		const int& gridPosPrevX, const int& gridPosNextX,
+		const int& gridPosPrevY, const int& gridPosNextY, const size_t& gridSize)
+	{
+		if (gridPosPrevX < 0)
+			return true;
+
+		if (gridPosPrevY < 0)
+			return true;
+
+		if (gridPosNextX >= static_cast<int>(gridSize))
+			return true;
+
+		if (gridPosNextY >= static_cast<int>(gridSize))
+			return true;
+
+		return false;
+	}
 } // namespace
 
 namespace Geometry
@@ -505,67 +585,6 @@ namespace Geometry
 		}
 	}
 
-	/// \brief a validation helper for scalar grid values. Also increments nanCount and infCount if encountering nan or inf.
-	[[nodiscard]] bool IsGridValueValid(const double& val, size_t& nanCount, size_t& infCount)
-	{
-		if (std::isnan(val) || !std::isnormal(val))
-		{
-			nanCount++;
-			return false;
-		}
-
-		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
-		{
-			infCount++;
-			return false;
-		}
-
-		return true;
-	}
-
-	/// \brief a basic validation helper for scalar grid values.
-	[[nodiscard]] bool IsGridValueValidBasic(const double& val)
-	{
-		if (std::isnan(val) || !std::isnormal(val))
-		{
-			return false;
-		}
-
-		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	/// \brief a boundary validation helper for scalar grid values.
-	[[nodiscard]] bool IsABoundaryCell(
-		const int& gridPosPrevX, const int& gridPosNextX,
-		const int& gridPosPrevY, const int& gridPosNextY,
-		const int& gridPosPrevZ, const int& gridPosNextZ, const size_t& gridSize)
-	{
-		if (gridPosPrevX < 0)
-			return true;
-
-		if (gridPosPrevY < 0)
-			return true;
-
-		if (gridPosPrevZ < 0)
-			return true;
-
-		if (gridPosNextX >= static_cast<int>(gridSize))
-			return true;
-
-		if (gridPosNextY >= static_cast<int>(gridSize))
-			return true;
-
-		if (gridPosNextZ >= static_cast<int>(gridSize))
-			return true;
-
-		return false;
-	}
-
 	void RepairScalarGrid(ScalarGrid& grid, bool verbose)
 	{
 		size_t nanCount = 0;
@@ -643,6 +662,74 @@ namespace Geometry
 		}
 	}
 
+	void RepairScalarGrid2D(ScalarGrid2D& grid, bool verbose)
+	{
+		size_t nanCount = 0;
+		size_t infCount = 0;
+
+		auto& values = grid.Values();
+		const auto nValues = values.size();
+		const auto& dim = grid.Dimensions();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		if (verbose)
+		{
+			std::cout << "----------------------------------------------------------\n";
+			std::cout << "RepairScalarGrid2D: repairing scalar grid...\n";
+		}
+
+		for (unsigned int iy = 0; iy < Ny; iy++)
+		{
+			for (unsigned int ix = 0; ix < Nx; ix++)
+			{
+				const unsigned int gridPos = Nx * iy + ix;
+
+				if (IsGridValueValid(values[gridPos], nanCount, infCount))
+					continue;
+
+				// check neighbors
+				const int gridPosPrevX = Nx * iy + (ix - 1);
+				const int gridPosNextX = Nx * iy + (ix + 1);
+
+				const int gridPosPrevY = Nx * (iy - 1) + ix;
+				const int gridPosNextY = Nx * (iy + 1) + ix;
+
+				if (IsABoundaryCell2D(gridPosPrevX, gridPosNextX, gridPosPrevY, gridPosNextY, nValues))
+				{
+					values[gridPos] = DEFAULT_SCALAR_GRID_INIT_VAL;
+					continue;
+				}
+
+				if (!IsGridValueValidBasic(values[gridPosPrevX]) || !IsGridValueValidBasic(values[gridPosNextX]) ||
+					!IsGridValueValidBasic(values[gridPosPrevY]) || !IsGridValueValidBasic(values[gridPosNextY]))
+				{
+					values[gridPos] = DEFAULT_SCALAR_GRID_INIT_VAL;
+					continue;
+				}
+
+				// all neighbors are valid. Computing average value:
+				values[gridPos] =
+					(values[gridPosPrevX] + values[gridPosNextX] +
+					values[gridPosPrevY] + values[gridPosNextY]) / 4.0;
+			}
+		}
+
+		if (verbose)
+		{
+			if (nanCount > 0 || infCount > 0)
+			{
+				std::cout << "RepairScalarGrid: [WARNING]: Encountered & repaired invalid cell values! nanCount: " << nanCount << ", infCount: " << infCount << ".\n";
+				std::cout << "----------------------------------------------------------\n";
+				return;
+			}
+
+			std::cout << "RepairScalarGrid: All grid values are valid.\n";
+			std::cout << "----------------------------------------------------------\n";
+		}
+	}
+
 	void NormalizeScalarGridValues(ScalarGrid& grid)
 	{
 		// find max absolute value
@@ -665,7 +752,7 @@ namespace Geometry
 	}
 
 	/// \brief if true, additional checks will be performed before writing gradient values.
-#define EXPECT_INVALID_VALUES false
+#define EXPECT_INVALID_VALUES true
 
 	VectorGrid ComputeGradient(const ScalarGrid& scalarGrid)
 	{

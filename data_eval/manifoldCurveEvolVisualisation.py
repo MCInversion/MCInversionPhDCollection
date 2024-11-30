@@ -71,9 +71,10 @@ import matplotlib.patches as patches
 #procedure_name = "equilibriumConcavePair14"
 #procedure_name = "equilibriumConcavePair15"
 
-procedure_name = "equilibriumConcavePair16"
+#procedure_name = "equilibriumConcavePair16"
 #procedure_name = "equilibriumConcavePair17"
 #procedure_name = "equilibriumConcavePair18"
+procedure_name = "equilibriumConcavePair19"
 
 #procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
@@ -169,7 +170,7 @@ png_time_steps = [] # a specified time step container for png export. If empty, 
 svg_time_steps = [] # a specified time step container for svg export. If empty, all time steps will be exported
 
 # a specified time step container for exporting a single png with opaque curve polylines (except the last one). If empty, no png will be exported
-multi_png_time_steps = []
+#multi_png_time_steps = []
 #multi_png_time_steps = [0]
 #multi_png_time_steps = [0, 2, 4, 8, 12, 16, 22]
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
@@ -187,7 +188,12 @@ multi_png_time_steps = []
 #multi_png_time_steps = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500]
 #multi_png_time_steps = [0, 500, 1000, 1500]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
-#multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
+#multi_png_time_steps = [0, 2, 8, 20, 50, 100, 224]
+#multi_png_time_steps = [0, 2, 8, 20, 50, 100, 107]
+multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
+#multi_png_time_steps = [0, 2, 8, 50, 100, 250, 332]
+#multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2216]
+#multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 1654]
 #multi_png_time_steps = [0, 250, 500, 750] # , 949
 #multi_png_time_steps = [0, 2, 4, 8, 10, 11]
 #multi_png_time_steps = [0, 10, 100] 

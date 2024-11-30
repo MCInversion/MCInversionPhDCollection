@@ -2862,14 +2862,14 @@ void EquilibriumPairedConcaveManifoldTests()
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		//{path00Curve, path01Curve},
 		//{path10Curve, path11Curve},
-		//{path20Curve, path21Curve}, // TODO: rerun again with proper remeshing
+		//{path20Curve, path21Curve},
 		//{path30Curve, path31Curve},
 		//{path40Curve, path41Curve},
 		//{path50Curve, path51Curve},
 		//{path60Curve, path61Curve},
 		//{path70Curve, path71Curve},
-		//{path80Curve, path81Curve},
-		{path90Curve, path91Curve},
+		{path80Curve, path81Curve},
+		//{path90Curve, path91Curve},
 		//{path100Curve, path101Curve},
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},
@@ -2889,10 +2889,12 @@ void EquilibriumPairedConcaveManifoldTests()
 	};
 	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		return 0.0;
-		//if (distance < 0.015)
-		//	return 0.0;
-		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 0.0;
+
+		if (distance < 0.0135)
+			return 0.0;
+		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.InnerManifoldEpsilon = [](double distance)
@@ -2901,10 +2903,13 @@ void EquilibriumPairedConcaveManifoldTests()
 	};
 	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		if (distance < 0.015)
+		//return 0.0;
+
+		if (distance < 0.0135)
 			return 0.0;
+		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+
 		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		return -0.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (std::fabs(negGradDotNormal) - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
@@ -2916,7 +2921,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
-	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
@@ -2925,13 +2930,13 @@ void EquilibriumPairedConcaveManifoldTests()
 	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
 	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
 	//strategySettings.DiagSettings.LogOuterManifoldEta = true;
-	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+	//strategySettings.DiagSettings.LogInnerManifoldsEta = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	//globalSettings.NSteps = 2500;
+	globalSettings.NSteps = 2500;
 	//globalSettings.NSteps = 1000;
-	globalSettings.NSteps = 500;
+	//globalSettings.NSteps = 500;
 	//globalSettings.NSteps = 20;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
@@ -2943,7 +2948,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	globalSettings.RemeshingResizeFactor = 0.7f;
 	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
-	for (unsigned int pairId = 16; const auto& [outerCurve, innerCurve] : curvePairs)
+	for (unsigned int pairId = 19; const auto& [outerCurve, innerCurve] : curvePairs)
 	{
 		std::cout << "EquilibriumPairedConcaveManifoldTests for pair: " << pairId << "\n";
 

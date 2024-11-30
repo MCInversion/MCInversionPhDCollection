@@ -759,6 +759,7 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 	};
 	m_DistanceField = std::make_shared<Geometry::ScalarGrid2D>(
 		SDF::PlanarPointCloudDistanceFieldGenerator::Generate(*m_TargetPointCloud, dfSettings));
+	RepairScalarGrid2D(*m_DistanceField);
 	m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_DistanceField));
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
@@ -789,6 +790,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(*m_OuterCurve));
 	m_OuterCurveDistanceField = std::make_shared<Geometry::ScalarGrid2D>(
 		SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));
+	RepairScalarGrid2D(*m_OuterCurveDistanceField);
 	m_OuterCurveDFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_OuterCurveDistanceField));
 
 	for (const auto& innerCurve : m_InnerCurves)
@@ -796,6 +798,7 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 		const Geometry::ManifoldCurve2DAdapter innerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(*innerCurve));
 		m_InnerCurvesDistanceFields.emplace_back(std::make_shared<Geometry::ScalarGrid2D>(
 			SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings, m_OuterCurveDistanceField->Box())));
+		RepairScalarGrid2D(*m_InnerCurvesDistanceFields.back());
 		m_InnerCurvesDFNegNormalizedGradients.emplace_back(
 			std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_InnerCurvesDistanceFields.back())));
 	}
