@@ -2858,9 +2858,21 @@ void EquilibriumPairedConcaveManifoldTests()
 	if (!pmp::write_to_ply(path141Curve, dataOutPath + "path141Curve.ply"))
 		std::cerr << "Error writing path141Curve.ply!\n";
 
+	// Pair 15
+	auto path150Curve = pmp::CurveFactory::circle(pmp::Point2{ 64.497322f, 62.582409f }, 92.768562f, 250);
+	RemeshWithDefaultSettings(path150Curve);
+	if (!pmp::write_to_ply(path150Curve, dataOutPath + "path150Curve.ply"))
+		std::cerr << "Error writing path150Curve.ply!\n";
+
+	const auto path151Vertices = ParsePolygonalSVGPath(svgPathPair00);
+	auto path151Curve = pmp::CurveFactory::sampled_polygon(path151Vertices, 140, false);
+	RemeshWithDefaultSettings(path151Curve);
+	if (!pmp::write_to_ply(path151Curve, dataOutPath + "path151Curve.ply"))
+		std::cerr << "Error writing path151Curve.ply!\n";
+
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
-		//{path00Curve, path01Curve},
+		{path00Curve, path01Curve},
 		//{path10Curve, path11Curve},
 		//{path20Curve, path21Curve},
 		//{path30Curve, path31Curve},
@@ -2868,13 +2880,14 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path50Curve, path51Curve},
 		//{path60Curve, path61Curve},
 		//{path70Curve, path71Curve},
-		{path80Curve, path81Curve},
+		//{path80Curve, path81Curve},
 		//{path90Curve, path91Curve},
 		//{path100Curve, path101Curve},
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},
 		//{path130Curve, path131Curve},
-		//{path140Curve, path141Curve}
+		//{path140Curve, path141Curve},
+		//{path150Curve, path151Curve},
 	};
 
 	// Prepare the settings for the evolver
@@ -2889,12 +2902,13 @@ void EquilibriumPairedConcaveManifoldTests()
 	};
 	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		//return 0.0;
+		return 0.0;
 
-		if (distance < 0.0135)
-			return 0.0;
-		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//if (distance < 0.0135)
+		//	return 0.0;
 
+		//return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.InnerManifoldEpsilon = [](double distance)
@@ -2907,17 +2921,19 @@ void EquilibriumPairedConcaveManifoldTests()
 
 		if (distance < 0.0135)
 			return 0.0;
-		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 
+		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		// return 1.0 * distance * (std::fabs(-negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		// return 1.0 * distance * (std::fabs(negGradDotNormal) - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * distance * (std::fabs(negGradDotNormal) - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
 	strategySettings.LevelOfDetail = 4;
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.6f;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0f;
 	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
@@ -2930,14 +2946,14 @@ void EquilibriumPairedConcaveManifoldTests()
 	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
 	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
 	//strategySettings.DiagSettings.LogOuterManifoldEta = true;
-	//strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 2500;
 	//globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
-	//globalSettings.NSteps = 20;
+	globalSettings.NSteps = 20;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
 	globalSettings.ExportPerTimeStep = true;
@@ -2955,7 +2971,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		globalSettings.ProcedureName = "equilibriumConcavePair" + std::to_string(pairId);
 
 		std::vector innerCurves{ innerCurve };
-		innerCurves[0].negate_orientation();
+		//innerCurves[0].negate_orientation();
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 			strategySettings, outerCurve, innerCurves, nullptr);
 
@@ -5618,12 +5634,20 @@ void TestDFDivergence2D()
 	const float minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
 	const float maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
 	const float cellSize = minSize / static_cast<float>(nVoxelsPerMinDimension);
-	const SDF::PointCloudDistanceField2DSettings dfSettings{
+	//const SDF::PointCloudDistanceField2DSettings dfSettings{
+	//	cellSize,
+	//	0.6,
+	//	DBL_MAX
+	//};
+	//const auto df = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(unevenCrossPts, dfSettings);
+
+	const SDF::DistanceField2DSettings dfSettings{
 		cellSize,
 		0.6,
 		DBL_MAX
 	};
-	const auto df = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(unevenCrossPts, dfSettings);
+	const Geometry::ManifoldCurve2DAdapter unevenCrossCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(unevenCrossCurve));
+	const auto df = SDF::PlanarDistanceFieldGenerator::Generate(unevenCrossCurveAdapter, dfSettings);
 
 	auto blurredDf = df;
 	ApplyWideGaussianBlur2D(blurredDf);
@@ -5655,15 +5679,15 @@ void TestDFDivergence2D()
 	// Calculate characteristics
 	//PlanarPointCloudCharacteristicsBuilder charBuilder{ unevenCrossPts, dfSettings };
 
-	CharacteristicsBuilderSettings chBuilderSettings;
-	chBuilderSettings.DFSettings = dfSettings;
-	chBuilderSettings.ConstructInwardCharacteristics = true;
-	chBuilderSettings.ConstructOutwardCharacteristics = true;
-	chBuilderSettings.DivFieldThresholdFactor = -0.15f;
+	//CharacteristicsBuilderSettings chBuilderSettings;
+	//chBuilderSettings.DFSettings = dfSettings;
+	//chBuilderSettings.ConstructInwardCharacteristics = true;
+	//chBuilderSettings.ConstructOutwardCharacteristics = true;
+	//chBuilderSettings.DivFieldThresholdFactor = -0.15f;
 
-	PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, chBuilderSettings };
-	const auto characteristics = charBuilder.Build();
-	ExportPolyLinesToPLY(characteristics, dataOutPath + "unevenCrossNegGradDF_Characteristics.ply");
+	//PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, chBuilderSettings };
+	//const auto characteristics = charBuilder.Build();
+	//ExportPolyLinesToPLY(characteristics, dataOutPath + "unevenCrossNegGradDF_Characteristics.ply");
 
 	//auto negGradDF = ComputeGradient(blurredDf);
 	//NegateGrid(negGradDF);

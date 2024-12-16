@@ -55,6 +55,9 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 		StabilizeGeometries();
 	}
 	AssignRemeshingSettingsToEvolvingManifolds();
+
+	if (LogManifoldValues())
+		InitializeArcLengthCalculation();
 }
 
 void ManifoldCurveEvolutionStrategy::Postprocess()
@@ -107,6 +110,8 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		std::cout << "After stabilization: { minLengthAfter: " << minLengthAfter << ", maxLengthAfter: " << maxLengthAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
 	AssignRemeshingSettingsToEvolvingManifolds();
+	if (LogManifoldValues())
+		InitializeArcLengthCalculation();
 }
 
 void ManifoldCurveEvolutionStrategy::PerformEvolutionStep(unsigned int stepId)
@@ -121,7 +126,7 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 {
 	for (auto* curveToRemesh : m_RemeshTracker.GetManifoldsToRemesh())
 	{
-		pmp::CurveRemeshing remesher(*curveToRemesh);
+		pmp::CurveRemeshing remesher(*curveToRemesh, m_ArcLengthCalculators[curveToRemesh]);
 		remesher.adaptive_remeshing(m_RemeshingSettings[curveToRemesh]);
 
 		//if (LogManifoldValues())
@@ -307,6 +312,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
 
+		std::vector<pmp::Scalar> arcLengths;
+		if (LogManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()])
+		{
+			arcLengths = m_ArcLengthCalculators[m_OuterCurve.get()]->CalculateArcLengths();
+		}
+
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
@@ -363,6 +374,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
 				if (GetSettings().DiagSettings.LogOuterManifoldEta)
 					m_Logger.LogValue(m_OuterCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+				if (!arcLengths.empty())
+					m_Logger.LogValue(m_OuterCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
 			}
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
@@ -437,6 +450,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);  // Assuming 2 entries per vertex for curves
 
+		std::vector<pmp::Scalar> arcLengths;
+		if (LogManifoldValues() && m_ArcLengthCalculators[innerCurve.get()])
+		{
+			arcLengths = m_ArcLengthCalculators[innerCurve.get()]->CalculateArcLengths();
+		}
+
 		for (const auto v : innerCurve->vertices())
 		{
 			const auto vPosToUpdate = innerCurve->position(v);
@@ -488,6 +507,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 					m_Logger.LogValue(innerCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
 				if (GetSettings().DiagSettings.LogInnerManifoldsEta)
 					m_Logger.LogValue(innerCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
+				if (!arcLengths.empty())
+					m_Logger.LogValue(m_OuterCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
 			}
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
@@ -968,6 +989,19 @@ void ManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds(
 			GetSettings().LevelOfDetail,
 			circleSettings.Radius * GetScalingFactor(),
 			GetSettings().RemeshingSettings);
+	}
+}
+
+void ManifoldCurveEvolutionStrategy::InitializeArcLengthCalculation()
+{
+	if (m_OuterCurve)
+	{
+		m_ArcLengthCalculators[m_OuterCurve.get()] = std::make_shared<pmp::EvolvingArcLengthCalculator>(*m_OuterCurve);
+	}
+
+	for (const auto& innerCurve : m_InnerCurves)
+	{
+		m_ArcLengthCalculators[innerCurve.get()] = std::make_shared<pmp::EvolvingArcLengthCalculator>(*innerCurve);
 	}
 }
 

@@ -5,6 +5,7 @@
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
+#include "pmp/algorithms/ArcLengthCalculator.h"
 #include "pmp/algorithms/TriangleKdTree.h"
 #include "pmp/algorithms/EdgeKdTree.h"
 
@@ -119,8 +120,9 @@ class CurveRemeshing
 public:
     //! \brief Construct with curve to be remeshed.
     //! \pre Input curve needs to be a pure manifold curve.
+    //! \param arcLengthCalc       an optional arc length calculator which needs to be updated before garbage collection.
     //! \throw InvalidInputException if the input precondition is violated.
-    CurveRemeshing(ManifoldCurve2D& curve);
+    CurveRemeshing(ManifoldCurve2D& curve, const std::shared_ptr<EvolvingArcLengthCalculator>& arcLengthCalc = nullptr);
 
     //! \brief Perform uniform remeshing.
     //! \param edge_length the target edge length.
@@ -175,6 +177,8 @@ private:
     VertexProperty<Point2> refpoints_;
     VertexProperty<Point2> refnormals_;
     VertexProperty<Scalar> refsizing_;
+
+    std::shared_ptr<EvolvingArcLengthCalculator> m_LengthCalculator{ nullptr };
 };
 
 } // namespace pmp

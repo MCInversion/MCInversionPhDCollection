@@ -940,8 +940,8 @@ Point Remeshing::weighted_centroid(Vertex v)
     return p;
 }
 
-CurveRemeshing::CurveRemeshing(ManifoldCurve2D& curve)
-    : curve_(curve), refcurve_(nullptr), kd_tree_(nullptr)
+CurveRemeshing::CurveRemeshing(ManifoldCurve2D& curve, const std::shared_ptr<EvolvingArcLengthCalculator>& arcLengthCalc)
+    : curve_(curve), refcurve_(nullptr), kd_tree_(nullptr), m_LengthCalculator(arcLengthCalc)
 {
     if (curve_.is_empty())
         throw InvalidInputException("CurveRemeshing::CurveRemeshing: Input has to be a non-empty manifold curve!");
@@ -1281,6 +1281,11 @@ void CurveRemeshing::collapse_short_edges()
                 }
             }
         }
+    }
+
+    if (m_LengthCalculator)
+    {
+        m_LengthCalculator->UpdateRefEdge();
     }
 
     curve_.garbage_collection();

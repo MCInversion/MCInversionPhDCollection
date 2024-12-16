@@ -2,6 +2,7 @@
 
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Remeshing.h"
+#include "pmp/algorithms/ArcLengthCalculator.h"
 #include "pmp/MatVec.h"
 
 #include "geometry/Grid.h"
@@ -545,6 +546,9 @@ protected:
     /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
     void AssignRemeshingSettingsToEvolvingManifolds() override;
 
+    /// \brief Initializes the arc length calculation objects for all available evolving curves.
+    void InitializeArcLengthCalculation();
+
     /// \brief A getter for the remeshing settings wrapper
     ManifoldRemeshingSettingsWrapper<pmp::ManifoldCurve2D>& GetRemeshingSettings()
     {
@@ -592,6 +596,8 @@ private:
     InitialSphereSettingsWrapper<pmp::ManifoldCurve2D, Circle2D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
 
     VertexValueLogger<pmp::ManifoldCurve2D> m_Logger{}; //>! a utility for exporting the chosen vertex values to a file for debugging purposes.
+
+    std::unordered_map<pmp::ManifoldCurve2D*, std::shared_ptr<pmp::EvolvingArcLengthCalculator>> m_ArcLengthCalculators{}; // Calculators for the arc length of vertex positions of the evolving curves.
 };
 
 /**

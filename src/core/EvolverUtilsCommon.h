@@ -722,9 +722,14 @@ private:
 	//}
 
 
+	//[[nodiscard]] std::vector<unsigned int> GetSortedVertexIds(const std::string& manifoldKey, )
+
+
 	std::string m_FileName; //!< Log file name
 	unsigned int m_CurrentTimeStep = 0; //!< Current time step being logged
 	unsigned int m_ManifoldCounter = 0; //!< Counter for assigning manifold keys
 	std::unordered_map<const ManifoldType*, std::string> m_ManifoldKeys; //!< Map from manifold pointer to unique key
 	std::map<unsigned int, nlohmann::json> m_TimeStepData; //!< Map from time step to JSON data
+	std::string m_SortByValueId{}; //>! if empty the vertex values will be pre-sorted by vertex index, otherwise by a given value id.
 };
+
