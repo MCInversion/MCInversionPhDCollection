@@ -144,4 +144,7 @@ namespace Geometry
 		}
 	};
 
+	/// \brief A debug utility to print curve values in topological order (based on connectivity)
+	void PrintCurveValuesInTopologicalOrder(const pmp::ManifoldCurve2D& curve, const std::vector<pmp::Scalar>& values, std::ostream& os);
+
 } // namespace Geometry

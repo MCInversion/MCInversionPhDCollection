@@ -216,6 +216,7 @@ void StandardMeshesExportWithNormals();
 void ExportBallPivotingBoundaryEdges();
 void TestProblematicMedialAxisPtClouds();
 void TestDFDivergence2D();
+void TestArcLengthCalculation();
 
 //
 // =================================================================================
@@ -337,6 +338,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"ExportBallPivotingBoundaryEdges", ExportBallPivotingBoundaryEdges },
     {"TestProblematicMedialAxisPtClouds", TestProblematicMedialAxisPtClouds },
     {"TestDFDivergence2D", TestDFDivergence2D },
+    {"TestArcLengthCalculation", TestArcLengthCalculation },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

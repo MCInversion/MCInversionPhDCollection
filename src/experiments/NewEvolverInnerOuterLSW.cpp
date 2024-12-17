@@ -2650,16 +2650,16 @@ void EquilibriumPairedManifoldTests()
 
 namespace
 {
-	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve)
+	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve, const std::shared_ptr<pmp::EvolvingArcLengthCalculator>& calc = nullptr, const pmp::Scalar& factor = 1.0f)
 	{
 		// DISCLAIMER: Some curves from svg paths might have duplicate points
-		constexpr float edgeLength = 2.0f;
+		const float edgeLength = 2.0f * factor;
 		constexpr unsigned int iterations = 10;
-		pmp::CurveRemeshing remesher(curve);
+		pmp::CurveRemeshing remesher(curve, calc);
 		pmp::AdaptiveRemeshingSettings settings;
 		settings.MinEdgeLength = edgeLength;
-		settings.MaxEdgeLength = 1.5f * edgeLength;
-		settings.ApproxError = 0.05f * edgeLength;
+		settings.MaxEdgeLength = 1.5f * edgeLength * factor;
+		settings.ApproxError = 0.05f * edgeLength * factor;
 		settings.NRemeshingIterations = iterations;
 		settings.NTangentialSmoothingIters = 6;
 		settings.UseProjection = false;
@@ -2853,7 +2853,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	if (!pmp::write_to_ply(path140Curve, dataOutPath + "path140Curve.ply"))
 		std::cerr << "Error writing path140Curve.ply!\n";
 
-	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.056454f, 52.693546f }, 13.217741f, 100);
+	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357f, 34.419353f }, 13.217741f, 100);
 	RemeshWithDefaultSettings(path141Curve);
 	if (!pmp::write_to_ply(path141Curve, dataOutPath + "path141Curve.ply"))
 		std::cerr << "Error writing path141Curve.ply!\n";
@@ -2875,7 +2875,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path00Curve, path01Curve},
 		//{path10Curve, path11Curve},
 		//{path20Curve, path21Curve},
-		{path30Curve, path31Curve},
+		//{path30Curve, path31Curve},
 		//{path40Curve, path41Curve},
 		//{path50Curve, path51Curve},
 		//{path60Curve, path61Curve},
@@ -2886,7 +2886,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},
 		//{path130Curve, path131Curve},
-		//{path140Curve, path141Curve},
+		{path140Curve, path141Curve},
 		//{path150Curve, path151Curve},
 	};
 
@@ -5711,4 +5711,30 @@ void TestDFDivergence2D()
 		rangeVal,
 		colorMap,
 		legendPxHeight, legendPxWidth);
+}
+
+void TestArcLengthCalculation()
+{
+	auto testCircleCurve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357f, 34.419353f }, 13.217741f, 10);
+
+	const auto arcLengthCalc = std::make_shared<pmp::EvolvingArcLengthCalculator>(testCircleCurve);
+
+	std::cout << "TestArcLengthCalculation: test 1: circle with 10 segments\n";
+	const auto arcLengths1 = arcLengthCalc->CalculateArcLengths();
+	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths1, std::cout);
+
+	std::cout << "TestArcLengthCalculation: test 2: circle with 10 segments after remeshing\n";
+	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc);
+	const auto arcLengths2 = arcLengthCalc->CalculateArcLengths();
+	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths2, std::cout);
+
+	std::cout << "TestArcLengthCalculation: test 3: circle with 20 segments after remeshing with factor 0.7\n";
+	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.7f);
+	const auto arcLengths3 = arcLengthCalc->CalculateArcLengths();
+	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths3, std::cout);
+
+	std::cout << "TestArcLengthCalculation: test 4: after remeshing with factor 0.5\n";
+	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.5f);
+	const auto arcLengths4 = arcLengthCalc->CalculateArcLengths();
+	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths4, std::cout);
 }

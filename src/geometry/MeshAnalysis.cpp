@@ -1188,4 +1188,64 @@ namespace Geometry
 		return signedArea;
 	}
 
+	void PrintCurveValuesInTopologicalOrder(const pmp::ManifoldCurve2D& curve, const std::vector<pmp::Scalar>& values, std::ostream& os)
+	{
+		if (values.size() != curve.n_vertices())
+		{
+			os << "Error: The values vector size does not match the number of curve vertices.\n";
+			return;
+		}
+
+		if (curve.n_vertices() == 0)
+		{
+			os << "The curve is empty. Nothing to print.\n";
+			return;
+		}
+
+		// Start from vertex 0
+		pmp::Vertex currentVertex(0);
+		pmp::Edge currentEdge = curve.edge_from(currentVertex);
+
+		// Check if the starting vertex and edge are valid
+		if (!curve.is_valid(currentVertex) || !curve.is_valid(currentEdge))
+		{
+			os << "Error: The starting vertex or edge is invalid.\n";
+			return;
+		}
+
+		os << "Printing curve values in topological order:\n";
+
+		std::vector<bool> visited(curve.n_vertices(), false); // Track visited vertices
+		size_t count = 0;
+
+		do
+		{
+			// Print the current vertex and its associated value
+			os << "Vertex " << currentVertex.idx() << ": " << values[currentVertex.idx()] << "\n";
+			visited[currentVertex.idx()] = true;
+
+			// Move to the next vertex and edge
+			pmp::Vertex nextVertex = curve.to_vertex(currentEdge);
+			if (visited[nextVertex.idx()])
+			{
+				os << "Warning: Encountered already visited vertex. Breaking to avoid infinite loop.\n";
+				break;
+			}
+
+			currentVertex = nextVertex;
+			currentEdge = curve.edge_from(currentVertex);
+			count++;
+
+			// Safety check: prevent infinite loops
+			if (count >= curve.n_vertices())
+			{
+				os << "Warning: Reached vertex limit. Breaking to avoid infinite loop.\n";
+				break;
+			}
+
+		} while (curve.is_valid(currentEdge) && count < curve.n_vertices());
+
+		os << "End of curve values.\n";
+	}
+
 } // namespace Geometry

@@ -126,6 +126,7 @@ int main()
         // "ExportBallPivotingBoundaryEdges",
     	//"TestProblematicMedialAxisPtClouds",
         // "TestDFDivergence2D",
+        //"TestArcLengthCalculation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

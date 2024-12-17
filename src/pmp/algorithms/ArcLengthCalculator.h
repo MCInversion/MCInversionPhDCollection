@@ -8,7 +8,7 @@ namespace pmp
 	{
 	public:
 
-		EvolvingArcLengthCalculator(ManifoldCurve2D& curve)
+		explicit EvolvingArcLengthCalculator(ManifoldCurve2D& curve)
 			: m_Curve(curve)
 		{
 			const auto vFirst = Vertex(0);
@@ -20,6 +20,13 @@ namespace pmp
 		void UpdateRefEdge();
 
 		[[nodiscard]] std::vector<Scalar> CalculateArcLengths();
+
+	protected:
+
+		[[nodiscard]] Edge GetRefEdgeId()
+		{
+			return m_RefEdge.Edge;
+		}
 
 	private:
 

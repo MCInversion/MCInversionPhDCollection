@@ -18,7 +18,7 @@ void pmp::EvolvingArcLengthCalculator::RecordPrevRefEdgePositions()
 
 void EvolvingArcLengthCalculator::UpdateRefEdge()
 {
-	if (RefEdgeValid(true) || !m_PrevRefEdge)
+	if (!RefEdgeValid(true) || !m_PrevRefEdge)
 	{
 		// nothing to do
 		return;
@@ -42,6 +42,16 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 
 	const auto v0New = m_Curve.from_vertex(m_RefEdge.Edge);
 	const auto newParamDist = norm(newRefPt - m_Curve.position(v0New));
+
+	if (newParamDist < FLT_EPSILON)
+	{
+		// the new ref point reaches to the next edge (forwards preference)
+		m_RefEdge.Edge = m_Curve.edge_from(m_Curve.to_vertex(m_RefEdge.Edge));
+		m_RefEdge.Param = 1.0f;
+		m_PrevRefEdge = nullptr;
+		return;
+	}
+
 	if (newParamDist > totalParamLength)
 	{
 		std::cerr << "\nEvolvingArcLengthCalculator::UpdateRefEdge: newParamDist > totalParamLength (this shouldn't happen)! \n";
@@ -49,8 +59,8 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 		m_PrevRefEdge = nullptr;
 		return;
 	}
-	m_RefEdge.Param = newParamDist / totalParamLength;
 
+	m_RefEdge.Param = 1.0f - (newParamDist / totalParamLength);
 	m_PrevRefEdge = nullptr;
 }
 
@@ -64,19 +74,42 @@ std::vector<Scalar> EvolvingArcLengthCalculator::CalculateArcLengths()
 
 	std::vector<Scalar> result(m_Curve.n_vertices(), -1.0f);
 
-	Vertex vNext = m_Curve.to_vertex(m_RefEdge.Edge);
+	// Initialize at the reference edge
+	Vertex vStart = m_Curve.to_vertex(m_RefEdge.Edge);
 	Scalar cumulativeLength = m_Curve.edge_length(m_RefEdge.Edge) * (1.0f - m_RefEdge.Param);
-	result[vNext.idx()] = cumulativeLength;
-	Edge eCurrent{ m_Curve.edge_from(vNext) };
+
+	result[vStart.idx()] = cumulativeLength;
+
+	// Track visited vertices to prevent loops
+	std::vector<bool> visited(m_Curve.n_vertices(), false);
+	visited[vStart.idx()] = true;
+
+	// Begin traversal
+	Vertex currentVertex = vStart;
+	Edge currentEdge = m_Curve.edge_from(currentVertex);
 
 	unsigned int safetyCounter = 0;
-	while (eCurrent != m_RefEdge.Edge || safetyCounter >= m_Curve.n_edges())
+	while (currentEdge.is_valid() && safetyCounter < m_Curve.n_edges())
 	{
-		vNext = m_Curve.to_vertex(eCurrent);
-		cumulativeLength += m_Curve.edge_length(eCurrent);
-		result[vNext.idx()] = cumulativeLength;
-		eCurrent = m_Curve.edge_from(vNext);
+		cumulativeLength += m_Curve.edge_length(currentEdge);
+		currentVertex = m_Curve.to_vertex(currentEdge);
+
+		// Check if vertex is already visited
+		if (visited[currentVertex.idx()])
+		{
+			break; // Prevent infinite loops
+		}
+
+		result[currentVertex.idx()] = cumulativeLength;
+		visited[currentVertex.idx()] = true;
+
+		currentEdge = m_Curve.edge_from(currentVertex);
 		++safetyCounter;
+	}
+
+	if (safetyCounter >= m_Curve.n_edges())
+	{
+		std::cerr << "Warning: EvolvingArcLengthCalculator::CalculateArcLengths - Safety counter limit reached.\n";
 	}
 
 	return result;

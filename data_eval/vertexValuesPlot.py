@@ -155,44 +155,38 @@ def get_sorted_values(values, manifold_name):
         vertex_order = get_vertex_ordering(arc_lengths, "value")
         sorted_arc_lengths = [arc_lengths[i]["value"] for i in vertex_order]
         sorted_values = []
-        if sorted_arc_lengths[0] > 1e-6:
+        # We need to extend the value lists by two values to extrapolate the first edge
+        max_vertex_arc_length = sorted_arc_lengths[-1]
+        sub_max_vertex_arc_length = sorted_arc_lengths[-2]
+        extrapolated_total_arc_length = 2 * max_vertex_arc_length - sub_max_vertex_arc_length
+        extrapolated_difference = extrapolated_total_arc_length - max_vertex_arc_length
+        ref_edge_length = extrapolated_difference + sorted_arc_lengths[0]
 
-            # We need to extend the value lists by two values to extrapolate the first edge
-            extrapolated_total_arc_length = 2 * sorted_arc_lengths[-1] - sorted_arc_lengths[-2]
+        sorted_arc_lengths.insert(0, 0.0)
+        sorted_arc_lengths.append(extrapolated_total_arc_length)
 
-            sorted_arc_lengths.insert(0, 0.0)
-            sorted_arc_lengths.append(extrapolated_total_arc_length)
+        # extended_vertex_order = vertex_order.copy()
+        # extended_vertex_order.insert(0, -1)
+        # extended_vertex_order.append(len(arc_lengths))
 
-            vertex_order.insert(0, -1)
-            vertex_order.append(len(arc_lengths))
+        arc_length_param = extrapolated_difference / ref_edge_length
 
-            arc_length_param = (1.0 - (sorted_arc_lengths[1] - extrapolated_total_arc_length) / extrapolated_total_arc_length)
+        # Create a new sorted value list with respective value types (without arc lengths)
+        for value_type, value_list in values.items():
+            if value_type == "arcLength":
+                continue
+                        
+            sorted_value_list = [value_list[i]["value"] for i in vertex_order]
 
-            # Create a new sorted value list with respective value types (without arc lengths)
-            for value_type, value_list in values.items():
-                if value_type == "arcLength":
-                    continue
-                
-                sorted_value_list = [value_list[i]["value"] for i in vertex_order]
+            # what value should be at the arc length 0.0?
+            prev_value = sorted_value_list[-1]
+            next_value = sorted_value_list[0]
+            last_edge_interpolated_value = prev_value + arc_length_param * (next_value - prev_value)
+            sorted_value_list.insert(0, last_edge_interpolated_value)
+            sorted_value_list.append(last_edge_interpolated_value)
 
-                # what value should be at the arc length 0.0?
-                prev_value = sorted_value_list[-1]
-                next_value = sorted_value_list[0]
-                last_edge_interpolated_value = prev_value + arc_length_param * (next_value - prev_value)
-                sorted_value_list.insert(0, last_edge_interpolated_value)
-
-                value_type_sorted_values_pair = (value_type, [value_list[i]["value"] for i in vertex_order])
-                sorted_values.append(value_type_sorted_values_pair)
-
-        else:
-            # Get sorted values without extrapolation
-            for value_type, value_list in values.items():
-                if value_type == "arcLength":
-                    continue
-
-                sorted_value_list = [value_list[i]["value"] for i in vertex_order]
-                value_type_sorted_values_pair = (value_type, sorted_value_list)
-                sorted_values.append(value_type_sorted_values_pair)
+            value_type_sorted_values_pair = (value_type, sorted_value_list)
+            sorted_values.append(value_type_sorted_values_pair)
 
         normalized_x = normalize_values(sorted_arc_lengths)
         return normalized_x, sorted_values
@@ -216,7 +210,7 @@ def get_sorted_values(values, manifold_name):
 
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):
-    selected_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]  # 0, 2, 5, 20, 80, 200, 400, 500 Specific time steps to include
+    selected_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]  #  Selected time steps
     n_steps = len(selected_time_steps)
     fig, ax = plt.subplots()
     ax.set_ylabel("Values")
