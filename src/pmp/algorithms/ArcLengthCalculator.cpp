@@ -6,6 +6,12 @@ using namespace pmp;
 
 void pmp::EvolvingArcLengthCalculator::RecordPrevRefEdgePositions()
 {
+	if (!RefEdgeValid(true))
+	{
+		// nothing to do
+		return;
+	}
+
 	const auto [v0, v1] = m_Curve.vertices(m_RefEdge.Edge);
 	m_PrevRefEdge = std::make_shared<PrevRefEdgeRecord>(PrevRefEdgeRecord{ m_Curve.position(v0), m_Curve.position(v1), m_RefEdge.Param });
 }
@@ -36,6 +42,13 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 
 	const auto v0New = m_Curve.from_vertex(m_RefEdge.Edge);
 	const auto newParamDist = norm(newRefPt - m_Curve.position(v0New));
+	if (newParamDist > totalParamLength)
+	{
+		std::cerr << "\nEvolvingArcLengthCalculator::UpdateRefEdge: newParamDist > totalParamLength (this shouldn't happen)! \n";
+		m_RefEdge.Param = 1.0f;
+		m_PrevRefEdge = nullptr;
+		return;
+	}
 	m_RefEdge.Param = newParamDist / totalParamLength;
 
 	m_PrevRefEdge = nullptr;

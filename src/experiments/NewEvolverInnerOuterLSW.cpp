@@ -2872,10 +2872,10 @@ void EquilibriumPairedConcaveManifoldTests()
 
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
-		{path00Curve, path01Curve},
+		//{path00Curve, path01Curve},
 		//{path10Curve, path11Curve},
 		//{path20Curve, path21Curve},
-		//{path30Curve, path31Curve},
+		{path30Curve, path31Curve},
 		//{path40Curve, path41Curve},
 		//{path50Curve, path51Curve},
 		//{path60Curve, path61Curve},
@@ -2950,10 +2950,10 @@ void EquilibriumPairedConcaveManifoldTests()
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	//globalSettings.NSteps = 2500;
+	globalSettings.NSteps = 2500;
 	//globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
-	globalSettings.NSteps = 20;
+	//globalSettings.NSteps = 20;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
 	globalSettings.ExportPerTimeStep = true;

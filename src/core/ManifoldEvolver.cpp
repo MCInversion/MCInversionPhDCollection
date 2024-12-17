@@ -374,7 +374,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
 				if (GetSettings().DiagSettings.LogOuterManifoldEta)
 					m_Logger.LogValue(m_OuterCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
-				if (!arcLengths.empty())
+				if (!arcLengths.empty() && (GetSettings().DiagSettings.LogOuterManifoldEpsilon || GetSettings().DiagSettings.LogOuterManifoldEta))
 					m_Logger.LogValue(m_OuterCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
 			}
 
@@ -507,8 +507,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 					m_Logger.LogValue(innerCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
 				if (GetSettings().DiagSettings.LogInnerManifoldsEta)
 					m_Logger.LogValue(innerCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
-				if (!arcLengths.empty())
-					m_Logger.LogValue(m_OuterCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
+				if (!arcLengths.empty() && (GetSettings().DiagSettings.LogInnerManifoldsEpsilon || GetSettings().DiagSettings.LogInnerManifoldsEta))
+					m_Logger.LogValue(innerCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
 			}
 
 			const Eigen::Vector2d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;

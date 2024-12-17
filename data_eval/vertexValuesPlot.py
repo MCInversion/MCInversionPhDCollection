@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 # Configuration
-procedure_name = "equilibriumConcavePair16"
+procedure_name = "equilibriumConcavePair19"
 directory = "../output"  # Adjust this path accordingly
 json_file = f"{directory}/{procedure_name}_log.json"
 
 use_interactive_plot = False  # Toggle between slider and opacity visualization
+force_vertex_indices_on_x_axis = False  # Use vertex indices instead of arc lengths on x-axis
 
 # Line style configuration
 inner_curves_color_palette = [
@@ -46,6 +47,27 @@ def normalize_vertex_indices(vertex_indices):
 def extract_manifold_idx(manifold_name):
     match = re.search(r'\d+', manifold_name)  # Extract first numeric group
     return int(match.group()) if match else 0
+
+# Helper function to normalize values to [0, 1]
+def normalize_values(values):
+    min_val = min(values)
+    max_val = max(values)
+    return [(v - min_val) / (max_val - min_val) for v in values]
+
+# Helper function to get vertex ordering based on a given array
+def get_vertex_ordering(input_list, key):
+    return [i for i, _ in sorted(enumerate(input_list), key=lambda x: x[1][key])]
+
+# Helper function to check uniqueness of values with a tolerance
+def check_uniqueness_with_tolerance(values, tolerance=1e-6):
+    sorted_values = sorted(values)  # Sort the values to check neighbors efficiently
+
+    for i in range(1, len(sorted_values)):
+        if abs(sorted_values[i] - sorted_values[i - 1]) < tolerance:
+            print(f"Duplicate values found: {sorted_values[i - 1]} and {sorted_values[i]} within tolerance {tolerance}")
+            return False
+
+    return True
 
 # Slider-based interactive plot with fixed plot range
 def interactive_plot():
@@ -118,37 +140,115 @@ def interactive_plot():
     plt.show()
 
 
+def get_sorted_values(values, manifold_name):
+    # Extract "arcLength" and compute the vertex order
+    arc_lengths = values.get("arcLength", [])
+
+    # Check if values contains other values besides "arcLength"                    
+    next_not_arc_length = next((k for k in values.keys() if k != "arcLength"), None)
+    if next_not_arc_length is None:
+        print(f"ERROR: No other values found in {manifold_name}. Something went wrong!")
+        return(None) 
+
+    if arc_lengths and not force_vertex_indices_on_x_axis:
+        # Working with arc lengths
+        vertex_order = get_vertex_ordering(arc_lengths, "value")
+        sorted_arc_lengths = [arc_lengths[i]["value"] for i in vertex_order]
+        sorted_values = []
+        if sorted_arc_lengths[0] > 1e-6:
+
+            # We need to extend the value lists by two values to extrapolate the first edge
+            extrapolated_total_arc_length = 2 * sorted_arc_lengths[-1] - sorted_arc_lengths[-2]
+
+            sorted_arc_lengths.insert(0, 0.0)
+            sorted_arc_lengths.append(extrapolated_total_arc_length)
+
+            vertex_order.insert(0, -1)
+            vertex_order.append(len(arc_lengths))
+
+            arc_length_param = (1.0 - (sorted_arc_lengths[1] - extrapolated_total_arc_length) / extrapolated_total_arc_length)
+
+            # Create a new sorted value list with respective value types (without arc lengths)
+            for value_type, value_list in values.items():
+                if value_type == "arcLength":
+                    continue
+                
+                sorted_value_list = [value_list[i]["value"] for i in vertex_order]
+
+                # what value should be at the arc length 0.0?
+                prev_value = sorted_value_list[-1]
+                next_value = sorted_value_list[0]
+                last_edge_interpolated_value = prev_value + arc_length_param * (next_value - prev_value)
+                sorted_value_list.insert(0, last_edge_interpolated_value)
+
+                value_type_sorted_values_pair = (value_type, [value_list[i]["value"] for i in vertex_order])
+                sorted_values.append(value_type_sorted_values_pair)
+
+        else:
+            # Get sorted values without extrapolation
+            for value_type, value_list in values.items():
+                if value_type == "arcLength":
+                    continue
+
+                sorted_value_list = [value_list[i]["value"] for i in vertex_order]
+                value_type_sorted_values_pair = (value_type, sorted_value_list)
+                sorted_values.append(value_type_sorted_values_pair)
+
+        normalized_x = normalize_values(sorted_arc_lengths)
+        return normalized_x, sorted_values
+
+    # Fallback to vertex indices stored in every value list
+    vertex_order = get_vertex_ordering(next_not_arc_length, "vertexIndex")
+
+    # Create a new sorted value list with respective value (without arc lengths)
+    sorted_values = []
+    for value_type, value_list in values.items():
+        if value_type == "arcLength":
+            continue
+
+        sorted_value_list = [value_list[i]["value"] for i in vertex_order]
+        value_type_sorted_values_pair = (value_type, sorted_value_list)
+        sorted_values.append(value_type_sorted_values_pair)
+
+    normalized_x = normalize_vertex_indices(range(len(vertex_order)))
+    return normalized_x, sorted_values
+
+
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):
-    selected_time_steps = [0, 2, 5, 20, 80, 200, 400, 500]  # Specific time steps to include
+    selected_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]  # 0, 2, 5, 20, 80, 200, 400, 500 Specific time steps to include
     n_steps = len(selected_time_steps)
     fig, ax = plt.subplots()
-    ax.set_xlabel("Normalized Vertex Indices [0, 1]")
     ax.set_ylabel("Values")
     ax.set_title(f"{procedure_name} - Increasing Opacity")
 
     frame_idx = 0  # Initialize frame index
     for time_step in selected_time_steps:
-        step_key = f"TimeStep_{time_step}"  # Adjusting to match the key format
+        step_key = f"TimeStep_{time_step}"
         if step_key not in data:
-            print(f"Warning: {step_key} not found in the data. Skipping.")
-            continue
+            print(f"ERROR: {step_key} not found in the data. Something went wrong!")
+            break
 
         step_data = data[step_key]
         alpha = min_opacity + (1.0 - min_opacity) * (frame_idx / (n_steps - 1)) if n_steps > 1 else 1.0
 
         for manifold_name, values in step_data.items():
             manifold_idx = extract_manifold_idx(manifold_name)
-            for value_type, value_list in values.items():
-                vertex_indices = [v["vertexIndex"] for v in value_list]
-                values = [v["value"] for v in value_list]
-                normalized_indices = normalize_vertex_indices(vertex_indices)
+
+            normalized_x, sorted_value_list = get_sorted_values(values, manifold_name)
+
+            # Plot all other value types using the determined vertex order
+            for value_type, y_values in sorted_value_list:
+
+                if value_type == "arcLength":
+                    print(f"ERROR: {value_type} found in {manifold_name}. Something went wrong!")
+                    break
 
                 if manifold_idx == 0:
                     # Outer curve (black line)
                     ax.plot(
-                        normalized_indices,
-                        values,
+                        normalized_x,
+                        y_values,
                         color='black',
                         linewidth=chosen_lwd,
                         alpha=alpha,
@@ -158,20 +258,22 @@ def visualize_opacity_interpolation(min_opacity=0.2):
                     # Inner curves with styles and colors
                     curve_idx = (manifold_idx - 1) % len(inner_curves_color_palette)
                     ax.plot(
-                        normalized_indices,
-                        values,
+                        normalized_x,
+                        y_values,
                         color=inner_curves_color_palette[curve_idx],
                         linewidth=chosen_lwd,
                         dashes=inner_curves_line_styles[curve_idx],
                         alpha=alpha,
                         label=f"{manifold_name} - {value_type}" if frame_idx == n_steps - 1 else None,
                     )
-        
+
         frame_idx += 1  # Increment frame index
 
     # Add legend on the final frame
     if frame_idx == n_steps:
         ax.legend(loc="upper right")
+
+    # Save and show the plot
     output_png_path = f"{directory}/{procedure_name}_ValueListsOpacity.png"
     print("Saving ", output_png_path)
     plt.savefig(output_png_path, dpi=300)
