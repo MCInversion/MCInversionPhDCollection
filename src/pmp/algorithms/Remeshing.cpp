@@ -1175,6 +1175,11 @@ void CurveRemeshing::preprocessing()
         // build kd-tree
         kd_tree_ = std::make_unique<EdgeKdTree>(refcurve_, 0);
     }
+
+    if (m_LengthCalculator)
+    {
+        m_LengthCalculator->RecordPrevRefEdgePositions();
+    }
 }
 
 
@@ -1187,6 +1192,11 @@ void CurveRemeshing::postprocessing()
     if (!has_feature_vertices_)
     {
         curve_.remove_vertex_property(vfeature_);
+    }
+
+    if (m_LengthCalculator)
+    {
+        m_LengthCalculator->UpdateRefEdge();
     }
 }
 
@@ -1281,11 +1291,6 @@ void CurveRemeshing::collapse_short_edges()
                 }
             }
         }
-    }
-
-    if (m_LengthCalculator)
-    {
-        m_LengthCalculator->UpdateRefEdge();
     }
 
     curve_.garbage_collection();
@@ -1417,7 +1422,7 @@ void CurveRemeshing::project_to_reference(Vertex v)
         return;
     }
 
-    // find closest triangle of reference mesh
+    // find closest edge of reference curve
     const auto nn = kd_tree_->nearest(points_[v]);
     const Point2 p = nn.nearest;
     const Edge e = nn.edge;

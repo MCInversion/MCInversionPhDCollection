@@ -15,6 +15,8 @@ namespace pmp
 			m_RefEdge = RefEdge{ m_Curve.edge_to(vFirst), 1.0f };
 		}
 
+		void RecordPrevRefEdgePositions();
+
 		void UpdateRefEdge();
 
 		[[nodiscard]] std::vector<Scalar> CalculateArcLengths();
@@ -29,8 +31,17 @@ namespace pmp
 			Scalar Param;
 		};
 
+		struct PrevRefEdgeRecord
+		{
+			Point2 StartPt;
+			Point2 EndPt;
+			Scalar Param;
+		};
+
 		RefEdge m_RefEdge;
 		ManifoldCurve2D& m_Curve;
+
+		std::shared_ptr<PrevRefEdgeRecord> m_PrevRefEdge{nullptr};
 	};
 
 } // namespace pmp
