@@ -147,4 +147,13 @@ namespace Geometry
 	/// \brief A debug utility to print curve values in topological order (based on connectivity)
 	void PrintCurveValuesInTopologicalOrder(const pmp::ManifoldCurve2D& curve, const std::vector<pmp::Scalar>& values, std::ostream& os);
 
+	/// \brief A utility for calculating the minimum dimension of planar curve (used primarily for determining distance field cell size).
+	[[nodiscard]] pmp::Scalar GetCurveBoundsMinDimension(const pmp::ManifoldCurve2D& curve);
+
+	/// \brief A utility for calculating the maximum dimension of planar curve.
+	[[nodiscard]] pmp::Scalar GetCurveBoundsMaxDimension(const pmp::ManifoldCurve2D& curve);
+
+	/// \brief A utility for calculating the minimum and maximum dimensions of planar curve.
+	[[nodiscard]] std::pair<pmp::Scalar, pmp::Scalar> GetCurveBoundsMinMaxDimensions(const pmp::ManifoldCurve2D& curve);
+
 } // namespace Geometry

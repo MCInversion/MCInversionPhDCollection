@@ -11,6 +11,9 @@ namespace Geometry
 	class CollisionKdTree;
 	class Collision2DTree;
 
+	//! \brief the amount by which boxes of kd-tree nodes are inflated to account for round-off errors.
+	constexpr float BOX_INFLATION = 1e-4f;
+
 	/**
 	 * \brief helper data item for splitting box.
 	 */

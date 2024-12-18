@@ -117,7 +117,7 @@ std::vector<Scalar> EvolvingArcLengthCalculator::CalculateArcLengths()
 
 bool EvolvingArcLengthCalculator::RefEdgeValid(const bool& checkPosition)
 {
-	if (!m_RefEdge.Edge.is_valid())
+	if (!m_RefEdge.Edge.is_valid() || !m_Curve.is_valid(m_RefEdge.Edge))
 	{
 		// invalid indices
 		return false;

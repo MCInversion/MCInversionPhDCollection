@@ -25,9 +25,6 @@ struct PairHash
 
 namespace Geometry
 {
-	//! \brief the amount by which boxes of kd-tree nodes are inflated to account for round-off errors.
-	constexpr float BOX_INFLATION = 1e-4f;
-
 	//! \brief maximum allowed depth of the CollisionKdTree.
 	constexpr unsigned int MAX_DEPTH = 20;
 

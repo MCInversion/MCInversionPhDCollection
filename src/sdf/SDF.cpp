@@ -886,7 +886,9 @@ namespace SDF
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
 		const float cellSize = grid.CellSize();
-		const auto& gridBox = grid.Box();
+		auto gridBox = grid.Box();
+		const auto gridBoxSize = gridBox.max() - gridBox.min();
+		gridBox.expand(Geometry::BOX_INFLATION * gridBoxSize[0], Geometry::BOX_INFLATION * gridBoxSize[1]);
 		const auto quadtreeVox = QuadtreeVoxelizer(*m_KdTree, gridBox, cellSize);
 
 		// extract leaf boxes and distance values from their centroids
@@ -906,6 +908,10 @@ namespace SDF
 			// transform from real space to grid index space
 			ix = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
 			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
+			
+			/*const double param = 1.0 - Geometry::BOX_INFLATION;
+			ix = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[0] + param * boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
+			iy = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[1] + param * boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));*/
 
 			gridPos = Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];

@@ -1248,4 +1248,43 @@ namespace Geometry
 		os << "End of curve values.\n";
 	}
 
+	pmp::Scalar GetCurveBoundsMinDimension(const pmp::ManifoldCurve2D& curve)
+	{
+		if (curve.n_vertices() == 0)
+		{
+			std::cerr << "GetCurveBoundsMinDimension: curve.n_vertices() == 0!\n";
+			return -1.0f;
+		}
+
+		const auto bbox = curve.bounds();
+		const auto bboxSize = bbox.max() - bbox.min();
+		return std::min(bboxSize[0], bboxSize[1]);
+	}
+
+	pmp::Scalar GetCurveBoundsMaxDimension(const pmp::ManifoldCurve2D& curve)
+	{
+		if (curve.n_vertices() == 0)
+		{
+			std::cerr << "GetCurveBoundsMaxDimension: curve.n_vertices() == 0!\n";
+			return -1.0f;
+		}
+
+		const auto bbox = curve.bounds();
+		const auto bboxSize = bbox.max() - bbox.min();
+		return std::max(bboxSize[0], bboxSize[1]);
+	}
+
+	std::pair<pmp::Scalar, pmp::Scalar> GetCurveBoundsMinMaxDimensions(const pmp::ManifoldCurve2D& curve)
+	{
+		if (curve.n_vertices() == 0)
+		{
+			std::cerr << "GetCurveBoundsMinMaxDimensions: curve.n_vertices() == 0!\n";
+			return { -1.0f, -1.0 };
+		}
+
+		const auto bbox = curve.bounds();
+		const auto bboxSize = bbox.max() - bbox.min();
+		return { std::min(bboxSize[0], bboxSize[1]), std::max(bboxSize[0], bboxSize[1]) };
+	}
+
 } // namespace Geometry

@@ -2541,16 +2541,16 @@ void EquilibriumPairedManifoldTests()
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		// Pair 1: Outer chamfered square and inner circle
-		{pmp::CurveFactory::sampled_polygon(squareVerticesLarge, segments, true),
-		 pmp::CurveFactory::circle(center, 0.5f * innerRadius, segments)},
+		//{pmp::CurveFactory::sampled_polygon(squareVerticesLarge, segments, true),
+		// pmp::CurveFactory::circle(center, 0.5f * innerRadius, segments)},
 
 		// Pair 2: Outer chamfered equilateral triangle and inner circle
-		{pmp::CurveFactory::sampled_polygon(triangleVerticesLarge, segments, true),
-		pmp::CurveFactory::circle(center, innerRadius, segments)},
+		//{pmp::CurveFactory::sampled_polygon(triangleVerticesLarge, segments, true),
+		//pmp::CurveFactory::circle(center, innerRadius, segments)},
 
-		// Pair 3: Outer circle and inner chamfered square
-		{pmp::CurveFactory::circle(center, outerRadius, segments),
-		pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
+		//// Pair 3: Outer circle and inner chamfered square
+		//{pmp::CurveFactory::circle(center, outerRadius, segments),
+		//pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
 
 		// Pair 4: Outer circle and inner chamfered equilateral triangle
 		{pmp::CurveFactory::circle(center, outerRadius, segments),
@@ -2563,46 +2563,59 @@ void EquilibriumPairedManifoldTests()
 
 	strategySettings.AdvectionInteractWithOtherManifolds = true;
 	// use PreComputeAdvectionDiffusionParams?
-	strategySettings.OuterManifoldEpsilon = [](double distance)
+	constexpr double scaledMinDist = 0.013;
+	strategySettings.OuterManifoldEpsilon = [&scaledMinDist](double distance)
 	{
-		return 0.0 * (1.0 - exp(-distance * distance / 1.0));
-	};
-	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
-	{
-		if (distance < 0.015)
+		if (distance < scaledMinDist)
 			return 0.0;
-		return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+	};
+	strategySettings.OuterManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	{
+		if (distance < scaledMinDist)
+			return 0.0;
+
+		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
-	strategySettings.InnerManifoldEpsilon = [](double distance)
+	strategySettings.InnerManifoldEpsilon = [&scaledMinDist](double distance)
 	{
-		return 0.0 * TRIVIAL_EPSILON(distance);
-	};
-	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
-	{
-		if (distance < 0.015)
+		if (distance < scaledMinDist)
 			return 0.0;
-		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return 0.001 * TRIVIAL_EPSILON(distance);
+	};
+	strategySettings.InnerManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	{
+		if (distance < scaledMinDist)
+			return 0.0;
+		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
-	strategySettings.LevelOfDetail = 3;
+	strategySettings.LevelOfDetail = 4;
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.7f;
 	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
-	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
+	//strategySettings.FieldSettings.FieldIsoLevel = 2.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
+	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
+	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
+	strategySettings.DiagSettings.LogOuterManifoldEta = true;
+	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	//globalSettings.NSteps = 2500;
-	globalSettings.NSteps = 1000;
+	globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 1378;
+	//globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
@@ -2614,14 +2627,17 @@ void EquilibriumPairedManifoldTests()
 	globalSettings.RemeshingResizeFactor = 0.7f;
 	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
-	for (unsigned int pairId = 0; const auto & [outerCurve, innerCurve] : curvePairs)
+	for (unsigned int pairId = 3; const auto & [outerCurve, innerCurve] : curvePairs)
 	{
 		std::cout << "EquilibriumPairedManifoldTest for pair: " << pairId << "\n";
 
 		globalSettings.ProcedureName = "equilibriumPair" + std::to_string(pairId);
 
+		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
+		strategySettings.FieldSettings.FieldIsoLevel = innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
+
 		std::vector innerCurves{ innerCurve };
-		innerCurves[0].negate_orientation();
+		//innerCurves[0].negate_orientation();
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 			strategySettings, outerCurve, innerCurves, nullptr);
 
@@ -2704,7 +2720,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		std::cerr << "Error writing path20Curve.ply!\n";
 
 	const auto path21Vertices = ParsePolygonalSVGPath(svgPathPair21);
-	auto path21Curve = pmp::CurveFactory::sampled_polygon(path21Vertices, 120, false);
+	auto path21Curve = pmp::CurveFactory::sampled_polygon(path21Vertices, 80, false);
 	RemeshWithDefaultSettings(path21Curve);
 	if (!pmp::write_to_ply(path21Curve, dataOutPath + "path21Curve.ply"))
 		std::cerr << "Error writing path21Curve.ply!\n";
@@ -2837,23 +2853,23 @@ void EquilibriumPairedConcaveManifoldTests()
 		std::cerr << "Error writing path121Curve.ply!\n";
 
 	// Pair 13
-	auto path130Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 180);
+	auto path130Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 100);
 	RemeshWithDefaultSettings(path130Curve);
 	if (!pmp::write_to_ply(path130Curve, dataOutPath + "path130Curve.ply"))
 		std::cerr << "Error writing path130Curve.ply!\n";
 
-	auto path131Curve = pmp::CurveFactory::circle(pmp::Point2{ 59.879032f, 51.983871f }, 14.104838f, 100);
+	auto path131Curve = pmp::CurveFactory::circle(pmp::Point2{ 59.879032f, 51.983871f }, 14.104838f, 80);
 	RemeshWithDefaultSettings(path131Curve);
 	if (!pmp::write_to_ply(path131Curve, dataOutPath + "path131Curve.ply"))
 		std::cerr << "Error writing path131Curve.ply!\n";
 
 	// Pair 14
-	auto path140Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 180);
+	auto path140Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 100);
 	RemeshWithDefaultSettings(path140Curve);
 	if (!pmp::write_to_ply(path140Curve, dataOutPath + "path140Curve.ply"))
 		std::cerr << "Error writing path140Curve.ply!\n";
 
-	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357f, 34.419353f }, 13.217741f, 100);
+	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357f, 34.419353f }, 13.217741f, 80);
 	RemeshWithDefaultSettings(path141Curve);
 	if (!pmp::write_to_ply(path141Curve, dataOutPath + "path141Curve.ply"))
 		std::cerr << "Error writing path141Curve.ply!\n";
@@ -2874,7 +2890,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		//{path00Curve, path01Curve},
 		//{path10Curve, path11Curve},
-		//{path20Curve, path21Curve},
+		{path20Curve, path21Curve},
 		//{path30Curve, path31Curve},
 		//{path40Curve, path41Curve},
 		//{path50Curve, path51Curve},
@@ -2886,7 +2902,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		//{path110Curve, path111Curve},
 		//{path120Curve, path121Curve},
 		//{path130Curve, path131Curve},
-		{path140Curve, path141Curve},
+		//{path140Curve, path141Curve},
 		//{path150Curve, path151Curve},
 	};
 
@@ -2896,30 +2912,42 @@ void EquilibriumPairedConcaveManifoldTests()
 
 	strategySettings.AdvectionInteractWithOtherManifolds = true;
 	// use PreComputeAdvectionDiffusionParams?
-	strategySettings.OuterManifoldEpsilon = [](double distance)
-	{
-		return 0.0 * (1.0 - exp(-distance * distance / 1.0));
-	};
-	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+	constexpr double scaledMinDist = 0.0135;
+	strategySettings.OuterManifoldEpsilon = [&scaledMinDist](double distance)
 	{
 		return 0.0;
 
-		//if (distance < 0.0135)
+		//if (distance < scaledMinDist)
+		//	return 0.0;
+
+		//return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+	};
+	strategySettings.OuterManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	{
+		return 0.0;
+
+		//if (distance < scaledMinDist)
 		//	return 0.0;
 
 		//return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
-	strategySettings.InnerManifoldEpsilon = [](double distance)
+	strategySettings.InnerManifoldEpsilon = [&scaledMinDist](double distance)
 	{
-		return 0.0 * TRIVIAL_EPSILON(distance);
+		return 0.0;
+
+		//if (distance < scaledMinDist)
+		//	return 0.0;
+
+		//return 0.001 * TRIVIAL_EPSILON(distance);
 	};
-	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+	strategySettings.InnerManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
 	{
 		//return 0.0;
 
-		if (distance < 0.0135)
+		if (distance < scaledMinDist)
 			return 0.0;
 
 		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
@@ -2938,7 +2966,6 @@ void EquilibriumPairedConcaveManifoldTests()
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
-	strategySettings.FieldSettings.FieldIsoLevel = 2.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
@@ -2969,6 +2996,9 @@ void EquilibriumPairedConcaveManifoldTests()
 		std::cout << "EquilibriumPairedConcaveManifoldTests for pair: " << pairId << "\n";
 
 		globalSettings.ProcedureName = "equilibriumConcavePair" + std::to_string(pairId);
+
+		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
+		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
 
 		std::vector innerCurves{ innerCurve };
 		//innerCurves[0].negate_orientation();
