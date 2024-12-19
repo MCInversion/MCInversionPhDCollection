@@ -215,8 +215,7 @@ def get_sorted_values(values, manifold_name):
 
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):
-    # TODO: what the hell happens in time step 2376?
-    selected_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2494]  # 2500 Selected time steps (1370)
+    selected_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]  # Selected time steps (1370, 2494)
     n_steps = len(selected_time_steps)
     fig, ax = plt.subplots()
     ax.set_ylabel("Values")

@@ -2354,7 +2354,7 @@ namespace
 		remesher.adaptive_remeshing(settings);
 	}
 
-	[[nodiscard]] pmp::ManifoldCurve2D GetCurveRotateAboutCenterPoint(const pmp::ManifoldCurve2D& curve, const pmp::Scalar& angle, const bool& remesh = false)
+	[[nodiscard]] pmp::ManifoldCurve2D GetCurveRotatedAboutCenterPoint(const pmp::ManifoldCurve2D& curve, const pmp::Scalar& angle, const bool& remesh = false)
 	{
 		if (curve.n_vertices() == 0)
 		{
@@ -2367,7 +2367,7 @@ namespace
 		pmp::ManifoldCurve2D resultCurve{ curve };
 		resultCurve *= rotationMatrix;
 		if (remesh)
-			RemeshWithDefaultSettings(resultCurve);
+			RemeshWithDefaultSettings(resultCurve, nullptr, 1.0);
 		return resultCurve;
 	}
 } // anonymous namespace
@@ -2400,7 +2400,7 @@ void EquilibriumPairedManifoldTests()
 		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * innerRadius + center,
 		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * innerRadius + center
 	};
-	const unsigned int segments = 30;
+	const unsigned int segments = 40;
 
 	//const pmp::Scalar angle = 46.0f; // in degrees
 	const pmp::Scalar angle = 0.0f;
@@ -2408,7 +2408,7 @@ void EquilibriumPairedManifoldTests()
 	const double minDistancePercentageEta = 0.05;
 
 	constexpr bool logCtrlFunctionValues{ true };
-	constexpr bool logEpsilon{ false };
+	constexpr bool logEpsilon{ true };
 
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
@@ -2425,8 +2425,8 @@ void EquilibriumPairedManifoldTests()
 		//pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
 
 		// Pair 4: Outer circle and inner chamfered equilateral triangle
-		{GetCurveRotateAboutCenterPoint(pmp::CurveFactory::circle(center, outerRadius, segments), angle, false),
-		GetCurveRotateAboutCenterPoint(pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments, true), angle, true)}
+		{GetCurveRotatedAboutCenterPoint(pmp::CurveFactory::circle(center, outerRadius, segments), angle, true),
+		GetCurveRotatedAboutCenterPoint(pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments / 2, true), angle, false)}
 	};
 
 	// Prepare the settings for the evolver
@@ -2507,11 +2507,19 @@ void EquilibriumPairedManifoldTests()
 
 		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
 		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
+		
+		// DEBUG translation
+		const auto smallXYShift = strategySettings.FieldSettings.FieldIsoLevel * 0.1f;
+		const auto smallTranslation = translation_matrix(pmp::vec2{ smallXYShift , -0.66f * smallXYShift });
+		pmp::ManifoldCurve2D outerCurveCopy{ outerCurve };
+		outerCurveCopy *= smallTranslation;
 
 		std::vector innerCurves{ innerCurve };
 		//innerCurves[0].negate_orientation();
+		//auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+		//	strategySettings, outerCurve, innerCurves, nullptr);
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
-			strategySettings, outerCurve, innerCurves, nullptr);
+			strategySettings, outerCurveCopy, innerCurves, nullptr);
 
 		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
 
@@ -2827,7 +2835,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
 		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
 
-		std::vector innerCurves{ GetCurveRotateAboutCenterPoint(innerCurve, angle) };
+		std::vector innerCurves{ GetCurveRotatedAboutCenterPoint(innerCurve, angle) };
 		//innerCurves[0].negate_orientation();
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 			strategySettings, outerCurve, innerCurves, nullptr);
@@ -5520,7 +5528,7 @@ void TestCurve2DRotation()
 	if (!pmp::write_to_ply(curve, dataOutPath + "curve_BeforeRot.ply"))
 		std::cerr << "Error writing curve_BeforeRot.ply!\n";
 
-	curve = GetCurveRotateAboutCenterPoint(curve, angle);
+	curve = GetCurveRotatedAboutCenterPoint(curve, angle);
 	if (!pmp::write_to_ply(curve, dataOutPath + "curve_AfterRot.ply"))
 		std::cerr << "Error writing curve_AfterRot.ply!\n";
 }
