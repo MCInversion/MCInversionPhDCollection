@@ -34,12 +34,12 @@ void ManifoldCurveEvolutionStrategy::InitNewTimeStepLog(unsigned int stepId)
 	m_Logger.StartNewTimeStep(stepId); // Explicitly start a new logging step
 }
 
-void ManifoldCurveEvolutionStrategy::SaveLog()
+void ManifoldCurveEvolutionStrategy::SaveLog(bool omitLastTimeStep)
 {
 	if (!LogManifoldValues())
 		return;
 
-	m_Logger.Save();
+	m_Logger.Save(omitLastTimeStep);
 }
 
 void ManifoldCurveEvolutionStrategy::Preprocess()
@@ -54,6 +54,8 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	{
 		StabilizeGeometries();
 	}
+	ComputeControlFunctionsLowerBounds();
+
 	AssignRemeshingSettingsToEvolvingManifolds();
 
 	if (LogManifoldValues())
@@ -109,6 +111,8 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		const auto [minLengthAfter, maxLengthAfter] = CalculateCoVolumeRange();
 		std::cout << "After stabilization: { minLengthAfter: " << minLengthAfter << ", maxLengthAfter: " << maxLengthAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
+	ComputeControlFunctionsLowerBounds();
+
 	AssignRemeshingSettingsToEvolvingManifolds();
 	if (LogManifoldValues())
 		InitializeArcLengthCalculation();
@@ -1015,6 +1019,42 @@ bool ManifoldCurveEvolutionStrategy::NeedsFieldsCalculation()
 	return NeedsVariableFieldsCalculation() || m_TargetPointCloud;
 }
 
+void ManifoldCurveEvolutionStrategy::ComputeControlFunctionsLowerBounds()
+{
+	// find reasonable bounds for distance
+	double maxDistance{ 0.0 };
+	if (m_DistanceField)
+	{
+		maxDistance = *std::ranges::max_element(m_DistanceField->Values());
+	}
+	else if (!m_DistanceField && m_OuterCurveDistanceField)
+	{
+		maxDistance = *std::ranges::max_element(m_OuterCurveDistanceField->Values());
+	}
+	else if (!m_DistanceField && !m_OuterCurveDistanceField && !m_InnerCurvesDistanceFields.empty())
+	{
+		maxDistance = *std::ranges::max_element(m_InnerCurvesDistanceFields.front()->Values());
+	}
+	else
+	{
+		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::ComputeControlFunctionsLowerBounds: undefined configuration. No distance field available!\n");
+	}
+
+	// normalize the max distance to expansion factor
+	const auto expFactor = GetSettings().FieldSettings.FieldExpansionFactor;
+	if (expFactor < FLT_EPSILON)
+	{
+		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::ComputeControlFunctionsLowerBounds: expFactor < FLT_EPSILON!\n");
+	}
+	maxDistance /= (0.5 + expFactor);
+
+	// apply the limit
+	GetSettings().OuterManifoldEpsilon.ComputeLimit(maxDistance);
+	GetSettings().OuterManifoldEta.ComputeLimit(maxDistance);
+	GetSettings().InnerManifoldEpsilon.ComputeLimit(maxDistance);
+	GetSettings().InnerManifoldEta.ComputeLimit(maxDistance);
+}
+
 void CustomManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()
 {
 	if (GetOuterCurve())
@@ -1225,12 +1265,12 @@ void ManifoldSurfaceEvolutionStrategy::InitNewTimeStepLog(unsigned int stepId)
 	m_Logger.StartNewTimeStep(stepId); // Explicitly start a new logging step
 }
 
-void ManifoldSurfaceEvolutionStrategy::SaveLog()
+void ManifoldSurfaceEvolutionStrategy::SaveLog(bool omitLastTimeStep)
 {
 	if (!LogManifoldValues())
 		return;
 
-	m_Logger.Save();
+	m_Logger.Save(omitLastTimeStep);
 }
 
 void ManifoldSurfaceEvolutionStrategy::Preprocess()
@@ -1245,6 +1285,8 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 	{
 		StabilizeGeometries();
 	}
+	ComputeControlFunctionsLowerBounds();
+
 	AssignRemeshingSettingsToEvolvingManifolds();
 }
 
@@ -1295,6 +1337,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		const auto [minAreaAfter, maxAreaAfter] = CalculateCoVolumeRange();
 		std::cout << "After stabilization: { minAreaAfter: " << minAreaAfter << ", maxAreaAfter: " << maxAreaAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
+	ComputeControlFunctionsLowerBounds();
 
 	AssignRemeshingSettingsToEvolvingManifolds();
 }
@@ -2134,6 +2177,42 @@ bool ManifoldSurfaceEvolutionStrategy::NeedsVariableFieldsCalculation()
 bool ManifoldSurfaceEvolutionStrategy::NeedsFieldsCalculation()
 {
 	return NeedsVariableFieldsCalculation() || m_TargetPointCloud;
+}
+
+void ManifoldSurfaceEvolutionStrategy::ComputeControlFunctionsLowerBounds()
+{
+	// find reasonable bounds for distance
+	double maxDistance{ 0.0 };
+	if (m_DistanceField)
+	{
+		maxDistance = *std::ranges::max_element(m_DistanceField->Values());
+	}
+	else if (!m_DistanceField && m_OuterSurfaceDistanceField)
+	{
+		maxDistance = *std::ranges::max_element(m_OuterSurfaceDistanceField->Values());
+	}
+	else if (!m_DistanceField && !m_OuterSurfaceDistanceField && !m_InnerSurfacesDistanceFields.empty())
+	{
+		maxDistance = *std::ranges::max_element(m_InnerSurfacesDistanceFields.front()->Values());
+	}
+	else
+	{
+		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ComputeControlFunctionsLowerBounds: undefined configuration. No distance field available!\n");
+	}
+
+	// normalize the max distance to expansion factor
+	const auto expFactor = GetSettings().FieldSettings.FieldExpansionFactor;
+	if (expFactor < FLT_EPSILON)
+	{
+		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ComputeControlFunctionsLowerBounds: expFactor < FLT_EPSILON!\n");
+	}
+	maxDistance /= (0.5 + expFactor);
+
+	// apply the limit
+	GetSettings().OuterManifoldEpsilon.ComputeLimit(maxDistance);
+	GetSettings().OuterManifoldEta.ComputeLimit(maxDistance);
+	GetSettings().InnerManifoldEpsilon.ComputeLimit(maxDistance);
+	GetSettings().InnerManifoldEta.ComputeLimit(maxDistance);
 }
 
 void CustomManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds()

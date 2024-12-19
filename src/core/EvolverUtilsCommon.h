@@ -625,16 +625,16 @@ public:
 	}
 
 	/// \brief Save all logged data to JSON format
-	void Save()
+	// \param[in] omitLastTimeStep        a flag useful when an exception has been thrown during some time step.
+	void Save(bool omitLastTimeStep = false)
 	{
 		nlohmann::json outputJson;
-
-		for (const auto& [timeStep, data] : m_TimeStepData)
+		const auto nTimeSteps = m_TimeStepData.size() - (omitLastTimeStep ? 1 : 0);
+		for (size_t timeStep = 1; timeStep <= nTimeSteps; ++timeStep)
 		{
-			// TODO: time steps are also unsorted
 			auto& timeStepJson = outputJson["TimeStep_" + std::to_string(timeStep)];
 
-			for (const auto& [manifoldKey, manifoldData] : data.items())
+			for (const auto& [manifoldKey, manifoldData] : m_TimeStepData[timeStep].items())
 			{
 				auto& manifoldJson = timeStepJson[manifoldKey];
 
@@ -729,7 +729,77 @@ private:
 	unsigned int m_CurrentTimeStep = 0; //!< Current time step being logged
 	unsigned int m_ManifoldCounter = 0; //!< Counter for assigning manifold keys
 	std::unordered_map<const ManifoldType*, std::string> m_ManifoldKeys; //!< Map from manifold pointer to unique key
-	std::map<unsigned int, nlohmann::json> m_TimeStepData; //!< Map from time step to JSON data
+	std::unordered_map<unsigned int, nlohmann::json> m_TimeStepData; //!< Map from time step to JSON data
 	std::string m_SortByValueId{}; //>! if empty the vertex values will be pre-sorted by vertex index, otherwise by a given value id.
 };
 
+//
+// ==========================================================================
+//
+
+/// \brief Extended control function wrapper
+template<typename ControlFunctionSignature>
+class ExtendedFunction;
+
+/// \brief Extended control function wrapper definition
+template<typename... Args>
+class ExtendedFunction<std::function<double(double /*dist*/, Args...)>>
+{
+public:
+
+	ExtendedFunction() = default;
+
+	explicit ExtendedFunction(std::function<double(double /*dist*/, Args...)> func)
+	{
+		Bind(std::move(func));
+	}
+
+	void Bind(double percentage, std::function<double(double /*dist*/, Args...)> func)
+	{
+		m_InputPercentage = percentage;
+		Bind(std::move(func));
+	}
+
+	void ComputeLimit(const double& maxDistance = 0.0)
+	{
+		if (maxDistance < 0.0 || m_InputPercentage < 0.0)
+		{
+			// invalid input
+			m_LowerDistanceLimit = 0.0;
+			return;
+		}
+
+		m_LowerDistanceLimit = maxDistance * m_InputPercentage;
+	}
+
+	double operator()(double dist, Args... args) const
+	{
+		if (!m_Lambda)
+		{
+			// invocation not available
+			return 0.0;
+		}
+
+		if (dist <= m_LowerDistanceLimit)
+			return 0.0;
+
+		return m_Lambda(dist, std::forward<Args>(args)...);
+	}
+
+	ExtendedFunction& operator=(std::function<double(double /*dist*/, Args...)> func)
+	{
+		Bind(std::move(func));
+		return *this;
+	}
+
+private:
+
+	void Bind(std::function<double(double /*dist*/, Args...)> func)
+	{
+		m_Lambda = std::move(func);
+	}
+
+	double m_InputPercentage{ 0.0 };
+	std::function<double(double /*dist*/, Args...)> m_Lambda;
+	double m_LowerDistanceLimit{ 0.0 };
+};

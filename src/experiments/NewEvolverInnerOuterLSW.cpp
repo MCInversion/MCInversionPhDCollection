@@ -921,22 +921,7 @@ void OldVsNewLSWTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				newEvolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			newEvolver.Evolve();
 		}
 
 		// ==========================================================================
@@ -1014,22 +999,7 @@ void OldVsNewLSWTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 
 		if (executeNewSurfaceCustomEvolver)
@@ -1107,22 +1077,7 @@ void OldVsNewLSWTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 
 		if (executeNewCurveCustomEvolver)
@@ -1186,22 +1141,7 @@ void OldVsNewLSWTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 	}
 }
@@ -1436,22 +1376,7 @@ void PairedLSWTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 
 		if (executeCustomCurveEvolver)
@@ -1535,22 +1460,7 @@ void PairedLSWTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 	}
 }
@@ -1803,22 +1713,7 @@ void PairedLSWRepulsionTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 
 		if (executeCustomCurveEvolver)
@@ -1909,14 +1804,7 @@ void PairedLSWRepulsionTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 	}
 }
@@ -2003,22 +1891,7 @@ void OutwardEvolvingInnerCircleTest()
 
 		std::cout << "ManifoldEvolver::Evolve ... ";
 
-		try
-		{
-			evolver.Evolve();
-		}
-		catch (std::invalid_argument& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (std::runtime_error& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (...)
-		{
-			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-		}
+		evolver.Evolve();
 	}
 }
 
@@ -2211,22 +2084,7 @@ void AdvectionDrivenInnerCircleTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 	}
 }
@@ -2346,22 +2204,7 @@ void ConcentricCirclesTests()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 
 		curveId++;
@@ -2486,27 +2329,48 @@ void NonConcentricCirclesTest()
 
 			std::cout << "ManifoldEvolver::Evolve ... ";
 
-			try
-			{
-				evolver.Evolve();
-			}
-			catch (std::invalid_argument& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (std::runtime_error& ex)
-			{
-				std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-			}
-			catch (...)
-			{
-				std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-			}
+			evolver.Evolve();
 		}
 
 		curveId++;
 	}
 }
+
+namespace
+{
+	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve, const std::shared_ptr<pmp::EvolvingArcLengthCalculator>& calc = nullptr, const pmp::Scalar& factor = 1.0f)
+	{
+		// DISCLAIMER: Some curves from svg paths might have duplicate points
+		const float edgeLength = 2.0f * factor;
+		constexpr unsigned int iterations = 10;
+		pmp::CurveRemeshing remesher(curve, calc);
+		pmp::AdaptiveRemeshingSettings settings;
+		settings.MinEdgeLength = edgeLength;
+		settings.MaxEdgeLength = 1.5f * edgeLength * factor;
+		settings.ApproxError = 0.05f * edgeLength * factor;
+		settings.NRemeshingIterations = iterations;
+		settings.NTangentialSmoothingIters = 6;
+		settings.UseProjection = false;
+		remesher.adaptive_remeshing(settings);
+	}
+
+	[[nodiscard]] pmp::ManifoldCurve2D GetCurveRotateAboutCenterPoint(const pmp::ManifoldCurve2D& curve, const pmp::Scalar& angle, const bool& remesh = false)
+	{
+		if (curve.n_vertices() == 0)
+		{
+			return curve;
+		}
+
+		const auto curveBBox = curve.bounds();
+		const auto center = curveBBox.center();
+		const auto rotationMatrix = pmp::rotation_matrix_2d(center, angle);
+		pmp::ManifoldCurve2D resultCurve{ curve };
+		resultCurve *= rotationMatrix;
+		if (remesh)
+			RemeshWithDefaultSettings(resultCurve);
+		return resultCurve;
+	}
+} // anonymous namespace
 
 void EquilibriumPairedManifoldTests()
 {
@@ -2538,6 +2402,14 @@ void EquilibriumPairedManifoldTests()
 	};
 	const unsigned int segments = 30;
 
+	//const pmp::Scalar angle = 46.0f; // in degrees
+	const pmp::Scalar angle = 0.0f;
+	const double minDistancePercentageEpsilon = 0.0;
+	const double minDistancePercentageEta = 0.05;
+
+	constexpr bool logCtrlFunctionValues{ true };
+	constexpr bool logEpsilon{ false };
+
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		// Pair 1: Outer chamfered square and inner circle
@@ -2553,8 +2425,8 @@ void EquilibriumPairedManifoldTests()
 		//pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
 
 		// Pair 4: Outer circle and inner chamfered equilateral triangle
-		{pmp::CurveFactory::circle(center, outerRadius, segments),
-		pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments, true)}
+		{GetCurveRotateAboutCenterPoint(pmp::CurveFactory::circle(center, outerRadius, segments), angle, false),
+		GetCurveRotateAboutCenterPoint(pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments, true), angle, true)}
 	};
 
 	// Prepare the settings for the evolver
@@ -2563,53 +2435,52 @@ void EquilibriumPairedManifoldTests()
 
 	strategySettings.AdvectionInteractWithOtherManifolds = true;
 	// use PreComputeAdvectionDiffusionParams?
-	constexpr double scaledMinDist = 0.013;
-	strategySettings.OuterManifoldEpsilon = [&scaledMinDist](double distance)
+	strategySettings.OuterManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
 	{
-		if (distance < scaledMinDist)
-			return 0.0;
 		return 1.0 * (1.0 - exp(-distance * distance / 1.0));
-	};
-	strategySettings.OuterManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	});
+	strategySettings.OuterManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
 	{
-		if (distance < scaledMinDist)
-			return 0.0;
-
 		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-	};
-	strategySettings.InnerManifoldEpsilon = [&scaledMinDist](double distance)
+	});
+	strategySettings.InnerManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
 	{
-		if (distance < scaledMinDist)
-			return 0.0;
 		return 0.001 * TRIVIAL_EPSILON(distance);
-	};
-	strategySettings.InnerManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	});
+	strategySettings.InnerManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
 	{
-		if (distance < scaledMinDist)
-			return 0.0;
 		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-	};
+	});
 	strategySettings.LevelOfDetail = 4;
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.7f;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0f;
 	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
-	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 	//strategySettings.FieldSettings.FieldIsoLevel = 2.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
-	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
-	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
-	strategySettings.DiagSettings.LogOuterManifoldEta = true;
-	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+	if (logCtrlFunctionValues)
+	{
+		if (logEpsilon)
+		{
+			strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
+			strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
+		}
+		else
+		{
+			strategySettings.DiagSettings.LogOuterManifoldEta = true;
+			strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+		}
+	}
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
@@ -2617,6 +2488,7 @@ void EquilibriumPairedManifoldTests()
 	//globalSettings.NSteps = 1378;
 	//globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
+	//globalSettings.NSteps = 20;
 	globalSettings.DoRemeshing = true;
 	globalSettings.DetectFeatures = false;
 	globalSettings.ExportPerTimeStep = true;
@@ -2634,7 +2506,7 @@ void EquilibriumPairedManifoldTests()
 		globalSettings.ProcedureName = "equilibriumPair" + std::to_string(pairId);
 
 		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
-		strategySettings.FieldSettings.FieldIsoLevel = innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
+		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
 
 		std::vector innerCurves{ innerCurve };
 		//innerCurves[0].negate_orientation();
@@ -2643,49 +2515,17 @@ void EquilibriumPairedManifoldTests()
 
 		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
 
-		try
-		{
-			evolver.Evolve();
-		}
-		catch (std::invalid_argument& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (std::runtime_error& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (...)
-		{
-			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-		}
+		evolver.Evolve();
 
 		pairId++;
 	}
 }
 
-namespace
-{
-	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve, const std::shared_ptr<pmp::EvolvingArcLengthCalculator>& calc = nullptr, const pmp::Scalar& factor = 1.0f)
-	{
-		// DISCLAIMER: Some curves from svg paths might have duplicate points
-		const float edgeLength = 2.0f * factor;
-		constexpr unsigned int iterations = 10;
-		pmp::CurveRemeshing remesher(curve, calc);
-		pmp::AdaptiveRemeshingSettings settings;
-		settings.MinEdgeLength = edgeLength;
-		settings.MaxEdgeLength = 1.5f * edgeLength * factor;
-		settings.ApproxError = 0.05f * edgeLength * factor;
-		settings.NRemeshingIterations = iterations;
-		settings.NTangentialSmoothingIters = 6;
-		settings.UseProjection = false;
-		remesher.adaptive_remeshing(settings);
-	}
-
-} // anonymous namespace
-
 void EquilibriumPairedConcaveManifoldTests()
 {
+	//const pmp::Scalar angle = 46.0f; // in degrees
+	const pmp::Scalar angle = 0.0f;
+
 	// Pair 0
 	const auto path00Vertices = ParsePolygonalSVGPath(svgPathPair00);
 	auto path00Curve = pmp::CurveFactory::sampled_polygon(path00Vertices, 140, false);
@@ -2912,43 +2752,30 @@ void EquilibriumPairedConcaveManifoldTests()
 
 	strategySettings.AdvectionInteractWithOtherManifolds = true;
 	// use PreComputeAdvectionDiffusionParams?
-	constexpr double scaledMinDist = 0.0135;
-	strategySettings.OuterManifoldEpsilon = [&scaledMinDist](double distance)
+	strategySettings.OuterManifoldEpsilon = [](double distance)
 	{
-		return 0.0;
+		//return 0.0;
 
-		//if (distance < scaledMinDist)
-		//	return 0.0;
-
-		//return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+		return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 	};
-	strategySettings.OuterManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 	{
-		return 0.0;
+		//return 0.0;
 
-		//if (distance < scaledMinDist)
-		//	return 0.0;
-
-		//return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
-	strategySettings.InnerManifoldEpsilon = [&scaledMinDist](double distance)
-	{
-		return 0.0;
-
-		//if (distance < scaledMinDist)
-		//	return 0.0;
-
-		//return 0.001 * TRIVIAL_EPSILON(distance);
-	};
-	strategySettings.InnerManifoldEta = [&scaledMinDist](double distance, double negGradDotNormal)
+	strategySettings.InnerManifoldEpsilon = [](double distance)
 	{
 		//return 0.0;
 
-		if (distance < scaledMinDist)
-			return 0.0;
+		return 0.001 * TRIVIAL_EPSILON(distance);
+	};
+	strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+	{
+		//return 0.0;
 
 		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
@@ -3000,29 +2827,14 @@ void EquilibriumPairedConcaveManifoldTests()
 		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
 		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
 
-		std::vector innerCurves{ innerCurve };
+		std::vector innerCurves{ GetCurveRotateAboutCenterPoint(innerCurve, angle) };
 		//innerCurves[0].negate_orientation();
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 			strategySettings, outerCurve, innerCurves, nullptr);
 
 		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
 
-		try
-		{
-			evolver.Evolve();
-		}
-		catch (std::invalid_argument& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (std::runtime_error& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (...)
-		{
-			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-		}
+		evolver.Evolve();
 
 		pairId++;
 	}
@@ -3099,22 +2911,7 @@ void VisualizeMCF()
 
 		std::cout << "ManifoldEvolver::Evolve ... ";
 
-		try
-		{
-			evolver.Evolve();
-		}
-		catch (std::invalid_argument& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (std::runtime_error& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (...)
-		{
-			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-		}
+		evolver.Evolve();
 
 		curveId++;
 	}
@@ -3827,14 +3624,10 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.AdvectionInteractWithOtherManifolds = false;
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 				{
-					if (distance <= 0.0)
-						return 0.0;
 					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 				};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 				{
-					if (distance <= 0.0)
-						return 0.0;
 					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 			strategySettings.TimeStep = tau;
@@ -3915,26 +3708,18 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.AdvectionInteractWithOtherManifolds = true;
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 				{
-					if (distance <= 0.0)
-						return 0.0;
 					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 				};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 				{
-					if (distance <= 0.0)
-						return 0.0;
 					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 				{
-					if (distance <= 0.0)
-						return 0.0;
 					return 0.0005 * TRIVIAL_EPSILON(distance);
 				};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 				{
-					if (distance <= 0.0)
-						return 0.0;
 					return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 				};
 			strategySettings.TimeStep = tau;
@@ -4033,14 +3818,10 @@ void SimpleMeshesIOLSWTests()
 
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
@@ -4132,26 +3913,18 @@ void SimpleMeshesIOLSWTests()
 
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 0.0005 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
@@ -4747,26 +4520,18 @@ void StandardMeshesIOLSWTests()
 
 			strategySettings.OuterManifoldEpsilon = [](double distance)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
 			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 0.0005 * TRIVIAL_EPSILON(distance);
 			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
 			{
-				if (distance <= 0.0)
-					return 0.0;
 				return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 			};
 			strategySettings.TimeStep = tau;
@@ -5038,22 +4803,7 @@ void HyperellipseEllipsoidEquilibriumTests()
 
 		std::cout << "ManifoldEvolver::Evolve ... ";
 
-		try
-		{
-			evolver.Evolve();
-		}
-		catch (std::invalid_argument& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (std::runtime_error& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (...)
-		{
-			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-		}
+		evolver.Evolve();
 
 		hyperellipseId++;
 	}
@@ -5603,22 +5353,7 @@ void TestProblematicMedialAxisPtClouds()
 
 		std::cout << "ManifoldEvolver::Evolve ... ";
 
-		try
-		{
-			evolver.Evolve();
-		}
-		catch (std::invalid_argument& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (std::runtime_error& ex)
-		{
-			std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Continue... < < < < < \n";
-		}
-		catch (...)
-		{
-			std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an exception! Continue... < < < < < \n";
-		}
+		evolver.Evolve();
 
 		unevenCrossId++;
 	}
@@ -5767,4 +5502,25 @@ void TestArcLengthCalculation()
 	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.5f);
 	const auto arcLengths4 = arcLengthCalc->CalculateArcLengths();
 	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths4, std::cout);
+}
+
+void TestCurve2DRotation()
+{
+	const auto center = pmp::Point2(200, 400);
+	const float innerRadius = 40.0f;
+	const std::vector<pmp::Point2> triangleVerticesSmall = {
+		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *innerRadius + center,
+		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *innerRadius + center,
+		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *innerRadius + center
+	};
+	const unsigned int segments = 30;
+
+	const pmp::Scalar angle = 45 * 1.2; // in degrees
+	auto curve = pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments, true);
+	if (!pmp::write_to_ply(curve, dataOutPath + "curve_BeforeRot.ply"))
+		std::cerr << "Error writing curve_BeforeRot.ply!\n";
+
+	curve = GetCurveRotateAboutCenterPoint(curve, angle);
+	if (!pmp::write_to_ply(curve, dataOutPath + "curve_AfterRot.ply"))
+		std::cerr << "Error writing curve_AfterRot.ply!\n";
 }

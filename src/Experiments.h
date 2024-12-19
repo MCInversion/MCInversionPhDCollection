@@ -217,6 +217,7 @@ void ExportBallPivotingBoundaryEdges();
 void TestProblematicMedialAxisPtClouds();
 void TestDFDivergence2D();
 void TestArcLengthCalculation();
+void TestCurve2DRotation();
 
 //
 // =================================================================================
@@ -339,6 +340,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestProblematicMedialAxisPtClouds", TestProblematicMedialAxisPtClouds },
     {"TestDFDivergence2D", TestDFDivergence2D },
     {"TestArcLengthCalculation", TestArcLengthCalculation },
+    {"TestCurve2DRotation", TestCurve2DRotation },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

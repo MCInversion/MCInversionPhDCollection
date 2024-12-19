@@ -906,12 +906,12 @@ namespace SDF
 		for (size_t i = 0; i < nOutlinePixels; i++)
 		{
 			// transform from real space to grid index space
-			ix = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
-			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
+			//ix = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
+			//iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 			
-			/*const double param = 1.0 - Geometry::BOX_INFLATION;
+			const double param = 1.0;
 			ix = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[0] + param * boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
-			iy = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[1] + param * boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));*/
+			iy = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[1] + param * boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 
 			gridPos = Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];

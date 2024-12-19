@@ -6,9 +6,9 @@ using namespace pmp;
 
 void pmp::EvolvingArcLengthCalculator::RecordPrevRefEdgePositions()
 {
-	if (!RefEdgeValid(true))
+	if (!RefEdgeValid())
 	{
-		// nothing to do
+		// cannot access invalid edge data
 		return;
 	}
 
@@ -18,7 +18,7 @@ void pmp::EvolvingArcLengthCalculator::RecordPrevRefEdgePositions()
 
 void EvolvingArcLengthCalculator::UpdateRefEdge()
 {
-	if (!RefEdgeValid(true) || !m_PrevRefEdge)
+	if (RefEdgeValid() || !m_PrevRefEdge || m_Curve.n_edges() == 0)
 	{
 		// nothing to do
 		return;

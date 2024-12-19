@@ -18,19 +18,17 @@
 //
 
 /// \brief eps(d) = 1, eps(d) = C_1 * (1 - exp(-d^2/C_2)), or any other control function for the Laplacian term in the equation. 
-using CurvatureCtrlFunction = std::function<double(double /* distance */)>;
+using CurvatureCtrlFunction = ExtendedFunction<std::function<double(double /* distance */)>>;
 
-const CurvatureCtrlFunction TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
-const CurvatureCtrlFunction STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
+constexpr auto TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
+constexpr auto STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
 
 /// \brief eta(d) = 0, eta(d) = D_1 * d * ((grad d . N) - D_2 * sqrt(1 - (grad d . N)^2), or any other control function for the advection term in the equation.
-using AdvectionCtrlFunction = std::function<double(double /* distance */, double /* negGradDotNormal */)>;
+using AdvectionCtrlFunction = ExtendedFunction<std::function<double(double /* distance */, double /* negGradDotNormal */)>>;
 
-const AdvectionCtrlFunction TRIVIAL_ETA = [](double /* distance */, double /* negGradDotNormal */) { return 0.0; };
-const AdvectionCtrlFunction STANDARD_ETA = [](double distance, double negGradDotNormal)
+constexpr auto TRIVIAL_ETA = [](double /* distance */, double /* negGradDotNormal */) { return 0.0; };
+constexpr auto STANDARD_ETA = [](double distance, double negGradDotNormal)
 {
-    if (distance >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
-        return 0.0;
     return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 };
 
@@ -205,8 +203,9 @@ public:
 
     /**
      * \brief Separate method for passing the resulting logged data into the log file.
+     * \param[in] omitLastTimeStep        a flag useful when an exception has been thrown during some time step.
      */
-    virtual void SaveLog() = 0;
+    virtual void SaveLog(bool omitLastTimeStep = false) = 0;
 
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
@@ -309,6 +308,9 @@ protected:
     /// \brief Checks the diagnostic flags in m_Settings.
     [[nodiscard]] bool LogManifoldValues();
 
+    /// \brief Computes lower bounds for control functions from maximum available distance range after scaling by m_ScalingFactor.
+    virtual void ComputeControlFunctionsLowerBounds() = 0;
+
 private:
 
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
@@ -337,17 +339,11 @@ public:
     {
         if (GetSettings().UseSemiImplicit)
         {
-            GetIntegrate() = [this](unsigned int step)
-            {
-	            SemiImplicitIntegrationStep(step);
-            };
+            GetIntegrate() = std::bind(&ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep, this, std::placeholders::_1);
         }
         else
         {
-            GetIntegrate() = [this](unsigned int step)
-            {
-	            ExplicitIntegrationStep(step);
-            };
+            GetIntegrate() = std::bind(&ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep, this, std::placeholders::_1);
         }
 
         if (GetSettings().UseLinearGridInterpolation)
@@ -369,8 +365,9 @@ public:
 
     /**
      * \brief Separate method for passing the resulting logged data into the log file.
+     * \param[in] omitLastTimeStep        a flag useful when an exception has been thrown during some time step.
      */
-    void SaveLog() override;
+    void SaveLog(bool omitLastTimeStep = false) override;
 
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
@@ -567,6 +564,9 @@ protected:
         return m_Logger;
     }
 
+    /// \brief Computes lower bounds for control functions from maximum available distance range after scaling by m_ScalingFactor.
+    void ComputeControlFunctionsLowerBounds() override;
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point2>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -671,17 +671,11 @@ public:
 
         if (GetSettings().UseSemiImplicit)
         {
-            GetIntegrate() = [this](unsigned int step)
-            {
-	            SemiImplicitIntegrationStep(step);
-            };
+            GetIntegrate() = std::bind(&ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep, this, std::placeholders::_1);
         }
         else
         {
-            GetIntegrate() = [this](unsigned int step)
-            {
-	            ExplicitIntegrationStep(step);
-            };
+            GetIntegrate() = std::bind(&ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep, this, std::placeholders::_1);
         }
 
         if (GetSettings().UseLinearGridInterpolation)
@@ -703,8 +697,9 @@ public:
 
     /**
      * \brief Separate method for passing the resulting logged data into the log file.
+     * \param[in] omitLastTimeStep        a flag useful when an exception has been thrown during some time step.
      */
-    void SaveLog() override;
+    void SaveLog(bool omitLastTimeStep = false) override;
 
     /**
      * \brief Preprocess for evolution, i.e.: construct the evolving manifolds, and transform the target data's distance field, and the DF's normalized neg gradient for stabilization.
@@ -910,6 +905,9 @@ protected:
         return m_Logger;
     }
 
+    /// \brief Computes lower bounds for control functions from maximum available distance range after scaling by m_ScalingFactor.
+    void ComputeControlFunctionsLowerBounds() override;
+
 private:
 
     std::shared_ptr<std::vector<pmp::Point>> m_TargetPointCloud{ nullptr }; //>! target point cloud geometry representing the spatial data for the reconstructed manifold.
@@ -1034,33 +1032,54 @@ public:
             m_Strategy->ExportCurrentState(0, m_Settings.OutputPath + m_Settings.ProcedureName);
         }
 
-        for (unsigned int step = 1; step <= m_Settings.NSteps; ++step)
+        try
         {
-            // Print progress to the console
-            std::cout << "\rManifoldEvolver::Evolve ... Step: " << step << "/" << m_Settings.NSteps << std::flush;
-
-            m_Strategy->PerformEvolutionStep(step);
-
-            if (m_Settings.DetectFeatures)
+            for (unsigned int step = 1; step <= m_Settings.NSteps; ++step)
             {
-                m_Strategy->DetectFeatures();
-            }
+                // Print progress to the console
+                std::cout << "\rManifoldEvolver::Evolve ... Step: " << step << "/" << m_Settings.NSteps << std::flush;
 
-            if (m_Settings.DoRemeshing)
-            {
-                if (m_Settings.RemeshingResizeTimeIds.contains(step))
+                m_Strategy->PerformEvolutionStep(step);
+
+                if (m_Settings.DetectFeatures)
                 {
-	                m_Strategy->ResizeRemeshingSettings(m_Settings.RemeshingResizeFactor);
+                    m_Strategy->DetectFeatures();
                 }
-                m_Strategy->Remesh();
-            }
 
-            m_Strategy->ComputeVariableDistanceFields();
+                if (m_Settings.DoRemeshing)
+                {
+                    if (m_Settings.RemeshingResizeTimeIds.contains(step))
+                    {
+	                    m_Strategy->ResizeRemeshingSettings(m_Settings.RemeshingResizeFactor);
+                    }
+                    m_Strategy->Remesh();
+                }
 
-            if (m_Settings.ExportPerTimeStep)
-            {
-                m_Strategy->ExportCurrentState(step, m_Settings.OutputPath + m_Settings.ProcedureName);
+                m_Strategy->ComputeVariableDistanceFields();
+
+                if (m_Settings.ExportPerTimeStep)
+                {
+                    m_Strategy->ExportCurrentState(step, m_Settings.OutputPath + m_Settings.ProcedureName);
+                }
             }
+        }
+        catch (std::invalid_argument& ex)
+        {
+            m_Strategy->SaveLog(true);
+            std::cerr << "> > > > > > > > > > > > > > std::invalid_argument: " << ex.what() << " Exiting... < < < < < \n";
+            return;
+        }
+        catch (std::runtime_error& ex)
+        {
+            m_Strategy->SaveLog(true);
+            std::cerr << "> > > > > > > > > > > > > > std::runtime_error: " << ex.what() << " Exiting... < < < < < \n";
+            return;
+        }
+        catch (...)
+        {
+            m_Strategy->SaveLog(true);
+            std::cerr << "> > > > > > > > > > > > > > ManifoldEvolver::Evolve has thrown an unknown exception! Exiting... < < < < < \n";
+            return;
         }
 
         m_Strategy->Postprocess();

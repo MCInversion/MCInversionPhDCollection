@@ -778,6 +778,30 @@ Mat3<Scalar> scaling_matrix_2d(const Vector<Scalar, 2>& s)
     return m;
 }
 
+// Template for a 3x3 rotation matrix in 2D with a reference point
+template <typename Scalar>
+Mat3<Scalar> rotation_matrix_2d(const Vector<Scalar, 2>& refPt, Scalar angle)
+{
+    Scalar radians = angle * Scalar(M_PI / 180.0); // Convert angle to radians
+    Scalar cos_a = cos(radians);
+    Scalar sin_a = sin(radians);
+
+    Mat3<Scalar> m(Scalar(0)); // Initialize all elements to 0
+
+    // Fill the matrix for rotation around the reference point
+    m(0, 0) = cos_a;
+    m(0, 1) = -sin_a;
+    m(1, 0) = sin_a;
+    m(1, 1) = cos_a;
+
+    m(0, 2) = refPt[0] * (1 - cos_a) + refPt[1] * sin_a; // Translation component for x
+    m(1, 2) = refPt[1] * (1 - cos_a) - refPt[0] * sin_a; // Translation component for y
+
+    m(2, 2) = Scalar(1); // Homogeneous coordinate
+
+    return m;
+}
+
 //! OpenGL matrix for rotation around x-axis by given angle (in degrees)
 template <typename Scalar>
 Mat4<Scalar> rotation_matrix_x(Scalar angle)
