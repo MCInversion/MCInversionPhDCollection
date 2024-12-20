@@ -2439,7 +2439,7 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.OuterManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
 	{
 		//return 0.0;
-		return 0.1 * (1.0 - exp(-distance * distance / 1.0));
+		return 0.5 * (1.0 - exp(-distance * distance / 1.0));
 	});
 	strategySettings.OuterManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
 	{

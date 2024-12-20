@@ -78,8 +78,45 @@ inline void PrintSparseMatrix(const SparseMatrix& matrix)
 			double value = matrix.coeff(i, j);
 			std::cout << std::setw(10) << value << " ";
 		}
-		std::cout << std::endl;
+		std::cout << "\n";
 	}
+}
+
+/**
+ * @brief Utility to print the entire SparseMatrix, including zeros, in a matrix-like format,
+ *        alongside the right-hand side vector/matrix (rhs).
+ *
+ * @param matrix The sparse matrix to print.
+ * @param rhs The right-hand side matrix to print alongside (should have 2 columns).
+ * @param matrixName    an optional identifier for matrix printout
+ */
+inline void PrintSparseMatrixAndRHS(const SparseMatrix& matrix, const Eigen::MatrixXd& rhs, const std::string& matrixName = "")
+{
+	// Validate that the RHS matrix has the correct dimensions
+	if (rhs.rows() != matrix.rows() || rhs.cols() != 2)
+	{
+		throw std::invalid_argument("The RHS matrix must have the same number of rows as the sparse matrix and exactly 2 columns.");
+	}
+
+	std::cout << "\n-----------------------------------------------------------------\n";
+	std::cout << (matrixName.empty() ? "Matrix" : matrixName) << " (" << matrix.rows() << " x " << matrix.cols() << "):\n";
+
+	// Set output formatting for better readability
+	std::cout << std::fixed << std::setprecision(6);
+
+	for (int i = 0; i < matrix.rows(); ++i)
+	{
+		for (int j = 0; j < matrix.cols(); ++j)
+		{
+			// Get the value at (i, j)
+			double value = matrix.coeff(i, j);
+			std::cout << std::setw(10) << value << " ";
+		}
+
+		// Print the RHS values for the current row
+		std::cout << "| " << std::setw(10) << rhs(i, 0) << " " << std::setw(10) << rhs(i, 1) << "\n";
+	}
+	std::cout << "\n-----------------------------------------------------------------\n";
 }
 
 /**

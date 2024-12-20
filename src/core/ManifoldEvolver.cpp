@@ -366,8 +366,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal);
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal), -1.0, 1.0);
 			const double advectionDistance = 
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
@@ -416,6 +416,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		Eigen::MatrixXd x = solver.solve(sysRhs);
 		if (solver.info() != Eigen::Success)
 		{
+			PrintSparseMatrixAndRHS(sysMat, sysRhs, "outerCurve Sys");
+
 			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
 				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
 			std::cerr << msg;
@@ -516,9 +518,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal);
-
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal), -1.0, 1.0);
 			const double advectionDistance = 
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight = 
@@ -575,6 +576,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		Eigen::MatrixXd x = solver.solve(sysRhs);
 		if (solver.info() != Eigen::Success)
 		{
+			PrintSparseMatrixAndRHS(sysMat, sysRhs, "innerCurve Sys");
+
 			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
 				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
 			std::cerr << msg;
@@ -679,8 +682,8 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal);
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal), -1.0, 1.0);
 			const double advectionDistance =
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
@@ -763,9 +766,8 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 
 			const auto vNormal = static_cast<pmp::vec2>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal);
-
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal), -1.0, 1.0);
 			const double advectionDistance =
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
@@ -1600,8 +1602,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal);
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal), -1.0, 1.0);
 			const double advectionDistance =
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
@@ -1721,9 +1723,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal);
-
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal), -1.0, 1.0);
 			const double advectionDistance =
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
@@ -1839,8 +1840,8 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal);
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal), -1.0, 1.0);
 			const double advectionDistance =
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
@@ -1923,9 +1924,8 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 
 			const auto vNormal = static_cast<pmp::vec3>(vNormalsProp[v]); // vertex unit normal
 
-			const auto negGradDotNormal = pmp::ddot(
-				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal);
-
+			const auto negGradDotNormal = std::clamp(pmp::ddot(
+				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal), -1.0, 1.0);
 			const double advectionDistance =
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
 			const double etaCtrlWeight =
