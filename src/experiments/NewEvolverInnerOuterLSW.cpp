@@ -2367,7 +2367,7 @@ namespace
 		pmp::ManifoldCurve2D resultCurve{ curve };
 		resultCurve *= rotationMatrix;
 		if (remesh)
-			RemeshWithDefaultSettings(resultCurve, nullptr, 1.0);
+			RemeshWithDefaultSettings(resultCurve, nullptr, 2.0);
 		return resultCurve;
 	}
 } // anonymous namespace
@@ -2407,8 +2407,9 @@ void EquilibriumPairedManifoldTests()
 	const double minDistancePercentageEpsilon = 0.0;
 	const double minDistancePercentageEta = 0.05;
 
-	constexpr bool logCtrlFunctionValues{ true };
-	constexpr bool logEpsilon{ true };
+	constexpr bool logCtrlFunctionValues{ false };
+	constexpr bool logEpsilon{ false };
+	constexpr bool logErrorValues{ false };
 
 	// List of curve pairs to evolve
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
@@ -2425,7 +2426,7 @@ void EquilibriumPairedManifoldTests()
 		//pmp::CurveFactory::sampled_polygon(squareVerticesSmall, segments, true)},
 
 		// Pair 4: Outer circle and inner chamfered equilateral triangle
-		{GetCurveRotatedAboutCenterPoint(pmp::CurveFactory::circle(center, outerRadius, segments), angle, true),
+		{GetCurveRotatedAboutCenterPoint(pmp::CurveFactory::circle(center, outerRadius, segments), angle, false),
 		GetCurveRotatedAboutCenterPoint(pmp::CurveFactory::sampled_polygon(triangleVerticesSmall, segments / 2, true), angle, false)}
 	};
 
@@ -2437,7 +2438,8 @@ void EquilibriumPairedManifoldTests()
 	// use PreComputeAdvectionDiffusionParams?
 	strategySettings.OuterManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
 	{
-		return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+		//return 0.0;
+		return 0.1 * (1.0 - exp(-distance * distance / 1.0));
 	});
 	strategySettings.OuterManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
 	{
@@ -2447,6 +2449,7 @@ void EquilibriumPairedManifoldTests()
 	});
 	strategySettings.InnerManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
 	{
+		//return 0.0;
 		return 0.001 * TRIVIAL_EPSILON(distance);
 	});
 	strategySettings.InnerManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
@@ -2454,7 +2457,6 @@ void EquilibriumPairedManifoldTests()
 		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	});
-	strategySettings.LevelOfDetail = 4;
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
@@ -2464,6 +2466,7 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 	//strategySettings.FieldSettings.FieldIsoLevel = 2.0;
+	strategySettings.UseLinearGridInterpolation = false;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
@@ -2480,6 +2483,17 @@ void EquilibriumPairedManifoldTests()
 			strategySettings.DiagSettings.LogOuterManifoldEta = true;
 			strategySettings.DiagSettings.LogInnerManifoldsEta = true;
 		}
+	}
+	if (logErrorValues)
+	{
+		//strategySettings.DiagSettings.LogOuterManifoldErrors = true;
+		//strategySettings.DiagSettings.LogInnerManifoldsErrors = true;
+
+		//strategySettings.DiagSettings.LogOuterManifoldXErrors = true;
+		//strategySettings.DiagSettings.LogInnerManifoldsXErrors = true;
+
+		strategySettings.DiagSettings.LogOuterManifoldYErrors = true;
+		strategySettings.DiagSettings.LogInnerManifoldsYErrors = true;
 	}
 
 	// Global settings

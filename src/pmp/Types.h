@@ -22,6 +22,8 @@
 #define PMP_ASSERT(x) assert(x)
 #endif
 
+//#define PMP_SCALAR_TYPE_64 true
+
 //! The pmp-library namespace
 namespace pmp {
 

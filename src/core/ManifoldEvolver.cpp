@@ -4,6 +4,8 @@
 #include "pmp/algorithms/Features.h"
 #include "pmp/algorithms/Normals.h"
 
+#include "utils/NumericalUtils.h"
+
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MeshAnalysis.h"
@@ -378,7 +380,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
 				if (GetSettings().DiagSettings.LogOuterManifoldEta)
 					m_Logger.LogValue(m_OuterCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
-				if (!arcLengths.empty() && (GetSettings().DiagSettings.LogOuterManifoldEpsilon || GetSettings().DiagSettings.LogOuterManifoldEta))
+				if (!arcLengths.empty())
 					m_Logger.LogValue(m_OuterCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
 			}
 
@@ -386,9 +388,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			sysRhs.row(v.idx()) = vertexRhs;
 
 			//const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // * (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); // (1.0 - exp(-interaction.Distance * interaction.Distance));
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); // (1.0 - exp(-interaction.Distance * interaction.Distance));
 
-			if (tanRedistWeight > 0.0f)
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterCurve, v, vNormal, tanRedistWeight);
@@ -424,6 +426,24 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
+
+			if (GetSettings().DiagSettings.LogOuterManifoldErrors)
+			{
+				const pmp::vec2 remainderVec{
+					Utils::Get32BitRemainder(newPos[0]),
+					Utils::Get32BitRemainder(newPos[1])
+				};
+				m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderMagnitude", i, norm(remainderVec));
+			}
+			else if (GetSettings().DiagSettings.LogOuterManifoldXErrors)
+			{
+				m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderX", i, Utils::Get32BitRemainder(newPos[0]));
+			}
+			else if (GetSettings().DiagSettings.LogOuterManifoldYErrors)
+			{
+				m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderY", i, Utils::Get32BitRemainder(newPos[1]));
+			}
+
 			if (!m_EvolBox.Contains(newPos))
 			{
 				const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: vertex " + std::to_string(i) 
@@ -511,7 +531,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 					m_Logger.LogValue(innerCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
 				if (GetSettings().DiagSettings.LogInnerManifoldsEta)
 					m_Logger.LogValue(innerCurve.get(), "etaCtrlWeight", v.idx(), etaCtrlWeight);
-				if (!arcLengths.empty() && (GetSettings().DiagSettings.LogInnerManifoldsEpsilon || GetSettings().DiagSettings.LogInnerManifoldsEta))
+				if (!arcLengths.empty())
 					m_Logger.LogValue(innerCurve.get(), "arcLength", v.idx(), arcLengths[v.idx()]);
 			}
 
@@ -519,9 +539,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			sysRhs.row(v.idx()) = vertexRhs;
 
 			//const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * 0.0; // (1.0 - exp(-interaction.Distance * interaction.Distance / 1.0));
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); //(1.0 - exp(-interaction.Distance * interaction.Distance));
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight); //(1.0 - exp(-interaction.Distance * interaction.Distance));
 
-			if (tanRedistWeight > 0.0f)
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerCurve, v, vNormal, tanRedistWeight);
@@ -566,6 +586,24 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (unsigned int i = 0; i < NVertices; i++)
 		{
 			const auto newPos = x.row(i);
+
+			if (GetSettings().DiagSettings.LogInnerManifoldsErrors)
+			{
+				const pmp::vec2 remainderVec{
+					Utils::Get32BitRemainder(newPos[0]),
+					Utils::Get32BitRemainder(newPos[1])
+				};
+				m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderMagnitude", i, norm(remainderVec));
+			}
+			else if (GetSettings().DiagSettings.LogInnerManifoldsXErrors)
+			{
+				m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderX", i, Utils::Get32BitRemainder(newPos[0]));
+			}
+			else if (GetSettings().DiagSettings.LogInnerManifoldsYErrors)
+			{
+				m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderY", i, Utils::Get32BitRemainder(newPos[1]));
+			}
+
 			if (!m_EvolBox.Contains(newPos))
 			{
 				//const auto newPosInOrigScale = affine_transform(m_TransformToOriginal, pmp::Point2(newPos));
@@ -2395,5 +2433,10 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 bool ManifoldEvolutionStrategy::LogManifoldValues()
 {
 	return m_Settings.DiagSettings.LogOuterManifoldEpsilon || m_Settings.DiagSettings.LogInnerManifoldsEpsilon ||
-		m_Settings.DiagSettings.LogOuterManifoldEta || m_Settings.DiagSettings.LogInnerManifoldsEta;
+		m_Settings.DiagSettings.LogOuterManifoldEta || m_Settings.DiagSettings.LogInnerManifoldsEta ||
+		m_Settings.DiagSettings.LogOuterManifoldErrors || m_Settings.DiagSettings.LogInnerManifoldsErrors ||
+		m_Settings.DiagSettings.LogOuterManifoldXErrors || m_Settings.DiagSettings.LogOuterManifoldYErrors ||
+		m_Settings.DiagSettings.LogInnerManifoldsXErrors || m_Settings.DiagSettings.LogInnerManifoldsYErrors;
 }
+
+// ================================================

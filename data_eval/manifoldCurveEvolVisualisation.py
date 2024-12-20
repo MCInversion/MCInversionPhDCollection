@@ -172,7 +172,7 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 # a specified time step container for exporting a single png with opaque curve polylines (except the last one). If empty, no png will be exported
 #multi_png_time_steps = []
 #multi_png_time_steps = [0]
-#multi_png_time_steps = [0, 2, 4, 8, 12, 16, 22]
+#multi_png_time_steps = [0, 2, 4, 8, 12, 16, 18]
 #multi_png_time_steps = [0, 10, 20, 30, 100, 200, 300, 400] 
 #multi_png_time_steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] 
 #multi_png_time_steps = [0, 4, 10, 40, 100, 180]

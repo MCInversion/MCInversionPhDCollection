@@ -99,6 +99,18 @@ struct DiagnosticSettings
     bool LogInnerManifoldsEpsilon{ false }; //>! whether to log values of epsilon (curvature control function) for each vertex and each time step for each inner manifold.
     bool LogOuterManifoldEta{ false };  //>! whether to log values of eta (advection control function) for each vertex and each time step for the outer manifold.
     bool LogInnerManifoldsEta{ false }; //>! whether to log values of eta (advection control function) for each vertex and each time step for each inner manifold.
+
+    //bool LogOuterManifoldDisplacements{ false };
+    //bool LogInnerManifoldsDisplacements{ false };
+
+    // numerical diagnostics
+    bool LogOuterManifoldErrors{ false };
+    bool LogInnerManifoldsErrors{ false };
+
+    bool LogOuterManifoldXErrors{ false };
+    bool LogOuterManifoldYErrors{ false };
+    bool LogInnerManifoldsXErrors{ false };
+    bool LogInnerManifoldsYErrors{ false };
 };
 
 /**
