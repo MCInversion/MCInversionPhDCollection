@@ -53,7 +53,7 @@ using AreaFunction = std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)>
  * \param stabilizationFactor    a multiplier for stabilizing mean co-volume area.
  * \return scaling factor for mesh and scalar grid.
  */
-[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor = 1.0f);
+[[nodiscard]] pmp::Scalar GetStabilizationScalingFactor(const double& timeStep, const pmp::Scalar& icoRadius, const unsigned int& icoSubdiv, const pmp::Scalar& stabilizationFactor = 1.0);
 
 /// \brief identifier for sparse matrix.
 using SparseMatrix = Eigen::SparseMatrix<double>;
@@ -187,7 +187,7 @@ inline void RegularizeMatrixInPlace(SparseMatrix& matrix, double lambda)
  * \param weight     weight of the velocity vector.
  * \return tangential velocity vector.
  */
-[[nodiscard]] pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const pmp::vec3& vNormal, const float& weight = 1.0f);
+[[nodiscard]] pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const pmp::vec3& vNormal, const pmp::Scalar& weight = 1.0);
 
 /**
  * \brief Computes tangential update velocity for a mesh vertex with a given weight.
@@ -197,7 +197,7 @@ inline void RegularizeMatrixInPlace(SparseMatrix& matrix, double lambda)
  * \param weight     weight of the velocity vector.
  * \return tangential velocity vector.
  */
-[[nodiscard]] pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v, const pmp::vec2& vNormal, const float& weight = 1.0f);
+[[nodiscard]] pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v, const pmp::vec2& vNormal, const pmp::Scalar& weight = 1.0);
 
 // ======================================================================================================================
 
@@ -250,9 +250,9 @@ enum class [[nodiscard]] FeatureDetectionType
 struct MeshTopologySettings
 {
 	bool FixSelfIntersections{ true }; //>! if true, self-intersecting faces within the evolving surface will be removed, and the holes will be patched by pmp::HoleFilling.
-	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	pmp::Scalar MinEdgeMultiplier{ 0.14 }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.1 }; //>! the fraction of total time steps after which remeshing should take place.
-	float EdgeLengthDecayFactor{ 0.98f }; //>! decay factor for minimum (and consequently maximum) edge length.
+	pmp::Scalar EdgeLengthDecayFactor{ 0.98 }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
@@ -263,8 +263,8 @@ struct MeshTopologySettings
 	FeatureDetectionType FeatureType{ FeatureDetectionType::MeanCurvature }; //>! type of feature detection function.
 	double MinDihedralAngle{ 1.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 	double MaxDihedralAngle{ 2.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
-	float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
-	float CriticalMeanCurvatureAngle{ 1.0f * static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
+	pmp::Scalar PrincipalCurvatureFactor{ 2.0 }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+	pmp::Scalar CriticalMeanCurvatureAngle{ 1.0 * static_cast<pmp::Scalar>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
 	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 
@@ -280,7 +280,7 @@ struct MeshTopologySettings
 [[nodiscard]] bool IsRemeshingNecessary(const CoVolumeStats& stats, const double& tStep);
 
 /// \brief Evaluates whether remeshing is necessary from the condition number metric for equilateral triangles.
-[[nodiscard]] bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianConditionNumbers);
+[[nodiscard]] bool IsRemeshingNecessary(const std::vector<pmp::Scalar>& equilateralJacobianConditionNumbers);
 
 /// \brief Evaluates whether remeshing is necessary from the condition number metric for equilateral triangles that do not have a feature vertex.
 [[nodiscard]] bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh);
@@ -305,7 +305,7 @@ struct MeshTopologySettings
 /// \brief A (one-time) evaluation whether the distance to target reaches a lower bound.
 ///	\param distancePerVertexValues    a vector of distance values on the evolving surface.
 ///	\return true if the conditions for feature detection are satisfied.
-[[nodiscard]] bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues);
+[[nodiscard]] bool ShouldDetectFeatures(const std::vector<pmp::Scalar>& distancePerVertexValues);
 
 /// \brief Sets a static container for time indices for a particular evolver setup.
 void SetRemeshingAdjustmentTimeIndices(const std::unordered_set<unsigned int>& valuesSet);
@@ -327,7 +327,7 @@ std::unordered_set<unsigned int>& GetRemeshingAdjustmentTimeIndices();
 ///	\param maxEdgeLength    the maximum edge length to be adjusted.
 ///	\param approxError      approximation error to be adjusted.
 ///
-void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, float& maxEdgeLength, float& approxError);
+void AdjustRemeshingLengths(const pmp::Scalar& decayFactor, pmp::Scalar& minEdgeLength, pmp::Scalar& maxEdgeLength, pmp::Scalar& approxError);
 
 /**
  * \brief Logs manifolds which need remeshing.
@@ -371,7 +371,7 @@ private:
  */
 struct ManifoldAdaptiveRemeshingParams
 {
-	float MinEdgeMultiplier{ 0.14f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	pmp::Scalar MinEdgeMultiplier{ 0.14 }; //>! multiplier for minimum edge length in adaptive remeshing.
 	unsigned int NRemeshingIters{ 3 }; //>! the number of iterations for pmp::Remeshing.
 	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
 	bool UseBackProjection{ true }; //>! if true surface kd-tree back-projection will be used for pmp::Remeshing.
@@ -384,7 +384,7 @@ struct ManifoldAdaptiveRemeshingParams
  * \param remeshingParams        input parameters for manifold adaptive remeshing.
  * \return the result AdaptiveRemeshingSettings.
  */
-[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, const ManifoldAdaptiveRemeshingParams& remeshingParams);
+[[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, pmp::Scalar radius, const ManifoldAdaptiveRemeshingParams& remeshingParams);
 
 /**
  * \brief A utility for estimating the edge sizing, error bound and other parameters for adaptive remeshing.
@@ -402,16 +402,16 @@ template <typename ManifoldType>
 
 	pmp::AdaptiveRemeshingSettings settings;
 
-	float minEdgeLength = std::numeric_limits<float>::max();
+	auto minEdgeLength = std::numeric_limits<pmp::Scalar>::max();
 	for (const auto e : manifold->edges())
 	{
-		float edgeLength = manifold->edge_length(e);
+		auto edgeLength = manifold->edge_length(e);
 		minEdgeLength = std::min(minEdgeLength, edgeLength);
 	}
 
-	settings.MinEdgeLength = remeshingParams.MinEdgeMultiplier * minEdgeLength / 2.0f;
-	settings.MaxEdgeLength = 4.0f * settings.MinEdgeLength;
-	settings.ApproxError = 0.25f * (settings.MinEdgeLength + settings.MaxEdgeLength);
+	settings.MinEdgeLength = remeshingParams.MinEdgeMultiplier * minEdgeLength / 2.0;
+	settings.MaxEdgeLength = 4.0 * settings.MinEdgeLength;
+	settings.ApproxError = 0.25 * (settings.MinEdgeLength + settings.MaxEdgeLength);
 
 	settings.NRemeshingIterations = remeshingParams.NRemeshingIters;
 	settings.NTangentialSmoothingIters = remeshingParams.NTanSmoothingIters;
@@ -428,7 +428,7 @@ template <typename ManifoldType>
  * \return the result AdaptiveRemeshingSettings.
  */
 [[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(
-	const std::shared_ptr<pmp::SurfaceMesh>& icosphere,	float radius, const pmp::Point& center);
+	const std::shared_ptr<pmp::SurfaceMesh>& icosphere, pmp::Scalar radius, const pmp::Point& center);
 
 /// \brief  A utility for computing the edge sizing and error limits from an arbitrary mesh.
 [[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromMesh(const std::shared_ptr<pmp::SurfaceMesh>& mesh);
@@ -441,7 +441,7 @@ template <typename ManifoldType>
  * \return the result AdaptiveRemeshingSettings.
  */
 [[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(
-	const std::shared_ptr<pmp::ManifoldCurve2D>& circlePolyline, float radius, const pmp::Point2& center);
+	const std::shared_ptr<pmp::ManifoldCurve2D>& circlePolyline, pmp::Scalar radius, const pmp::Point2& center);
 
 /// \brief  A utility for computing the edge sizing and error limits from an arbitrary manifold curve.
 [[nodiscard]] pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& curve);
@@ -469,7 +469,7 @@ public:
 	}
 
 	/// \brief Adjust all remeshing settings using a provided resize factor
-	void AdjustAllRemeshingLengths(float resizeFactor)
+	void AdjustAllRemeshingLengths(pmp::Scalar resizeFactor)
 	{
 		for (auto& remeshingSettings : m_ManifoldSettings | std::views::values)
 		{
@@ -511,7 +511,7 @@ public:
 	{
 		if (m_ManifoldSettings.empty())
 		{
-			return -1.0f; // Return a default value if the map is empty
+			return -1.0; // Return a default value if the map is empty
 		}
 
 		// Use std::max_element to find the SphereType with the maximum radius
@@ -528,7 +528,7 @@ public:
 	{
 		if (m_ManifoldSettings.empty())
 		{
-			return -1.0f; // Return a default value if the map is empty
+			return -1.0; // Return a default value if the map is empty
 		}
 
 		// Use std::max_element to find the SphereType with the maximum radius

@@ -1,12 +1,13 @@
 #pragma once
 
+#include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 
 #include "GeometryConversionUtils.h"
 
 #include <optional>
 
-#include "pmp/ManifoldCurve2D.h"
 
 namespace Geometry
 {
@@ -44,11 +45,11 @@ namespace Geometry
 
 	/// \brief Computes the condition number of a equilateral Jacobian of this triangle.
 	///        Note: The Jacobian corresponds to the planar transformation from triangle (-0.5, 0), (0.5, 0), (0, 1) to the evaluated triangle.
-	[[nodiscard]] float GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face);
+	[[nodiscard]] pmp::Scalar GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face);
 
 	/// \brief Preferred min and max values for the equilateral Jacobian condition number.
-	constexpr float JACOBIAN_COND_MIN = 1.0f;
-	constexpr float JACOBIAN_COND_MAX = 1.5f;
+	constexpr pmp::Scalar JACOBIAN_COND_MIN = 1.0;
+	constexpr pmp::Scalar JACOBIAN_COND_MAX = 1.5;
 
 	// ============================================================================================================
 
@@ -65,7 +66,7 @@ namespace Geometry
 	void ComputeEdgeDihedralAngles(pmp::SurfaceMesh& mesh);
 
 	/// \brief Computes vertex principal curvatures and mean curvature + properties related to feature detection.
-	void ComputeVertexCurvaturesAndRelatedProperties(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor = 2.0f);
+	void ComputeVertexCurvaturesAndRelatedProperties(pmp::SurfaceMesh& mesh, const pmp::Scalar& principalCurvatureFactor = 2.0);
 
 	/// \brief Computes z-level elevation values for each vertex.
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh);
@@ -83,7 +84,7 @@ namespace Geometry
 	[[nodiscard]] bool EvaluatePMPSurfaceMeshSaliency(pmp::SurfaceMesh& mesh, const double& forcedVariance = -1.0, const bool& normalizeValues = false);
 
 	/// \brief Prints the evaluated histogram data.
-	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os);
+	void PrintHistogramResultData(const std::pair<std::pair<pmp::Scalar, pmp::Scalar>, std::vector<unsigned int>>& histData, std::ostream& os);
 
 	/// \brief A test function for subdivision mesh counts estimation.
 	/// See: "Cavarga, Mesh Primitive Counting Formula for Subdivision Surfaces, SCG 2023".
@@ -130,15 +131,15 @@ namespace Geometry
 	[[nodiscard]] pmp::Scalar CalculateSignedAreaOfASimpleClosedCurve(const pmp::ManifoldCurve2D& curve);
 
 	/// \brief face quality metric computation function.
-	using FaceQualityFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
+	using FaceQualityFunction = std::function<pmp::Scalar(const pmp::SurfaceMesh&, const pmp::Face&)>;
 
 	/// \brief A simple wrapper for the range of values for FaceQualityFunction.
 	struct FaceQualityRange
 	{
-		pmp::Scalar Min{ 0.0f };
-		pmp::Scalar Max{ 1.0f };
+		pmp::Scalar Min{ 0.0 };
+		pmp::Scalar Max{ 1.0 };
 
-		bool operator() (const float& val) const
+		bool operator() (const pmp::Scalar& val) const
 		{
 			return val > Min && val < Max;
 		}

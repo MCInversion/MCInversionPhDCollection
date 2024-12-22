@@ -39,7 +39,7 @@ struct BE_ThresholdSettings
 struct BE_IcoSphereSettings
 {
 	pmp::vec3 Center{};
-	float Radius{ 1.0f };
+	pmp::Scalar Radius{ 1.0 };
 };
 
 /**
@@ -58,9 +58,9 @@ struct BE_CurvatureSettings
  */
 struct BE_MeshTopologySettings
 {
-	float MinEdgeMultiplier{ 0.07f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	pmp::Scalar MinEdgeMultiplier{ 0.07 }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.0 }; //>! the fraction of total time steps after which remeshing should take place.
-	float EdgeLengthDecayFactor{ 0.97f }; //>! decay factor for minimum (and consequently maximum) edge length.
+	pmp::Scalar EdgeLengthDecayFactor{ 0.97 }; //>! decay factor for minimum (and consequently maximum) edge length.
 	double RemeshingSizeDecayStartTimeFactor{ 0.2 }; //>! decay of edge length bounds should take place after (this value) * NSteps of evolution.
 	unsigned int StepStrideForEdgeDecay{ 5 }; //>! the number of steps after which edge length bound decay takes place.
 	double FeatureDetectionStartTimeFactor{ 0.4 }; //>! feature detection becomes relevant after (this value) * NSteps.
@@ -190,10 +190,10 @@ private:
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
-	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
-	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
+	pmp::Scalar m_StartingSurfaceRadius{ 1.0 }; //>! radius of the starting surface.
+	pmp::Scalar m_ScalingFactor{ 1.0 }; //>! stabilization scaling factor value.
 
-	pmp::Scalar m_UnitNormalToGridScaleFactor{ 1.0f }; //>! scaling factor for voxel rasterization of surface unit normals for NormalIntensityWeightFunction.
+	pmp::Scalar m_UnitNormalToGridScaleFactor{ 1.0 }; //>! scaling factor for voxel rasterization of surface unit normals for NormalIntensityWeightFunction.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.

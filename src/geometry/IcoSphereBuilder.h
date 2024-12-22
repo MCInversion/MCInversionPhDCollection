@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pmp/Types.h"
+
 #include "PrimitiveMeshBuilder.h"
 
 /**
@@ -17,7 +19,7 @@ namespace Geometry
 	struct IcoSphereSettings
 	{
 		unsigned int SubdivisionLevel{ 0 }; //! subdivision level. Zero corresponds to a basic icosahedron.
-		float Radius{ 1.0f }; //! ico-sphere radius
+		pmp::Scalar Radius{ 1.0 }; //! ico-sphere radius
 		bool ComputeNormals{ false }; //! whether to compute vertex normals
 		bool UseRecursiveStrategy{ true }; //! if true the default recursive construction strategy will be used
 	};
@@ -42,7 +44,7 @@ namespace Geometry
 	private:
 
 		unsigned int m_SubdivisionLevel{ 0 }; //>! subdivision level. Zero corresponds to a basic icosahedron.
-		float m_Radius{ 1.0f }; //>! ico-sphere radius
+		pmp::Scalar m_Radius{ 1.0 }; //>! ico-sphere radius
 		bool m_ComputeNormals{ false };
 		bool m_UseRecursiveStrategy{ true };
 	};

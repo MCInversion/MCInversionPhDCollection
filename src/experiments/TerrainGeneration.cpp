@@ -28,7 +28,7 @@ void TerrainPtGenerationTest()
 		{
 			pmp::Point(0, 0, 0),
 			pmp::Point(100, 0, 0),
-			pmp::Point(50, 86.6f, 0) // Height of an equilateral triangle with side length 100 units
+			pmp::Point(50, 86.6, 0) // Height of an equilateral triangle with side length 100 units
 		},
 		// Example 3: More complicated concave polygon
 		{
@@ -48,14 +48,14 @@ void TerrainPtGenerationTest()
 		// Set up terrain settings
 		Geometry::TerrainSettings settings;
 		settings.BoundaryLoopPolyline = boundary;
-		settings.MinElevation = 0.0f;
-		settings.MaxElevation = 60.0f;
-		settings.SamplingRadius = 1.0f;
+		settings.MinElevation = 0.0;
+		settings.MaxElevation = 60.0;
+		settings.SamplingRadius = 1.0;
 		settings.SamplingAttempts = 30;
-		settings.NoiseScale = 50.0f;  // Increased to match the terrain scale
+		settings.NoiseScale = 50.0;  // Increased to match the terrain scale
 		settings.Octaves = 3;         // Reduced for less noise
-		settings.Persistence = 0.3f;  // Reduced for smoother transitions
-		settings.Lacunarity = 1.5f;   // Reduced to space out features
+		settings.Persistence = 0.3;  // Reduced for smoother transitions
+		settings.Lacunarity = 1.5;   // Reduced to space out features
 		settings.Seed = 4999;
 
 		// Create terrain builder
@@ -91,7 +91,7 @@ void TerrainTriangulationTest()
 		{
 			pmp::Point(0, 0, 0),
 			pmp::Point(100, 0, 0),
-			pmp::Point(50, 86.6f, 0) // Height of an equilateral triangle with side length 100 units
+			pmp::Point(50, 86.6, 0) // Height of an equilateral triangle with side length 100 units
 		},
 		// Example 3: More complicated concave polygon
 		{
@@ -111,14 +111,14 @@ void TerrainTriangulationTest()
 		// Set up terrain settings
 		Geometry::TerrainSettings settings;
 		settings.BoundaryLoopPolyline = boundary;
-		settings.MinElevation = 0.0f;
-		settings.MaxElevation = 60.0f;
-		settings.SamplingRadius = 1.0f;
+		settings.MinElevation = 0.0;
+		settings.MaxElevation = 60.0;
+		settings.SamplingRadius = 1.0;
 		settings.SamplingAttempts = 30;
-		settings.NoiseScale = 50.0f;  // Increased to match the terrain scale
+		settings.NoiseScale = 50.0;  // Increased to match the terrain scale
 		settings.Octaves = 3;         // Reduced for less noise
-		settings.Persistence = 0.3f;  // Reduced for smoother transitions
-		settings.Lacunarity = 1.5f;   // Reduced to space out features
+		settings.Persistence = 0.3;  // Reduced for smoother transitions
+		settings.Lacunarity = 1.5;   // Reduced to space out features
 		settings.Seed = 4999;
 
 		// Create terrain builder

@@ -11,7 +11,7 @@ namespace Geometry
         const auto center = bbox.center();
         const auto& boxMax = bbox.max();
         const auto& boxMin = bbox.min();
-        const float maxXYRadius = 0.5f * sqrt((boxMax[0] - boxMin[0]) * (boxMax[0] - boxMin[0]) + (boxMax[1] - boxMin[1]) * (boxMax[1] - boxMin[1]));
+        const float maxXYRadius = 0.5 * sqrt((boxMax[0] - boxMin[0]) * (boxMax[0] - boxMin[0]) + (boxMax[1] - boxMin[1]) * (boxMax[1] - boxMin[1]));
 
         const float ringRadius = m_Settings.RingRadius;
         const float tubeRadius = m_Settings.TubeRadius;

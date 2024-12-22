@@ -10,23 +10,23 @@ namespace Geometry
 	 * \param l     line length.
 	 * \return normal vector for the given parameters (u, v, r, l)
 	 */
-	[[nodiscard]] pmp::vec3 ComputeMobiusNormal(const float& u, const float& v, const float& r, const float& l)
+	[[nodiscard]] pmp::vec3 ComputeMobiusNormal(const pmp::Scalar& u, const pmp::Scalar& v, const pmp::Scalar& r, const pmp::Scalar& l)
 	{
-		const float norm = sqrt(l * l * (8 * r * r + 3 * l * 2 * v * 2 + l * v * (8 * r * cos(u) + l * v * cos(2 * u))));
-		constexpr float sqrt2 = static_cast<float>(M_SQRT2);
+		const pmp::Scalar norm = sqrt(l * l * (8 * r * r + 3 * l * 2 * v * 2 + l * v * (8 * r * cos(u) + l * v * cos(2 * u))));
+		constexpr pmp::Scalar sqrt2 = static_cast<pmp::Scalar>(M_SQRT2);
 		return pmp::vec3{
-			(sqrt2 * l * sin(u) * (2 * r * cos(u) - l * v * pow(sin(u), 2.0f))) / norm,
-			(sqrt2 * l * (l * v * pow(cos(u), 3.0f) + 2 * (r + l * v * cos(u)) * pow(sin(u), 2.0f))) / norm,
-			-1.0f * (l * sqrt2 * cos(u) * (2 * r + l * v * cos(u))) / norm
-		} * (-1.0f);
+			(sqrt2 * l * sin(u) * (2 * r * cos(u) - l * v * pow(sin(u), 2.0))) / norm,
+			(sqrt2 * l * (l * v * pow(cos(u), 3.0) + 2 * (r + l * v * cos(u)) * pow(sin(u), 2.0))) / norm,
+			-1.0 * (l * sqrt2 * cos(u) * (2 * r + l * v * cos(u))) / norm
+		} * (-1.0);
 	}
 
 	void MobiusStripBuilder::BuildBaseData()
 	{
 		m_BaseResult = std::make_unique<BaseMeshGeometryData>();
 
-		const float ringRadius = m_Settings.RingRadius;
-		const float sLineLength = m_Settings.SweepLineLength;
+		const pmp::Scalar ringRadius = m_Settings.RingRadius;
+		const pmp::Scalar sLineLength = m_Settings.SweepLineLength;
 
 		const size_t nRSegments = m_Settings.RingSegments;
 		const size_t nLSegments = m_Settings.SweepSegments;
@@ -43,15 +43,15 @@ namespace Geometry
 
 		for (unsigned int i = 0; i < nRSegments; i++)
 		{
-			const float ringParam = 2.0f * static_cast<float>(M_PI * i) / static_cast<float>(nRSegments);
+			const pmp::Scalar ringParam = 2.0 * static_cast<pmp::Scalar>(M_PI * i) / static_cast<pmp::Scalar>(nRSegments);
 			for (unsigned int j = 0; j < nLVerts; j++)
 			{
-				const float lineParam = sLineLength * (static_cast<float>(j) / static_cast<float>(nLVerts) - 0.5f);
-				const float rad = (ringRadius + 0.5f * sLineLength * lineParam * cos(ringParam));
+				const pmp::Scalar lineParam = sLineLength * (static_cast<pmp::Scalar>(j) / static_cast<pmp::Scalar>(nLVerts) - 0.5);
+				const pmp::Scalar rad = (ringRadius + 0.5 * sLineLength * lineParam * cos(ringParam));
 				m_BaseResult->Vertices.emplace_back(pmp::vec3{
 					rad * cos(ringParam),
 					rad * sin(ringParam),
-					0.5f * sLineLength * lineParam * sin(ringParam)
+					0.5 * sLineLength * lineParam * sin(ringParam)
 				});
 
 				if (i > 0 && j > 0)

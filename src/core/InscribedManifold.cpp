@@ -9,7 +9,7 @@
 std::vector<Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
     pmp::BoundingBox2 bbox(data.Points);
-    pmp::Point2 bboxCenter = (bbox.min() + bbox.max()) * 0.5f;
+    pmp::Point2 bboxCenter = (bbox.min() + bbox.max()) * 0.5;
 
     // Find the closest point to the bounding box center
     pmp::Scalar minDist = std::numeric_limits<pmp::Scalar>::max();
@@ -120,7 +120,7 @@ std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const In
 
     const auto& dim = grid.Dimensions();
     const auto& orig = grid.Box().min();
-    const float cellSize = grid.CellSize();
+    const pmp::Scalar cellSize = grid.CellSize();
 
     const auto Nx = static_cast<unsigned int>(dim.Nx);
     const auto Ny = static_cast<unsigned int>(dim.Ny);
@@ -286,7 +286,7 @@ namespace
 
             const unsigned int midX = (minX + maxX) / 2;
             const unsigned int midY = (minY + maxY) / 2;
-            const auto newRadius = static_cast<unsigned int>(std::floor(static_cast<float>(radius) / 2));
+            const auto newRadius = static_cast<unsigned int>(std::floor(static_cast<pmp::Scalar>(radius) / 2));
 
             RecursiveSearchForMaxima(circles, grid, gridGradient, minX, minY, midX, midY, newRadius, onTerminate, output, depth + 1, false);
             RecursiveSearchForMaxima(circles, grid, gridGradient, midX, minY, maxX, midY, newRadius, onTerminate, output, depth + 1, false);
@@ -348,7 +348,7 @@ namespace
             const unsigned int midX = (minX + maxX) / 2;
             const unsigned int midY = (minY + maxY) / 2;
             const unsigned int midZ = (minZ + maxZ) / 2;
-            const auto newRadius = static_cast<unsigned int>(std::floor(static_cast<float>(radius) / 2));
+            const auto newRadius = static_cast<unsigned int>(std::floor(static_cast<pmp::Scalar>(radius) / 2));
 
             RecursiveSearchForMaxima3D(spheres, grid, gridGradient, minX, minY, minZ, midX, midY, midZ, newRadius, onTerminate);
             RecursiveSearchForMaxima3D(spheres, grid, gridGradient, midX, minY, minZ, maxX, midY, midZ, newRadius, onTerminate);
@@ -380,7 +380,7 @@ std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calcul
 
     const auto& dim = grid.Dimensions();
     const auto& orig = grid.Box().min();
-    const float cellSize = grid.CellSize();
+    const pmp::Scalar cellSize = grid.CellSize();
     const auto Nx = static_cast<unsigned int>(dim.Nx);
     const auto Ny = static_cast<unsigned int>(dim.Ny);
 
@@ -452,14 +452,14 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
     auto& grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
     const auto gridGradient = ComputeGradient(grid);
-    constexpr float GRAD_EPSILON = 1e-5f;
+    constexpr pmp::Scalar GRAD_EPSILON = 1e-5;
 
     const auto& dim = grid.Dimensions();
     const auto Nx = static_cast<unsigned int>(dim.Nx);
     const auto Ny = static_cast<unsigned int>(dim.Ny);
 
     // Derive the sample interval from grid dimensions
-    constexpr float factor = 0.2f; // TODO: make this value a parameter
+    constexpr pmp::Scalar factor = 0.2; // TODO: make this value a parameter
     const auto sampleInterval = static_cast<unsigned int>(std::max(1u, static_cast<unsigned int>(Nx * factor)));
 
     // Build the KD-tree
@@ -584,7 +584,7 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
 std::vector<Sphere3D> NaiveInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
 {
     pmp::BoundingBox bbox(data.Points);
-    pmp::Point bboxCenter = (bbox.min() + bbox.max()) * 0.5f;
+    pmp::Point bboxCenter = (bbox.min() + bbox.max()) * 0.5;
 
     // Find the closest point to the bounding box center
     pmp::Scalar minDist = std::numeric_limits<pmp::Scalar>::max();
@@ -618,7 +618,7 @@ std::vector<Sphere3D> DistanceFieldInscribedSphereCalculator::Calculate(const In
 
     const auto& dim = grid.Dimensions();
     const auto& orig = grid.Box().min();
-    const float cellSize = grid.CellSize();
+    const pmp::Scalar cellSize = grid.CellSize();
 
     const auto Nx = static_cast<unsigned int>(dim.Nx);
     const auto Ny = static_cast<unsigned int>(dim.Ny);
@@ -684,7 +684,7 @@ std::vector<Sphere3D> HierarchicalDistanceFieldInscribedSphereCalculator::Calcul
 
     const auto& dim = grid.Dimensions();
     const auto& orig = grid.Box().min();
-    const float cellSize = grid.CellSize();
+    const pmp::Scalar cellSize = grid.CellSize();
     const auto Nx = static_cast<unsigned int>(dim.Nx);
     const auto Ny = static_cast<unsigned int>(dim.Ny);
     const auto Nz = static_cast<unsigned int>(dim.Nz);
@@ -739,7 +739,7 @@ std::vector<Sphere3D> ParticleSwarmDistanceFieldInscribedSphereCalculator::Calcu
     //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);
     const auto gridGradient = ComputeGradient(grid);
-    constexpr float GRAD_EPSILON = 1e-5f;
+    constexpr pmp::Scalar GRAD_EPSILON = 1e-5;
 
     const auto& dim = grid.Dimensions();
     const auto Nx = static_cast<unsigned int>(dim.Nx);
@@ -747,7 +747,7 @@ std::vector<Sphere3D> ParticleSwarmDistanceFieldInscribedSphereCalculator::Calcu
     const auto Nz = static_cast<unsigned int>(dim.Nz);
 
     // Derive the sample interval from grid dimensions
-    constexpr float factor = 0.2f; // TODO: make this value a parameter
+    constexpr pmp::Scalar factor = 0.2; // TODO: make this value a parameter
     const auto sampleInterval = static_cast<unsigned int>(std::max(1u, static_cast<unsigned int>(Nx * factor)));
 
     // Build the KD-tree

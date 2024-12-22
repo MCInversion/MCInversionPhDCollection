@@ -13,18 +13,18 @@ namespace Geometry
 	struct TerrainSettings
 	{
 		std::vector<pmp::Point> BoundaryLoopPolyline{}; //>! points determining the boundary of the generated terrain
-		pmp::Scalar MinElevation{ 0.0f }; //>! minimum elevation.
-		pmp::Scalar MaxElevation{ 100.0f }; //>! maximum elevation.
+		pmp::Scalar MinElevation{ 0.0 }; //>! minimum elevation.
+		pmp::Scalar MaxElevation{ 100.0 }; //>! maximum elevation.
 		
 		// Poisson Disk Sampling settings
-		pmp::Scalar SamplingRadius{ 1.0f }; //>! Example value, adjust as needed
+		pmp::Scalar SamplingRadius{ 1.0 }; //>! Example value, adjust as needed
 		size_t SamplingAttempts{ 30 }; //>! Typical value, can be adjusted
 
 		// Perlin Noise settings
-		pmp::Scalar NoiseScale{ 1.0f }; //>! Scale of the noise, affects frequency
+		pmp::Scalar NoiseScale{ 1.0 }; //>! Scale of the noise, affects frequency
 		size_t Octaves{ 4 }; //>! Number of noise layers
-		pmp::Scalar Persistence{ 0.5f }; //>! Amplitude decrease
-		pmp::Scalar Lacunarity{ 2.0f }; //>! Frequency increase
+		pmp::Scalar Persistence{ 0.5 }; //>! Amplitude decrease
+		pmp::Scalar Lacunarity{ 2.0 }; //>! Frequency increase
 
 		unsigned int Seed{ std::random_device{}() }; // Default seed is random
 	};

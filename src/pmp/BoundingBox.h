@@ -89,7 +89,7 @@ public:
     [[nodiscard]] const Point& max() const { return max_; }
 
     //! Get center point.
-    [[nodiscard]] Point center() const { return 0.5f * (min_ + max_); }
+    [[nodiscard]] Point center() const { return 0.5 * (min_ + max_); }
 
     //! Indicate if the bounding box is empty.
     [[nodiscard]] bool is_empty() const
@@ -100,7 +100,7 @@ public:
     //! Get the size of the bounding box.
     [[nodiscard]] Scalar size() const
     {
-        return is_empty() ? 0.0f : distance(max_, min_);
+        return is_empty() ? 0.0 : distance(max_, min_);
     }
 
     //! Get the intersection value of this box with another.
@@ -152,9 +152,9 @@ public:
     }
 
     //! Expand the size of the bounding box.
-    void expand(const float& x, const float& y, const float& z)
+    void expand(const Scalar& x, const Scalar& y, const Scalar& z)
     {
-        assert(x >= 0.0f && y >= 0.0f && z >= 0.0f);
+        assert(x >= 0.0 && y >= 0.0 && z >= 0.0);
         min_ -= Point(x, y, z);
         max_ += Point(x, y, z);
     }
@@ -271,7 +271,7 @@ public:
     [[nodiscard]] const Point2& max() const { return max_; }
 
     //! Get center point.
-    [[nodiscard]] Point2 center() const { return 0.5f * (min_ + max_); }
+    [[nodiscard]] Point2 center() const { return 0.5 * (min_ + max_); }
 
     //! Indicate if the bounding box is empty.
     [[nodiscard]] bool is_empty() const
@@ -282,7 +282,7 @@ public:
     //! Get the size of the bounding box.
     [[nodiscard]] Scalar size() const
     {
-        return is_empty() ? 0.0f : distance(max_, min_);
+        return is_empty() ? 0.0 : distance(max_, min_);
     }
 
     //! Get the intersection value of this box with another.
@@ -325,9 +325,9 @@ public:
     }
 
     //! Expand the size of the bounding box.
-    void expand(const float& x, const float& y)
+    void expand(const Scalar& x, const Scalar& y)
     {
-        assert(x >= 0.0f && y >= 0.0f);
+        assert(x >= 0.0 && y >= 0.0);
         min_ -= Point2(x, y);
         max_ += Point2(x, y);
     }
@@ -366,13 +366,13 @@ inline [[nodiscard]] mat4 CalculateTransformMatrixBetweenBoxes(const BoundingBox
     const mat4 translationMatrix = translation_matrix(translationVector);
 
     // Calculate scale factors for each dimension
-    const float scaleX = toBox.width() / fromBox.width();
-    const float scaleY = toBox.height() / fromBox.height();
-    const float scaleZ = toBox.depth() / fromBox.depth();
+    const Scalar scaleX = toBox.width() / fromBox.width();
+    const Scalar scaleY = toBox.height() / fromBox.height();
+    const Scalar scaleZ = toBox.depth() / fromBox.depth();
     mat4 scalingMatrix;
     if (forceUniform)
     {
-		const float uniformScale = (scaleX + scaleY + scaleZ) / 3.0f;
+		const Scalar uniformScale = (scaleX + scaleY + scaleZ) / 3.0;
         scalingMatrix = scaling_matrix(uniformScale);	    
     }
     else
@@ -391,12 +391,12 @@ inline [[nodiscard]] mat3 CalculateTransformationMatrixBetweenBoxes2D(const Boun
     const mat3 translationMatrix = translation_matrix(translationVector);
 
     // Calculate scale factors for each dimension
-    const float scaleX = toBox.width() / fromBox.width();
-    const float scaleY = toBox.height() / fromBox.height();
+    const Scalar scaleX = toBox.width() / fromBox.width();
+    const Scalar scaleY = toBox.height() / fromBox.height();
     mat3 scalingMatrix;
     if (forceUniform)
     {
-        const float uniformScale = (scaleX + scaleY) / 3.0f;
+        const Scalar uniformScale = (scaleX + scaleY) / 3.0;
         scalingMatrix = scaling_matrix_2d(uniformScale);
     }
     else

@@ -86,19 +86,19 @@ void SubdivisionTests2()
 	auto icoMesh = ico.GetPMPSurfaceMeshResult();
 
 	const pmp::mat4 matrixGeomScale{
-		2.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
+		2.0, 0.0, 0.0, 0.0,
+			0.0, 1.0, 0.0, 0.0,
+			0.0, 0.0, 1.0, 0.0,
+			0.0, 0.0, 0.0, 1.0
 	};
 	icoMesh *= matrixGeomScale;
 
 	pmp::Decimation decim(icoMesh);
-	decim.initialize(aspectRatio, 0, 0, normalDeviation, 0.0f);
+	decim.initialize(aspectRatio, 0, 0, normalDeviation, 0.0);
 	decim.decimate(icoMesh.n_vertices() * 0.01 * targetDecimPercentage);
 
 	pmp::Remeshing remeshing(icoMesh);
-	remeshing.uniform_remeshing(0.2f, 3);
+	remeshing.uniform_remeshing(0.2, 3);
 	icoMesh.write(dataOutPath + "ico_Decimated0.vtk");
 
 	// icoMesh is now an elongated decimated ellipsoid
@@ -121,8 +121,8 @@ void SubdivisionTests2()
 void SubdivisionTests3()
 {
 	constexpr Geometry::TorusSettings tSettings{
-		1.0f,
-			0.4f,
+		1.0,
+			0.4,
 			5,
 			3,
 			false
@@ -316,7 +316,7 @@ void SubdivPreallocationTests()
 void NewIcosphereTests()
 {
 	std::cout << "performNewIcosphereTests...\n";
-	Geometry::IcoSphereBuilder ico({ 5, 1.0f, true, false });
+	Geometry::IcoSphereBuilder ico({ 5, 1.0, true, false });
 	ico.BuildBaseData();
 
 	// test out BaseMeshGeometryData.
@@ -354,7 +354,7 @@ void IcospherePerformanceTests()
 
 			for (size_t i = 0; i < nSphereRuns; i++)
 			{
-				Geometry::IcoSphereBuilder ico0({ subdiv, 1.0f, true, true });
+				Geometry::IcoSphereBuilder ico0({ subdiv, 1.0, true, true });
 				ico0.BuildBaseData();
 			}
 
@@ -369,7 +369,7 @@ void IcospherePerformanceTests()
 
 			for (size_t i = 0; i < nSphereRuns; i++)
 			{
-				Geometry::IcoSphereBuilder ico1({ subdiv, 1.0f, true, false });
+				Geometry::IcoSphereBuilder ico1({ subdiv, 1.0, true, false });
 				ico1.BuildBaseData();
 			}
 

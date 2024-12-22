@@ -74,7 +74,7 @@ private:
     class HeapInterface
     {
     public:
-        HeapInterface(VertexProperty<float> prio, VertexProperty<int> pos)
+        HeapInterface(VertexProperty<Scalar> prio, VertexProperty<int> pos)
             : prio_(prio), pos_(pos)
         {
         }
@@ -85,7 +85,7 @@ private:
         void set_heap_position(Vertex v, int pos) { pos_[v] = pos; }
 
     private:
-        VertexProperty<float> prio_;
+        VertexProperty<Scalar> prio_;
         VertexProperty<int> pos_;
     };
 
@@ -103,7 +103,7 @@ private:
     bool texcoord_check(Halfedge h);
 
     // what is the priority of collapsing the halfedge h
-    float priority(const CollapseData& cd);
+    Scalar priority(const CollapseData& cd);
 
     // preprocess halfedge collapse
     void preprocess_collapse(const CollapseData& cd);
@@ -121,7 +121,7 @@ private:
 
     bool initialized_{false};
 
-    VertexProperty<float> vpriority_;
+    VertexProperty<Scalar> vpriority_;
     VertexProperty<Halfedge> vtarget_;
     VertexProperty<int> heap_pos_;
     VertexProperty<Quadric> vquadric_;

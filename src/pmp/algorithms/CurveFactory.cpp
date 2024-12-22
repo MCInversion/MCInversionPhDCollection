@@ -10,14 +10,14 @@ namespace pmp
 {
 	namespace
 	{
-	    void DeformCircleWithSineWave(ManifoldCurve2D& curve, float amplitude, float freq)
+	    void DeformCircleWithSineWave(ManifoldCurve2D& curve, Scalar amplitude, Scalar freq)
 	    {
 	        for (const auto v : curve.vertices())
 	        {
 	            Point2 p = curve.position(v) - Point2(0, 0);
-	            const float angle = atan2(p[1], p[0]);
+	            const Scalar angle = atan2(p[1], p[0]);
 	            vec2 direction = normalize(p);
-	            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0f);
+	            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0);
 	        }
 	    }
 
@@ -49,7 +49,7 @@ namespace pmp
 		Scalar endAngle)
 	{
         ManifoldCurve2D curve;
-        const bool isFullCircle = std::fabs(endAngle - startAngle - 2.0f * M_PI) < 1e-6f;
+        const bool isFullCircle = std::fabs(endAngle - startAngle - 2.0 * M_PI) < 1e-6;
         const size_t nVerts = (isFullCircle ? nSegments : nSegments + 1);
         curve.reserve(nVerts, nSegments);
         std::vector<Vertex> vertices;
@@ -87,7 +87,7 @@ namespace pmp
         return curve;
 	}
 
-    ManifoldCurve2D CurveFactory::sine_deformed_circle(const Point2& center, Scalar radius, size_t nSegments, float amplitude, float freq, Scalar startAngle, Scalar endAngle)
+    ManifoldCurve2D CurveFactory::sine_deformed_circle(const Point2& center, Scalar radius, size_t nSegments, Scalar amplitude, Scalar freq, Scalar startAngle, Scalar endAngle)
     {
         auto result = circle(center, radius, nSegments, startAngle, endAngle);
         DeformCircleWithSineWave(result, amplitude, freq);
@@ -159,7 +159,7 @@ namespace pmp
         }
 
         std::vector<Point2> polyVerticesCopy{ polyVertices };
-        if (checkOrientation && CalculatePolyPointsSignedArea(polyVerticesCopy) < 0.0f)
+        if (checkOrientation && CalculatePolyPointsSignedArea(polyVerticesCopy) < 0.0)
         {
             std::ranges::reverse(polyVerticesCopy);
         }
@@ -257,7 +257,7 @@ namespace pmp
         Scalar endAngle)
     {
         ManifoldCurve2D curve;
-        const bool isFullEllipse = std::fabs(endAngle - startAngle - 2.0f * M_PI) < 1e-6f;
+        const bool isFullEllipse = std::fabs(endAngle - startAngle - 2.0 * M_PI) < 1e-6;
         const size_t nVerts = (isFullEllipse ? nSegments : nSegments + 1);
         curve.reserve(nVerts, nSegments);
         std::vector<Vertex> vertices;

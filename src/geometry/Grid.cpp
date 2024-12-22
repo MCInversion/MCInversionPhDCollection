@@ -2,7 +2,7 @@
 
 namespace Geometry
 {
-	ScalarGrid::ScalarGrid(const float& cellSize, const pmp::BoundingBox& box)
+	ScalarGrid::ScalarGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -31,7 +31,7 @@ namespace Geometry
 		m_FrozenValues = std::vector(nValues, false);
 	}
 
-	ScalarGrid::ScalarGrid(const float& cellSize, const pmp::BoundingBox& box, const double& initVal)
+	ScalarGrid::ScalarGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box, const double& initVal)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -231,7 +231,7 @@ namespace Geometry
 
 	bool ScalarGrid::IsValid() const
 	{
-		if (m_CellSize <= 0.0f)
+		if (m_CellSize <= 0.0)
 			return false;
 
 		if (m_Box.is_empty())
@@ -253,7 +253,7 @@ namespace Geometry
 		m_FrozenValues = std::vector(nValues, false);
 	}
 
-	VectorGrid::VectorGrid(const float& cellSize, const pmp::BoundingBox& box)
+	VectorGrid::VectorGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -284,7 +284,7 @@ namespace Geometry
 		m_FrozenValues = std::vector(nValues, false);
 	}
 
-	VectorGrid::VectorGrid(const float& cellSize, const pmp::BoundingBox& box, const pmp::vec3& initVal)
+	VectorGrid::VectorGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box, const pmp::vec3& initVal)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -524,7 +524,7 @@ namespace Geometry
 
 	bool VectorGrid::IsValid() const
 	{
-		if (m_CellSize <= 0.0f)
+		if (m_CellSize <= 0.0)
 			return false;
 
 		if (m_Box.is_empty())
@@ -545,7 +545,7 @@ namespace Geometry
 		return m_Dimensions.Valid();
 	}
 
-	ScalarGrid2D::ScalarGrid2D(const float& cellSize, const pmp::BoundingBox2& box)
+	ScalarGrid2D::ScalarGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -570,7 +570,7 @@ namespace Geometry
 		m_FrozenValues = std::vector(nValues, false);
 	}
 
-	ScalarGrid2D::ScalarGrid2D(const float& cellSize, const pmp::BoundingBox2& box, const double& initVal)
+	ScalarGrid2D::ScalarGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box, const double& initVal)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -766,7 +766,7 @@ namespace Geometry
 
 	bool ScalarGrid2D::IsValid() const
 	{
-		if (m_CellSize <= 0.0f)
+		if (m_CellSize <= 0.0)
 			return false;
 
 		if (m_Box.is_empty())
@@ -787,7 +787,7 @@ namespace Geometry
 		m_FrozenValues = std::vector(nValues, false);
 	}
 
-	VectorGrid2D::VectorGrid2D(const float& cellSize, const pmp::BoundingBox2& box)
+	VectorGrid2D::VectorGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -813,7 +813,7 @@ namespace Geometry
 		m_FrozenValues = std::vector(nValues, false);
 	}
 
-	VectorGrid2D::VectorGrid2D(const float& cellSize, const pmp::BoundingBox2& box, const pmp::vec2& initVal)
+	VectorGrid2D::VectorGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box, const pmp::vec2& initVal)
 		: m_CellSize(cellSize)
 	{
 		// compute global grid bounds
@@ -1038,7 +1038,7 @@ namespace Geometry
 
 	bool VectorGrid2D::IsValid() const
 	{
-		if (m_CellSize <= 0.0f)
+		if (m_CellSize <= 0.0)
 			return false;
 
 		if (m_Box.is_empty())

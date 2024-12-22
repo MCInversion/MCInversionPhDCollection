@@ -20,7 +20,7 @@ struct IsoSurfaceEvolutionSettings
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
 	double FieldIsoLevelOffset{ 1.0 }; //! value by which the shrink-wrapped surface is offset from the target surface.
 
-	float ReSampledGridCellSize{ 1.0f }; //! cell size of the grid from which an isosurface will be generated.
+	pmp::Scalar ReSampledGridCellSize{ 1.0 }; //! cell size of the grid from which an isosurface will be generated.
 
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
@@ -32,7 +32,7 @@ struct IsoSurfaceEvolutionSettings
 	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
-	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
+	pmp::Scalar TangentialVelocityWeight{ 0.0 }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.
@@ -54,7 +54,7 @@ public:
 	 * \param fieldExpansionFactor     the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	 * \param settings                 surface evolution settings.
 	 */
-	IsoSurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const IsoSurfaceEvolutionSettings& settings);
+	IsoSurfaceEvolver(const Geometry::ScalarGrid& field, const pmp::Scalar& fieldExpansionFactor, const IsoSurfaceEvolutionSettings& settings);
 
 	/**
 	 * \brief Main functionality.
@@ -115,8 +115,8 @@ private:
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
-	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
-	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
+	pmp::Scalar m_ExpansionFactor{ 0.0 }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
+	pmp::Scalar m_ScalingFactor{ 1.0 }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.
@@ -142,4 +142,4 @@ void ReportInput(const IsoSurfaceEvolutionSettings& evolSettings, std::ostream& 
  * \param stabilizationFactor    a multiplier for stabilizing mean co-volume area.
  * \return scaling factor for mesh and scalar grid.
  */
-[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& cellSize, const float& stabilizationFactor = 1.0f);
+[[nodiscard]] pmp::Scalar GetStabilizationScalingFactor(const double& timeStep, const pmp::Scalar& cellSize, const pmp::Scalar& stabilizationFactor = 1.0);

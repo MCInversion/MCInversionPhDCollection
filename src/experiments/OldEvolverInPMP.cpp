@@ -52,11 +52,11 @@ void SDFTests()
 
 		const auto meshBBox = mesh.bounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 		const SDF::DistanceFieldSettings sdfSettings{
 			cellSize,
-				1.0f,
+				1.0,
 				DBL_MAX,
 				SDF::KDTreeSplitType::Center,
 				SDF::SignComputation::VoxelFloodFill,
@@ -96,7 +96,7 @@ void SDFTests()
 		std::cout << "---------------------------------------------------\n";
 
 		pmp::BoundingBox sdfBox(meshBBox);
-		const float expansion = 1.0f * minSize;
+		const pmp::Scalar expansion = 1.0 * minSize;
 		sdfBox.expand(expansion, expansion, expansion);
 		Geometry::ScalarGrid sdf2(cellSize, sdfBox);
 
@@ -120,7 +120,7 @@ void SphereTestOLD()
 		const SphereTestEvolutionSettings stSettings{
 			topoSettings,
 			false, false, dataOutPath,
-			ST_MeshLaplacian::Barycentric, 0.0f, false };
+			ST_MeshLaplacian::Barycentric, 0.0, false };
 
 		SphereTest st(stSettings);
 		st.PerformTest(4);
@@ -134,7 +134,7 @@ void SphereTestOLD()
 		const SphereTestEvolutionSettings stSettings{
 			topoSettings,
 			false, false, dataOutPath,
-			ST_MeshLaplacian::Barycentric, 0.25f, false };
+			ST_MeshLaplacian::Barycentric, 0.25, false };
 
 		SphereTest st(stSettings);
 		st.PerformTest(4);
@@ -148,7 +148,7 @@ void SphereTestOLD()
 		const SphereTestEvolutionSettings stSettings{
 			topoSettings,
 			false, false, dataOutPath,
-			ST_MeshLaplacian::Barycentric, 0.0f, true };
+			ST_MeshLaplacian::Barycentric, 0.0, true };
 
 		SphereTest st(stSettings);
 		st.PerformTest(4);
@@ -162,7 +162,7 @@ void SphereTestOLD()
 		const SphereTestEvolutionSettings stSettings{
 			topoSettings,
 			false, false, dataOutPath,
-			ST_MeshLaplacian::Barycentric, 0.25f, true };
+			ST_MeshLaplacian::Barycentric, 0.25, true };
 
 		SphereTest st(stSettings);
 		st.PerformTest(4);
@@ -190,10 +190,10 @@ void EvolverTests()
 		mesh.read(dataDirPath + name + ".obj");
 		const auto meshBBox = mesh.bounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::DistanceFieldSettings sdfSettings{
 			cellSize,
 				volExpansionFactor,
@@ -237,7 +237,7 @@ void EvolverTests()
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true
 		};
 		ReportInput(seSettings, std::cout);
@@ -263,10 +263,10 @@ void OldArmadilloLSWTest()
 	mesh.read(dataDirPath + name + ".obj");
 	const auto meshBBox = mesh.bounds();
 	const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-	const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-	const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-	const float cellSize = minSize / nVoxelsPerMinDimension;
-	constexpr float volExpansionFactor = 1.0f;
+	const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+	const pmp::Scalar maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+	const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+	constexpr pmp::Scalar volExpansionFactor = 1.0;
 	const SDF::DistanceFieldSettings sdfSettings{
 		cellSize,
 			volExpansionFactor,
@@ -298,10 +298,10 @@ void OldArmadilloLSWTest()
 	const double tau = defaultTimeStep; // time step
 
 	MeshTopologySettings topoParams;
-	topoParams.EdgeLengthDecayFactor = 0.95f;
+	topoParams.EdgeLengthDecayFactor = 0.95;
 	topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 	topoParams.NRemeshingIters = 5;
-	topoParams.PrincipalCurvatureFactor = 2.0f;
+	topoParams.PrincipalCurvatureFactor = 2.0;
 	topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 	topoParams.UseBackProjection = false;
 	AdvectionDiffusionParameters adParams = PreComputeAdvectionDiffusionParams(0.5 * sdfBoxMaxDim, minSize);
@@ -320,7 +320,7 @@ void OldArmadilloLSWTest()
 		dataOutPath,
 		MeshLaplacian::Voronoi,
 		{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-		0.05f,
+		0.05,
 		true,
 		//false
 	};
@@ -360,11 +360,11 @@ void IsosurfaceEvolverTests()
 		{ "happyBuddha", 1.5e-3 },
 		{ "rockerArm", 0.06 }
 	};
-	const std::map<std::string, float> resamplingFactors{
-		{"3holes", 3.0f },
-		{ "fertility", 2.0f },
-		{ "happyBuddha", 1.0f },
-		{ "rockerArm", 2.0f }
+	const std::map<std::string, pmp::Scalar> resamplingFactors{
+		{"3holes", 3.0 },
+		{ "fertility", 2.0 },
+		{ "happyBuddha", 1.0 },
+		{ "rockerArm", 2.0 }
 	};
 
 	for (const auto& name : higherGenusMeshNames)
@@ -373,10 +373,10 @@ void IsosurfaceEvolverTests()
 		mesh.read(dataDirPath + name + ".obj");
 		const auto meshBBox = mesh.bounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::DistanceFieldSettings sdfSettings{
 			cellSize,
 				volExpansionFactor,
@@ -407,9 +407,9 @@ void IsosurfaceEvolverTests()
 
 		const MeshTopologySettings topoParams{
 			true,
-			0.4f,
+			0.4,
 			0.0,
-			1.0f,
+			1.0,
 			0.0,
 			2,
 			0.0,
@@ -418,13 +418,13 @@ void IsosurfaceEvolverTests()
 			false,
 			FeatureDetectionType::MeanCurvature,
 			1.0 * M_PI_2 * 180.0, 2.0 * M_PI_2 * 180.0,
-			2.0f,
-			0.8f * static_cast<float>(M_PI_2),
+			2.0,
+			0.8 * static_cast<pmp::Scalar>(M_PI_2),
 			true
 		};
 
 		const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
-		const float resamplingFactor = (resamplingFactors.contains(name) ? resamplingFactors.at(name) : 1.5f);
+		const pmp::Scalar resamplingFactor = (resamplingFactors.contains(name) ? resamplingFactors.at(name) : 1.5);
 		IsoSurfaceEvolutionSettings seSettings{
 			name,
 			20,
@@ -438,7 +438,7 @@ void IsosurfaceEvolverTests()
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true
 		};
 		ReportInput(seSettings, std::cout);
@@ -496,11 +496,11 @@ void BrainEvolverTests()
 	};
 
 	// ico-sphere params
-	const pmp::vec3 talairachCenter{ 69.278477120258884f, 81.210907276033296f, 69.224956401243205f };
-	const pmp::vec3 actualBrainCenter{ 96.536378893717142f, 126.13349816811417f, 116.99736547254018f };
+	const pmp::vec3 talairachCenter{ 69.278477120258884, 81.210907276033296, 69.224956401243205 };
+	const pmp::vec3 actualBrainCenter{ 96.536378893717142, 126.13349816811417, 116.99736547254018 };
 
-	constexpr float talairachRadius = 66.061572538428337f;
-	constexpr float actualBrainRadius = 102.09133074846271f;
+	constexpr pmp::Scalar talairachRadius = 66.061572538428337;
+	constexpr pmp::Scalar actualBrainRadius = 102.09133074846271;
 
 	const BE_IcoSphereSettings talairachIcoSettings{ talairachCenter, talairachRadius };
 	const BE_IcoSphereSettings actualBrainIcoSettings{ actualBrainCenter, actualBrainRadius };
@@ -557,8 +557,8 @@ void SheetEvolverTest()
 {
 #define PERFORM_7PT_EXAMPLE false
 	/**/
-	constexpr float roiHalfDim = 5.0f;
-	constexpr float roiDim = 2.0f * roiHalfDim;
+	constexpr pmp::Scalar roiHalfDim = 5.0;
+	constexpr pmp::Scalar roiDim = 2.0 * roiHalfDim;
 
 #if PERFORM_7PT_EXAMPLE
 	constexpr unsigned int nXSegments = 50;
@@ -585,27 +585,27 @@ void SheetEvolverTest()
 	pMesh.write(dataOutPath + "plane.vtk");
 	//pMesh.write(dataOutPath + "plane.obj");
 
-	constexpr float cellSize = 0.1f;
-	constexpr float columnWeight = 0.5f;
+	constexpr pmp::Scalar cellSize = 0.1;
+	constexpr pmp::Scalar columnWeight = 0.5;
 #if PERFORM_7PT_EXAMPLE
-	const auto gridBox = pmp::BoundingBox{ pmp::vec3{-5.0f, -5.0f, -roiHalfDim}, pmp::vec3{16.1f, 15.0f, roiHalfDim} };
+	const auto gridBox = pmp::BoundingBox{ pmp::vec3{-5.0, -5.0, -roiHalfDim}, pmp::vec3{16.1, 15.0, roiHalfDim} };
 	const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
-		{pmp::vec2{4.0f, 6.0f}, 0.5f * columnWeight},
-		{pmp::vec2{0.0f, 0.0f}, 0.5f * columnWeight},
-		{pmp::vec2{5.0f, 0.0f}, 0.5f * columnWeight},
-		{pmp::vec2{11.1f, 0.1f}, 0.5f * columnWeight},
-		{pmp::vec2{9.0f, 2.0f}, 0.5f * columnWeight},
-		{pmp::vec2{7.0f, 2.0f}, 0.5f * columnWeight},
-		{pmp::vec2{6.0f, 10.0f}, 0.5f * columnWeight}
+		{pmp::vec2{4.0, 6.0}, 0.5 * columnWeight},
+		{pmp::vec2{0.0, 0.0}, 0.5 * columnWeight},
+		{pmp::vec2{5.0, 0.0}, 0.5 * columnWeight},
+		{pmp::vec2{11.1, 0.1}, 0.5 * columnWeight},
+		{pmp::vec2{9.0, 2.0}, 0.5 * columnWeight},
+		{pmp::vec2{7.0, 2.0}, 0.5 * columnWeight},
+		{pmp::vec2{6.0, 10.0}, 0.5 * columnWeight}
 		});
 #else // 5-point example:
-	const auto gridBox = pmp::BoundingBox{ pmp::vec3{0.0f, 0.0f, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} };
+	const auto gridBox = pmp::BoundingBox{ pmp::vec3{0.0, 0.0, -roiHalfDim}, pmp::vec3{roiDim, roiDim, roiHalfDim} };
 	const auto grid = GetDistanceFieldWithSupportColumns(cellSize, gridBox, {
-		{pmp::vec2{2.5f, 2.5f}, 0.5f * columnWeight},
-		{pmp::vec2{7.5f, 2.5f}, 0.5f * columnWeight},
-		{pmp::vec2{7.5f, 7.5f}, 0.5f * columnWeight},
-		{pmp::vec2{5.0f, 8.0f}, 0.5f * columnWeight},
-		{pmp::vec2{2.5f, 7.5f}, 0.5f * columnWeight}
+		{pmp::vec2{2.5, 2.5}, 0.5 * columnWeight},
+		{pmp::vec2{7.5, 2.5}, 0.5 * columnWeight},
+		{pmp::vec2{7.5, 7.5}, 0.5 * columnWeight},
+		{pmp::vec2{5.0, 8.0}, 0.5 * columnWeight},
+		{pmp::vec2{2.5, 7.5}, 0.5 * columnWeight}
 		});
 #endif
 	ExportToVTI(dataOutPath + "CapsuleVals", grid);
@@ -615,14 +615,14 @@ void SheetEvolverTest()
 
 	const double fieldIsoLevel = sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 
-	const float startZHeight = sdfBox.min()[2] + 0.9f * sdfBoxSize[2];
-	const float endZHeight = sdfBox.min()[2] + 0.5f * sdfBoxSize[2];
+	const pmp::Scalar startZHeight = sdfBox.min()[2] + 0.9 * sdfBoxSize[2];
+	const pmp::Scalar endZHeight = sdfBox.min()[2] + 0.5 * sdfBoxSize[2];
 
 	constexpr double tau = 0.02;
 
 	const MeshTopologySettings topoSettings{
 		true,
-		0.45f,
+		0.45,
 		0.0,
 		1.0
 	};
@@ -647,7 +647,7 @@ void SheetEvolverTest()
 		dataOutPath,
 		MeshLaplacian::Voronoi,
 		{/*"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition", "stiffnessMatrixConditioning" */},
-		0.05f,
+		0.05,
 		true,
 		true
 	};

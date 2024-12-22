@@ -1,6 +1,8 @@
 #pragma once
 
+#include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 #include "MarchingCubes.h"
 #include <optional>
 #include <nanoflann.hpp>
@@ -73,7 +75,7 @@ namespace Geometry
 	 * \param chunkIdsVertexPropPtrOpt   an optional ptr to a vector of "chunk" ids (1 chunk = 1 thread).
 	 * \return optional BaseMeshGeometryData.
 	 */
-	[[nodiscard]] std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel = false, std::optional<std::vector<float>*> chunkIdsVertexPropPtrOpt = std::nullopt);
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel = false, std::optional<std::vector<pmp::Scalar>*> chunkIdsVertexPropPtrOpt = std::nullopt);
 
 	/**
 	 * \brief For importing PLY point cloud files with option for parallel.
@@ -226,7 +228,7 @@ namespace Geometry
 		inline size_t kdtree_get_point_count() const { return points.size(); }
 
 		// Returns the dim'th component of the idx'th point in the class
-		inline float kdtree_get_pt(const size_t idx, const size_t dim) const
+		inline pmp::Scalar kdtree_get_pt(const size_t idx, const size_t dim) const
 		{
 			if (dim == 0) return points[idx][0];
 			else return points[idx][1];
@@ -238,7 +240,7 @@ namespace Geometry
 	};
 
 	using PointCloud2DTree = nanoflann::KDTreeSingleIndexAdaptor<
-		nanoflann::L2_Simple_Adaptor<float, PointCloud2D>,
+		nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloud2D>,
 		PointCloud2D,
 		2 /* dimensions */
 	>;
@@ -254,7 +256,7 @@ namespace Geometry
 		inline size_t kdtree_get_point_count() const { return points.size(); }
 
 		// Returns the dim'th component of the idx'th point in the class
-		inline float kdtree_get_pt(const size_t idx, const size_t dim) const
+		inline pmp::Scalar kdtree_get_pt(const size_t idx, const size_t dim) const
 		{
 			if (dim == 0) return points[idx][0];
 			if (dim == 1) return points[idx][1];
@@ -267,7 +269,7 @@ namespace Geometry
 	};
 
 	using PointCloud3DTree = nanoflann::KDTreeSingleIndexAdaptor<
-		nanoflann::L2_Simple_Adaptor<float, PointCloud3D>,
+		nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloud3D>,
 		PointCloud3D,
 		3 /* dimensions */
 	>;
@@ -282,7 +284,7 @@ namespace Geometry
 	 * \param distTolerance       Distance tolerance for slicing (points which will be closer to the slicing plane than this distance are projected and pushed to the resulting 2D slice).
 	 * \return The sliced point cloud.
 	 */
-	[[nodiscard]] std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance);
+	[[nodiscard]] std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const pmp::Scalar& distTolerance);
 
 	/// \brief Computes the medial axis of a given 2D curve.
 	[[nodiscard]] std::optional<BaseCurveGeometryData> CalculateApproxMedialAxisFromCurve(const pmp::ManifoldCurve2D& curve);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pmp/Types.h"
-#include "pmp/MatVec.h"
 #include "pmp/ManifoldCurve2D.h"
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/CurveFactory.h"
@@ -20,7 +19,7 @@ struct InscribedCircleInputData
 struct Circle2D
 {
 	pmp::Point2 Center{};
-	pmp::Scalar Radius{ -1.0f };
+	pmp::Scalar Radius{ -1.0 };
 };
 
 /// \brief A base utility to calculate the centers and radii of circles inscribed to a point cloud.
@@ -114,7 +113,7 @@ struct InscribedSphereInputData
 struct Sphere3D
 {
 	pmp::Point Center{};
-	pmp::Scalar Radius{ -1.0f };
+	pmp::Scalar Radius{ -1.0 };
 };
 
 /// \brief A base utility to calculate the centers and radii of spheres inscribed to a point cloud.

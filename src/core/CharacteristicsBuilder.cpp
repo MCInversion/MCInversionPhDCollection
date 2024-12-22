@@ -13,16 +13,16 @@ using namespace Geometry;
 
 namespace
 {
-    constexpr float DEFAULT_FAN_STEP_ANGLE{ M_PI / 12.0f };
-    constexpr float ANGLE_STEP_FACTOR{ 7.0 };
+    constexpr pmp::Scalar DEFAULT_FAN_STEP_ANGLE{ M_PI / 12.0 };
+    constexpr pmp::Scalar ANGLE_STEP_FACTOR{ 7.0 };
 
     /// \brief Calculates an angle step in radians considering the input curve is a uniformly sampled circle centered in the middle of the input box
-    [[nodiscard]] float CalculateAngularFanSegmentSize(const pmp::BoundingBox2& box, const pmp::ManifoldCurve2D& curve)
+    [[nodiscard]] pmp::Scalar CalculateAngularFanSegmentSize(const pmp::BoundingBox2& box, const pmp::ManifoldCurve2D& curve)
     {
         if (curve.n_edges() == 0)
             return DEFAULT_FAN_STEP_ANGLE;
 
-        float meanEdgeLength = 0.0f;
+        pmp::Scalar meanEdgeLength = 0.0;
         for (const auto e : curve.edges())
         {
             meanEdgeLength += curve.edge_length(e);
@@ -32,13 +32,13 @@ namespace
             return DEFAULT_FAN_STEP_ANGLE;
 
         const auto size = box.max() - box.min();
-        const float boxCircumference = 2.0f * (size[0] + size[0]);
+        const pmp::Scalar boxCircumference = 2.0 * (size[0] + size[0]);
         const size_t nBoxBoundaryIntersections = std::round(boxCircumference / meanEdgeLength);
 
-        return ANGLE_STEP_FACTOR * 2.0f * M_PI / nBoxBoundaryIntersections;
+        return ANGLE_STEP_FACTOR * 2.0 * M_PI / nBoxBoundaryIntersections;
     }
 
-    void ClipRayByDivergenceField(Ray2D& ray, const float& divFieldThreshold, const ScalarGrid2D& divField)
+    void ClipRayByDivergenceField(Ray2D& ray, const pmp::Scalar& divFieldThreshold, const ScalarGrid2D& divField)
     {
         const auto [Nx, Ny] = divField.Dimensions();
         const auto cellSize = divField.CellSize();
@@ -52,33 +52,33 @@ namespace
         if (ix < 0 || ix >= Nx || iy < 0 || iy >= Ny) return;
 
         // Get ray direction components
-        float dx = ray.Direction[0];
-        float dy = ray.Direction[1];
+        pmp::Scalar dx = ray.Direction[0];
+        pmp::Scalar dy = ray.Direction[1];
 
         // Determine step direction for x and y
         int stepX = (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
         int stepY = (dy > 0) ? 1 : (dy < 0) ? -1 : 0;
 
         // Calculate initial tMax and tDelta values
-        float tMaxX, tMaxY;
+        pmp::Scalar tMaxX, tMaxY;
         if (dx != 0) {
-            float nextBoundaryX = gridBox.min()[0] + (ix + (stepX > 0 ? 1 : 0)) * cellSize;
+            pmp::Scalar nextBoundaryX = gridBox.min()[0] + (ix + (stepX > 0 ? 1 : 0)) * cellSize;
             tMaxX = (nextBoundaryX - ray.StartPt[0]) / dx;
         }
         else {
-            tMaxX = std::numeric_limits<float>::infinity();
+            tMaxX = std::numeric_limits<pmp::Scalar>::infinity();
         }
 
         if (dy != 0) {
-            float nextBoundaryY = gridBox.min()[1] + (iy + (stepY > 0 ? 1 : 0)) * cellSize;
+            pmp::Scalar nextBoundaryY = gridBox.min()[1] + (iy + (stepY > 0 ? 1 : 0)) * cellSize;
             tMaxY = (nextBoundaryY - ray.StartPt[1]) / dy;
         }
         else {
-            tMaxY = std::numeric_limits<float>::infinity();
+            tMaxY = std::numeric_limits<pmp::Scalar>::infinity();
         }
 
-        float tDeltaX = (dx != 0) ? cellSize / std::abs(dx) : std::numeric_limits<float>::infinity();
-        float tDeltaY = (dy != 0) ? cellSize / std::abs(dy) : std::numeric_limits<float>::infinity();
+        pmp::Scalar tDeltaX = (dx != 0) ? cellSize / std::abs(dx) : std::numeric_limits<pmp::Scalar>::infinity();
+        pmp::Scalar tDeltaY = (dy != 0) ? cellSize / std::abs(dy) : std::numeric_limits<pmp::Scalar>::infinity();
 
         // Traverse the grid cells along the ray path
         while (ix >= 0 && ix < Nx && iy >= 0 && iy < Ny)
@@ -135,7 +135,7 @@ std::vector<Ray2D> PlanarPointCloudCharacteristicsBuilder::GenerateInitialRays(c
             if (norm(direction) > std::numeric_limits<double>::epsilon()) // Check for valid direction
             {
                 // Create a ray with the current point as the start and the normalized direction
-                rays.emplace_back(point, pmp::vec2(static_cast<float>(direction[0]), static_cast<float>(direction[1])));
+                rays.emplace_back(point, pmp::vec2(static_cast<pmp::Scalar>(direction[0]), static_cast<pmp::Scalar>(direction[1])));
             }
         }
     }
@@ -149,7 +149,7 @@ void PlanarCharacteristicsBuilder::CullRays(std::vector<Ray2D>& rays, const pmp:
     for (auto& ray : rays)
     {
         // Calculate the intersection of the ray with the bounding box
-        float tMin, tMax;
+        pmp::Scalar tMin, tMax;
         if (RayBoxIntersection2D(ray.StartPt, ray.Direction, clipBox, tMin, tMax))
         {
             // Update ParamMax if the box intersection parameter is closer than the current value
@@ -159,7 +159,7 @@ void PlanarCharacteristicsBuilder::CullRays(std::vector<Ray2D>& rays, const pmp:
         else
         {
             // If the ray does not intersect the bounding box, mark it as invalid (e.g., set HitParam to 0)
-            ray.HitParam = 0.0f;
+            ray.HitParam = 0.0;
         }
     }
 
@@ -226,7 +226,7 @@ std::vector<std::vector<pmp::Point2>> PlanarPointCloudCharacteristicsBuilder::Bu
 // =========================================================================================================
 //
 
-std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRays(const float& fanAngleStep) const
+std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRays(const pmp::Scalar& fanAngleStep) const
 {
     std::vector<Ray2D> rays;
 
@@ -251,16 +251,16 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
                 continue;
 
             // Calculate rotation axis (assuming vectors are in 2D, rotate counterclockwise)
-            const float startAngle = std::atan2(eToNormal[1], eToNormal[0]);
-            float endAngle = std::atan2(eFromNormal[1], eFromNormal[0]);
+            const pmp::Scalar startAngle = std::atan2(eToNormal[1], eToNormal[0]);
+            pmp::Scalar endAngle = std::atan2(eFromNormal[1], eFromNormal[0]);
 
             // Adjust the angles to handle wrapping around correctly
             if (endAngle < startAngle)
-                endAngle += 2.0f * static_cast<float>(M_PI);
+                endAngle += 2.0 * static_cast<pmp::Scalar>(M_PI);
 
             for (size_t i = 0; i <= nAngleSegments; ++i)
             {
-                const float currentAngle = startAngle + i * fanAngleStep;
+                const pmp::Scalar currentAngle = startAngle + i * fanAngleStep;
 
                 // Ensure we do not overshoot the end angle
                 if (currentAngle > endAngle)
@@ -276,7 +276,7 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
         else
         {
             // outward pointing normals of adjacent edges converge, one characteristic suffices
-            const auto normal = (eToNormal + eFromNormal) * 0.5f;
+            const auto normal = (eToNormal + eFromNormal) * 0.5;
             if (m_Settings.ConstructOutwardCharacteristics)
             {
 				rays.emplace_back(pos, normal);	            
@@ -294,15 +294,15 @@ std::vector<Ray2D> PlanarManifoldCurveCharacteristicsBuilder::GenerateInitialRay
             if (nAngleSegments < 2)
                 continue;
 
-            const float startAngle = std::atan2(-eFromNormal[1], -eFromNormal[0]);
-            float endAngle = std::atan2(-eToNormal[1], -eToNormal[0]);
+            const pmp::Scalar startAngle = std::atan2(-eFromNormal[1], -eFromNormal[0]);
+            pmp::Scalar endAngle = std::atan2(-eToNormal[1], -eToNormal[0]);
 
             if (endAngle < startAngle)
-                endAngle += 2.0f * static_cast<float>(M_PI);
+                endAngle += 2.0 * static_cast<pmp::Scalar>(M_PI);
 
             for (size_t i = 0; i <= nAngleSegments; ++i)
             {
-                const float currentAngle = startAngle + i * fanAngleStep;
+                const pmp::Scalar currentAngle = startAngle + i * fanAngleStep;
                 if (currentAngle > endAngle)
                     break;
 

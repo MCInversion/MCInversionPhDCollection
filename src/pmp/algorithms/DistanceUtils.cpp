@@ -52,7 +52,7 @@ Scalar dist_point_line_segment(const Point2& p, const Point2& v0, const Point2& 
     Scalar t = c1 / c2;
 
     // Clamp t to the range [0, 1] to ensure the closest point is on the segment
-    t = std::max(0.0f, std::min(1.0f, t));
+    t = std::max(Scalar(0.0), std::min(Scalar(1.0), t));
 
     // Calculate the closest point on the line segment
     nearest_point[0] = v0[0] + t * v[0];

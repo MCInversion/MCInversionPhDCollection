@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include <cstdint>
-
+#include "pmp/Config.h"
 #include "pmp/MatVec.h"
 
 //! \def PMP_ASSERT(x)
@@ -22,44 +21,35 @@
 #define PMP_ASSERT(x) assert(x)
 #endif
 
-//#define PMP_SCALAR_TYPE_64 true
-
 //! The pmp-library namespace
 namespace pmp {
 
 //! \addtogroup core
 //! @{
 
-//! Scalar type
-#ifdef PMP_SCALAR_TYPE_64
-using Scalar = double;
+//! Overriding scalar type aliases
+#if PMP_SCALAR_TYPE_64
+    using vec2 = dvec2;  // Use double-based 2D vector
+    using vec3 = dvec3;  // Use double-based 3D vector
 #else
-using Scalar = float;
+    using vec2 = Vector<float, 2>;  // Use float-based 2D vector
+    using vec3 = Vector<float, 3>;  // Use float-based 3D vector
 #endif
 
 //! Point type
-using Point = Vector<Scalar, 3>;
-using Point2 = Vector<Scalar, 2>;
+using Point = vec3;
+using Point2 = vec2;
 
 //! Normal type
-using Normal = Vector<Scalar, 3>;
-using Normal2 = Vector<Scalar, 2>;
+using Normal = vec3;
+using Normal2 = vec2;
 
 //! Color type
 //! \details RGB values in the range of [0,1]
-using Color = Vector<Scalar, 3>;
+using Color = vec3;
 
 //! Texture coordinate type
-using TexCoord = Vector<Scalar, 2>;
-
-// define index type to be used
-#ifdef PMP_INDEX_TYPE_64
-using IndexType = std::uint_least64_t;
-#define PMP_MAX_INDEX UINT_LEAST64_MAX
-#else
-using IndexType = std::uint_least32_t;
-#define PMP_MAX_INDEX UINT_LEAST32_MAX
-#endif
+using TexCoord = vec2;
 
 //! Common IO flags for reading and writing
 struct IOFlags

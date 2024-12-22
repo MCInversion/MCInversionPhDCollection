@@ -17,11 +17,13 @@
  */
  // --------------------------------------------------------------------------------
 
+#include "pmp/Types.h"
 #include "pmp/algorithms/CurveFactory.h"
 #include "pmp/algorithms/Normals.h"
 
 #include "geometry/GridUtil.h"
 #include "geometry/PlaneBuilder.h"
+#include "geometry/GeometryIOUtils.h"
 
 #include "sdf/SDF.h"
 
@@ -54,12 +56,12 @@ void DistanceFieldHashTest()
 
 	const auto meshBBox = meshAdapter.GetBounds();
 	const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-	const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-	const float cellSize = minSize / 10.0f;
+	const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+	const pmp::Scalar cellSize = minSize / 10.0;
 
 	const SDF::DistanceFieldSettings sdfSettings{
 		cellSize,
-		1.0f,
+		1.0,
 		DBL_MAX,
 		SDF::KDTreeSplitType::Center,
 		SDF::SignComputation::VoxelFloodFill,
@@ -82,7 +84,7 @@ void DistanceFieldHashTest()
 	const Geometry::BaseMeshAdapter mesh2Adapter(std::make_shared<Geometry::BaseMeshGeometryData>(meshData2));
 	const SDF::DistanceFieldSettings sdfSettings2{
 		cellSize,
-		1.0f,
+		1.0,
 		DBL_MAX,
 		SDF::KDTreeSplitType::Center,
 		SDF::SignComputation::None,
@@ -101,7 +103,7 @@ void DistanceFieldHashTest()
 
 	const SDF::PointCloudDistanceFieldSettings sdfSettings3{
 			cellSize,
-			1.0f,
+			1.0,
 			DBL_MAX,
 			SDF::BlurPostprocessingType::None
 	};
@@ -131,12 +133,12 @@ void DistanceField2DHashTest()
 
 		const auto curveBBox = curveAdapter.GetBounds();
 		const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-		const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-		const float cellSize = minSize / 10.0f;
+		const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+		const pmp::Scalar cellSize = minSize / 10.0;
 
 		const SDF::DistanceField2DSettings sdfSettings{
 			cellSize,
-			1.0f,
+			1.0,
 			truncationFactor,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation2D::PixelFloodFill,
@@ -162,12 +164,12 @@ void DistanceField2DHashTest()
 
 		const auto curveBBox = curveAdapter.GetBounds();
 		const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-		const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-		const float cellSize = minSize / 10.0f;
+		const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+		const pmp::Scalar cellSize = minSize / 10.0;
 
 		const SDF::DistanceField2DSettings sdfSettings{
 			cellSize,
-			1.0f,
+			1.0,
 			truncationFactor,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation2D::None,
@@ -188,12 +190,12 @@ void DistanceField2DHashTest()
 		const std::vector points = { pmp::Point2(0, 0), pmp::Point2(1, 0), pmp::Point2(1, 1), pmp::Point2(0, 1) };
 		const auto pointBBox = pmp::BoundingBox2(points);
 		const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-		const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-		const float cellSize = minSize / 10.0f;
+		const pmp::Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+		const pmp::Scalar cellSize = minSize / 10.0;
 
 		const SDF::PointCloudDistanceField2DSettings sdfSettings{
 			cellSize,
-			1.0f,
+			1.0,
 			truncationFactor
 		};
 
@@ -209,17 +211,17 @@ void DistanceField2DHashTest()
 	//
 
 	{
-		auto ellipse = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0f, 32);
-		ellipse *= scaling_matrix_2d(pmp::vec2(2.0f, 1.0f));
+		auto ellipse = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 32);
+		ellipse *= scaling_matrix_2d(pmp::vec2(2.0, 1.0));
 
 		const auto pointBBox = pmp::BoundingBox2(ellipse.positions());
 		const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-		const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-		const float cellSize = minSize / 20.0f;
+		const pmp::Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+		const pmp::Scalar cellSize = minSize / 20.0;
 
 		const SDF::PointCloudDistanceField2DSettings sdfSettings{
 			cellSize,
-			1.0f,
+			1.0,
 			truncationFactor
 		};
 
@@ -261,17 +263,17 @@ void PointCloud2DSliceTests()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+		{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+		{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+		{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	for (const auto& meshName : meshForPtCloudNames)
@@ -310,12 +312,12 @@ void PointCloud2DSliceTests()
 		const pmp::BoundingBox ptCloudBBox(pts3D);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		//const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float distTolerance = 0.01f * minSize;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		//const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar distTolerance = 0.01 * minSize;
 
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(pts3D, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -334,7 +336,7 @@ void PointCloud2DSliceTests()
 
 void CurveReorientTests()
 {
-	auto circleCurve = pmp::CurveFactory::circle(pmp::Point2{}, 1.0f, 25);
+	auto circleCurve = pmp::CurveFactory::circle(pmp::Point2{}, 1.0, 25);
 	circleCurve.negate_orientation();
 	if (!pmp::write_to_ply(circleCurve, dataOutPath + "circleCurve_Flipped.ply"))
 		std::cerr << "Error writing file!\n";
@@ -685,31 +687,31 @@ void OldVsNewLSWTests()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+		{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+		{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+		{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 50;
@@ -775,10 +777,10 @@ void OldVsNewLSWTests()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 			volExpansionFactor,
@@ -812,11 +814,11 @@ void OldVsNewLSWTests()
 			std::cout << "Setting up SurfaceEvolutionSettings.\n";
 
 			MeshTopologySettings topoParams;
-			topoParams.MinEdgeMultiplier = 0.14f;
+			topoParams.MinEdgeMultiplier = 0.14;
 			topoParams.UseBackProjection = false;
-			topoParams.PrincipalCurvatureFactor = 3.2f;
-			topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
-			topoParams.EdgeLengthDecayFactor = 0.7f;
+			topoParams.PrincipalCurvatureFactor = 3.2;
+			topoParams.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
+			topoParams.EdgeLengthDecayFactor = 0.7;
 			topoParams.ExcludeEdgesWithoutBothFeaturePts = true; // this one is internally set to true for ManifoldEvolver by default
 			topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
@@ -839,7 +841,7 @@ void OldVsNewLSWTests()
 				dataOutPath,
 				MeshLaplacian::Voronoi,
 				{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-				0.05f,
+				0.05,
 				true,
 				false
 			};
@@ -887,8 +889,8 @@ void OldVsNewLSWTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -905,7 +907,7 @@ void OldVsNewLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			std::cout << "Setting up ManifoldSurfaceEvolutionStrategy.\n";
@@ -928,9 +930,9 @@ void OldVsNewLSWTests()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.01f * minSize;
+		const pmp::Scalar distTolerance = 0.01 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -938,8 +940,8 @@ void OldVsNewLSWTests()
 			continue;
 		}
 		const std::vector cutCircles{ 
-			Circle2D{pmp::Point2{-0.02f, 0.04f}, 0.015f },
-			Circle2D{pmp::Point2{0.03f, 0.04f}, 0.015f } };
+			Circle2D{pmp::Point2{-0.02, 0.04}, 0.015 },
+			Circle2D{pmp::Point2{0.03, 0.04}, 0.015 } };
 		DeletePointsContainedInCircles(pts2D, cutCircles);
 
 		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
@@ -969,8 +971,8 @@ void OldVsNewLSWTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -987,7 +989,7 @@ void OldVsNewLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			auto curveStrategy = std::make_shared<ManifoldCurveEvolutionStrategy>(
@@ -1022,8 +1024,8 @@ void OldVsNewLSWTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1040,7 +1042,7 @@ void OldVsNewLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -1058,10 +1060,10 @@ void OldVsNewLSWTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;
 
@@ -1100,8 +1102,8 @@ void OldVsNewLSWTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1118,7 +1120,7 @@ void OldVsNewLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -1178,37 +1180,37 @@ void PairedLSWTests()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+		{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+		{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+		{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
 	const std::map<std::string, Circle2D> innerCircles{
-		{"armadillo", Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}},
-		{"bunny", Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}},
-		{"maxPlanck", Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}},
-		{"nefertiti", Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f}}
+		{"armadillo", Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}},
+		{"bunny", Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}},
+		{"maxPlanck", Circle2D{pmp::Point2{8.0, 85.0}, 50.0}},
+		{"nefertiti", Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}}
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -1271,9 +1273,9 @@ void PairedLSWTests()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		// const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		// const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = (isoLevelOffsetFactors.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -1284,9 +1286,9 @@ void PairedLSWTests()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.01f * minSize;
+		const pmp::Scalar distTolerance = 0.01 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -1321,8 +1323,8 @@ void PairedLSWTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1339,7 +1341,7 @@ void PairedLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -1357,10 +1359,10 @@ void PairedLSWTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;
 
@@ -1405,11 +1407,11 @@ void PairedLSWTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1426,7 +1428,7 @@ void PairedLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -1497,37 +1499,37 @@ void PairedLSWRepulsionTests()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+		{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+		{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+		{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
 	const std::map<std::string, Circle2D> innerCircles{
-		{"armadillo", Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}},
-		{"bunny", Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}},
-		{"maxPlanck", Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}},
-		{"nefertiti", Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f}}
+		{"armadillo", Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}},
+		{"bunny", Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}},
+		{"maxPlanck", Circle2D{pmp::Point2{8.0, 85.0}, 50.0}},
+		{"nefertiti", Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}}
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 
 	const std::map<std::string, double> criticalDistances{
@@ -1597,9 +1599,9 @@ void PairedLSWRepulsionTests()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -1610,9 +1612,9 @@ void PairedLSWRepulsionTests()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.01f * minSize;
+		const pmp::Scalar distTolerance = 0.01 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -1658,8 +1660,8 @@ void PairedLSWRepulsionTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1676,7 +1678,7 @@ void PairedLSWRepulsionTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -1694,10 +1696,10 @@ void PairedLSWRepulsionTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;
 
@@ -1752,8 +1754,8 @@ void PairedLSWRepulsionTests()
 
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1770,7 +1772,7 @@ void PairedLSWRepulsionTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -1784,11 +1786,11 @@ void PairedLSWRepulsionTests()
 				continue;
 			}
 
-			const auto outerCircle = outerCircles.at(meshName);
+			const auto& outerCircle = outerCircles.at(meshName);
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
 			auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
 
-			const auto innerCircle = innerCircles.at(meshName);
+			const auto& innerCircle = innerCircles.at(meshName);
 			const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
 			auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
 			innerCurve.negate_orientation();
@@ -1812,7 +1814,7 @@ void PairedLSWRepulsionTests()
 
 void OutwardEvolvingInnerCircleTest()
 {
-	const Circle2D innerTestCircle{ pmp::Point2{-3.0f, 52.0f}, 20.0f };
+	const Circle2D innerTestCircle{ pmp::Point2{-3.0, 52.0}, 20.0 };
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
@@ -1830,9 +1832,9 @@ void OutwardEvolvingInnerCircleTest()
 			}
 	};
 	const auto bboxSize = bbox.max() - bbox.min();
-	const float minSize = std::min(bboxSize[0], bboxSize[1]);
-	const float maxSize = std::max(bboxSize[0], bboxSize[1]);
-	const float cellSize = minSize / nVoxelsPerMinDimension;
+	const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+	const pmp::Scalar maxSize = std::max(bboxSize[0], bboxSize[1]);
+	const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 	const double isoLvlOffsetFactor = defaultOffsetFactor;
 	const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -1850,11 +1852,11 @@ void OutwardEvolvingInnerCircleTest()
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
-		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 		strategySettings.RemeshingSettings.UseBackProjection = false;
 
-		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -1874,7 +1876,7 @@ void OutwardEvolvingInnerCircleTest()
 		globalSettings.OutputPath = dataOutPath;
 		globalSettings.ExportResult = false;
 
-		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeFactor = 0.7;
 		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 		const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -1935,10 +1937,10 @@ void AdditionalCurveShapesTests()
 		std::cerr << "Error writing triangle_withChamfer.ply!\n";
 
 	const std::vector squareVertices = {
-		pmp::Point2{0.0f, 0.0f},
-		pmp::Point2{1.0f, 0.0f},
-		pmp::Point2{1.0f, 1.0f},
-		pmp::Point2{0.0f, 1.0f}
+		pmp::Point2{0.0, 0.0},
+		pmp::Point2{1.0, 0.0},
+		pmp::Point2{1.0, 1.0},
+		pmp::Point2{0.0, 1.0}
 	};
 	// Test case 3: unit square without chamfering
 	pmp::ManifoldCurve2D polyCurve3 = pmp::CurveFactory::sampled_polygon(squareVertices, 20, false);
@@ -1951,10 +1953,10 @@ void AdditionalCurveShapesTests()
 		std::cerr << "Error writing square_withChamfer.ply!\n";
 
 	const std::vector nonClosedPolyline = {
-		pmp::Point2{0.0f, 0.0f},
-		pmp::Point2{1.0f, 0.0f},
-		pmp::Point2{1.5f, 0.5f},
-		pmp::Point2{2.0f, 0.0f}
+		pmp::Point2{0.0, 0.0},
+		pmp::Point2{1.0, 0.0},
+		pmp::Point2{1.5, 0.5},
+		pmp::Point2{2.0, 0.0}
 	};
 	// Test case 5: non-closed polyline without chamfering
 	pmp::ManifoldCurve2D polyCurve5 = pmp::CurveFactory::sampled_polygon(nonClosedPolyline, 20, false, false);
@@ -1966,12 +1968,12 @@ void AdditionalCurveShapesTests()
 		std::cerr << "Error writing nonClosedPolyline_withChamfer.ply!\n";
 
 	const std::vector hexagonVertices = {
-		pmp::Point2{0.0f, 1.0f},
-		pmp::Point2{0.866f, 0.5f},
-		pmp::Point2{0.866f, -0.5f},
-		pmp::Point2{0.0f, -1.0f},
-		pmp::Point2{-0.866f, -0.5f},
-		pmp::Point2{-0.866f, 0.5f}
+		pmp::Point2{0.0, 1.0},
+		pmp::Point2{0.866, 0.5},
+		pmp::Point2{0.866, -0.5},
+		pmp::Point2{0.0, -1.0},
+		pmp::Point2{-0.866, -0.5},
+		pmp::Point2{-0.866, 0.5}
 	};
 	// Test case 7: hexagon without chamfering
 	pmp::ManifoldCurve2D polyCurve7 = pmp::CurveFactory::sampled_polygon(hexagonVertices, 30, false, true);
@@ -1987,30 +1989,30 @@ void AdditionalCurveShapesTests()
 void AdvectionDrivenInnerCircleTests()
 {
 	const std::map<std::string, pmp::ManifoldCurve2D> targetCurves{
-		{ "circle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 0.0, 2.0 * M_PI)},
-		{ "incompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, M_PI_2, 2.0 * M_PI)},
-		{ "sineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, 0.0, 2.0 * M_PI)},
-		{ "sineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, M_PI_2, 2.0 * M_PI)},
-		{ "chamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0f, 52.0f}, 60.0f, 70.0f, 15, true)},
+		{ "circle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 0.0, 2.0 * M_PI)},
+		{ "incompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, M_PI_2, 2.0 * M_PI)},
+		{ "sineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, 0.0, 2.0 * M_PI)},
+		{ "sineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, M_PI_2, 2.0 * M_PI)},
+		{ "chamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0, 52.0}, 60.0, 70.0, 15, true)},
 		{ "incompleteChamferedRectangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-30.0f, -35.0f} + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{30.0f, -35.0f} + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{30.0f, 35.0f} + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{-30.0f, 35.0f} + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)},
+			pmp::Point2{-30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 		{ "chamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true)},
+			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 		{ "incompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)}
+			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
 	constexpr double defaultOffsetFactor = 1.5;
 	constexpr unsigned int NTimeSteps = 180;
-	const auto innerTestCircle = Circle2D{ pmp::Point2{-3.0f, 52.0f}, 20.0f };
+	const auto innerTestCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 20.0 };
 
 	for (const auto& [ptCloudName, curve] : targetCurves)
 	{
@@ -2021,9 +2023,9 @@ void AdvectionDrivenInnerCircleTests()
 		const pmp::BoundingBox2 bbox{ pts2D };
 
 		const auto bboxSize = bbox.max() - bbox.min();
-		const float minSize = std::min(bboxSize[0], bboxSize[1]);
-		//const float maxSize = std::max(bboxSize[0], bboxSize[1]);
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+		//const pmp::Scalar maxSize = std::max(bboxSize[0], bboxSize[1]);
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = defaultOffsetFactor;
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -2045,11 +2047,11 @@ void AdvectionDrivenInnerCircleTests()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -2066,7 +2068,7 @@ void AdvectionDrivenInnerCircleTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -2094,10 +2096,10 @@ void ConcentricCirclesTests()
 {
 	// Define the inner and outer circle pairs directly
 	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
-		{Circle2D{pmp::Point2{-3.0f, 52.0f}, 100.0f}, Circle2D{pmp::Point2{-3.0f, 52.0f}, 121.558f}},
-		{Circle2D{pmp::Point2{-25.0f, 8.0f}, 0.055f}, Circle2D{pmp::Point2{-25.0f, 8.0f}, 0.142831f}},
-		{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{8.0f, 85.0f}, 292.263f}},
-		{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{-20.0f, 90.0f}, 441.436f}}
+		{Circle2D{pmp::Point2{-3.0, 52.0}, 100.0}, Circle2D{pmp::Point2{-3.0, 52.0}, 121.558}},
+		{Circle2D{pmp::Point2{-25.0, 8.0}, 0.055}, Circle2D{pmp::Point2{-25.0, 8.0}, 0.142831}},
+		{Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Circle2D{pmp::Point2{8.0, 85.0}, 292.263}},
+		{Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Circle2D{pmp::Point2{-20.0, 90.0}, 441.436}}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2126,8 +2128,8 @@ void ConcentricCirclesTests()
 			}
 		};
 		const auto bboxSize = bbox.max() - bbox.min();
-		const float minSize = std::min(bboxSize[0], bboxSize[1]);
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		//if (executeCustomCurveEvolver)
 		{
@@ -2159,11 +2161,11 @@ void ConcentricCirclesTests()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -2183,7 +2185,7 @@ void ConcentricCirclesTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -2216,10 +2218,10 @@ void NonConcentricCirclesTest()
 {
 	// Define the inner and outer circle pairs directly
 	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
-		{Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}, Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f}},
-		{Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f}, Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f}},
-		{Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}, Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f}},
-		{Circle2D{pmp::Point2{-20.0f, 90.0f}, 55.0f}, Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f}}
+		{Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}, Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558}},
+		{Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}, Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831}},
+		{Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263}},
+		{Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436}}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2248,9 +2250,9 @@ void NonConcentricCirclesTest()
 			}
 		};
 		const auto bboxSize = bbox.max() - bbox.min();
-		const float minSize = std::min(bboxSize[0], bboxSize[1]);
-		//const float maxSize = std::max(bboxSize[0], bboxSize[1]);
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+		//const pmp::Scalar maxSize = std::max(bboxSize[0], bboxSize[1]);
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = defaultOffsetFactor;
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -2285,12 +2287,12 @@ void NonConcentricCirclesTest()
 			strategySettings.TimeStep = defaultTimeStep;
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 
 			strategySettings.RemeshingSettings.UseBackProjection = true;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -2309,7 +2311,7 @@ void NonConcentricCirclesTest()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -2338,16 +2340,16 @@ void NonConcentricCirclesTest()
 
 namespace
 {
-	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve, const std::shared_ptr<pmp::EvolvingArcLengthCalculator>& calc = nullptr, const pmp::Scalar& factor = 1.0f)
+	void RemeshWithDefaultSettings(pmp::ManifoldCurve2D& curve, const std::shared_ptr<pmp::EvolvingArcLengthCalculator>& calc = nullptr, const pmp::Scalar& factor = 1.0)
 	{
 		// DISCLAIMER: Some curves from svg paths might have duplicate points
-		const float edgeLength = 2.0f * factor;
+		const pmp::Scalar edgeLength = 2.0 * factor;
 		constexpr unsigned int iterations = 10;
 		pmp::CurveRemeshing remesher(curve, calc);
 		pmp::AdaptiveRemeshingSettings settings;
 		settings.MinEdgeLength = edgeLength;
-		settings.MaxEdgeLength = 1.5f * edgeLength * factor;
-		settings.ApproxError = 0.05f * edgeLength * factor;
+		settings.MaxEdgeLength = 1.5 * edgeLength * factor;
+		settings.ApproxError = 0.05 * edgeLength * factor;
 		settings.NRemeshingIterations = iterations;
 		settings.NTangentialSmoothingIters = 6;
 		settings.UseProjection = false;
@@ -2375,35 +2377,35 @@ namespace
 void EquilibriumPairedManifoldTests()
 {
 	const auto center = pmp::Point2(200, 400);
-	const float outerRadius = 100.0f;
-	const float innerRadius = 40.0f;
+	const pmp::Scalar outerRadius = 100.0;
+	const pmp::Scalar innerRadius = 40.0;
 
 	const std::vector<pmp::Point2> squareVerticesLarge = {
-		pmp::Point2{-50.0f, -50.0f} + center,
-		pmp::Point2{50.0f, -50.0f} + center,
-		pmp::Point2{50.0f, 50.0f} + center,
-		pmp::Point2{-50.0f, 50.0f} + center
+		pmp::Point2{-50.0, -50.0} + center,
+		pmp::Point2{50.0, -50.0} + center,
+		pmp::Point2{50.0, 50.0} + center,
+		pmp::Point2{-50.0, 50.0} + center
 	};
 	const std::vector<pmp::Point2> triangleVerticesLarge = {
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * (2.0f * outerRadius) + center,
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * (2.0f * outerRadius) + center,
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * (2.0f * outerRadius) + center
+		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} * (2.0 * outerRadius) + center,
+		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} * (2.0 * outerRadius) + center,
+		pmp::Point2{0.0, sqrtf(3.0) / 3.0} * (2.0 * outerRadius) + center
 	};
 	const std::vector<pmp::Point2> squareVerticesSmall = {
-		pmp::Point2{-20.0f, -20.0f} + center,
-		pmp::Point2{20.0f, -20.0f} + center,
-		pmp::Point2{20.0f, 20.0f} + center,
-		pmp::Point2{-20.0f, 20.0f} + center
+		pmp::Point2{-20.0, -20.0} + center,
+		pmp::Point2{20.0, -20.0} + center,
+		pmp::Point2{20.0, 20.0} + center,
+		pmp::Point2{-20.0, 20.0} + center
 	};
 	const std::vector<pmp::Point2> triangleVerticesSmall = {
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} * innerRadius + center,
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} * innerRadius + center,
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} * innerRadius + center
+		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} * innerRadius + center,
+		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} * innerRadius + center,
+		pmp::Point2{0.0, sqrtf(3.0) / 3.0} * innerRadius + center
 	};
 	const unsigned int segments = 40;
 
-	//const pmp::Scalar angle = 46.0f; // in degrees
-	const pmp::Scalar angle = 0.0f;
+	//const pmp::Scalar angle = 46.0; // in degrees
+	const pmp::Scalar angle = 0.0;
 	const double minDistancePercentageEpsilon = 0.0;
 	const double minDistancePercentageEta = 0.05;
 
@@ -2415,7 +2417,7 @@ void EquilibriumPairedManifoldTests()
 	const std::vector<std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> curvePairs{
 		// Pair 1: Outer chamfered square and inner circle
 		//{pmp::CurveFactory::sampled_polygon(squareVerticesLarge, segments, true),
-		// pmp::CurveFactory::circle(center, 0.5f * innerRadius, segments)},
+		// pmp::CurveFactory::circle(center, 0.5 * innerRadius, segments)},
 
 		// Pair 2: Outer chamfered equilateral triangle and inner circle
 		//{pmp::CurveFactory::sampled_polygon(triangleVerticesLarge, segments, true),
@@ -2460,10 +2462,10 @@ void EquilibriumPairedManifoldTests()
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0f;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0;
 	strategySettings.RemeshingSettings.UseBackProjection = true;
-	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
+	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 	//strategySettings.FieldSettings.FieldIsoLevel = 2.0;
 	strategySettings.UseLinearGridInterpolation = false;
@@ -2510,7 +2512,7 @@ void EquilibriumPairedManifoldTests()
 	globalSettings.OutputPath = dataOutPath;
 	globalSettings.ExportResult = false;
 
-	globalSettings.RemeshingResizeFactor = 0.7f;
+	globalSettings.RemeshingResizeFactor = 0.7;
 	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 	for (unsigned int pairId = 3; const auto & [outerCurve, innerCurve] : curvePairs)
@@ -2523,8 +2525,8 @@ void EquilibriumPairedManifoldTests()
 		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
 		
 		// DEBUG translation
-		const auto smallXYShift = strategySettings.FieldSettings.FieldIsoLevel * 0.1f;
-		const auto smallTranslation = translation_matrix(pmp::vec2{ smallXYShift , -0.66f * smallXYShift });
+		const auto smallXYShift = strategySettings.FieldSettings.FieldIsoLevel * 0.1;
+		const auto smallTranslation = translation_matrix(pmp::vec2{ smallXYShift , -0.66 * smallXYShift });
 		pmp::ManifoldCurve2D outerCurveCopy{ outerCurve };
 		outerCurveCopy *= smallTranslation;
 
@@ -2545,8 +2547,8 @@ void EquilibriumPairedManifoldTests()
 
 void EquilibriumPairedConcaveManifoldTests()
 {
-	//const pmp::Scalar angle = 46.0f; // in degrees
-	const pmp::Scalar angle = 0.0f;
+	//const pmp::Scalar angle = 46.0; // in degrees
+	const pmp::Scalar angle = 0.0;
 
 	// Pair 0
 	const auto path00Vertices = ParsePolygonalSVGPath(svgPathPair00);
@@ -2620,8 +2622,8 @@ void EquilibriumPairedConcaveManifoldTests()
 	if (!pmp::write_to_ply(path50Curve, dataOutPath + "path50Curve.ply"))
 		std::cerr << "Error writing path50Curve.ply!\n";
 
-	auto path51Curve = pmp::CurveFactory::circle(pmp::Point2{ 98.689514f, 54.600803f }, 9.625f, 80);
-	//auto path51Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.244923f, 60.766129f }, 14.346979f, 100);
+	auto path51Curve = pmp::CurveFactory::circle(pmp::Point2{ 98.689514, 54.600803 }, 9.625, 80);
+	//auto path51Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.244923, 60.766129 }, 14.346979, 100);
 	if (!pmp::write_to_ply(path51Curve, dataOutPath + "path51Curve.ply"))
 		std::cerr << "Error writing path51Curve.ply!\n";
 
@@ -2665,7 +2667,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		std::cerr << "Error writing path81Curve.ply!\n";
 
 	// Pair 9
-	auto path90Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 180);
+	auto path90Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285, 68.040321 }, 56.508064, 180);
 	RemeshWithDefaultSettings(path90Curve);
 	if (!pmp::write_to_ply(path90Curve, dataOutPath + "path90Curve.ply"))
 		std::cerr << "Error writing path90Curve.ply!\n";
@@ -2677,7 +2679,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		std::cerr << "Error writing path91Curve.ply!\n";
 
 	// Pair 10
-	auto path100Curve = pmp::CurveFactory::circle(pmp::Point2{ 61.653221f, 60.588707f }, 56.508064f, 180);
+	auto path100Curve = pmp::CurveFactory::circle(pmp::Point2{ 61.653221, 60.588707 }, 56.508064, 180);
 	RemeshWithDefaultSettings(path100Curve);
 	if (!pmp::write_to_ply(path100Curve, dataOutPath + "path100Curve.ply"))
 		std::cerr << "Error writing path90Curve.ply!\n";
@@ -2715,29 +2717,29 @@ void EquilibriumPairedConcaveManifoldTests()
 		std::cerr << "Error writing path121Curve.ply!\n";
 
 	// Pair 13
-	auto path130Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 100);
+	auto path130Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285, 68.040321 }, 56.508064, 100);
 	RemeshWithDefaultSettings(path130Curve);
 	if (!pmp::write_to_ply(path130Curve, dataOutPath + "path130Curve.ply"))
 		std::cerr << "Error writing path130Curve.ply!\n";
 
-	auto path131Curve = pmp::CurveFactory::circle(pmp::Point2{ 59.879032f, 51.983871f }, 14.104838f, 80);
+	auto path131Curve = pmp::CurveFactory::circle(pmp::Point2{ 59.879032, 51.983871 }, 14.104838, 80);
 	RemeshWithDefaultSettings(path131Curve);
 	if (!pmp::write_to_ply(path131Curve, dataOutPath + "path131Curve.ply"))
 		std::cerr << "Error writing path131Curve.ply!\n";
 
 	// Pair 14
-	auto path140Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285f, 68.040321f }, 56.508064f, 100);
+	auto path140Curve = pmp::CurveFactory::circle(pmp::Point2{ 60.411285, 68.040321 }, 56.508064, 100);
 	RemeshWithDefaultSettings(path140Curve);
 	if (!pmp::write_to_ply(path140Curve, dataOutPath + "path140Curve.ply"))
 		std::cerr << "Error writing path140Curve.ply!\n";
 
-	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357f, 34.419353f }, 13.217741f, 80);
+	auto path141Curve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357, 34.419353 }, 13.217741, 80);
 	RemeshWithDefaultSettings(path141Curve);
 	if (!pmp::write_to_ply(path141Curve, dataOutPath + "path141Curve.ply"))
 		std::cerr << "Error writing path141Curve.ply!\n";
 
 	// Pair 15
-	auto path150Curve = pmp::CurveFactory::circle(pmp::Point2{ 64.497322f, 62.582409f }, 92.768562f, 250);
+	auto path150Curve = pmp::CurveFactory::circle(pmp::Point2{ 64.497322, 62.582409 }, 92.768562, 250);
 	RemeshWithDefaultSettings(path150Curve);
 	if (!pmp::write_to_ply(path150Curve, dataOutPath + "path150Curve.ply"))
 		std::cerr << "Error writing path150Curve.ply!\n";
@@ -2810,10 +2812,10 @@ void EquilibriumPairedConcaveManifoldTests()
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
-	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0f;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0;
 	strategySettings.RemeshingSettings.UseBackProjection = true;
-	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<float>(M_PI_2);
+	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
@@ -2837,7 +2839,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	globalSettings.OutputPath = dataOutPath;
 	globalSettings.ExportResult = false;
 
-	globalSettings.RemeshingResizeFactor = 0.7f;
+	globalSettings.RemeshingResizeFactor = 0.7;
 	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 	for (unsigned int pairId = 19; const auto& [outerCurve, innerCurve] : curvePairs)
@@ -2870,13 +2872,13 @@ void VisualizeMCF()
 	};
 
 	// remesh the deformed circle
-	constexpr float edgeLength = 2.0f;
+	constexpr pmp::Scalar edgeLength = 2.0;
 	constexpr unsigned int iterations = 10;
 	pmp::CurveRemeshing remesher(curves[1]);
 	pmp::AdaptiveRemeshingSettings settings;
 	settings.MinEdgeLength = edgeLength;
-	settings.MaxEdgeLength = 1.5f * edgeLength;
-	settings.ApproxError = 0.05f * edgeLength;
+	settings.MaxEdgeLength = 1.5 * edgeLength;
+	settings.ApproxError = 0.05 * edgeLength;
 	settings.NRemeshingIterations = iterations;
 	settings.NTangentialSmoothingIters = 6;
 	settings.UseProjection = true;
@@ -2898,11 +2900,11 @@ void VisualizeMCF()
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
-		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 		strategySettings.RemeshingSettings.UseBackProjection = false;
 
-		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 		strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
 		strategySettings.FieldSettings.FieldIsoLevel = 0.01;
@@ -2919,7 +2921,7 @@ void VisualizeMCF()
 		globalSettings.OutputPath = dataOutPath;
 		globalSettings.ExportResult = false;
 
-		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeFactor = 0.7;
 		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 		std::vector<pmp::ManifoldCurve2D> innerCurves{};
@@ -2962,34 +2964,34 @@ void VisualizeMultipleInnerCurves()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-	{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-	{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-	{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-	{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+	{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+	{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+	{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+	{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		//{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
-		//{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
-		//{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		//{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		//{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		//{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
 	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		//{"armadillo", { Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f} }},
-		//{"bunny", { Circle2D{pmp::Point2{-0.025f, 0.08f}, 0.025f} } },
-		//{"maxPlanck", { Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f} }},
+		//{"armadillo", { Circle2D{pmp::Point2{-3.0, 52.0}, 20.0} }},
+		//{"bunny", { Circle2D{pmp::Point2{-0.025, 0.08}, 0.025} } },
+		//{"maxPlanck", { Circle2D{pmp::Point2{8.0, 85.0}, 50.0} }},
 
 		{"nefertiti", {
-			Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f},
-			//Circle2D{pmp::Point2{-75.0f, -50.0f}, 25.0f}
-			Circle2D{pmp::Point2{-10.0f, -200.0f}, 35.0f}
+			Circle2D{pmp::Point2{-20.0, 100.0}, 55.0},
+			//Circle2D{pmp::Point2{-75.0, -50.0}, 25.0}
+			Circle2D{pmp::Point2{-10.0, -200.0}, 35.0}
 		}}
 	};
 
@@ -3050,9 +3052,9 @@ void VisualizeMultipleInnerCurves()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		//const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		//const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = (isoLevelOffsetFactors.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -3063,9 +3065,9 @@ void VisualizeMultipleInnerCurves()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.01f * minSize;
+		const pmp::Scalar distTolerance = 0.01 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -3105,11 +3107,11 @@ void VisualizeMultipleInnerCurves()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+			//strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3126,7 +3128,7 @@ void VisualizeMultipleInnerCurves()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -3195,34 +3197,34 @@ void ExportSlicingPlanes()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+		{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+		{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+		{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
 		Geometry::PlaneSettings planeSettings;
-		planeSettings.Width = 200.0f;
-		planeSettings.Depth = 250.0f;
+		planeSettings.Width = 200.0;
+		planeSettings.Depth = 250.0;
 		planeSettings.nWidthSegments = 1;
 		planeSettings.nDepthSegments = 1;
-		planeSettings.Origin = slicingPlaneRefPts.at(meshName) - 0.5f * pmp::vec3{ planeSettings.Width, planeSettings.Depth, 0.0f };
+		planeSettings.Origin = slicingPlaneRefPts.at(meshName) - 0.5 * pmp::vec3{ planeSettings.Width, planeSettings.Depth, 0.0 };
 
 		Geometry::PlaneBuilder pb(planeSettings);
 		pb.BuildBaseData();
 		pb.BuildPMPSurfaceMesh();
 		auto pMesh = pb.GetPMPSurfaceMeshResult();
 
-		const pmp::vec3 defaultNormal(0.0f, 0.0f, 1.0f);
+		const pmp::vec3 defaultNormal(0.0, 0.0, 1.0);
 		const pmp::vec3 targetNormal = slicingPlaneNormals.at(meshName);
 
 		const pmp::mat4 rotationMat = rotation_matrix(targetNormal, defaultNormal);
@@ -3238,24 +3240,24 @@ void ExportSlicingPlanes()
 void AdvectionDrivenInnerOuterCircleTests()
 {
 	const std::map<std::string, pmp::ManifoldCurve2D> targetCurves{
-		{ "Circle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 0.0, 2.0 * M_PI)},
-		{ "IncompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, M_PI_2, 2.0 * M_PI)},
-		{ "SineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, 0.0, 2.0 * M_PI)},
-		{ "SineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, M_PI_2, 2.0 * M_PI)},
-		{ "ChamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0f, 52.0f}, 60.0f, 70.0f, 15, true)},
+		{ "Circle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 0.0, 2.0 * M_PI)},
+		{ "IncompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, M_PI_2, 2.0 * M_PI)},
+		{ "SineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, 0.0, 2.0 * M_PI)},
+		{ "SineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, M_PI_2, 2.0 * M_PI)},
+		{ "ChamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0, 52.0}, 60.0, 70.0, 15, true)},
 		{ "IncompleteChamferedRectangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-30.0f, -35.0f} + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{30.0f, -35.0f} + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{30.0f, 35.0f} + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{-30.0f, 35.0f} + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)},
+			pmp::Point2{-30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 		{ "ChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true)},
+			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 		{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-			pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)}
+			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -3263,8 +3265,8 @@ void AdvectionDrivenInnerOuterCircleTests()
 	constexpr double defaultOffsetFactor = 1.5;
 	constexpr unsigned int NTimeSteps = 180;
 
-	const auto innerCircle = Circle2D{ pmp::Point2{-3.0f, 52.0f}, 20.0f };
-	const auto outerCircle = Circle2D{ pmp::Point2{-3.0f, 52.0f}, 110.0f };
+	const auto innerCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 20.0 };
+	const auto outerCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 110.0 };
 
 	for (const auto& [ptCloudName, curve] : targetCurves)
 	{
@@ -3276,9 +3278,9 @@ void AdvectionDrivenInnerOuterCircleTests()
 		const pmp::BoundingBox2 bbox{ pts2D };
 
 		const auto bboxSize = bbox.max() - bbox.min();
-		const float minSize = std::min(bboxSize[0], bboxSize[1]);
-		//const float maxSize = std::max(bboxSize[0], bboxSize[1]);
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+		//const pmp::Scalar maxSize = std::max(bboxSize[0], bboxSize[1]);
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = defaultOffsetFactor;
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -3309,11 +3311,11 @@ void AdvectionDrivenInnerOuterCircleTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3330,7 +3332,7 @@ void AdvectionDrivenInnerOuterCircleTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -3374,24 +3376,24 @@ void AdvectionDrivenInnerOuterCircleTests()
 void OuterOnlySimpleShapeTests()
 {
 	const std::map<std::string, pmp::ManifoldCurve2D> targetCurves{
-	{ "Circle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 0.0, 2.0 * M_PI)},
-	{ "IncompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, M_PI_2, 2.0 * M_PI)},
-	{ "SineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, 0.0, 2.0 * M_PI)},
-	{ "SineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0f, 52.0f}, 35.0f, 25, 7.0f, 4.0f, M_PI_2, 2.0 * M_PI)},
-	{ "ChamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0f, 52.0f}, 60.0f, 70.0f, 15, true)},
+	{ "Circle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 0.0, 2.0 * M_PI)},
+	{ "IncompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, M_PI_2, 2.0 * M_PI)},
+	{ "SineDeformedCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, 0.0, 2.0 * M_PI)},
+	{ "SineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, M_PI_2, 2.0 * M_PI)},
+	{ "ChamferedRectangle", pmp::CurveFactory::rectangle(pmp::Point2{-3.0, 52.0}, 60.0, 70.0, 15, true)},
 	{ "IncompleteChamferedRectangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-30.0f, -35.0f} + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{30.0f, -35.0f} + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{30.0f, 35.0f} + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{-30.0f, 35.0f} + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)},
+		pmp::Point2{-30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 	{ "ChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true)},
+		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 	{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *120.0f + pmp::Point2{-3.0f, 52.0f},
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *120.0f + pmp::Point2{-3.0f, 52.0f}}, 30, true, false)}
+		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -3399,7 +3401,7 @@ void OuterOnlySimpleShapeTests()
 	constexpr double defaultOffsetFactor = 1.5;
 	constexpr unsigned int NTimeSteps = 180;
 
-	const auto outerCircle = Circle2D{ pmp::Point2{-3.0f, 52.0f}, 110.0f };
+	const auto outerCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 110.0 };
 
 	for (const auto& [ptCloudName, curve] : targetCurves)
 	{
@@ -3411,9 +3413,9 @@ void OuterOnlySimpleShapeTests()
 		const pmp::BoundingBox2 bbox{ pts2D };
 
 		const auto bboxSize = bbox.max() - bbox.min();
-		const float minSize = std::min(bboxSize[0], bboxSize[1]);
-		//const float maxSize = std::max(bboxSize[0], bboxSize[1]);
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+		//const pmp::Scalar maxSize = std::max(bboxSize[0], bboxSize[1]);
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 
 		const double isoLvlOffsetFactor = defaultOffsetFactor;
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
@@ -3436,11 +3438,11 @@ void OuterOnlySimpleShapeTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3457,7 +3459,7 @@ void OuterOnlySimpleShapeTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -3508,29 +3510,29 @@ void SimpleMeshesIOLSWTests()
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
-		{"boxWithAHole", Sphere3D{pmp::Point{0, 0, 0}, 2.0f} },
+		{"boxWithAHole", Sphere3D{pmp::Point{0, 0, 0}, 2.0} },
 	};
 	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
-		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{0, 0, 0}, 0.9f}} },
+		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{0, 0, 0}, 0.9}} },
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"boxWithAHole", pmp::Point{0.0f, 0.0f, 0.0f}},
+		{"boxWithAHole", pmp::Point{0.0, 0.0, 0.0}},
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"boxWithAHole", pmp::vec3{0.0f, -1.0f, 0.0f}},
+		{"boxWithAHole", pmp::vec3{0.0, -1.0, 0.0}},
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		{"boxWithAHole", Circle2D{pmp::Point2{0.0f, 0.0f}, 2.0f} },
+		{"boxWithAHole", Circle2D{pmp::Point2{0.0, 0.0}, 2.0} },
 	};
 	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		{"boxWithAHole", std::vector{ Circle2D{pmp::Point2{0.0f, 0.0f}, 0.9f}} }
+		{"boxWithAHole", std::vector{ Circle2D{pmp::Point2{0.0, 0.0}, 0.9}} }
 	};
 
 	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
-		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{1.0f, 0.0f, 0.0f}, 0.6f} }},
+		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{1.0, 0.0, 0.0}, 0.6} }},
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 30;
@@ -3582,10 +3584,10 @@ void SimpleMeshesIOLSWTests()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 			volExpansionFactor,
@@ -3620,9 +3622,9 @@ void SimpleMeshesIOLSWTests()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.01f * minSize;
+		const pmp::Scalar distTolerance = 0.01 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -3656,11 +3658,11 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3677,7 +3679,7 @@ void SimpleMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -3748,11 +3750,11 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3769,7 +3771,7 @@ void SimpleMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -3850,11 +3852,11 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3871,7 +3873,7 @@ void SimpleMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -3887,10 +3889,10 @@ void SimpleMeshesIOLSWTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;
 			std::vector<pmp::SurfaceMesh> innerSurfaces; // no inner surfaces to evolve
@@ -3953,11 +3955,11 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -3977,7 +3979,7 @@ void SimpleMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -3993,10 +3995,10 @@ void SimpleMeshesIOLSWTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;
 
@@ -4017,10 +4019,10 @@ void SimpleMeshesIOLSWTests()
 				innerIcoBuilder.BuildPMPSurfaceMesh();
 				auto innerSurface = innerIcoBuilder.GetPMPSurfaceMeshResult();
 				const pmp::mat4 transfMatrixGeomMove{
-					1.0f, 0.0f, 0.0f, innerSphere.Center[0],
-					0.0f, 1.0f, 0.0f, innerSphere.Center[1],
-					0.0f, 0.0f, 1.0f, innerSphere.Center[2],
-					0.0f, 0.0f, 0.0f, 1.0f
+					1.0, 0.0, 0.0, innerSphere.Center[0],
+					0.0, 1.0, 0.0, innerSphere.Center[1],
+					0.0, 0.0, 1.0, innerSphere.Center[2],
+					0.0, 0.0, 0.0, 1.0
 				};
 				innerSurface *= transfMatrixGeomMove;
 				innerSurface.negate_orientation();
@@ -4089,51 +4091,51 @@ void StandardMeshesIOLSWTests()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"armadillo", pmp::Point{-0.10348621158928151f, 21.427067319905646f, 9.79369240592005f}},
-		{"bunny", pmp::Point{-0.01684039831161499f, 0.11015420407056808f, 0.0012007840834242693f} },
-		//{"bunny", pmp::Point{-0.021311134388792542f, 0.11143290480956525f, 0.007428090888817638f} },
-		{"maxPlanck", pmp::Point{30.59686279296875f, -18.105804443359375f, 82.29149055480957f} },
-		{"nefertiti", pmp::Point{0.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::Point{-0.10348621158928151, 21.427067319905646, 9.79369240592005}},
+		{"bunny", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+		//{"bunny", pmp::Point{-0.021311134388792542, 0.11143290480956525, 0.007428090888817638} },
+		{"maxPlanck", pmp::Point{30.59686279296875, -18.105804443359375, 82.29149055480957} },
+		{"nefertiti", pmp::Point{0.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"armadillo", pmp::vec3{-0.03070969905335075f, 0.12876712096541565f, 0.9911992448253433f}},
-		{"bunny", pmp::vec3{0.0f, 0.0f, 1.0f} },
-		//{"bunny", pmp::vec3{-0.18754182700901353f, -0.029010506066971985f, 0.9818281181855913f} },
-		{"maxPlanck", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"nefertiti", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"armadillo", pmp::vec3{-0.03070969905335075, 0.12876712096541565, 0.9911992448253433}},
+		{"bunny", pmp::vec3{0.0, 0.0, 1.0} },
+		//{"bunny", pmp::vec3{-0.18754182700901353, -0.029010506066971985, 0.9818281181855913} },
+		{"maxPlanck", pmp::vec3{1.0, 0.0, 0.0} },
+		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234f, 16.6515f}, 121.558f} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906f, 0.102261f}, 0.142831f} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82f, 82.5006f}, 292.263f} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497f, -0.0410004f}, 441.436f} }
+		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
 	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		//{"armadillo", std::vector{ Circle2D{pmp::Point2{-3.0f, 52.0f}, 20.0f}} },
-		{"bunny", std::vector{ Circle2D{pmp::Point2{0.0f, 0.08f}, 0.025f}} },
-		{"maxPlanck", std::vector{ Circle2D{pmp::Point2{8.0f, 85.0f}, 50.0f}} },
-		//{"nefertiti", std::vector{ Circle2D{pmp::Point2{-20.0f, 100.0f}, 55.0f}} }
+		//{"armadillo", std::vector{ Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}} },
+		{"bunny", std::vector{ Circle2D{pmp::Point2{0.0, 0.08}, 0.025}} },
+		{"maxPlanck", std::vector{ Circle2D{pmp::Point2{8.0, 85.0}, 50.0}} },
+		//{"nefertiti", std::vector{ Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}} }
 	};
 
 	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509f, 21.4183f, -0.000249863f}, 136.963f} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297f, 0.110217f, -0.0015718f}, 0.141622f} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658f, -17.9765f, 82.2885f}, 271.982f} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997f, -0.00499725f, -0.0215073f}, 392.184f} }
+		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
-		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0f, 52.0f}, 20.0f}} },
-		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0f, 0.082f, 0.012f}, 0.03f}} },
-		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 50.0f, 100.0f}, 50.0f}} },
-		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0f, 100.0f}, 55.0f}} }
+		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0, 52.0}, 20.0}} },
+		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0, 0.082, 0.012}, 0.03}} },
+		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0, 50.0, 100.0}, 50.0}} },
+		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0, 100.0}, 55.0}} }
 	};
 
 	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
 		{"armadillo", {}},
-		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f}, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}/**/}},
-		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f, 0.0f}, 50.0f}, Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} /**/}},
+		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01, 0.06, 0.012}, 0.032}, Sphere3D{pmp::Point{0.01, 0.12, 0.01}, 0.025}/**/}},
+		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0, 85.0, 0.0}, 50.0}, Sphere3D{pmp::Point{30.0, -120.0, 160.0}, 100.0} /**/}},
 		{"nefertiti", {}}
 	};
 
@@ -4205,10 +4207,10 @@ void StandardMeshesIOLSWTests()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 			volExpansionFactor,
@@ -4225,9 +4227,9 @@ void StandardMeshesIOLSWTests()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.01f * minSize;
+		const float distTolerance = 0.01 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -4261,11 +4263,11 @@ void StandardMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -4282,7 +4284,7 @@ void StandardMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -4353,11 +4355,11 @@ void StandardMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -4376,7 +4378,7 @@ void StandardMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -4457,11 +4459,11 @@ void StandardMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<float>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -4478,7 +4480,7 @@ void StandardMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -4494,10 +4496,10 @@ void StandardMeshesIOLSWTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;			
 			std::vector<pmp::SurfaceMesh> innerSurfaces; // no inner surfaces to evolve
@@ -4560,11 +4562,11 @@ void StandardMeshesIOLSWTests()
 			strategySettings.LevelOfDetail = 3;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -4581,7 +4583,7 @@ void StandardMeshesIOLSWTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerSpheres.contains(meshName))
@@ -4597,10 +4599,10 @@ void StandardMeshesIOLSWTests()
 			icoBuilder.BuildPMPSurfaceMesh();
 			auto outerSurface = icoBuilder.GetPMPSurfaceMeshResult();
 			const pmp::mat4 transfMatrixGeomMove{
-				1.0f, 0.0f, 0.0f, outerSphere.Center[0],
-				0.0f, 1.0f, 0.0f, outerSphere.Center[1],
-				0.0f, 0.0f, 1.0f, outerSphere.Center[2],
-				0.0f, 0.0f, 0.0f, 1.0f
+				1.0, 0.0, 0.0, outerSphere.Center[0],
+				0.0, 1.0, 0.0, outerSphere.Center[1],
+				0.0, 0.0, 1.0, outerSphere.Center[2],
+				0.0, 0.0, 0.0, 1.0
 			};
 			outerSurface *= transfMatrixGeomMove;
 
@@ -4621,10 +4623,10 @@ void StandardMeshesIOLSWTests()
 				innerIcoBuilder.BuildPMPSurfaceMesh();
 				auto innerSurface = innerIcoBuilder.GetPMPSurfaceMeshResult();
 				const pmp::mat4 transfMatrixGeomMove{
-					1.0f, 0.0f, 0.0f, innerSphere.Center[0],
-					0.0f, 1.0f, 0.0f, innerSphere.Center[1],
-					0.0f, 0.0f, 1.0f, innerSphere.Center[2],
-					0.0f, 0.0f, 0.0f, 1.0f
+					1.0, 0.0, 0.0, innerSphere.Center[0],
+					0.0, 1.0, 0.0, innerSphere.Center[1],
+					0.0, 0.0, 1.0, innerSphere.Center[2],
+					0.0, 0.0, 0.0, 1.0
 				};
 				innerSurface *= transfMatrixGeomMove;
 				innerSurface.negate_orientation();
@@ -4731,24 +4733,24 @@ void HyperellipseEllipsoidEquilibriumTests()
 	if (!pmp::write_to_ply(hyperEllipse, dataOutPath + "hyperEllipse.ply"))
 		std::cerr << "Error writing hyperEllipse.ply!\n";
 	// remesh hyper ellipse
-	constexpr float edgeLength = 15.0f;
+	constexpr pmp::Scalar edgeLength = 15.0;
 	constexpr unsigned int iterations = 10;
 	pmp::CurveRemeshing remesher(hyperEllipse);
 	pmp::AdaptiveRemeshingSettings settings;
 	settings.MinEdgeLength = edgeLength;
-	settings.MaxEdgeLength = 1.5f * edgeLength;
-	settings.ApproxError = 0.05f * edgeLength;
+	settings.MaxEdgeLength = 1.5 * edgeLength;
+	settings.ApproxError = 0.05 * edgeLength;
 	settings.NRemeshingIterations = iterations;
 	settings.NTangentialSmoothingIters = 6;
 	settings.UseProjection = true;
 	remesher.adaptive_remeshing(settings);	
 
 	const std::vector<Circle2D> testInnerCircles{
-		{ pmp::Point2{ 0.0f, 0.0f }, 70.0f },
-		{ pmp::Point2{ 100.0f, 0.0f }, 60.0f },
-		{ pmp::Point2{ 140.0f, 0.0f }, 40.0f },
-		{ pmp::Point2{ 130.0f, 0.0f }, 60.0f },
-		{ pmp::Point2{ 130.0f, 40.0f }, 40.0f }
+		{ pmp::Point2{ 0.0, 0.0 }, 70.0 },
+		{ pmp::Point2{ 100.0, 0.0 }, 60.0 },
+		{ pmp::Point2{ 140.0, 0.0 }, 40.0 },
+		{ pmp::Point2{ 130.0, 0.0 }, 60.0 },
+		{ pmp::Point2{ 130.0, 40.0 }, 40.0 }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -4784,11 +4786,11 @@ void HyperellipseEllipsoidEquilibriumTests()
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
-		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22f;
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.22;
 		strategySettings.RemeshingSettings.UseBackProjection = false;
 
-		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -4805,7 +4807,7 @@ void HyperellipseEllipsoidEquilibriumTests()
 		globalSettings.OutputPath = dataOutPath;
 		globalSettings.ExportResult = false;
 
-		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeFactor = 0.7;
 		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 		const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -4853,30 +4855,30 @@ void JunkCan2DTests()
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
-		{"canStraight", pmp::Point{0.07009050250053406f, 0.3348689912818372f, -0.018547505140304565f}},
-		{"canStraightMissingBottom", pmp::Point{0.07009050250053406f, 0.3348689912818372f, -0.018547505140304565f} },
-		{"crushedCan", pmp::Point{0.0007844995707273483f, 0.030990499537438154f, -0.006461501121520996} },
-		{"crushedCanMissingBottom", pmp::Point{0.0007844995707273483f, 0.030990499537438154f, -0.006461501121520996} }
+		{"canStraight", pmp::Point{0.07009050250053406, 0.3348689912818372, -0.018547505140304565}},
+		{"canStraightMissingBottom", pmp::Point{0.07009050250053406, 0.3348689912818372, -0.018547505140304565} },
+		{"crushedCan", pmp::Point{0.0007844995707273483, 0.030990499537438154, -0.006461501121520996} },
+		{"crushedCanMissingBottom", pmp::Point{0.0007844995707273483, 0.030990499537438154, -0.006461501121520996} }
 	};
 
 	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
-		{"canStraight", pmp::vec3{1.0f, 0.0f, 0.0f}},
-		{"canStraightMissingBottom", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"crushedCan", pmp::vec3{1.0f, 0.0f, 0.0f} },
-		{"crushedCanMissingBottom", pmp::vec3{1.0f, 0.0f, 0.0f} }
+		{"canStraight", pmp::vec3{1.0, 0.0, 0.0}},
+		{"canStraightMissingBottom", pmp::vec3{1.0, 0.0, 0.0} },
+		{"crushedCan", pmp::vec3{1.0, 0.0, 0.0} },
+		{"crushedCanMissingBottom", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
 	const std::map<std::string, Circle2D> outerCircles{
-		{"canStraight", Circle2D{pmp::Point2{0.25f, 0.0f}, 0.9f} },
-		{"canStraightMissingBottom", Circle2D{pmp::Point2{0.25f, 0.0f}, 0.9f} },
-		{"crushedCan", Circle2D{pmp::Point2{0.0205f, 0.0f}, 0.07f} },
-		{"crushedCanMissingBottom", Circle2D{pmp::Point2{0.0205f, 0.0f}, 0.07f} }
+		{"canStraight", Circle2D{pmp::Point2{0.25, 0.0}, 0.9} },
+		{"canStraightMissingBottom", Circle2D{pmp::Point2{0.25, 0.0}, 0.9} },
+		{"crushedCan", Circle2D{pmp::Point2{0.0205, 0.0}, 0.07} },
+		{"crushedCanMissingBottom", Circle2D{pmp::Point2{0.0205, 0.0}, 0.07} }
 	};
 	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		{"canStraight", std::vector{ Circle2D{pmp::Point2{0.35f, -0.25f}, 0.16f} } },
-		{"canStraightMissingBottom", std::vector{ Circle2D{pmp::Point2{0.35f, -0.25f}, 0.16f}, Circle2D{pmp::Point2{0.25f, 0.35f}, 0.16f}} },
-		{"crushedCan", std::vector{ Circle2D{pmp::Point2{0.025f, -0.035f}, 0.02f}} },
-		{"crushedCanMissingBottom", std::vector{ Circle2D{pmp::Point2{0.030f, -0.035f}, 0.02f}, Circle2D{pmp::Point2{0.025f, 0.035f}, 0.02f} } }
+		{"canStraight", std::vector{ Circle2D{pmp::Point2{0.35, -0.25}, 0.16} } },
+		{"canStraightMissingBottom", std::vector{ Circle2D{pmp::Point2{0.35, -0.25}, 0.16}, Circle2D{pmp::Point2{0.25, 0.35}, 0.16}} },
+		{"crushedCan", std::vector{ Circle2D{pmp::Point2{0.025, -0.035}, 0.02}} },
+		{"crushedCanMissingBottom", std::vector{ Circle2D{pmp::Point2{0.030, -0.035}, 0.02}, Circle2D{pmp::Point2{0.025, 0.035}, 0.02} } }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 30;
@@ -4937,10 +4939,10 @@ void JunkCan2DTests()
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto center = ptCloudBBox.center();
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 			volExpansionFactor,
@@ -4957,9 +4959,9 @@ void JunkCan2DTests()
 		// - - - - - - - - -  New Manifold Evolver (Curve)  - - - - - - - - - - - - 
 		// ==========================================================================
 
-		const float distTolerance = 0.05f * minSize;
+		const pmp::Scalar distTolerance = 0.05 * minSize;
 		const auto planeRefPt = (slicingPlaneRefPts.contains(meshName) ? slicingPlaneRefPts.at(meshName) : center);
-		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0f, 0.0f, 0.0f });
+		const auto planeNormal = (slicingPlaneNormals.contains(meshName) ? slicingPlaneNormals.at(meshName) : pmp::vec3{ -1.0, 0.0, 0.0 });
 		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
 		if (pts2D.empty())
 		{
@@ -5000,11 +5002,11 @@ void JunkCan2DTests()
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
 
-			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14f;
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 			strategySettings.RemeshingSettings.UseBackProjection = false;
 
-			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
@@ -5021,7 +5023,7 @@ void JunkCan2DTests()
 			globalSettings.OutputPath = dataOutPath;
 			globalSettings.ExportResult = false;
 
-			globalSettings.RemeshingResizeFactor = 0.7f;
+			globalSettings.RemeshingResizeFactor = 0.7;
 			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 			if (!outerCircles.contains(meshName))
@@ -5082,7 +5084,7 @@ void JunkCan2DTests()
 void InscribedCircleCalculatorVisualization()
 {
 	// Data (incomplete circle)
-	pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+	pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 16);
 	auto targetPts = targetCurve.positions();
 	targetPts.erase(targetPts.begin());
 	targetPts.erase(targetPts.begin());
@@ -5092,11 +5094,11 @@ void InscribedCircleCalculatorVisualization()
 
 	const auto pointBBox = pmp::BoundingBox2(inputData.Points);
 	const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-	const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-	const float cellSize = minSize / 20.0f;
+	const pmp::Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+	const pmp::Scalar cellSize = minSize / 20.0;
 	const SDF::PointCloudDistanceField2DSettings sdfSettings{
 		cellSize,
-		0.5f,
+		0.5,
 		DBL_MAX
 	};
 	inputData.DistanceField = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(inputData.Points, sdfSettings));
@@ -5154,25 +5156,25 @@ void InscribedCircleCalculatorVisualization()
 	// Ellipsoid
 
 	{
-		Geometry::IcoSphereBuilder icoBuilder({ 2, 1.0f });
+		Geometry::IcoSphereBuilder icoBuilder({ 2, 1.0 });
 		icoBuilder.BuildBaseData();
 		icoBuilder.BuildPMPSurfaceMesh();
 		auto sphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
-		constexpr float a = 1.0f;
-		constexpr float b = 1.5f;
-		constexpr float c = 2.0f;
+		constexpr pmp::Scalar a = 1.0;
+		constexpr pmp::Scalar b = 1.5;
+		constexpr pmp::Scalar c = 2.0;
 		const auto scalingMat = scaling_matrix(pmp::vec3{ a, b, c });
 		sphereMesh *= scalingMat;
 
 		const auto points = sphereMesh.positions();
 		const auto pointBBox3D = pmp::BoundingBox(points);
 		const auto pointBBox3DSize = pointBBox3D.max() - pointBBox3D.min();
-		const float minSize3D = std::min({ pointBBox3DSize[0], pointBBox3DSize[1], pointBBox3DSize[2] });
-		const float cellSize3D = minSize3D / 20.0f;
+		const pmp::Scalar minSize3D = std::min({ pointBBox3DSize[0], pointBBox3DSize[1], pointBBox3DSize[2] });
+		const pmp::Scalar cellSize3D = minSize3D / 20.0;
 
 		const SDF::PointCloudDistanceFieldSettings ellipsoidDfSettings{
 			cellSize3D,
-			0.5f,
+			0.5,
 			DBL_MAX
 		};
 		const auto dfEllipsoid = std::make_shared<Geometry::ScalarGrid>(SDF::PointCloudDistanceFieldGenerator::Generate(points, ellipsoidDfSettings));
@@ -5190,8 +5192,8 @@ void StandardMeshesExportWithNormals()
 	};
 
 	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
-		{"bunnyWNormals", std::vector{ Sphere3D{pmp::Point{-0.01f, 0.06f, 0.012f}, 0.032f}, Sphere3D{pmp::Point{0.01f, 0.12f, 0.01f}, 0.025f}/**/}},
-		{"maxPlanckWNormals", std::vector{ Sphere3D{pmp::Point{8.0f, 85.0f, 0.0f}, 50.0f}, Sphere3D{pmp::Point{30.0f, -120.0f, 160.0f}, 100.0f} /**/}},
+		{"bunnyWNormals", std::vector{ Sphere3D{pmp::Point{-0.01, 0.06, 0.012}, 0.032}, Sphere3D{pmp::Point{0.01, 0.12, 0.01}, 0.025}/**/}},
+		{"maxPlanckWNormals", std::vector{ Sphere3D{pmp::Point{8.0, 85.0, 0.0}, 50.0}, Sphere3D{pmp::Point{30.0, -120.0, 160.0}, 100.0} /**/}},
 	};
 
 	constexpr size_t samplingLevel = 3;
@@ -5288,13 +5290,13 @@ void TestProblematicMedialAxisPtClouds()
 	const auto unevenCrossPts = unevenCrossCurve.positions();
 
 	const std::vector<Circle2D> testInnerCircles{
-		//{ pmp::Point2{ 60.322582f, 63.604839f }, 6.6532254f },
-		//{ pmp::Point2{ 87.733871f, 55.975807f }, 9.08871 },
-		//{ pmp::Point2{ 62.3629f, 61.741936f }, 19.161289f },
-		//{ pmp::Point2{ 73.274193f, 103.87903f }, 8.5161285f },
-		//{ pmp::Point2{ 24.749998f, 67.330643f }, 10.733871f },
-		{ pmp::Point2{ 53.935482f, 30.129032f }, 7.6290321f },
-		//{ pmp::Point2{ 51.0f, 72.0f }, 5.0f },
+		//{ pmp::Point2{ 60.322582, 63.604839 }, 6.6532254 },
+		//{ pmp::Point2{ 87.733871, 55.975807 }, 9.08871 },
+		//{ pmp::Point2{ 62.3629, 61.741936 }, 19.161289 },
+		//{ pmp::Point2{ 73.274193, 103.87903 }, 8.5161285 },
+		//{ pmp::Point2{ 24.749998, 67.330643 }, 10.733871 },
+		{ pmp::Point2{ 53.935482, 30.129032 }, 7.6290321 },
+		//{ pmp::Point2{ 51.0, 72.0 }, 5.0 },
 
 	};
 
@@ -5333,15 +5335,15 @@ void TestProblematicMedialAxisPtClouds()
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
 
-		strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0f;
+		strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0;
 		strategySettings.RemeshingSettings.UseBackProjection = true;
 
-		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2f;
-		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
+		strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+		strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
 
 		strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
 		strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
-		strategySettings.FieldSettings.FieldExpansionFactor = 0.5f;
+		strategySettings.FieldSettings.FieldExpansionFactor = 0.5;
 
 		std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
 
@@ -5355,7 +5357,7 @@ void TestProblematicMedialAxisPtClouds()
 		globalSettings.OutputPath = dataOutPath;
 		globalSettings.ExportResult = false;
 
-		globalSettings.RemeshingResizeFactor = 0.7f;
+		globalSettings.RemeshingResizeFactor = 0.7;
 		globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 		const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
@@ -5384,30 +5386,30 @@ void TestProblematicMedialAxisPtClouds()
 void TestDFDivergence2D()
 {
 	const std::vector unevenCrossPolyPts{
-		pmp::Point2{39.507142f, 14.544772f},
-		pmp::Point2{46.104261f, 5.542495f},
-		pmp::Point2{61.36143f, 4.906308f},
-		pmp::Point2{68.282948f, 13.11281f},
-		pmp::Point2{66.153916f, 31.426095f},
-		pmp::Point2{69.924933f, 39.754365f},
-		pmp::Point2{111.082270f, 39.723965f},
-		pmp::Point2{117.795930f, 46.528945f},
-		pmp::Point2{117.765430f, 66.419005f},
-		pmp::Point2{113.358230f, 72.215125f},
-		pmp::Point2{89.030514f, 71.743755f},
-		pmp::Point2{82.788235f, 77.337235f},
-		pmp::Point2{87.565954f, 122.613040f},
-		pmp::Point2{80.332640f, 129.222760f},
-		pmp::Point2{68.372952f, 128.366110f},
-		pmp::Point2{61.451434f, 122.392570f},
-		pmp::Point2{57.089489f, 85.394595f},
-		pmp::Point2{36.929786f, 84.297475f},
-		pmp::Point2{10.835265f, 83.544745f},
-		pmp::Point2{3.558908f, 76.519305f},
-		pmp::Point2{3.558908f, 57.450225f},
-		pmp::Point2{10.584357f, 47.664785f},
-		pmp::Point2{32.413427f, 48.166595f},
-		pmp::Point2{40.865615f, 41.985195f}
+		pmp::Point2{39.507142, 14.544772},
+		pmp::Point2{46.104261, 5.542495},
+		pmp::Point2{61.36143, 4.906308},
+		pmp::Point2{68.282948, 13.11281},
+		pmp::Point2{66.153916, 31.426095},
+		pmp::Point2{69.924933, 39.754365},
+		pmp::Point2{111.082270, 39.723965},
+		pmp::Point2{117.795930, 46.528945},
+		pmp::Point2{117.765430, 66.419005},
+		pmp::Point2{113.358230, 72.215125},
+		pmp::Point2{89.030514, 71.743755},
+		pmp::Point2{82.788235, 77.337235},
+		pmp::Point2{87.565954, 122.613040},
+		pmp::Point2{80.332640, 129.222760},
+		pmp::Point2{68.372952, 128.366110},
+		pmp::Point2{61.451434, 122.392570},
+		pmp::Point2{57.089489, 85.394595},
+		pmp::Point2{36.929786, 84.297475},
+		pmp::Point2{10.835265, 83.544745},
+		pmp::Point2{3.558908, 76.519305},
+		pmp::Point2{3.558908, 57.450225},
+		pmp::Point2{10.584357, 47.664785},
+		pmp::Point2{32.413427, 48.166595},
+		pmp::Point2{40.865615, 41.985195}
 	};
 	pmp::ManifoldCurve2D unevenCrossCurve = pmp::CurveFactory::sampled_polygon(unevenCrossPolyPts, 100, false);
 	if (!pmp::write_to_ply(unevenCrossCurve, dataOutPath + "unevenCrossCurve.ply"))
@@ -5418,9 +5420,9 @@ void TestDFDivergence2D()
 
 	const pmp::BoundingBox2 ptCloudBBox(unevenCrossPts);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-	const float minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
-	const float maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
-	const float cellSize = minSize / static_cast<float>(nVoxelsPerMinDimension);
+	const pmp::Scalar minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const pmp::Scalar maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const pmp::Scalar cellSize = minSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 	//const SDF::PointCloudDistanceField2DSettings dfSettings{
 	//	cellSize,
 	//	0.6,
@@ -5470,7 +5472,7 @@ void TestDFDivergence2D()
 	//chBuilderSettings.DFSettings = dfSettings;
 	//chBuilderSettings.ConstructInwardCharacteristics = true;
 	//chBuilderSettings.ConstructOutwardCharacteristics = true;
-	//chBuilderSettings.DivFieldThresholdFactor = -0.15f;
+	//chBuilderSettings.DivFieldThresholdFactor = -0.15;
 
 	//PlanarManifoldCurveCharacteristicsBuilder charBuilder{ unevenCrossCurve, chBuilderSettings };
 	//const auto characteristics = charBuilder.Build();
@@ -5502,7 +5504,7 @@ void TestDFDivergence2D()
 
 void TestArcLengthCalculation()
 {
-	auto testCircleCurve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357f, 34.419353f }, 13.217741f, 10);
+	auto testCircleCurve = pmp::CurveFactory::circle(pmp::Point2{ 53.669357, 34.419353 }, 13.217741, 10);
 
 	const auto arcLengthCalc = std::make_shared<pmp::EvolvingArcLengthCalculator>(testCircleCurve);
 
@@ -5516,12 +5518,12 @@ void TestArcLengthCalculation()
 	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths2, std::cout);
 
 	std::cout << "TestArcLengthCalculation: test 3: circle with 20 segments after remeshing with factor 0.7\n";
-	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.7f);
+	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.7);
 	const auto arcLengths3 = arcLengthCalc->CalculateArcLengths();
 	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths3, std::cout);
 
 	std::cout << "TestArcLengthCalculation: test 4: after remeshing with factor 0.5\n";
-	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.5f);
+	RemeshWithDefaultSettings(testCircleCurve, arcLengthCalc, 0.5);
 	const auto arcLengths4 = arcLengthCalc->CalculateArcLengths();
 	Geometry::PrintCurveValuesInTopologicalOrder(testCircleCurve, arcLengths4, std::cout);
 }
@@ -5529,11 +5531,11 @@ void TestArcLengthCalculation()
 void TestCurve2DRotation()
 {
 	const auto center = pmp::Point2(200, 400);
-	const float innerRadius = 40.0f;
+	const pmp::Scalar innerRadius = 40.0;
 	const std::vector<pmp::Point2> triangleVerticesSmall = {
-		pmp::Point2{-0.5f, -sqrtf(3.0f) / 6.0f} *innerRadius + center,
-		pmp::Point2{0.5f, -sqrtf(3.0f) / 6.0f} *innerRadius + center,
-		pmp::Point2{0.0f, sqrtf(3.0f) / 3.0f} *innerRadius + center
+		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *innerRadius + center,
+		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *innerRadius + center,
+		pmp::Point2{0.0, sqrtf(3.0) / 3.0} *innerRadius + center
 	};
 	const unsigned int segments = 30;
 

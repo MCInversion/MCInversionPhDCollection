@@ -18,7 +18,9 @@
 #pragma once
 
 // FOR WINDOWS
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <string>
 #include <assert.h>
 #include <math.h>

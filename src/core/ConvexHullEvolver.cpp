@@ -60,9 +60,9 @@ void ConvexHullEvolver::Evolve()
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength is: " << (remeshedLengthMin / (m_EvolSettings.MaxDim * m_ScalingFactor)) * 100 << " % of MaxDim.\n";
 #endif
-	auto minEdgeLength = 4.0f * remeshedLengthMin;
-	auto maxEdgeLength = 8.0f * minEdgeLength;
-	auto approxError = 0.5f * minEdgeLength;
+	auto minEdgeLength = 4.0 * remeshedLengthMin;
+	auto maxEdgeLength = 8.0 * minEdgeLength;
+	auto approxError = 0.5 * minEdgeLength;
 
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
@@ -77,7 +77,7 @@ void ConvexHullEvolver::Evolve()
 	if (!m_EvolvingSurface->has_vertex_property("v:feature"))
 		throw std::logic_error("ConvexHullEvolver::Evolve: vertex property \"v:feature\" not found in m_EvolvingSurface!\n");
 	auto vFeature = m_EvolvingSurface->get_vertex_property<bool>("v:feature");
-	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0f);
+	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -107,8 +107,8 @@ void ConvexHullEvolver::Evolve()
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
-			if (tanRedistWeight > 0.0f)
+			const pmp::Scalar tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_EvolvingSurface, v, vNormal, tanRedistWeight);
@@ -142,7 +142,7 @@ void ConvexHullEvolver::Evolve()
 		const auto vPos = m_EvolvingSurface->position(v);
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-		vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
+		vIsFeatureVal[v] = (vFeature[v] ? 1.0 : -1.0);
 	}
 	ComputeTriangleMetrics();
 	if (m_EvolSettings.ExportSurfacePerTimeStep)
@@ -218,7 +218,7 @@ void ConvexHullEvolver::Evolve()
 
 		// --------------------------------------------------------------------
 
-		//const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
+		//const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<pmp::Scalar>("v:equilateralJacobianCondition");
 		//if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
 		if (m_EvolSettings.DoRemeshing && IsNonFeatureRemeshingNecessary(*m_EvolvingSurface))
 		{
@@ -281,7 +281,7 @@ void ConvexHullEvolver::Evolve()
 			const auto vPos = m_EvolvingSurface->position(v);
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-			vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
+			vIsFeatureVal[v] = (vFeature[v] ? 1.0 : -1.0);
 		}
 		ComputeTriangleMetrics();
 
@@ -404,7 +404,7 @@ void ConvexHullEvolver::Preprocess()
 	std::cout << "ConvexHullEvolver::Preprocess: {lengthMin: " << lengthMin << ", lengthMean: " << lengthMean << ", lengthMax: " << lengthMax << "},\n";
 	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
 	m_Remesher->convex_hull_adaptive_remeshing({
-	4.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
+	4.0 * lengthMin, 8.0 * lengthMin, 0.5 * lengthMin,
 	3, 5, true
 	});
 #if REPORT_EVOL_STEPS
@@ -413,7 +413,7 @@ void ConvexHullEvolver::Preprocess()
 
 	// transform mesh and grid
 	// >>> uniform scale to ensure numerical method's stability.
-	const float scalingFactor = GetConvexHullStabilizationScalingFactor(m_EvolSettings.TimeStep, *m_EvolvingSurface, m_LaplacianAreaFunction);
+	const pmp::Scalar scalingFactor = GetConvexHullStabilizationScalingFactor(m_EvolSettings.TimeStep, *m_EvolvingSurface, m_LaplacianAreaFunction);
 	m_ScalingFactor = scalingFactor;
 	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
 	const auto origin = m_EvolSettings.TargetOrigin;
@@ -422,16 +422,16 @@ void ConvexHullEvolver::Preprocess()
 	std::cout << "ConvexHullEvolver::Preprocess: Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
 #endif
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
 	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.0, 0.0, 0.0, -origin[0],
+		0.0, 1.0, 0.0, -origin[1],
+		0.0, 0.0, 1.0, -origin[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
@@ -466,9 +466,9 @@ void ConvexHullEvolver::ComputeDistanceField()
 #endif
 	const pmp::BoundingBox ptCloudBBox(m_PointCloud);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-	const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-	const float cellSize = minSize / static_cast<float>(m_EvolSettings.NVoxelsPerMinDimension);
-	constexpr float volExpansionFactor = 1.0f;
+	const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+	const auto cellSize = minSize / static_cast<pmp::Scalar>(m_EvolSettings.NVoxelsPerMinDimension);
+	constexpr pmp::Scalar volExpansionFactor = 1.0;
 	const SDF::PointCloudDistanceFieldSettings dfSettings{
 				cellSize,
 				volExpansionFactor,
@@ -511,17 +511,17 @@ void ReportCHEvolverInput(const ConvexHullSurfaceEvolutionSettings& evolSettings
 }
 
 /// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+constexpr pmp::Scalar SCALE_FACTOR_POWER = 1.0 / 2.0;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 1.0f;
+constexpr pmp::Scalar INV_SHRINK_FACTOR = 1.0;
 
-float GetConvexHullStabilizationScalingFactor(const double& timeStep, pmp::SurfaceMesh& convexHullMesh, const AreaFunction& areaFunction, const float& stabilizationFactor)
+float GetConvexHullStabilizationScalingFactor(const double& timeStep, pmp::SurfaceMesh& convexHullMesh, const AreaFunction& areaFunction, const pmp::Scalar& stabilizationFactor)
 {
 	const auto surfaceArea = surface_area(convexHullMesh);
 	const auto nVertices = convexHullMesh.n_vertices();
 	const auto coVolStats = AnalyzeMeshCoVolumes(convexHullMesh, areaFunction);
-	float expectedMeanCoVolArea = stabilizationFactor * (surfaceArea / static_cast<float>(nVertices));
-	expectedMeanCoVolArea += stabilizationFactor * static_cast<float>(coVolStats.Mean);
-	expectedMeanCoVolArea /= 2.0f;
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
+	auto expectedMeanCoVolArea = stabilizationFactor * (surfaceArea / static_cast<pmp::Scalar>(nVertices));
+	expectedMeanCoVolArea += stabilizationFactor * static_cast<pmp::Scalar>(coVolStats.Mean);
+	expectedMeanCoVolArea /= 2.0;
+	return pow(static_cast<pmp::Scalar>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }

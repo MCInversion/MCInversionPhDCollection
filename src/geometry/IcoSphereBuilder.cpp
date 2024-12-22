@@ -10,19 +10,19 @@ namespace IcoSphere
 	using TriangleList = std::vector<Triangle>;
 
 	/// \brief golden ratio.
-	const float phi = (1.0f + sqrt(5.0f)) / 2.0f;
+	const pmp::Scalar phi = (1.0 + sqrt(5.0)) / 2.0;
 
 	/// \brief golden ratio ico-sphere radius.
-	const float norm = sqrt(1.0f + phi * phi);
+	const pmp::Scalar norm = sqrt(1.0 + phi * phi);
 
 	/// \brief vertices of an icosahedron.
 	inline const VertexList ICOSAHEDRON_BASE_VERTICES{
-		/* v0 */ pmp::vec3{-1.0f / norm, phi / norm, 0.0f},  /* v1 */ pmp::vec3{1.0f / norm, phi / norm, 0.0f},
-		/* v2 */ pmp::vec3{-1.0f / norm, -phi / norm, 0.0f}, /* v3 */ pmp::vec3{1.0f / norm, -phi / norm, 0.0f},
-		/* v4 */ pmp::vec3{0.0f, -1.0f / norm, phi / norm},  /* v5 */ pmp::vec3{0.0f, 1.0f / norm, phi / norm},
-		/* v6 */ pmp::vec3{0.0f, -1.0f / norm, -phi / norm}, /* v7 */ pmp::vec3{0.0f, 1.0f / norm, -phi / norm},
-		/* v8 */ pmp::vec3{phi / norm, 0.0f, -1.0f / norm},  /* v9 */ pmp::vec3{phi / norm, 0.0f, 1.0f / norm},
-		/* v10 */pmp::vec3{-phi / norm, 0.0f, -1.0f / norm},/* v11 */ pmp::vec3{-phi / norm, 0.0f, 1.0f / norm}
+		/* v0 */ pmp::vec3{-1.0 / norm, phi / norm, 0.0},  /* v1 */ pmp::vec3{1.0 / norm, phi / norm, 0.0},
+		/* v2 */ pmp::vec3{-1.0 / norm, -phi / norm, 0.0}, /* v3 */ pmp::vec3{1.0 / norm, -phi / norm, 0.0},
+		/* v4 */ pmp::vec3{0.0, -1.0 / norm, phi / norm},  /* v5 */ pmp::vec3{0.0, 1.0 / norm, phi / norm},
+		/* v6 */ pmp::vec3{0.0, -1.0 / norm, -phi / norm}, /* v7 */ pmp::vec3{0.0, 1.0 / norm, -phi / norm},
+		/* v8 */ pmp::vec3{phi / norm, 0.0, -1.0 / norm},  /* v9 */ pmp::vec3{phi / norm, 0.0, 1.0 / norm},
+		/* v10 */pmp::vec3{-phi / norm, 0.0, -1.0 / norm},/* v11 */ pmp::vec3{-phi / norm, 0.0, 1.0 / norm}
 	};
 
 	/// \brief vertex index triples for icosahedron triangle faces.
@@ -95,7 +95,7 @@ namespace
 		const auto nTotalEdgeSegments = nInteriorEdgePts + 1;
 		for (size_t i = 1; i <= nInteriorEdgePts; ++i)
 		{
-			const auto t = static_cast<float>(i) / static_cast<float>(nTotalEdgeSegments);
+			const auto t = static_cast<pmp::Scalar>(i) / static_cast<pmp::Scalar>(nTotalEdgeSegments);
 			pmp::vec3 newPoint = normalize(start + t * (end - start));
 
 			ids.push_back(static_cast<unsigned int>(vertices.size()));
@@ -135,12 +135,12 @@ namespace
 
 		for (size_t i = 1; i < nEdgePts - 1; i++)
 		{
-			const float iParam = static_cast<float>(i) / static_cast<float>(nEdgePts - 1);
+			const pmp::Scalar iParam = static_cast<pmp::Scalar>(i) / static_cast<pmp::Scalar>(nEdgePts - 1);
 			interiorPoints.reserve(nMaxPtsInRow - i + 1);
 			for (size_t j = 1; j < nEdgePts - i - 1; j++)
 			{
-				const float jParam = static_cast<float>(j) / static_cast<float>(nEdgePts - 1);
-				const pmp::vec3 newPoint = normalize(p1 * (1.0f - iParam - jParam) + p2 * jParam + p3 * iParam);
+				const pmp::Scalar jParam = static_cast<pmp::Scalar>(j) / static_cast<pmp::Scalar>(nEdgePts - 1);
+				const pmp::vec3 newPoint = normalize(p1 * (1.0 - iParam - jParam) + p2 * jParam + p3 * iParam);
 
 				interiorPoints[i - 1].push_back(static_cast<unsigned int>(vertices.size()));
 				vertices.push_back(newPoint);

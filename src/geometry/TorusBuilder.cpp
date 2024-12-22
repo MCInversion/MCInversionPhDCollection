@@ -6,8 +6,8 @@ namespace Geometry
 	{
 		m_BaseResult = std::make_unique<BaseMeshGeometryData>();
 
-		const float ringRadius = m_Settings.RingRadius;
-		const float tubeRadius = m_Settings.TubeRadius;
+		const pmp::Scalar ringRadius = m_Settings.RingRadius;
+		const pmp::Scalar tubeRadius = m_Settings.TubeRadius;
 
 		const size_t nRSegments = m_Settings.RingSegments;
 		const size_t nTSegments = m_Settings.TubeSegments;
@@ -21,14 +21,14 @@ namespace Geometry
 
 		const InsertionFunction polyInsertFn = m_Settings.UseQuads ? EmplaceQuadIndexTuple : EmplaceTriIndexTuples;
 
-		//float prevRingParam{ 0.0f };
-		//float prevTubeParam{ 0.0f };
+		//pmp::Scalar prevRingParam{ 0.0 };
+		//pmp::Scalar prevTubeParam{ 0.0 };
 		for (unsigned int i = 0; i < nRSegments; i++)
 		{
-			const float ringParam = 2.0f * static_cast<float>(M_PI * i) / static_cast<float>(nRSegments);
+			const pmp::Scalar ringParam = 2.0 * static_cast<pmp::Scalar>(M_PI * i) / static_cast<pmp::Scalar>(nRSegments);
 			for (unsigned int j = 0; j < nTSegments; j++)
 			{
-				const float tubeParam = 2.0f * static_cast<float>(M_PI * j) / static_cast<float>(nTSegments);
+				const pmp::Scalar tubeParam = 2.0 * static_cast<pmp::Scalar>(M_PI * j) / static_cast<pmp::Scalar>(nTSegments);
 
 				m_BaseResult->Vertices.emplace_back(pmp::vec3{
 					(ringRadius + tubeRadius * cos(tubeParam)) * cos(ringParam),
@@ -63,7 +63,7 @@ namespace Geometry
 		}
 		for (unsigned int j = 1; j < nTSegments; j++)
 		{
-			//const float tubeParam = M_PI * (1.0f + 2.0f * static_cast<float>(j) / static_cast<float>(nTSegments));
+			//const pmp::Scalar tubeParam = M_PI * (1.0 + 2.0 * static_cast<pmp::Scalar>(j) / static_cast<pmp::Scalar>(nTSegments));
 			polyInsertFn(*m_BaseResult,
 				(static_cast<unsigned int>(nRSegments) - 1) * static_cast<unsigned int>(nTSegments) + j - 1,
 				(static_cast<unsigned int>(nRSegments) - 1) * static_cast<unsigned int>(nTSegments) + j,

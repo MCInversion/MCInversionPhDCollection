@@ -18,7 +18,7 @@
 // ================================================================================================
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
-constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.2f;
+constexpr pmp::Scalar ICO_SPHERE_RADIUS_FACTOR = 0.2;
 
 /// \brief this value is verified for [Smith, 2002]
 //constexpr double BET_NORMAL_INTENSITY_FACTOR = 0.05;
@@ -61,12 +61,12 @@ void BrainSurfaceEvolver::Preprocess()
 	auto& field = *m_Field;
 	const auto& fieldBox = field.Box();
 	const auto fieldBoxSize = fieldBox.max() - fieldBox.min();
-	const float minDim = std::min({ fieldBoxSize[0], fieldBoxSize[1], fieldBoxSize[2] });
-	const float maxDim = std::max({ fieldBoxSize[0], fieldBoxSize[1], fieldBoxSize[2] });
+	const pmp::Scalar minDim = std::min({ fieldBoxSize[0], fieldBoxSize[1], fieldBoxSize[2] });
+	const pmp::Scalar maxDim = std::max({ fieldBoxSize[0], fieldBoxSize[1], fieldBoxSize[2] });
 
 	// build ico-sphere
-	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (minDim + maxDim);
-	//const float icoSphereRadius = m_EvolSettings.IcoSphereSettings.Radius;
+	const pmp::Scalar icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * (minDim + maxDim);
+	//const pmp::Scalar icoSphereRadius = m_EvolSettings.IcoSphereSettings.Radius;
 	m_StartingSurfaceRadius = icoSphereRadius;
 #if REPORT_EVOL_STEPS
 	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
@@ -81,12 +81,12 @@ void BrainSurfaceEvolver::Preprocess()
 	// >>> uniform scale to ensure numerical method's stability.
 	// >>> translation to origin for fields not centered at (0,0,0).
 	// >>> scaling factor value is intended for stabilization of the numerical method.
-	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
+	const pmp::Scalar scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
 	m_ScalingFactor = scalingFactor;
 	m_EvolvingSurfaceRadiusEstimate = static_cast<double>(icoSphereRadius * scalingFactor);
 	//m_EvolSettings.IcoSphereSettings.Radius *= scalingFactor;
 
-	m_UnitNormalToGridScaleFactor = static_cast<float>(m_EvolvingSurfaceRadiusEstimate) / (maxDim * m_ScalingFactor);
+	m_UnitNormalToGridScaleFactor = static_cast<pmp::Scalar>(m_EvolvingSurfaceRadiusEstimate) / (maxDim * m_ScalingFactor);
 
 	// origin needs to be computed from bet2
 	const auto origin = m_EvolSettings.IcoSphereSettings.Center;
@@ -96,16 +96,16 @@ void BrainSurfaceEvolver::Preprocess()
 	std::cout << "Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
 #endif
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
 	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.0, 0.0, 0.0, -origin[0],
+		0.0, 1.0, 0.0, -origin[1],
+		0.0, 0.0, 1.0, -origin[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
@@ -175,7 +175,7 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 	const auto d1 = m_EvolSettings.ThresholdSettings.MinIntensitySearchDepth;
 	const auto d2 = m_EvolSettings.ThresholdSettings.MaxIntensitySearchDepth;
 
-	const float normalStepFactor = m_UnitNormalToGridScaleFactor / static_cast<float>(d2 - d1);
+	const pmp::Scalar normalStepFactor = m_UnitNormalToGridScaleFactor / static_cast<pmp::Scalar>(d2 - d1);
 	const auto iNormalStepX = static_cast<int>(std::round(vNormal[0] * normalStepFactor));
 	const auto iNormalStepY = static_cast<int>(std::round(vNormal[1] * normalStepFactor));
 	const auto iNormalStepZ = static_cast<int>(std::round(vNormal[2] * normalStepFactor));
@@ -235,23 +235,23 @@ double BrainSurfaceEvolver::NormalIntensityWeightFunction(const pmp::vec3& vPos,
 // ================================================================================================
 
 /// \brief a utility for computing the mean value of mean edge lengths for each vertex neighborhood.
-[[nodiscard]] float ComputeMeanInterVertexDistance(const pmp::SurfaceMesh& mesh)
+[[nodiscard]] pmp::Scalar ComputeMeanInterVertexDistance(const pmp::SurfaceMesh& mesh)
 {
-	float result{ 0.0f };
+	pmp::Scalar result{ 0.0 };
 	for (const auto v : mesh.vertices())
 	{
 		const auto vPos = mesh.position(v);
-		float neighborhoodResult{ 0.0 };
+		pmp::Scalar neighborhoodResult{ 0.0 };
 		for (const auto w : mesh.vertices(v))
 		{
 			const auto wPos = mesh.position(w);
 			neighborhoodResult += pmp::norm(vPos - wPos);
 		}
 		const auto vValence = mesh.valence(v);
-		neighborhoodResult /= static_cast<float>(vValence);
+		neighborhoodResult /= static_cast<pmp::Scalar>(vValence);
 		result += neighborhoodResult;
 	}
-	result /= static_cast<float>(mesh.n_vertices());
+	result /= static_cast<pmp::Scalar>(mesh.n_vertices());
 
 	return result;
 }
@@ -307,12 +307,12 @@ void BrainSurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
-	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
-	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
-	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 4.0f * minEdgeLength;
+	const pmp::Scalar phi = (1.0 + sqrt(5.0)) / 2.0; /// golden ratio.
+	const auto subdiv = static_cast<pmp::Scalar>(m_EvolSettings.IcoSphereSubdivisionLevel);
+	const pmp::Scalar r = m_StartingSurfaceRadius * m_ScalingFactor;
+	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	auto minEdgeLength = minEdgeMultiplier * (2.0 * r / (sqrt(phi * sqrt(5.0)) * subdiv)); // from icosahedron edge length
+	auto maxEdgeLength = 4.0 * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -322,7 +322,7 @@ void BrainSurfaceEvolver::Evolve()
 	auto NVertices = static_cast<unsigned int>(m_EvolvingSurface->n_vertices());
 	SparseMatrix sysMat(NVertices, NVertices);
 	Eigen::MatrixXd sysRhs(NVertices, 3);
-	auto vIntensity = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:normalIntensity", 0.0f);
+	auto vIntensity = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:normalIntensity", 0.0);
 	auto vFeature = m_EvolvingSurface->vertex_property<bool>("v:feature", false);
 
 	// property container for surface vertex normals
@@ -331,7 +331,7 @@ void BrainSurfaceEvolver::Evolve()
 	// ----------- System fill function --------------------------------
 	const auto fillMatrixAndRHSTriplesFromMesh = [&]()
 	{
-		const float meanInterVertexDistance = ComputeMeanInterVertexDistance(*m_EvolvingSurface);
+		const pmp::Scalar meanInterVertexDistance = ComputeMeanInterVertexDistance(*m_EvolvingSurface);
 
 		for (const auto v : m_EvolvingSurface->vertices())
 		{
@@ -469,7 +469,7 @@ void BrainSurfaceEvolver::Evolve()
 			}
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing({
-				minEdgeLength, maxEdgeLength, 2.0f * minEdgeLength,
+				minEdgeLength, maxEdgeLength, 2.0 * minEdgeLength,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
 				m_EvolSettings.TopoParams.UseBackProjection });

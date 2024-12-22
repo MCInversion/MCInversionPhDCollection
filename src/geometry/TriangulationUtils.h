@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pmp/Types.h"
+
 #include "GeometryConversionUtils.h"
 
 namespace Geometry

@@ -79,8 +79,8 @@ void SheetMembraneEvolver::Preprocess()
 	auto& field = *m_Field;
 	const auto& fieldBox = field.Box();
 
-	const float startZHeight = m_EvolSettings.StartZHeight;
-	const float endZHeight = m_EvolSettings.EndZHeight;
+	const pmp::Scalar startZHeight = m_EvolSettings.StartZHeight;
+	const pmp::Scalar endZHeight = m_EvolSettings.EndZHeight;
 	m_SheetSurfaceVelocity = static_cast<double>(startZHeight) - static_cast<double>(endZHeight);
 
 	// build plane surface
@@ -106,11 +106,11 @@ void SheetMembraneEvolver::Preprocess()
 	// >>> translation to origin for fields not centered at (0,0,0).
 	// >>> scaling factor value is intended for stabilization of the numerical method.
 
-	const float cellSizeX = fieldSize[0] / static_cast<float>(m_EvolSettings.nXSegments);
-	const float cellSizeY = fieldSize[1] / static_cast<float>(m_EvolSettings.nYSegments);
-	m_MeanEdgeLength = (cellSizeX + cellSizeY + sqrt(cellSizeX * cellSizeX + cellSizeY * cellSizeY)) / 3.0f;
+	const pmp::Scalar cellSizeX = fieldSize[0] / static_cast<pmp::Scalar>(m_EvolSettings.nXSegments);
+	const pmp::Scalar cellSizeY = fieldSize[1] / static_cast<pmp::Scalar>(m_EvolSettings.nYSegments);
+	m_MeanEdgeLength = (cellSizeX + cellSizeY + sqrt(cellSizeX * cellSizeX + cellSizeY * cellSizeY)) / 3.0;
 
-	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, cellSizeX, cellSizeY);
+	const pmp::Scalar scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, cellSizeX, cellSizeY);
 	m_ScalingFactor = scalingFactor;
 #if REPORT_EVOL_STEPS
 	std::cout << "Stabilization Scaling Factor: " << scalingFactor << ",\n";
@@ -121,17 +121,17 @@ void SheetMembraneEvolver::Preprocess()
 	m_MeanEdgeLength *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
-	const auto planeCenter = pmp::vec3{ fieldOrig[0] + 0.5f * fieldSize[0], fieldOrig[1] + 0.5f * fieldSize[1], planeOrig[2] };
+	const auto planeCenter = pmp::vec3{ fieldOrig[0] + 0.5 * fieldSize[0], fieldOrig[1] + 0.5 * fieldSize[1], planeOrig[2] };
 	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -planeCenter[0],
-		0.0f, 1.0f, 0.0f, -planeCenter[1],
-		0.0f, 0.0f, 1.0f, -planeCenter[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.0, 0.0, 0.0, -planeCenter[0],
+		0.0, 1.0, 0.0, -planeCenter[1],
+		0.0, 0.0, 1.0, -planeCenter[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
@@ -224,10 +224,10 @@ void SheetMembraneEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	float minEdgeLength = m_MeanEdgeLength * m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	float maxEdgeLength = 4.0f * minEdgeLength;
-	float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
-	//auto approxError = 2.0f * minEdgeLength;
+	pmp::Scalar minEdgeLength = m_MeanEdgeLength * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	pmp::Scalar maxEdgeLength = 4.0 * minEdgeLength;
+	pmp::Scalar approxError = 0.25 * (minEdgeLength + maxEdgeLength);
+	//auto approxError = 2.0 * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -269,8 +269,8 @@ void SheetMembraneEvolver::Evolve()
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
-			if (tanRedistWeight > 0.0f)
+			const auto tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_EvolvingSurface, v, vNormal, tanRedistWeight);
@@ -493,14 +493,14 @@ void ReportInput(const SheetMembraneEvolutionSettings& evolSettings, std::ostrea
 }
 
 /// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+constexpr pmp::Scalar SCALE_FACTOR_POWER = 1.0 / 2.0;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 2.0f;
+constexpr pmp::Scalar INV_SHRINK_FACTOR = 2.0;
 
-float GetStabilizationScalingFactor(const double& timeStep, const float& cellSizeX, const float& cellSizeY, const float& stabilizationFactor)
+float GetStabilizationScalingFactor(const double& timeStep, const pmp::Scalar& cellSizeX, const pmp::Scalar& cellSizeY, const pmp::Scalar& stabilizationFactor)
 {
-	const float expectedMeanCoVolArea = stabilizationFactor * cellSizeX * cellSizeY;
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
+	const pmp::Scalar expectedMeanCoVolArea = stabilizationFactor * cellSizeX * cellSizeY;
+	return pow(static_cast<pmp::Scalar>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }
 
 //
@@ -528,8 +528,8 @@ static [[nodiscard]] bool IsColumnInField(const pmp::BoundingBox& fieldBox, cons
 }
 
 Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
-	const float& cellSize, const pmp::BoundingBox& box, 
-	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const float& supportZLevel)
+	const pmp::Scalar& cellSize, const pmp::BoundingBox& box,
+	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const pmp::Scalar& supportZLevel)
 {
 	if (box.is_empty())
 	{
@@ -545,16 +545,16 @@ Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
 		std::cerr << "GetDistanceFieldWithSupportColumns: cellSize too large!\n";
 		throw std::logic_error("GetDistanceFieldWithSupportColumns: cellSize too large!\n");
 	}
-	if (supportZLevel < 0.0f || supportZLevel > 1.0f)
+	if (supportZLevel < 0.0 || supportZLevel > 1.0)
 	{
 		std::cerr << "GetDistanceFieldWithSupportColumns: supportZLevel must be a value between 0 and 1!\n";
 		throw std::logic_error("GetDistanceFieldWithSupportColumns: supportZLevel must be a value between 0 and 1!\n");
 	}
 
-	const float maxColumnRadius = 0.5f * std::fmaxf(boxSize[0], boxSize[1]);
-	const float preferredColumnRadius = 0.05f * maxColumnRadius;
-	const float columnZPosition = box.min()[2] + (supportZLevel - 0.1f) * boxSize[2];
-	const float maxColumnHeight = box.max()[2] - columnZPosition;
+	const pmp::Scalar maxColumnRadius = 0.5 * std::fmaxf(boxSize[0], boxSize[1]);
+	const pmp::Scalar preferredColumnRadius = 0.05 * maxColumnRadius;
+	const pmp::Scalar columnZPosition = box.min()[2] + (supportZLevel - 0.1) * boxSize[2];
+	const pmp::Scalar maxColumnHeight = box.max()[2] - columnZPosition;
 
 	constexpr double initVal = Geometry::DEFAULT_SCALAR_GRID_INIT_VAL;
 	Geometry::ScalarGrid result(cellSize, box, initVal);
@@ -569,7 +569,7 @@ Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
 			continue;
 
 		const auto& weight = wPos.Weight;
-		if (weight < 0.0f || weight > 1.0f)
+		if (weight < 0.0 || weight > 1.0)
 		{
 			std::cerr << "GetDistanceFieldWithSupportColums: Weight must be a value between 0 and 1!\n";
 			continue;

@@ -28,29 +28,29 @@ namespace
     [[nodiscard]] InscribedCircleInputData CreateUniformCircleSamplingData()
     {
         InscribedCircleInputData inputData;
-        inputData.Points = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0f, 32).positions();
+        inputData.Points = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 32).positions();
         return inputData;
     }
 
     [[nodiscard]] InscribedCircleInputData CreateEllipseSamplingData()
     {
         InscribedCircleInputData inputData;
-        auto ellipse = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0f, 32);
-        ellipse *= scaling_matrix_2d(pmp::vec2(2.0f, 1.0f));
+        auto ellipse = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 32);
+        ellipse *= scaling_matrix_2d(pmp::vec2(2.0, 1.0));
         inputData.Points = ellipse.positions();
         return inputData;
     }
 
-    [[nodiscard]] std::shared_ptr<Geometry::ScalarGrid2D> GenerateDistanceField(const std::vector<pmp::Point2>& points, float truncationFactor = 10.0f)
+    [[nodiscard]] std::shared_ptr<Geometry::ScalarGrid2D> GenerateDistanceField(const std::vector<pmp::Point2>& points, float truncationFactor = 10.0)
     {
         const auto pointBBox = pmp::BoundingBox2(points);
         const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-        const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-        const float cellSize = minSize / 20.0f;
+        const pmp::Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+        const pmp::Scalar cellSize = minSize / 20.0;
 
         const SDF::PointCloudDistanceField2DSettings sdfSettings{
             cellSize,
-            1.0f,
+            1.0,
         DBL_MAX
         };
         return std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings));
@@ -120,8 +120,8 @@ TEST_F(NaiveInscribedCircleCalculatorTests, UnitSquareVertices)
 
     // Assert
     ASSERT_EQ(circles.size(), 1);
-    EXPECT_FLOAT_EQ(circles[0].Center[0], 0.5f);
-    EXPECT_FLOAT_EQ(circles[0].Center[1], 0.5f);
+    EXPECT_FLOAT_EQ(circles[0].Center[0], 0.5);
+    EXPECT_FLOAT_EQ(circles[0].Center[1], 0.5);
     EXPECT_FLOAT_EQ(circles[0].Radius, std::sqrt(2) / 2);
 }
 
@@ -135,9 +135,9 @@ TEST_F(NaiveInscribedCircleCalculatorTests, UniformCircleSampling)
 
     // Assert
     ASSERT_EQ(circles.size(), 1);
-    EXPECT_FLOAT_EQ(circles[0].Center[0], 0.0f);
-    EXPECT_FLOAT_EQ(circles[0].Center[1], 0.0f);
-    EXPECT_FLOAT_EQ(circles[0].Radius, 1.0f);
+    EXPECT_FLOAT_EQ(circles[0].Center[0], 0.0);
+    EXPECT_FLOAT_EQ(circles[0].Center[1], 0.0);
+    EXPECT_FLOAT_EQ(circles[0].Radius, 1.0);
 }
 
 TEST_F(NaiveInscribedCircleCalculatorTests, EllipseSampling)
@@ -150,9 +150,9 @@ TEST_F(NaiveInscribedCircleCalculatorTests, EllipseSampling)
 
     // Assert
     ASSERT_EQ(circles.size(), 1);
-    EXPECT_FLOAT_EQ(circles[0].Center[0], 0.0f);
-    EXPECT_FLOAT_EQ(circles[0].Center[1], 0.0f);
-    EXPECT_FLOAT_EQ(circles[0].Radius, 1.0f);
+    EXPECT_FLOAT_EQ(circles[0].Center[0], 0.0);
+    EXPECT_FLOAT_EQ(circles[0].Center[1], 0.0);
+    EXPECT_FLOAT_EQ(circles[0].Radius, 1.0);
 }
 
 TEST_F(DistanceFieldInscribedCircleCalculatorTests, UnitSquareVertices) 
@@ -170,8 +170,8 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, UnitSquareVertices)
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Center[0], 0.5f, epsilon);
-        EXPECT_NEAR(circle.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Center[0], 0.5, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.5, epsilon);
         EXPECT_NEAR(circle.Radius, std::sqrt(2) / 2, epsilon);
     }
 }
@@ -191,9 +191,9 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, UniformCircleSampling)
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
-        EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
-        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(circle.Center[0], 0.0, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.0, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0, epsilon);
     }
 }
 
@@ -212,7 +212,7 @@ TEST_F(DistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0, epsilon);
     }
 }
 
@@ -231,8 +231,8 @@ TEST_F(HierarchicalDistanceFieldInscribedCircleCalculatorTests, UnitSquareVertic
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Center[0], 0.5f, epsilon);
-        EXPECT_NEAR(circle.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Center[0], 0.5, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.5, epsilon);
         EXPECT_NEAR(circle.Radius, std::sqrt(2) / 2, epsilon);
     }
 }
@@ -252,9 +252,9 @@ TEST_F(HierarchicalDistanceFieldInscribedCircleCalculatorTests, UniformCircleSam
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
-        EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
-        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(circle.Center[0], 0.0, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.0, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0, epsilon);
     }
 }
 
@@ -273,7 +273,7 @@ TEST_F(HierarchicalDistanceFieldInscribedCircleCalculatorTests, EllipseSampling)
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0, epsilon);
     }
 }
 
@@ -292,8 +292,8 @@ TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, UnitSquareVerti
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Center[0], 0.5f, epsilon);
-        EXPECT_NEAR(circle.Center[1], 0.5f, epsilon);
+        EXPECT_NEAR(circle.Center[0], 0.5, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.5, epsilon);
         EXPECT_NEAR(circle.Radius, std::sqrt(2) / 2, epsilon);
     }
 }
@@ -313,9 +313,9 @@ TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, UniformCircleSa
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Center[0], 0.0f, epsilon);
-        EXPECT_NEAR(circle.Center[1], 0.0f, epsilon);
-        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(circle.Center[0], 0.0, epsilon);
+        EXPECT_NEAR(circle.Center[1], 0.0, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0, epsilon);
     }
 }
 
@@ -334,14 +334,14 @@ TEST_F(ParticleSwarmDistanceFieldInscribedCircleCalculatorTests, EllipseSampling
     ASSERT_EQ(circles.size(), 1);
     for (const auto& circle : circles)
     {
-        EXPECT_NEAR(circle.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(circle.Radius, 1.0, epsilon);
     }
 }
 
 TEST(ParticleSwarmDistanceFieldInscribedCircleCalculator_Tests, ProblematicIncompleteCircle)
 {
     // Arrange
-    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 16);
     auto targetPts = targetCurve.positions();
     targetPts.erase(targetPts.begin());
     targetPts.erase(targetPts.begin());
@@ -394,7 +394,7 @@ namespace
 
     [[nodiscard]] InscribedSphereInputData CreateUniformSphereSamplingData()
     {
-        pmp::SurfaceMesh sphereMesh = ConstructIcoSphere(pmp::Point(0, 0, 0), 1.0f, 2);
+        pmp::SurfaceMesh sphereMesh = ConstructIcoSphere(pmp::Point(0, 0, 0), 1.0, 2);
         InscribedSphereInputData data;
         data.Points = sphereMesh.positions();
         return data;
@@ -402,10 +402,10 @@ namespace
 
     [[nodiscard]] InscribedSphereInputData CreateEllipsoidSamplingData()
     {
-        pmp::SurfaceMesh sphereMesh = ConstructIcoSphere(pmp::Point(0, 0, 0), 1.0f, 2);
-        constexpr float a = 1.0f;
-        constexpr float b = 1.5f;
-        constexpr float c = 2.0f;
+        pmp::SurfaceMesh sphereMesh = ConstructIcoSphere(pmp::Point(0, 0, 0), 1.0, 2);
+        constexpr pmp::Scalar a = 1.0;
+        constexpr pmp::Scalar b = 1.5;
+        constexpr pmp::Scalar c = 2.0;
         const auto scalingMat = scaling_matrix(pmp::vec3{a, b, c});
         sphereMesh *= scalingMat;
         InscribedSphereInputData data;
@@ -413,17 +413,17 @@ namespace
         return data;
     }
 
-    [[nodiscard]] std::shared_ptr<Geometry::ScalarGrid> GenerateDistanceField(const std::vector<pmp::Point>& points, float truncationFactor = 10.0f)
+    [[nodiscard]] std::shared_ptr<Geometry::ScalarGrid> GenerateDistanceField(const std::vector<pmp::Point>& points, pmp::Scalar truncationFactor = 10.0)
     {
         const auto pointBBox = pmp::BoundingBox(points);
         const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-        const float minSize = std::min({pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2]});
-        const float cellSize = minSize / 20.0f;
+        const pmp::Scalar minSize = std::min({pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2]});
+        const pmp::Scalar cellSize = minSize / 20.0;
 
         const SDF::PointCloudDistanceFieldSettings sdfSettings{
             cellSize,
-            1.0f,
-        DBL_MAX
+            1.0,
+            DBL_MAX
         };
         return std::make_shared<Geometry::ScalarGrid>(SDF::PointCloudDistanceFieldGenerator::Generate(points, sdfSettings));
     }
@@ -441,9 +441,9 @@ TEST_F(NaiveInscribedSphereCalculatorTests, UnitCubeVertices)
 
     // Assert
     ASSERT_EQ(spheres.size(), 1);
-    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.5f);
-    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.5f);
-    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.5f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.5);
+    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.5);
+    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.5);
     EXPECT_FLOAT_EQ(spheres[0].Radius, std::sqrt(3) / 2);  // Inscribed sphere in a unit cube
 }
 
@@ -457,10 +457,10 @@ TEST_F(NaiveInscribedSphereCalculatorTests, UniformSphereSampling)
 
     // Assert
     ASSERT_EQ(spheres.size(), 1);
-    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.0f);
-    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.0f);
-    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.0f);
-    EXPECT_FLOAT_EQ(spheres[0].Radius, 1.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.0);
+    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.0);
+    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.0);
+    EXPECT_FLOAT_EQ(spheres[0].Radius, 1.0);
 }
 
 TEST_F(NaiveInscribedSphereCalculatorTests, EllipsoidSampling)
@@ -473,10 +473,10 @@ TEST_F(NaiveInscribedSphereCalculatorTests, EllipsoidSampling)
 
     // Assert
     ASSERT_EQ(spheres.size(), 1);
-    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.0f);
-    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.0f);
-    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.0f);
-    EXPECT_FLOAT_EQ(spheres[0].Radius, 1.0f);
+    EXPECT_FLOAT_EQ(spheres[0].Center[0], 0.0);
+    EXPECT_FLOAT_EQ(spheres[0].Center[1], 0.0);
+    EXPECT_FLOAT_EQ(spheres[0].Center[2], 0.0);
+    EXPECT_FLOAT_EQ(spheres[0].Radius, 1.0);
 }
 
 TEST_F(DistanceFieldInscribedSphereCalculatorTests, UnitCubeVertices)
@@ -494,9 +494,9 @@ TEST_F(DistanceFieldInscribedSphereCalculatorTests, UnitCubeVertices)
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Center[0], 0.5f, epsilon);
-        EXPECT_NEAR(sphere.Center[1], 0.5f, epsilon);
-        EXPECT_NEAR(sphere.Center[2], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[0], 0.5, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.5, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.5, epsilon);
         EXPECT_NEAR(sphere.Radius, std::sqrt(3) / 2, epsilon);
     }
 }
@@ -520,10 +520,10 @@ TEST_F(DistanceFieldInscribedSphereCalculatorTests, UniformSphereSampling)
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Center[0], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Center[1], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Center[2], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[0], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0, epsilon);
     }
 }
 
@@ -544,7 +544,7 @@ TEST_F(DistanceFieldInscribedSphereCalculatorTests, EllipsoidSampling)
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0, epsilon);
     }
 }
 
@@ -563,9 +563,9 @@ TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, UnitCubeVertices
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Center[0], 0.5f, epsilon);
-        EXPECT_NEAR(sphere.Center[1], 0.5f, epsilon);
-        EXPECT_NEAR(sphere.Center[2], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[0], 0.5, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.5, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.5, epsilon);
         EXPECT_NEAR(sphere.Radius, std::sqrt(3) / 2, epsilon);
     }
 }
@@ -587,10 +587,10 @@ TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, UniformSphereSam
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Center[0], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Center[1], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Center[2], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[0], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0, epsilon);
     }
 }
 
@@ -609,7 +609,7 @@ TEST_F(HierarchicalDistanceFieldInscribedSphereCalculatorTests, EllipsoidSamplin
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0, epsilon);
     }
 }
 
@@ -628,9 +628,9 @@ TEST_F(ParticleSwarmDistanceFieldInscribedSphereCalculatorTests, UnitCubeVertice
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Center[0], 0.5f, epsilon);
-        EXPECT_NEAR(sphere.Center[1], 0.5f, epsilon);
-        EXPECT_NEAR(sphere.Center[2], 0.5f, epsilon);
+        EXPECT_NEAR(sphere.Center[0], 0.5, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.5, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.5, epsilon);
         EXPECT_NEAR(sphere.Radius, std::sqrt(3) / 2, epsilon);
     }
 }
@@ -650,10 +650,10 @@ TEST_F(ParticleSwarmDistanceFieldInscribedSphereCalculatorTests, UniformSphereSa
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Center[0], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Center[1], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Center[2], 0.0f, epsilon);
-        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(sphere.Center[0], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Center[1], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Center[2], 0.0, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0, epsilon);
     }
 }
 
@@ -672,14 +672,14 @@ TEST_F(ParticleSwarmDistanceFieldInscribedSphereCalculatorTests, EllipsoidSampli
     ASSERT_EQ(spheres.size(), 1);
     for (const auto& sphere : spheres)
     {
-        EXPECT_NEAR(sphere.Radius, 1.0f, epsilon);
+        EXPECT_NEAR(sphere.Radius, 1.0, epsilon);
     }
 }
 
 TEST(ParticleSwarmDistanceFieldInscribedSphereCalculator_Tests, ProblematicIncompleteSphere)
 {
     // Arrange
-    pmp::SurfaceMesh targetSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 1);
+    pmp::SurfaceMesh targetSurface = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 1);
     auto targetPts = targetSurface.positions();
     // Remove a few points to simulate incompleteness
     targetPts.erase(targetPts.begin(), targetPts.begin() + 3);

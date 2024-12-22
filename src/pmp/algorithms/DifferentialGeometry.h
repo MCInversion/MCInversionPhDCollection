@@ -45,7 +45,7 @@ inline Scalar angle(const Point2& v0, const Point2& v1)
     }
 
     const Scalar cosAngle = dot(v0, v1) / denominator;
-    return acos(std::clamp(cosAngle, -1.0f, 1.0f));
+    return acos(std::clamp(cosAngle, Scalar(-1.0), Scalar(1.0)));
 }
 
 //! compute sine of angle between two (un-normalized) vectors

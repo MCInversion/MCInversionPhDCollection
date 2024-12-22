@@ -381,7 +381,7 @@ void Curvature::curvature_to_texture_coordinates() const
         kmax = std::max(fabs(kmin), fabs(kmax));
         for (auto v : mesh_.vertices())
         {
-            tex[v] = TexCoord((0.5f * curvatures[v] / kmax) + 0.5f, 0.0);
+            tex[v] = TexCoord((0.5 * curvatures[v] / kmax) + 0.5, 0.0);
         }
     }
     else // unsigned
@@ -410,7 +410,7 @@ void Curvature1D::analyze()
         // If the vertex is isolated, its curvature is zero
         if (curve_.is_isolated(v))
         {
-            curvature_[v] = 0.0f;
+            curvature_[v] = 0.0;
             continue;
         }
 
@@ -419,7 +419,7 @@ void Curvature1D::analyze()
 
         if (!curve_.is_valid(v_prev) || !curve_.is_valid(v_next))
         {
-            curvature_[v] = 0.0f;
+            curvature_[v] = 0.0;
             continue;
         }
 
@@ -447,11 +447,11 @@ void Curvature1D::analyze()
         {
             Scalar angle = std::acos(eDot);
             Scalar curvature = 2 * std::sin(angle / 2) / ((len1 + len2) / 2);
-            curvature_[v] = curvature * ((eCross >= 0) ? 1.0f : -1.0f);
+            curvature_[v] = curvature * ((eCross >= 0) ? 1.0 : -1.0);
         }
         else
         {
-            curvature_[v] = 0.0f;
+            curvature_[v] = 0.0;
         }
     }
 }

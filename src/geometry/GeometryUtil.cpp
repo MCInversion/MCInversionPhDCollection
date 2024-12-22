@@ -1,7 +1,6 @@
 #include "GeometryUtil.h"
 #include "CollisionKdTree.h"
 
-#include "pmp/MatVec.h"
 #include "pmp/BoundingBox.h"
 
 namespace Geometry
@@ -203,7 +202,7 @@ namespace Geometry
 
 		for (int q = 0; q <= 2; q++) 
 		{
-			if (normal[q] > 0.0f) 
+			if (normal[q] > 0.0) 
 			{
 				vmin[q] = -boxMax[q] - refPt[q];
 				vmax[q] = boxMax[q] - refPt[q];
@@ -214,8 +213,8 @@ namespace Geometry
 			vmax[q] = -boxMax[q] - refPt[q];
 		}
 
-		if (DOT(normal, vmin) > 0.0f) return false;
-		if (DOT(normal, vmax) >= 0.0f) return true;
+		if (DOT(normal, vmin) > 0.0) return false;
+		if (DOT(normal, vmax) >= 0.0) return true;
 		return false;
 	}
 
@@ -275,7 +274,7 @@ namespace Geometry
 		assert(vertices.size() == 3); // only vertex triples allowed
 
 		pmp::vec3 v0, v1, v2;
-		float min, max, p0, p1, p2, rad, fex, fey, fez;
+		pmp::Scalar min, max, p0, p1, p2, rad, fex, fey, fez;
 		pmp::vec3 normal, e0, e1, e2;
 
 		SUB(v0, vertices[0], boxCenter);
@@ -341,30 +340,30 @@ namespace Geometry
 
 
 #define INTERSECTION_TEST_VERTEX(P1, Q1, R1, P2, Q2, R2) { \
-  if (ORIENT_2D(R2,P2,Q1) >= 0.0f)                         \
-    if (ORIENT_2D(R2,Q2,Q1) <= 0.0f)                       \
-      if (ORIENT_2D(P1,P2,Q1) > 0.0f) {                    \
-	if (ORIENT_2D(P1,Q2,Q1) <= 0.0f) return 1;             \
+  if (ORIENT_2D(R2,P2,Q1) >= 0.0)                         \
+    if (ORIENT_2D(R2,Q2,Q1) <= 0.0)                       \
+      if (ORIENT_2D(P1,P2,Q1) > 0.0) {                    \
+	if (ORIENT_2D(P1,Q2,Q1) <= 0.0) return 1;             \
 	else return 0;} else {                                 \
-	if (ORIENT_2D(P1,P2,R1) >= 0.0f)                       \
-	  if (ORIENT_2D(Q1,R1,P2) >= 0.0f) return 1;           \
+	if (ORIENT_2D(P1,P2,R1) >= 0.0)                       \
+	  if (ORIENT_2D(Q1,R1,P2) >= 0.0) return 1;           \
 	  else return 0;                                       \
 	else return 0;}                                        \
     else                                                   \
-      if (ORIENT_2D(P1,Q2,Q1) <= 0.0f)                     \
-	if (ORIENT_2D(R2,Q2,R1) <= 0.0f)                       \
-	  if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) return 1;           \
+      if (ORIENT_2D(P1,Q2,Q1) <= 0.0)                     \
+	if (ORIENT_2D(R2,Q2,R1) <= 0.0)                       \
+	  if (ORIENT_2D(Q1,R1,Q2) >= 0.0) return 1;           \
 	  else return 0;                                       \
 	else return 0;                                         \
       else return 0;                                       \
   else                                                     \
-    if (ORIENT_2D(R2,P2,R1) >= 0.0f)                       \
-      if (ORIENT_2D(Q1,R1,R2) >= 0.0f)                     \
-	if (ORIENT_2D(P1,P2,R1) >= 0.0f) return 1;             \
+    if (ORIENT_2D(R2,P2,R1) >= 0.0)                       \
+      if (ORIENT_2D(Q1,R1,R2) >= 0.0)                     \
+	if (ORIENT_2D(P1,P2,R1) >= 0.0) return 1;             \
 	else return 0;                                         \
       else                                                 \
-	if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) {                     \
-	  if (ORIENT_2D(R2,R1,Q2) >= 0.0f) return 1;           \
+	if (ORIENT_2D(Q1,R1,Q2) >= 0.0) {                     \
+	  if (ORIENT_2D(R2,R1,Q2) >= 0.0) return 1;           \
 	  else return 0; }                                     \
 	else return 0;                                         \
     else  return 0;                                        \
@@ -372,19 +371,19 @@ namespace Geometry
 	
 
 #define INTERSECTION_TEST_EDGE(P1, Q1, R1, P2, Q2, R2) { \
-  if (ORIENT_2D(R2,P2,Q1) >= 0.0f) {\
-    if (ORIENT_2D(P1,P2,Q1) >= 0.0f) { \
-        if (ORIENT_2D(P1,Q1,R2) >= 0.0f) return 1; \
+  if (ORIENT_2D(R2,P2,Q1) >= 0.0) {\
+    if (ORIENT_2D(P1,P2,Q1) >= 0.0) { \
+        if (ORIENT_2D(P1,Q1,R2) >= 0.0) return 1; \
         else return 0;} else { \
-      if (ORIENT_2D(Q1,R1,P2) >= 0.0f){ \
-	if (ORIENT_2D(R1,P1,P2) >= 0.0f) return 1; else return 0;} \
+      if (ORIENT_2D(Q1,R1,P2) >= 0.0){ \
+	if (ORIENT_2D(R1,P1,P2) >= 0.0) return 1; else return 0;} \
       else return 0; } \
   } else {\
-    if (ORIENT_2D(R2,P2,R1) >= 0.0f) {\
-      if (ORIENT_2D(P1,P2,R1) >= 0.0f) {\
-	if (ORIENT_2D(P1,R1,R2) >= 0.0f) return 1;  \
+    if (ORIENT_2D(R2,P2,R1) >= 0.0) {\
+      if (ORIENT_2D(P1,P2,R1) >= 0.0) {\
+	if (ORIENT_2D(P1,R1,R2) >= 0.0) return 1;  \
 	else {\
-	  if (ORIENT_2D(Q1,R1,R2) >= 0.0f) return 1; else return 0;}}\
+	  if (ORIENT_2D(Q1,R1,R2) >= 0.0) return 1; else return 0;}}\
       else  return 0; }\
     else return 0; }}
 
@@ -395,20 +394,20 @@ namespace Geometry
 		const pmp::Scalar p1[2], const pmp::Scalar q1[2], const pmp::Scalar r1[2],
 		const pmp::Scalar p2[2], const pmp::Scalar q2[2], const pmp::Scalar r2[2])
 	{
-		if (ORIENT_2D(p2, q2, p1) >= 0.0f)
+		if (ORIENT_2D(p2, q2, p1) >= 0.0)
 		{
-			if (ORIENT_2D(q2, r2, p1) >= 0.0f)
+			if (ORIENT_2D(q2, r2, p1) >= 0.0)
 			{
-				if (ORIENT_2D(r2, p2, p1) >= 0.0f) return 1;
+				if (ORIENT_2D(r2, p2, p1) >= 0.0) return 1;
 				INTERSECTION_TEST_EDGE(p1, q1, r1, p2, q2, r2)
 			}
-			if (ORIENT_2D(r2, p2, p1) >= 0.0f)
+			if (ORIENT_2D(r2, p2, p1) >= 0.0)
 				INTERSECTION_TEST_EDGE(p1, q1, r1, r2, p2, q2)
 				INTERSECTION_TEST_VERTEX(p1, q1, r1, p2, q2, r2)
 		}
-		if (ORIENT_2D(q2, r2, p1) >= 0.0f)
+		if (ORIENT_2D(q2, r2, p1) >= 0.0)
 		{
-			if (ORIENT_2D(r2, p2, p1) >= 0.0f)
+			if (ORIENT_2D(r2, p2, p1) >= 0.0)
 				INTERSECTION_TEST_EDGE(p1, q1, r1, q2, r2, p2)
 				INTERSECTION_TEST_VERTEX(p1, q1, r1, q2, r2, p2)
 		}
@@ -419,15 +418,15 @@ namespace Geometry
 		const pmp::Scalar p1[2], const pmp::Scalar q1[2], const pmp::Scalar r1[2], 
 		const pmp::Scalar p2[2], const pmp::Scalar q2[2], const pmp::Scalar r2[2])
 	{
-		if (ORIENT_2D(p1, q1, r1) < 0.0f)
+		if (ORIENT_2D(p1, q1, r1) < 0.0)
 		{
-			if (ORIENT_2D(p2, q2, r2) < 0.0f)
+			if (ORIENT_2D(p2, q2, r2) < 0.0)
 			{
 				return ccw_tri_tri_intersection_2d(p1, r1, q1, p2, r2, q2);
 			}
 			return ccw_tri_tri_intersection_2d(p1, r1, q1, p2, q2, r2);
 		}
-		if (ORIENT_2D(p2, q2, r2) < 0.0f)
+		if (ORIENT_2D(p2, q2, r2) < 0.0)
 		{
 			return ccw_tri_tri_intersection_2d(p1, q1, r1, p2, r2, q2);
 		}
@@ -498,35 +497,35 @@ namespace Geometry
 	  SUB(v2,p1,q1);\
 	  CROSS(N1,v1,v2);\
 	  SUB(v1,q2,q1);\
-	  if (DOT(v1,N1) > 0.0f) return 0;\
+	  if (DOT(v1,N1) > 0.0) return 0;\
 	  SUB(v1,p2,p1);\
 	  SUB(v2,r1,p1);\
 	  CROSS(N1,v1,v2);\
 	  SUB(v1,r2,p1);\
-	  if (DOT(v1,N1) > 0.0f) return 0;\
+	  if (DOT(v1,N1) > 0.0) return 0;\
 	  else return 1; }
 
 #define TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
-	  if (dp2 > 0.0f) { \
-	     if (dq2 > 0.0f) CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2) \
-	     else if (dr2 > 0.0f) CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
+	  if (dp2 > 0.0) { \
+	     if (dq2 > 0.0) CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2) \
+	     else if (dr2 > 0.0) CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
 	     else CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2) }\
-	  else if (dp2 < 0.0f) { \
-	    if (dq2 < 0.0f) CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
-	    else if (dr2 < 0.0f) CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
+	  else if (dp2 < 0.0) { \
+	    if (dq2 < 0.0) CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
+	    else if (dr2 < 0.0) CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
 	    else CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
 	  } else { \
-	    if (dq2 < 0.0f) { \
-	      if (dr2 >= 0.0f)  CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
+	    if (dq2 < 0.0) { \
+	      if (dr2 >= 0.0)  CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
 	      else CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2)\
 	    } \
-	    else if (dq2 > 0.0f) { \
-	      if (dr2 > 0.0f) CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
+	    else if (dq2 > 0.0) { \
+	      if (dr2 > 0.0) CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
 	      else  CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
 	    } \
 	    else  { \
-	      if (dr2 > 0.0f) CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
-	      else if (dr2 < 0.0f) CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2)\
+	      if (dr2 > 0.0) CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
+	      else if (dr2 < 0.0) CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2)\
 	      else return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
 	     }}}
 
@@ -550,7 +549,7 @@ namespace Geometry
 		SUB(v1, r1, r2)
 		pmp::Scalar dr1 = DOT(v1, N2);
 
-		if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return 0;
+		if (((dp1 * dq1) > 0.0) && ((dp1 * dr1) > 0.0))  return 0;
 		/* Compute distance signs  of p2, q2 and r2 to the plane of
 		   triangle(p1,q1,r1) */
 		SUB(v1, q1, p1)
@@ -563,33 +562,33 @@ namespace Geometry
 		pmp::Scalar dq2 = DOT(v1, N1);
 		SUB(v1, r2, r1)
 		pmp::Scalar dr2 = DOT(v1, N1);
-		if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return 0;
+		if (((dp2 * dq2) > 0.0) && ((dp2 * dr2) > 0.0)) return 0;
 
 		/* Permutation in a canonical form of T1's vertices */
-		if (dp1 > 0.0f) 
+		if (dp1 > 0.0) 
 		{
-			if (dq1 > 0.0f) TRI_TRI_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
-			if (dr1 > 0.0f) TRI_TRI_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
+			if (dq1 > 0.0) TRI_TRI_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 > 0.0) TRI_TRI_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
 			TRI_TRI_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		if (dp1 < 0.0f)
+		if (dp1 < 0.0)
 		{
-			if (dq1 < 0.0f) TRI_TRI_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
-			if (dr1 < 0.0f) TRI_TRI_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
+			if (dq1 < 0.0) TRI_TRI_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
+			if (dr1 < 0.0) TRI_TRI_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
 			TRI_TRI_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
 		}
-		if (dq1 < 0.0f) 
+		if (dq1 < 0.0) 
 		{
-			if (dr1 >= 0.0f) TRI_TRI_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 >= 0.0) TRI_TRI_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
 			TRI_TRI_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		if (dq1 > 0.0f)
+		if (dq1 > 0.0)
 		{
-			if (dr1 > 0.0f) TRI_TRI_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 > 0.0) TRI_TRI_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
 			TRI_TRI_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		if (dr1 > 0.0f) TRI_TRI_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
-		if (dr1 < 0.0f) TRI_TRI_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
+		if (dr1 > 0.0) TRI_TRI_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
+		if (dr1 < 0.0) TRI_TRI_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
 		return coplanar_tri_tri3d(p1, q1, r1, p2, q2, r2, N1);
 	}
 
@@ -622,15 +621,15 @@ namespace Geometry
 		SUB(v2, r2, p1)
 		CROSS(N, v1, v2)
 		SUB(v, p2, p1)
-		if (DOT(v, N) > 0.0f) 
+		if (DOT(v, N) > 0.0) 
 		{
 			SUB(v1, r1, p1)
 			CROSS(N, v1, v2)
-			if (DOT(v, N) <= 0.0f)
+			if (DOT(v, N) <= 0.0)
 			{
 				SUB(v2, q2, p1)
 				CROSS(N,v1,v2)
-				if (DOT(v, N) > 0.0f)
+				if (DOT(v, N) > 0.0)
 				{
 					SUB(v1, p1, p2)
 					SUB(v2, p1, r1)
@@ -663,13 +662,13 @@ namespace Geometry
 
 		SUB(v2, q2, p1)
 		CROSS(N, v1, v2)
-		if (DOT(v, N) < 0.0f)
+		if (DOT(v, N) < 0.0)
 		{
 			return 0;
 		}
 		SUB(v1, r1, p1)
 		CROSS(N, v1, v2)
-		if (DOT(v, N) >= 0.0f)
+		if (DOT(v, N) >= 0.0)
 		{
 			SUB(v1, p1, p2)
 			SUB(v2, p1, r1)
@@ -707,13 +706,13 @@ namespace Geometry
 	  SUB(v2,r2,p1) \
 	  CROSS(N,v1,v2) \
 	  SUB(v,p2,p1) \
-	  if (DOT(v,N) > 0.0f) {\
+	  if (DOT(v,N) > 0.0) {\
 	    SUB(v1,r1,p1) \
 	    CROSS(N,v1,v2) \
-	    if (DOT(v,N) <= 0.0f) { \
+	    if (DOT(v,N) <= 0.0) { \
 	      SUB(v2,q2,p1) \
 	      CROSS(N,v1,v2) \
-	      if (DOT(v,N) > 0.0f) { \
+	      if (DOT(v,N) > 0.0) { \
 		SUB(v1,p1,p2) \
 		SUB(v2,p1,r1) \
 		alpha = DOT(v1,N2) / DOT(v2,N2); \
@@ -744,12 +743,12 @@ namespace Geometry
 	  } else { \
 	    SUB(v2,q2,p1) \
 	    CROSS(N,v1,v2) \
-	    if (DOT(v,N) < 0.0f) { \
+	    if (DOT(v,N) < 0.0) { \
 	      return 0; \
 	    } else { \
 	      SUB(v1,r1,p1) \
 	      CROSS(N,v1,v2) \
-	      if (DOT(v,N) >= 0.0f) { \
+	      if (DOT(v,N) >= 0.0) { \
 		SUB(v1,p1,p2) \
 		SUB(v2,p1,r1) \
 		alpha = DOT(v1,N2) / DOT(v2,N2); \
@@ -776,52 +775,52 @@ namespace Geometry
 	      }}}} 
 
 	  // #define TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
-	  //if (dp2 > 0.0f) { \
-	  //   if (dq2 > 0.0f) return construct_intersection(p1,r1,q1,r2,p2, q2, N1, N2, source, target); \
-	  //   else if (dr2 > 0.0f) return construct_intersection(p1,r1,q1,q2,r2,p2, N1, N2, source, target);\
+	  //if (dp2 > 0.0) { \
+	  //   if (dq2 > 0.0) return construct_intersection(p1,r1,q1,r2,p2, q2, N1, N2, source, target); \
+	  //   else if (dr2 > 0.0) return construct_intersection(p1,r1,q1,q2,r2,p2, N1, N2, source, target);\
 	  //   else return construct_intersection(p1,q1,r1,p2,q2,r2, N1, N2, source, target); }\
-	  //else if (dp2 < 0.0f) { \
-	  //  if (dq2 < 0.0f) return construct_intersection(p1,q1,r1,r2,p2,q2, N1, N2, source, target);\
-	  //  else if (dr2 < 0.0f) return construct_intersection(p1,q1,r1,q2,r2,p2, N1, N2, source, target);\
+	  //else if (dp2 < 0.0) { \
+	  //  if (dq2 < 0.0) return construct_intersection(p1,q1,r1,r2,p2,q2, N1, N2, source, target);\
+	  //  else if (dr2 < 0.0) return construct_intersection(p1,q1,r1,q2,r2,p2, N1, N2, source, target);\
 	  //  else return construct_intersection(p1,r1,q1,p2,q2,r2, N1, N2, source, target);\
 	  //} else { \
-	  //  if (dq2 < 0.0f) { \
-	  //    if (dr2 >= 0.0f)  return construct_intersection(p1,r1,q1,q2,r2,p2, N1, N2, source, target);\
+	  //  if (dq2 < 0.0) { \
+	  //    if (dr2 >= 0.0)  return construct_intersection(p1,r1,q1,q2,r2,p2, N1, N2, source, target);\
 	  //    else return construct_intersection(p1,q1,r1,p2,q2,r2, N1, N2, source, target);\
 	  //  } \
-	  //  else if (dq2 > 0.0f) { \
-	  //    if (dr2 > 0.0f) return construct_intersection(p1,r1,q1,p2,q2,r2, N1, N2, source, target);\
+	  //  else if (dq2 > 0.0) { \
+	  //    if (dr2 > 0.0) return construct_intersection(p1,r1,q1,p2,q2,r2, N1, N2, source, target);\
 	  //    else  return construct_intersection(p1,q1,r1,q2,r2,p2, N1, N2, source, target);\
 	  //  } \
 	  //  else  { \
-	  //    if (dr2 > 0.0f) return construct_intersection(p1,q1,r1,r2,p2,q2, N1, N2, source, target);\
-	  //    else if (dr2 < 0.0f) return construct_intersection(p1,r1,q1,r2,p2,q2, N1, N2, source, target);\
+	  //    if (dr2 > 0.0) return construct_intersection(p1,q1,r1,r2,p2,q2, N1, N2, source, target);\
+	  //    else if (dr2 < 0.0) return construct_intersection(p1,r1,q1,r2,p2,q2, N1, N2, source, target);\
 	  //    else { \
       //    *coplanar = 1; \
 	  //    return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
 	  //   } \
 	  //}} }
 	#define TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
-	  if (dp2 > 0.0f) { \
-	     if (dq2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2) \
-	     else if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
+	  if (dp2 > 0.0) { \
+	     if (dq2 > 0.0) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2) \
+	     else if (dr2 > 0.0) CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
 	     else CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2) }\
-	  else if (dp2 < 0.0f) { \
-	    if (dq2 < 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
-	    else if (dr2 < 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
+	  else if (dp2 < 0.0) { \
+	    if (dq2 < 0.0) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
+	    else if (dr2 < 0.0) CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
 	    else CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
 	  } else { \
-	    if (dq2 < 0.0f) { \
-	      if (dr2 >= 0.0f)  CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
+	    if (dq2 < 0.0) { \
+	      if (dr2 >= 0.0)  CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
 	      else CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2)\
 	    } \
-	    else if (dq2 > 0.0f) { \
-	      if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
+	    else if (dq2 > 0.0) { \
+	      if (dr2 > 0.0) CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
 	      else  CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
 	    } \
 	    else  { \
-	      if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
-	      else if (dr2 < 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2)\
+	      if (dr2 > 0.0) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
+	      else if (dr2 < 0.0) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2)\
 	      else { \
        		*coplanar = 1; \
 		return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
@@ -852,7 +851,7 @@ namespace Geometry
 		SUB(v1, r1, r2)
 		pmp::Scalar dr1 = DOT(v1, N2);
 
-		if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return 0;
+		if (((dp1 * dq1) > 0.0) && ((dp1 * dr1) > 0.0))  return 0;
 
 		// Compute distance signs  of p2, q2 and r2 
 		// to the plane of triangle(p1,q1,r1)
@@ -867,7 +866,7 @@ namespace Geometry
 		SUB(v1, r2, r1)
 		pmp::Scalar dr2 = DOT(v1, N1);
 
-		if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return 0;
+		if (((dp2 * dq2) > 0.0) && ((dp2 * dr2) > 0.0)) return 0;
 		// Permutation in a canonical form of T1's vertices
 
 		//  printf("d1 = [%f %f %f], d2 = [%f %f %f]\n", dp1, dq1, dr1, dp2, dq2, dr2);
@@ -879,30 +878,30 @@ namespace Geometry
 			return 0;
 		  }
 		*/
-		if (dp1 > 0.0f) 
+		if (dp1 > 0.0) 
 		{
-			if (dq1 > 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
-			if (dr1 > 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
+			if (dq1 > 0.0) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 > 0.0) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
 			TRI_TRI_INTER_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		if (dp1 < 0.0f)
+		if (dp1 < 0.0)
 		{
-			if (dq1 < 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
-			if (dr1 < 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
+			if (dq1 < 0.0) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
+			if (dr1 < 0.0) TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
 			TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
 		}
-		if (dq1 < 0.0f) 
+		if (dq1 < 0.0) 
 		{
-			if (dr1 >= 0.0f) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 >= 0.0) TRI_TRI_INTER_3D(q1, r1, p1, p2, r2, q2, dp2, dr2, dq2)
 			TRI_TRI_INTER_3D(p1, q1, r1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		if (dq1 > 0.0f) 
+		if (dq1 > 0.0) 
 		{
-			if (dr1 > 0.0f) TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
+			if (dr1 > 0.0) TRI_TRI_INTER_3D(p1, q1, r1, p2, r2, q2, dp2, dr2, dq2)
 			TRI_TRI_INTER_3D(q1, r1, p1, p2, q2, r2, dp2, dq2, dr2)
 		}
-		if (dr1 > 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
-		if (dr1 < 0.0f) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
+		if (dr1 > 0.0) TRI_TRI_INTER_3D(r1, p1, q1, p2, q2, r2, dp2, dq2, dr2)
+		if (dr1 < 0.0) TRI_TRI_INTER_3D(r1, p1, q1, p2, r2, q2, dp2, dr2, dq2)
 		// triangles are co-planar
 		* coplanar = 1;
 		return coplanar_tri_tri3d(p1, q1, r1, p2, q2, r2, N1);
@@ -925,7 +924,7 @@ namespace Geometry
 	}
 
 	/// \brief intersection tolerance for Moller-Trumbore algorithm.
-	constexpr float MT_INTERSECTION_EPSILON = 1e-5f;
+	constexpr pmp::Scalar MT_INTERSECTION_EPSILON = 1e-5;
 
 	bool RayIntersectsTriangle(Ray& ray, const std::vector<pmp::vec3>& triVertices)
 	{
@@ -933,30 +932,30 @@ namespace Geometry
 		pmp::vec3 edge2 = triVertices[2] - triVertices[0];
 		pmp::vec3 cross1;
 		CROSS(cross1, ray.Direction, edge2);
-		const float det = DOT(edge1, cross1);
+		const pmp::Scalar det = DOT(edge1, cross1);
 		if (std::fabs(det) < MT_INTERSECTION_EPSILON)
 		{
 			return false; // Ray is parallel to triangle
 		}
 
-		const float invDet = 1.0f / det;
+		const pmp::Scalar invDet = 1.0 / det;
 		const auto startToTri0 = ray.StartPt - triVertices[0];
-		const float u = invDet * DOT(startToTri0, cross1);
-		if (u < -MT_INTERSECTION_EPSILON || u > 1.0f + MT_INTERSECTION_EPSILON)
+		const pmp::Scalar u = invDet * DOT(startToTri0, cross1);
+		if (u < -MT_INTERSECTION_EPSILON || u > 1.0 + MT_INTERSECTION_EPSILON)
 		{
 			return false;
 		}
 
 		pmp::vec3 cross2;
 		CROSS(cross2, startToTri0, edge1);
-		const float v = invDet * DOT(ray.Direction, cross2);
-		if (v < -MT_INTERSECTION_EPSILON || u + v > 1.0f + MT_INTERSECTION_EPSILON)
+		const pmp::Scalar v = invDet * DOT(ray.Direction, cross2);
+		if (v < -MT_INTERSECTION_EPSILON || u + v > 1.0 + MT_INTERSECTION_EPSILON)
 		{
 			return false;
 		}
 
-		const float t = invDet * DOT(edge2, cross2);
-		if (t > MT_INTERSECTION_EPSILON && t < 1.0f / MT_INTERSECTION_EPSILON &&
+		const pmp::Scalar t = invDet * DOT(edge2, cross2);
+		if (t > MT_INTERSECTION_EPSILON && t < 1.0 / MT_INTERSECTION_EPSILON &&
 			t >= ray.ParamMin && t <= ray.ParamMax)
 		{
 			ray.HitParam = t;
@@ -993,15 +992,15 @@ namespace Geometry
 		: StartPt(startPt), Direction(dir)
 	{
 		// dir vector must be normalized.
-		const float dirLenSq = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
-		if (dirLenSq >= 1.0f + FLT_EPSILON || dirLenSq <= 1.0f - FLT_EPSILON)
+		const pmp::Scalar dirLenSq = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+		if (dirLenSq >= 1.0 + FLT_EPSILON || dirLenSq <= 1.0 - FLT_EPSILON)
 		{
 			throw std::logic_error("Ray::Ray: ||dir|| != 1 ! Ray direction vector must be normalized!\n");
 		}
 
-		InvDirection[0] = 1.0f / dir[0];
-		InvDirection[1] = 1.0f / dir[1];
-		InvDirection[2] = 1.0f / dir[2];
+		InvDirection[0] = 1.0 / dir[0];
+		InvDirection[1] = 1.0 / dir[1];
+		InvDirection[2] = 1.0 / dir[2];
 
 		// calculate id of max dimension of ray direction.
 		const pmp::vec3 absDir{ std::fabs(dir[0]), std::fabs(dir[1]), std::fabs(dir[2]) };
@@ -1011,11 +1010,11 @@ namespace Geometry
 		kx = (kz + 1) % 3;
 		ky = (kx + 1) % 3;
 		// swap kx and ky dims to preserve winding direction of triangles.
-		if (dir[kz] < 0.0f) std::swap(kx, ky);
+		if (dir[kz] < 0.0) std::swap(kx, ky);
 		// calculate shear constants
 		Sx = dir[kx] / dir[kz];
 		Sy = dir[ky] / dir[kz];
-		Sz = 1.0f / dir[kz];
+		Sz = 1.0 / dir[kz];
 	}
 
 	/// \brief if true, we use backface-culling (i.e. skipping triangles whose normals point away from the ray).
@@ -1027,46 +1026,46 @@ namespace Geometry
 		const pmp::vec3 A = triVertices[0] - ray.StartPt;
 		const pmp::vec3 B = triVertices[1] - ray.StartPt;
 		const pmp::vec3 C = triVertices[2] - ray.StartPt;
-		const float Ax = A[ray.kx] - ray.Sx * A[ray.kz];
-		const float Ay = A[ray.ky] - ray.Sy * A[ray.kz];
-		const float Bx = B[ray.kx] - ray.Sx * B[ray.kz];
-		const float By = B[ray.ky] - ray.Sy * B[ray.kz];
-		const float Cx = C[ray.kx] - ray.Sx * C[ray.kz];
-		const float Cy = C[ray.ky] - ray.Sy * C[ray.kz];
-		float U = Cx * By - Cy * Bx;
-		float V = Ax * Cy - Ay * Cx;
-		float W = Bx * Ay - By * Ax;
-		if (U == 0.0f || V == 0.0f || W == 0.0f) 
+		const pmp::Scalar Ax = A[ray.kx] - ray.Sx * A[ray.kz];
+		const pmp::Scalar Ay = A[ray.ky] - ray.Sy * A[ray.kz];
+		const pmp::Scalar Bx = B[ray.kx] - ray.Sx * B[ray.kz];
+		const pmp::Scalar By = B[ray.ky] - ray.Sy * B[ray.kz];
+		const pmp::Scalar Cx = C[ray.kx] - ray.Sx * C[ray.kz];
+		const pmp::Scalar Cy = C[ray.ky] - ray.Sy * C[ray.kz];
+		pmp::Scalar U = Cx * By - Cy * Bx;
+		pmp::Scalar V = Ax * Cy - Ay * Cx;
+		pmp::Scalar W = Bx * Ay - By * Ax;
+		if (U == 0.0 || V == 0.0 || W == 0.0) 
 		{
 			const double CxBy = static_cast<double>(Cx) * static_cast<double>(By);
 			const double CyBx = static_cast<double>(Cy) * static_cast<double>(Bx);
-			U = static_cast<float>(CxBy - CyBx);
+			U = static_cast<pmp::Scalar>(CxBy - CyBx);
 			const double AxCy = static_cast<double>(Ax) * static_cast<double>(Cy);
 			const double AyCx = static_cast<double>(Ay) * static_cast<double>(Cx);
-			V = static_cast<float>(AxCy - AyCx);
+			V = static_cast<pmp::Scalar>(AxCy - AyCx);
 			const double BxAy = static_cast<double>(Bx) * static_cast<double>(Ay);
 			const double ByAx = static_cast<double>(By) * static_cast<double>(Ax);
-			W = static_cast<float>(BxAy - ByAx);
+			W = static_cast<pmp::Scalar>(BxAy - ByAx);
 		}
 #if BACKFACE_CULLING
-		if (U < 0.0f || V < 0.0f || W < 0.0f) return false;
+		if (U < 0.0 || V < 0.0 || W < 0.0) return false;
 #else
-		if ((U < 0.0f || V < 0.0f || W < 0.0f) &&
-		   (U > 0.0f || V > 0.0f || W > 0.0f)) return false;
+		if ((U < 0.0 || V < 0.0 || W < 0.0) &&
+		   (U > 0.0 || V > 0.0 || W > 0.0)) return false;
 #endif
-		const float det = U + V + W;
-		if (det == 0.0f) return false;
-		const float Az = ray.Sz * A[ray.kz];
-		const float Bz = ray.Sz * B[ray.kz];
-		const float Cz = ray.Sz * C[ray.kz];
-		const float T = U * Az + V * Bz + W * Cz;
-		if (T < 0.0f || T > ray.HitParam * det)
+		const pmp::Scalar det = U + V + W;
+		if (det == 0.0) return false;
+		const pmp::Scalar Az = ray.Sz * A[ray.kz];
+		const pmp::Scalar Bz = ray.Sz * B[ray.kz];
+		const pmp::Scalar Cz = ray.Sz * C[ray.kz];
+		const pmp::Scalar T = U * Az + V * Bz + W * Cz;
+		if (T < 0.0 || T > ray.HitParam * det)
 			return false;
 		
-		const float rcpDet = 1.0f / det; // reciprocal det
-		/*const float hitBCoordU = U * rcpDet;
-		const float hitBCoordV = V * rcpDet;
-		const float hitBCoordW = W * rcpDet;*/
+		const pmp::Scalar rcpDet = 1.0 / det; // reciprocal det
+		/*const pmp::Scalar hitBCoordU = U * rcpDet;
+		const pmp::Scalar hitBCoordV = V * rcpDet;
+		const pmp::Scalar hitBCoordW = W * rcpDet;*/
 		ray.HitParam = T * rcpDet;
 		
 		return true;
@@ -1077,22 +1076,22 @@ namespace Geometry
 	constexpr unsigned int idVec[3] = { 0, 1, 2 };
 
 	// accelerated roundoff for watertightness [Woop, Benthin, Wald, 2013, p. 70]
-	float p = 1.0f + 2e-23f;
-	float m = 1.0f - 2e-23f;
-	[[nodiscard]] float up(const float a) { return a > 0.0f ? a * p : a * m; }
-	[[nodiscard]] float dn(const float a) { return a > 0.0f ? a * m : a * p; }
-	[[nodiscard]] float Up(const float a) { return a * p; }
-	[[nodiscard]] float Dn(const float a) { return a * m; }
-	constexpr float eps = 5.0f * 2e-24f;
+	pmp::Scalar p = 1.0 + 2e-23;
+	pmp::Scalar m = 1.0 - 2e-23;
+	[[nodiscard]] pmp::Scalar up(const pmp::Scalar a) { return a > 0.0 ? a * p : a * m; }
+	[[nodiscard]] pmp::Scalar dn(const pmp::Scalar a) { return a > 0.0 ? a * m : a * p; }
+	[[nodiscard]] pmp::Scalar Up(const pmp::Scalar a) { return a * p; }
+	[[nodiscard]] pmp::Scalar Dn(const pmp::Scalar a) { return a * m; }
+	constexpr pmp::Scalar eps = 5.0 * 2e-24;
 
 	bool RayIntersectsABox(const Ray& ray, const pmp::BoundingBox& box)
 	{
 		int nearX = static_cast<int>(idVec[ray.kx]), farX = static_cast<int>(idVec[ray.kx]);
 		int nearY = static_cast<int>(idVec[ray.ky]), farY = static_cast<int>(idVec[ray.ky]);
 		int nearZ = static_cast<int>(idVec[ray.kz]), farZ = static_cast<int>(idVec[ray.kz]);
-		if (ray.Direction[ray.kx] < 0.0f) std::swap(nearX, farX);
-		if (ray.Direction[ray.ky] < 0.0f) std::swap(nearY, farY);
-		if (ray.Direction[ray.kz] < 0.0f) std::swap(nearZ, farZ);
+		if (ray.Direction[ray.kx] < 0.0) std::swap(nearX, farX);
+		if (ray.Direction[ray.ky] < 0.0) std::swap(nearY, farY);
+		if (ray.Direction[ray.kz] < 0.0) std::swap(nearZ, farZ);
 
 		const pmp::vec3 absDMin{
 			std::fabs(ray.StartPt[0] - box.min()[0]),
@@ -1106,33 +1105,33 @@ namespace Geometry
 		};
 		pmp::vec3 lower{Dn(absDMin[0]),	Dn(absDMin[1]),	Dn(absDMin[2])};
 		pmp::vec3 upper{Up(absDMax[0]),	Up(absDMax[1]),	Up(absDMax[2])};
-		const float max_z = std::max(lower[ray.kz], upper[ray.kz]);
-		const float err_near_x = Up(lower[ray.kx] + max_z);
-		const float err_near_y = Up(lower[ray.ky] + max_z);
-		float start_near_x = up(ray.StartPt[ray.kx] + Up(eps * err_near_x));
-		float start_near_y = up(ray.StartPt[ray.ky] + Up(eps * err_near_y));
-		const float start_near_z = ray.StartPt[ray.kz];
-		const float err_far_x = Up(upper[ray.kx] + max_z);
-		const float err_far_y = Up(upper[ray.ky] + max_z);
-		float start_far_x = dn(ray.StartPt[ray.kx] - Up(eps * err_far_x));
-		float start_far_y = dn(ray.StartPt[ray.ky] - Up(eps * err_far_y));
-		const float start_far_z = ray.StartPt[ray.kz];
-		if (ray.Direction[ray.kx] < 0.0f) std::swap(start_near_x, start_far_x);
-		if (ray.Direction[ray.ky] < 0.0f) std::swap(start_near_y, start_far_y);
-		const float rdir_near_x = Dn(Dn(ray.InvDirection[ray.kx]));
-		const float rdir_near_y = Dn(Dn(ray.InvDirection[ray.ky]));
-		const float rdir_near_z = Dn(Dn(ray.InvDirection[ray.kz]));
-		const float rdir_far_x = Up(Up(ray.InvDirection[ray.kx]));
-		const float rdir_far_y = Up(Up(ray.InvDirection[ray.ky]));
-		const float rdir_far_z = Up(Up(ray.InvDirection[ray.kz]));
-		float tNearX = (box.min()[nearX] - start_near_x) * rdir_near_x;
-		float tNearY = (box.min()[nearY] - start_near_y) * rdir_near_y;
-		float tNearZ = (box.min()[nearZ] - start_near_z) * rdir_near_z;
-		float tFarX = (box.max()[farX] - start_far_x) * rdir_far_x;
-		float tFarY = (box.max()[farY] - start_far_y) * rdir_far_y;
-		float tFarZ = (box.max()[farZ] - start_far_z) * rdir_far_z;
-		const float tNear = std::max({ tNearX, tNearY, tNearZ, ray.ParamMin });
-		const float tFar = std::min({ tFarX, tFarY, tFarZ, ray.ParamMax });
+		const pmp::Scalar max_z = std::max(lower[ray.kz], upper[ray.kz]);
+		const pmp::Scalar err_near_x = Up(lower[ray.kx] + max_z);
+		const pmp::Scalar err_near_y = Up(lower[ray.ky] + max_z);
+		pmp::Scalar start_near_x = up(ray.StartPt[ray.kx] + Up(eps * err_near_x));
+		pmp::Scalar start_near_y = up(ray.StartPt[ray.ky] + Up(eps * err_near_y));
+		const pmp::Scalar start_near_z = ray.StartPt[ray.kz];
+		const pmp::Scalar err_far_x = Up(upper[ray.kx] + max_z);
+		const pmp::Scalar err_far_y = Up(upper[ray.ky] + max_z);
+		pmp::Scalar start_far_x = dn(ray.StartPt[ray.kx] - Up(eps * err_far_x));
+		pmp::Scalar start_far_y = dn(ray.StartPt[ray.ky] - Up(eps * err_far_y));
+		const pmp::Scalar start_far_z = ray.StartPt[ray.kz];
+		if (ray.Direction[ray.kx] < 0.0) std::swap(start_near_x, start_far_x);
+		if (ray.Direction[ray.ky] < 0.0) std::swap(start_near_y, start_far_y);
+		const pmp::Scalar rdir_near_x = Dn(Dn(ray.InvDirection[ray.kx]));
+		const pmp::Scalar rdir_near_y = Dn(Dn(ray.InvDirection[ray.ky]));
+		const pmp::Scalar rdir_near_z = Dn(Dn(ray.InvDirection[ray.kz]));
+		const pmp::Scalar rdir_far_x = Up(Up(ray.InvDirection[ray.kx]));
+		const pmp::Scalar rdir_far_y = Up(Up(ray.InvDirection[ray.ky]));
+		const pmp::Scalar rdir_far_z = Up(Up(ray.InvDirection[ray.kz]));
+		pmp::Scalar tNearX = (box.min()[nearX] - start_near_x) * rdir_near_x;
+		pmp::Scalar tNearY = (box.min()[nearY] - start_near_y) * rdir_near_y;
+		pmp::Scalar tNearZ = (box.min()[nearZ] - start_near_z) * rdir_near_z;
+		pmp::Scalar tFarX = (box.max()[farX] - start_far_x) * rdir_far_x;
+		pmp::Scalar tFarY = (box.max()[farY] - start_far_y) * rdir_far_y;
+		pmp::Scalar tFarZ = (box.max()[farZ] - start_far_z) * rdir_far_z;
+		const pmp::Scalar tNear = std::max<pmp::Scalar>({ tNearX, tNearY, tNearZ, ray.ParamMin });
+		const pmp::Scalar tFar = std::min<pmp::Scalar>({ tFarX, tFarY, tFarZ, ray.ParamMax });
 		return tNear <= tFar;
 	}
 
@@ -1218,7 +1217,7 @@ namespace Geometry
 		const pmp::vec2& e = boxHalfSize;
 
 		// Compute the center of the line segment
-		pmp::vec2 lineCenter((p1[0] + p2[0]) * 0.5f, (p1[1] + p2[1]) * 0.5f);
+		pmp::vec2 lineCenter((p1[0] + p2[0]) * 0.5, (p1[1] + p2[1]) * 0.5);
 
 		// Translate the box and the line segment to the origin
 		pmp::vec2 T(lineCenter[0] - boxCenter[0], lineCenter[1] - boxCenter[1]);
@@ -1228,11 +1227,11 @@ namespace Geometry
 
 		// Perform the SAT test
 		// Test the box's x and y axes
-		if (std::fabs(T[0]) > e[0] + 0.5f * absD[0]) return false;
-		if (std::fabs(T[1]) > e[1] + 0.5f * absD[1]) return false;
+		if (std::fabs(T[0]) > e[0] + 0.5 * absD[0]) return false;
+		if (std::fabs(T[1]) > e[1] + 0.5 * absD[1]) return false;
 
 		// Test the line segment's direction vector
-		float r = e[1] * std::fabs(d[0]) + e[0] * std::fabs(d[1]);
+		pmp::Scalar r = e[1] * std::fabs(d[0]) + e[0] * std::fabs(d[1]);
 		if (std::fabs(T[0] * d[1] - T[1] * d[0]) > r) return false;
 
 		// No separating axis found, the line segment intersects the box
@@ -1251,24 +1250,24 @@ namespace Geometry
 			throw std::invalid_argument("Line2DIntersectsLine2D requires exactly two points per line.");
 
 		// Extract coordinates for the first line
-		float x1 = vertices0[0][0], y1 = vertices0[0][1];
-		float x2 = vertices0[1][0], y2 = vertices0[1][1];
+		pmp::Scalar x1 = vertices0[0][0], y1 = vertices0[0][1];
+		pmp::Scalar x2 = vertices0[1][0], y2 = vertices0[1][1];
 
 		// Extract coordinates for the second line
-		float x3 = vertices1[0][0], y3 = vertices1[0][1];
-		float x4 = vertices1[1][0], y4 = vertices1[1][1];
+		pmp::Scalar x3 = vertices1[0][0], y3 = vertices1[0][1];
+		pmp::Scalar x4 = vertices1[1][0], y4 = vertices1[1][1];
 
 		// Compute determinants
-		float detL1 = Det(x1, y1, x2, y2);
-		float detL2 = Det(x3, y3, x4, y4);
-		float x1mx2 = x1 - x2;
-		float x3mx4 = x3 - x4;
-		float y1my2 = y1 - y2;
-		float y3my4 = y3 - y4;
+		pmp::Scalar detL1 = Det(x1, y1, x2, y2);
+		pmp::Scalar detL2 = Det(x3, y3, x4, y4);
+		pmp::Scalar x1mx2 = x1 - x2;
+		pmp::Scalar x3mx4 = x3 - x4;
+		pmp::Scalar y1my2 = y1 - y2;
+		pmp::Scalar y3my4 = y3 - y4;
 
-		float xnom = Det(detL1, x1mx2, detL2, x3mx4);
-		float ynom = Det(detL1, y1my2, detL2, y3my4);
-		float denom = Det(x1mx2, y1my2, x3mx4, y3my4);
+		pmp::Scalar xnom = Det(detL1, x1mx2, detL2, x3mx4);
+		pmp::Scalar ynom = Det(detL1, y1my2, detL2, y3my4);
+		pmp::Scalar denom = Det(x1mx2, y1my2, x3mx4, y3my4);
 
 		if (std::abs(denom) < FLT_EPSILON) // Lines are parallel or collinear
 		{
@@ -1276,8 +1275,8 @@ namespace Geometry
 		}
 
 		// Calculate intersection point
-		float ix = xnom / denom;
-		float iy = ynom / denom;
+		pmp::Scalar ix = xnom / denom;
+		pmp::Scalar iy = ynom / denom;
 
 		if (!std::isfinite(ix) || !std::isfinite(iy)) // Check for numerical stability
 		{
@@ -1295,11 +1294,11 @@ namespace Geometry
 	{
 
 		/// \brief Calculates the parametric distance at which two 2D rays intersect.
-		[[nodiscard]] float CalculateIntersectionParametricDistance(const Ray2D& ray1, const Ray2D& ray2)
+		[[nodiscard]] pmp::Scalar CalculateIntersectionParametricDistance(const Ray2D& ray1, const Ray2D& ray2)
 		{
 			// Represent rays as parametric equations: P1 = StartPt1 + t1 * Direction1, P2 = StartPt2 + t2 * Direction2
 			pmp::vec2 dirCross = pmp::vec2(-ray2.Direction[1], ray2.Direction[0]); // Perpendicular direction to ray2
-			float det = dirCross[0] * ray1.Direction[0] + dirCross[1] * ray1.Direction[1];
+			pmp::Scalar det = dirCross[0] * ray1.Direction[0] + dirCross[1] * ray1.Direction[1];
 
 			// If det is zero, rays are parallel and do not intersect
 			if (std::abs(det) < INTERSECTION_EPSILON)
@@ -1322,7 +1321,7 @@ namespace Geometry
 		if (t1 > ParamMin && t1 < ParamMax)
 		{
 			// Update HitParam and ParamMax if the intersection is closer
-			HitParam = std::min(HitParam, t1);
+			HitParam = std::min<pmp::Scalar>(HitParam, t1);
 			ParamMax = HitParam;
 		}
 
@@ -1350,11 +1349,11 @@ namespace Geometry
 		return StartPt + ParamMax * Direction;
 	}
 
-	bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, float& tMinOut, float& tMaxOut)
+	bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, pmp::Scalar& tMinOut, pmp::Scalar& tMaxOut)
 	{
 		// Initialize parameters for the intersection distances
-		float tMin = 0.0f;
-		float tMax = std::numeric_limits<float>::infinity();
+		pmp::Scalar tMin = 0.0;
+		pmp::Scalar tMax = std::numeric_limits<pmp::Scalar>::infinity();
 
 		// Get the min and max points of the bounding box
 		pmp::Point2 boxMin = box.min();
@@ -1366,8 +1365,8 @@ namespace Geometry
 			if (std::abs(direction[i]) > INTERSECTION_EPSILON) // Avoid division by zero
 			{
 				// Calculate intersection distances with the slab boundaries
-				float t1 = (boxMin[i] - startPt[i]) / direction[i];
-				float t2 = (boxMax[i] - startPt[i]) / direction[i];
+				pmp::Scalar t1 = (boxMin[i] - startPt[i]) / direction[i];
+				pmp::Scalar t2 = (boxMax[i] - startPt[i]) / direction[i];
 
 				// Ensure t1 is the min and t2 is the max distance
 				if (t1 > t2) std::swap(t1, t2);

@@ -19,8 +19,8 @@ struct SheetMembraneEvolutionSettings
 	double TimeStep{ 0.01 };     //>! time step size.
 	double FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target mesh).
 
-	float StartZHeight{ 0.9f }; //>! the evolving sheet plane surface will start at this z-height
-	float EndZHeight{ 0.0f }; //>! the evolving sheet plane surface will end at this z-height
+	pmp::Scalar StartZHeight{ 0.9 }; //>! the evolving sheet plane surface will start at this z-height
+	pmp::Scalar EndZHeight{ 0.0 }; //>! the evolving sheet plane surface will end at this z-height
 
 	unsigned int nXSegments{ 10 }; //>! the number of plane surface segments in x-direction
 	unsigned int nYSegments{ 10 }; //>! the number of plane surface segments in y-direction
@@ -35,7 +35,7 @@ struct SheetMembraneEvolutionSettings
 	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
-	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
+	pmp::Scalar TangentialVelocityWeight{ 0.0 }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.
@@ -115,12 +115,12 @@ private:
 	SheetMembraneEvolutionSettings m_EvolSettings{}; //>! settings.
 
 	double m_SheetSurfaceVelocity{ 1.0 }; //>! the downward velocity (in -z direction) of the evolving sheet surface
-	float m_MeanEdgeLength{ 0.3f }; //>! mean edge length for adaptive remeshing
+	pmp::Scalar m_MeanEdgeLength{ 0.3 }; //>! mean edge length for adaptive remeshing
 
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
-	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
+	pmp::Scalar m_ScalingFactor{ 1.0 }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.
@@ -147,7 +147,7 @@ void ReportInput(const SheetMembraneEvolutionSettings& evolSettings, std::ostrea
  * \param stabilizationFactor    a multiplier for stabilizing mean co-volume area.
  * \return scaling factor for mesh and scalar grid.
  */
-[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const float& cellSizeX, const float& cellSizeY, const float& stabilizationFactor = 1.0f);
+[[nodiscard]] float GetStabilizationScalingFactor(const double& timeStep, const pmp::Scalar& cellSizeX, const pmp::Scalar& cellSizeY, const pmp::Scalar& stabilizationFactor = 1.0);
 
 /**
  * \brief A wrapper for the 2D position and weight of a support column
@@ -156,7 +156,7 @@ void ReportInput(const SheetMembraneEvolutionSettings& evolSettings, std::ostrea
 struct WeightedColumnPosition
 {
 	pmp::vec2 Position{}; //>! 2D position of this column
-	float Weight{ 1.0f }; //>! weight of this column
+	pmp::Scalar Weight{ 1.0 }; //>! weight of this column
 };
 
 /**
@@ -168,5 +168,5 @@ struct WeightedColumnPosition
  * \return the produced scalar signed distance field.
  */
 [[nodiscard]] Geometry::ScalarGrid GetDistanceFieldWithSupportColumns(
-	const float& cellSize, const pmp::BoundingBox& box,
-	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const float& supportZLevel = 0.5f);
+	const pmp::Scalar& cellSize, const pmp::BoundingBox& box,
+	const std::vector<WeightedColumnPosition>& weightedColumnPositions, const pmp::Scalar& supportZLevel = 0.5);

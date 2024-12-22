@@ -12,19 +12,19 @@ namespace SDF
 	 * \param startBox         bounding box to start from.
 	 * \param targetLeafSize   preferred leaf size for the octree voxelizer.
 	 * \return cube bounding box for octree voxelizer.
-	 * \throw std::logic error if targetLeafSize <= 0.0f.
+	 * \throw std::logic error if targetLeafSize <= 0.0.
 	 */
-	[[nodiscard]] pmp::BoundingBox ComputeCubeBoxFromTargetLeafSize(const pmp::BoundingBox& startBox, const float& targetLeafSize)
+	[[nodiscard]] pmp::BoundingBox ComputeCubeBoxFromTargetLeafSize(const pmp::BoundingBox& startBox, const pmp::Scalar& targetLeafSize)
 	{
-		if (targetLeafSize <= 0.0f)
+		if (targetLeafSize <= 0.0)
 		{
-			throw std::logic_error("ComputeCubeBoxFromTargetLeafSize: targetLeafSize <= 0.0f!\n");
+			throw std::logic_error("ComputeCubeBoxFromTargetLeafSize: targetLeafSize <= 0.0!\n");
 		}
 
 		const auto startBoxSize = startBox.max() - startBox.min();
-		const float maxDim = std::max({ startBoxSize[0], startBoxSize[1], startBoxSize[2] });
+		const pmp::Scalar maxDim = std::max({ startBoxSize[0], startBoxSize[1], startBoxSize[2] });
 		const unsigned int expectedDepth = std::floor(log2(maxDim / targetLeafSize));
-		const float cubeBoxHalfDim = pow(2.0f, expectedDepth) * targetLeafSize;
+		const float cubeBoxHalfDim = pow(2.0, expectedDepth) * targetLeafSize;
 
 		const auto startBoxCenter = startBox.center();
 		const pmp::vec3 cubeBoxCenter{
@@ -47,7 +47,7 @@ namespace SDF
 		return { cubeBoxMin, cubeBoxMax };
 	}
 
-	OctreeVoxelizer::OctreeVoxelizer(const Geometry::CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const float& targetLeafSize)
+	OctreeVoxelizer::OctreeVoxelizer(const Geometry::CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const pmp::Scalar& targetLeafSize)
 		: m_KdTree(kdTree), m_LeafSize(targetLeafSize)
 	{
 		m_Root = new Node(this);
@@ -60,21 +60,21 @@ namespace SDF
 	// ======================== Helper macros for Octree subdivision ======================
 
 	#define SET_BOX_MIN_COORD(b, B, i, j, k, size)							        \
-			b.min()[0] = B.min()[0] + (static_cast<float>(i) / 2.0f) * (size);		\
-			b.min()[1] = B.min()[1] + (static_cast<float>(j) / 2.0f) * (size);		\
-			b.min()[2] = B.min()[2] + (static_cast<float>(k) / 2.0f) * (size)
+			b.min()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i) / 2.0) * (size);		\
+			b.min()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j) / 2.0) * (size);		\
+			b.min()[2] = B.min()[2] + (static_cast<pmp::Scalar>(k) / 2.0) * (size)
 
 	#define SET_BOX_MAX_COORD(b, B, i, j, k, size)							        \
-			b.max()[0] = B.min()[0] + (static_cast<float>(i + 1) / 2.0f) * (size);	\
-			b.max()[1] = B.min()[1] + (static_cast<float>(j + 1) / 2.0f) * (size);	\
-			b.max()[2] = B.min()[2] + (static_cast<float>(k + 1) / 2.0f) * (size)
+			b.max()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i + 1) / 2.0) * (size);	\
+			b.max()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j + 1) / 2.0) * (size);	\
+			b.max()[2] = B.min()[2] + (static_cast<pmp::Scalar>(k + 1) / 2.0) * (size)
 
 	void OctreeVoxelizer::BuildRecurse(Node* node, const pmp::BoundingBox& box, unsigned int remainingDepth)
 	{
 		assert(!box.is_empty());
 		node->cubeBox = box;
 
-		const float boxSize = box.max()[0] - box.min()[0];
+		const pmp::Scalar boxSize = box.max()[0] - box.min()[0];
 
 		if (remainingDepth == 0 || boxSize < m_LeafSize + LEAF_SIZE_EPSILON)
 		{
@@ -171,19 +171,19 @@ namespace SDF
 	 * \param startBox         bounding box to start from.
 	 * \param targetLeafSize   preferred leaf size for the quadtree voxelizer.
 	 * \return cube bounding box for quadtree voxelizer.
-	 * \throw std::logic error if targetLeafSize <= 0.0f.
+	 * \throw std::logic error if targetLeafSize <= 0.0.
 	 */
-	[[nodiscard]] pmp::BoundingBox2 ComputeSquareBoxFromTargetLeafSize(const pmp::BoundingBox2& startBox, const float& targetLeafSize)
+	[[nodiscard]] pmp::BoundingBox2 ComputeSquareBoxFromTargetLeafSize(const pmp::BoundingBox2& startBox, const pmp::Scalar& targetLeafSize)
 	{
-		if (targetLeafSize <= 0.0f)
+		if (targetLeafSize <= 0.0)
 		{
-			throw std::logic_error("ComputeSquareBoxFromTargetLeafSize: targetLeafSize <= 0.0f!\n");
+			throw std::logic_error("ComputeSquareBoxFromTargetLeafSize: targetLeafSize <= 0.0!\n");
 		}
 
 		const auto startBoxSize = startBox.max() - startBox.min();
-		const float maxDim = std::max(startBoxSize[0], startBoxSize[1] );
+		const pmp::Scalar maxDim = std::max(startBoxSize[0], startBoxSize[1] );
 		const unsigned int expectedDepth = std::floor(log2(maxDim / targetLeafSize));
-		const float squareBoxHalfDim = pow(2.0f, expectedDepth) * targetLeafSize;
+		const pmp::Scalar squareBoxHalfDim = pow(2.0, expectedDepth) * targetLeafSize;
 
 		const auto startBoxCenter = startBox.center();
 		const pmp::vec2 squareBoxCenter{
@@ -203,7 +203,7 @@ namespace SDF
 		return { squareBoxMin, squareBoxMax };
 	}
 
-	QuadtreeVoxelizer::QuadtreeVoxelizer(const Geometry::Collision2DTree& kdTree, const pmp::BoundingBox2& startBox, const float& targetLeafSize)
+	QuadtreeVoxelizer::QuadtreeVoxelizer(const Geometry::Collision2DTree& kdTree, const pmp::BoundingBox2& startBox, const pmp::Scalar& targetLeafSize)
 		: m_KdTree(kdTree), m_LeafSize(targetLeafSize)
 	{
 		m_Root = new Node(this);
@@ -216,19 +216,19 @@ namespace SDF
 	// ======================== Helper macros for Quadtree subdivision ======================
 
 #define SET_BOX_MIN_COORD_2D(b, B, i, j, size)							            \
-			b.min()[0] = B.min()[0] + (static_cast<float>(i) / 2.0f) * (size);		\
-			b.min()[1] = B.min()[1] + (static_cast<float>(j) / 2.0f) * (size);
+			b.min()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i) / 2.0) * (size);		\
+			b.min()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j) / 2.0) * (size);
 
 #define SET_BOX_MAX_COORD_2D(b, B, i, j, size)							            \
-			b.max()[0] = B.min()[0] + (static_cast<float>(i + 1) / 2.0f) * (size);	\
-			b.max()[1] = B.min()[1] + (static_cast<float>(j + 1) / 2.0f) * (size);
+			b.max()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i + 1) / 2.0) * (size);	\
+			b.max()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j + 1) / 2.0) * (size);
 
 	void QuadtreeVoxelizer::BuildRecurse(Node* node, const pmp::BoundingBox2& box, unsigned int remainingDepth)
 	{
 		assert(!box.is_empty());
 		node->squareBox = box;
 
-		const float boxSize = box.max()[0] - box.min()[0];
+		const pmp::Scalar boxSize = box.max()[0] - box.min()[0];
 
 		if (remainingDepth == 0 || boxSize < m_LeafSize + LEAF_SIZE_EPSILON)
 		{

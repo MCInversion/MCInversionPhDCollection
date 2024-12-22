@@ -12,7 +12,7 @@ namespace pmp
 			: m_Curve(curve)
 		{
 			const auto vFirst = Vertex(0);
-			m_RefEdge = RefEdge{ m_Curve.edge_to(vFirst), 1.0f };
+			m_RefEdge = RefEdge{ m_Curve.edge_to(vFirst), 1.0 };
 		}
 
 		void RecordPrevRefEdgePositions();

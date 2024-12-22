@@ -42,7 +42,7 @@ size_t Features::detect_boundary()
 
 size_t Features::detect_angle(Scalar angle)
 {
-    const Scalar feature_cosine = cos(angle / 180.0f * M_PI);
+    const Scalar feature_cosine = cos(angle / 180.0 * M_PI);
     size_t n_edges = 0;
     for (auto e : mesh_.edges())
     {
@@ -96,7 +96,7 @@ size_t Features::detect_angle_within_bounds(Scalar minAngle, Scalar maxAngle)
 
 size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts)
 {
-    assert(principalCurvatureFactor >= 1.0f);
+    assert(principalCurvatureFactor >= 1.0);
     Curvature curvAlg{ mesh_ };
     curvAlg.analyze_tensor(1);
 
@@ -109,8 +109,8 @@ size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& princip
         const auto v0 = mesh_.vertex(e, 0);
         auto vMinCurvature = curvAlg.min_curvature(v0);
         auto vMaxCurvature = curvAlg.max_curvature(v0);
-    	const bool isV0Saddle = (vMinCurvature < 0.0f && vMaxCurvature > 0.0f) || (vMinCurvature > 0.0f && vMaxCurvature < 0.0f);
-        const bool isV0Concave = vMinCurvature < 0.0f && vMaxCurvature < 0.0f;
+    	const bool isV0Saddle = (vMinCurvature < 0.0 && vMaxCurvature > 0.0) || (vMinCurvature > 0.0 && vMaxCurvature < 0.0);
+        const bool isV0Concave = vMinCurvature < 0.0 && vMaxCurvature < 0.0;
     	auto vAbsMinCurvature = std::fabs(vMinCurvature);
         auto vAbsMaxCurvature = std::fabs(vMaxCurvature);
         if (!isV0Saddle && vAbsMaxCurvature > principalCurvatureFactor * vAbsMinCurvature)
@@ -121,8 +121,8 @@ size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& princip
         const auto v1 = mesh_.vertex(e, 1);
         vMinCurvature = curvAlg.min_curvature(v1);
         vMaxCurvature = curvAlg.max_curvature(v1);
-        const bool isV1Saddle = (vMinCurvature < 0.0f && vMaxCurvature > 0.0f) || (vMinCurvature > 0.0f && vMaxCurvature < 0.0f);
-        const bool isV1Concave = vMinCurvature < 0.0f && vMaxCurvature < 0.0f;
+        const bool isV1Saddle = (vMinCurvature < 0.0 && vMaxCurvature > 0.0) || (vMinCurvature > 0.0 && vMaxCurvature < 0.0);
+        const bool isV1Concave = vMinCurvature < 0.0 && vMaxCurvature < 0.0;
         vAbsMinCurvature = std::fabs(vMinCurvature);
         vAbsMaxCurvature = std::fabs(vMaxCurvature);
         if (!isV1Saddle && vAbsMaxCurvature > principalCurvatureFactor * vAbsMinCurvature)
@@ -150,14 +150,14 @@ size_t Features::detect_vertices_with_curvatures_imbalance(const Scalar& princip
 /// \brief computes mean length of an outgoing edge from a given vertex.
 [[nodiscard]] Scalar ComputeMeanArcLengthAtVertex(const SurfaceMesh& mesh, const Vertex& v)
 {
-    Scalar edgeLength = 0.0f;
+    Scalar edgeLength = 0.0;
     size_t valence = 0;
 	for (const auto w : mesh.vertices(v))
 	{
         edgeLength += norm(mesh.position(v) - mesh.position(w));
         valence++;
 	}
-    return 2.0f * edgeLength / static_cast<Scalar>(valence);
+    return 2.0 * edgeLength / static_cast<Scalar>(valence);
 }
 
 bool IsConvexDominantSaddle(const Scalar& vMinCurvature, const Scalar& vMaxCurvature, const Scalar& curvatureFactor)
@@ -165,14 +165,14 @@ bool IsConvexDominantSaddle(const Scalar& vMinCurvature, const Scalar& vMaxCurva
     const auto vAbsMinCurvature = std::fabs(vMinCurvature);
     const auto vAbsMaxCurvature = std::fabs(vMaxCurvature);
 
-    const bool isSaddle = (vMinCurvature < 0.0f && vMaxCurvature > 0.0f) || (vMinCurvature > 0.0f && vMaxCurvature < 0.0f);
+    const bool isSaddle = (vMinCurvature < 0.0 && vMaxCurvature > 0.0) || (vMinCurvature > 0.0 && vMaxCurvature < 0.0);
 
     return (vAbsMaxCurvature < curvatureFactor * vAbsMinCurvature) && isSaddle;
 }
 
 size_t Features::detect_vertices_with_high_curvature(const Scalar& curvatureAngle, const Scalar& principalCurvatureFactor, const bool& excludeEdgesWithoutTwoFeatureVerts)
 {
-    assert(curvatureAngle >= 0.0f);
+    assert(curvatureAngle >= 0.0);
     Curvature curvAlg{ mesh_ };
     curvAlg.analyze_tensor(1);
 

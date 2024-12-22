@@ -38,7 +38,7 @@ void BPATest()
 	constexpr size_t minVerts = 9; // Minimum number of vertices to sample
 
 	constexpr unsigned int seed = 5000; // seed for the pt cloud sampling RNG
-	constexpr float radiusPercentageOfMinDim = 0.05f;
+	constexpr pmp::Scalar radiusPercentageOfMinDim = 0.05;
 
 	for (const auto& meshName : meshForPtCloudNames)
 	{
@@ -79,8 +79,8 @@ void BPATest()
 
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float bpaRadius = radiusPercentageOfMinDim * minSize;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar bpaRadius = radiusPercentageOfMinDim * minSize;
 		std::cout << "BPA radius: " << bpaRadius << " units, i.e.: " << radiusPercentageOfMinDim * 100 << " % of min dim.\n";
 
 		const auto bpaMeshOpt = Geometry::ComputeBallPivotingMeshFromPoints(ptCloud, bpaRadius);
@@ -338,12 +338,12 @@ void IncrementalMeshBuilderHausdorffEval()
 		// Compute the distance field for the original mesh
 		auto meshBBox = meshAdapter.GetBounds();
 		auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		pmp::Scalar meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		pmp::Scalar meshCellSize = meshMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 
 		SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
-			1.0f,  // volExpansionFactor
+			1.0,  // volExpansionFactor
 			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation::None,  // Unsigned distance field
@@ -401,12 +401,12 @@ void ApollonArtecEvaLSWHausdorffEval()
 		// Compute the distance field for the original mesh
 		auto meshBBox = meshAdapter.GetBounds();
 		auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		pmp::Scalar meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		pmp::Scalar meshCellSize = meshMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 
 		SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
-			1.0f,  // volExpansionFactor
+			1.0,  // volExpansionFactor
 			Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation::None,  // Unsigned distance field

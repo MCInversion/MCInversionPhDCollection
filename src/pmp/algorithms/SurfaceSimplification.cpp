@@ -175,7 +175,7 @@ void SurfaceSimplification::simplify(unsigned int n_vertices)
     std::vector<Vertex> one_ring;
 
     // add properties for priority queue
-    vpriority_ = mesh_.add_vertex_property<float>("v:prio");
+    vpriority_ = mesh_.add_vertex_property<Scalar>("v:prio");
     heap_pos_ = mesh_.add_vertex_property<int>("v:heap");
     vtarget_ = mesh_.add_vertex_property<Halfedge>("v:target");
 
@@ -238,7 +238,7 @@ void SurfaceSimplification::simplify(unsigned int n_vertices)
 
 void SurfaceSimplification::enqueue_vertex(Vertex v)
 {
-    float prio, min_prio(std::numeric_limits<float>::max());
+    Scalar prio, min_prio(std::numeric_limits<Scalar>::max());
     Halfedge min_h;
 
     for (auto h : mesh_.halfedges(v))
@@ -560,7 +560,7 @@ bool SurfaceSimplification::texcoord_check(Halfedge h)
     return true;
 }
 
-float SurfaceSimplification::priority(const CollapseData& cd)
+Scalar SurfaceSimplification::priority(const CollapseData& cd)
 {
     // computer quadric error metric
     Quadric Q = vquadric_[cd.v0];

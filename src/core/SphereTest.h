@@ -9,7 +9,7 @@
  */
 struct ST_MeshTopologySettings
 {
-	float MinEdgeMultiplier{ 0.7f }; //>! multiplier for minimum edge length in adaptive remeshing.
+	pmp::Scalar MinEdgeMultiplier{ 0.7 }; //>! multiplier for minimum edge length in adaptive remeshing.
 	double RemeshingStartTimeFactor{ 0.0 }; //>! the fraction of total time steps after which remeshing should take place.
 	unsigned int NRemeshingIters{ 2 }; //>! the number of iterations for pmp::Remeshing.
 	unsigned int NTanSmoothingIters{ 5 }; //>! the number of tangential smoothing iterations for pmp::Remeshing.
@@ -39,7 +39,7 @@ struct SphereTestEvolutionSettings
 
 	ST_MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 
-	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
+	double TangentialVelocityWeight{ 0.0 }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 
 	double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).

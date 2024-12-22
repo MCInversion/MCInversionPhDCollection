@@ -38,7 +38,7 @@ void SurfaceSubdivision::catmull_clark()
         // boundary or feature edge?
         if (mesh_.is_boundary(e) || (efeature_ && efeature_[e]))
         {
-            epoint[e] = 0.5f * (points_[mesh_.vertex(e, 0)] +
+            epoint[e] = 0.5 * (points_[mesh_.vertex(e, 0)] +
                                 points_[mesh_.vertex(e, 1)]);
         }
 
@@ -50,7 +50,7 @@ void SurfaceSubdivision::catmull_clark()
             p += points_[mesh_.vertex(e, 1)];
             p += fpoint[mesh_.face(e, 0)];
             p += fpoint[mesh_.face(e, 1)];
-            p *= 0.25f;
+            p *= 0.25;
             epoint[e] = p;
         }
     }
@@ -122,7 +122,7 @@ void SurfaceSubdivision::catmull_clark()
 
             p /= (k * k);
 
-            p += ((k - 2.0f) / k) * points_[v];
+            p += ((k - 2.0) / k) * points_[v];
 
             vpoint[v] = p;
         }
@@ -347,7 +347,7 @@ void SurfaceSubdivision::quad_tri()
     // split each edge evenly into two parts
     for (auto e : mesh_.edges())
     {
-        mesh_.insert_vertex(e, 0.5f * (points_[mesh_.vertex(e, 0)] +
+        mesh_.insert_vertex(e, 0.5 * (points_[mesh_.vertex(e, 0)] +
                                        points_[mesh_.vertex(e, 1)]));
     }
 

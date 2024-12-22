@@ -26,7 +26,7 @@ struct IcoSphereEvolutionSettings
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
 	pmp::vec3 TargetOrigin{}; //>! origin of the evolution's target.
-	float MaxDim{}; //>! max dimension of the bounding box of the evolution's target.
+	pmp::Scalar MaxDim{}; //>! max dimension of the bounding box of the evolution's target.
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
 	bool ExportResultSurface{ true }; //>! whether to export resulting evolving surface.
@@ -36,7 +36,7 @@ struct IcoSphereEvolutionSettings
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
 
-	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
+	pmp::Scalar TangentialVelocityWeight{ 0.0 }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.
@@ -121,14 +121,14 @@ private:
 	// Members
 	std::vector<pmp::Point> m_PointCloud;
 	IcoSphereEvolutionSettings m_EvolSettings; //>! settings.
-	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
+	pmp::Scalar m_StartingSurfaceRadius{ 1.0 }; //>! radius of the starting surface.
 	pmp::Point m_StartingSurfaceCenter{}; //>! center of the bounding sphere of m_PointCloud.
 
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 	std::shared_ptr<pmp::Remeshing> m_Remesher{ nullptr };  //>! a remesher which keeps the evolving surface with its vlocked_ info for initial convex hull vertices.
 
-	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
+	pmp::Scalar m_ScalingFactor{ 1.0 }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.

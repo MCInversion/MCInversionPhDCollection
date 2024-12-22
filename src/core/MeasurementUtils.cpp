@@ -10,7 +10,7 @@ namespace Geometry
 {
 	constexpr unsigned int DEFAULT_N_VOXELS_PER_MIN_DIMENSION = 40;
 
-	std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>> ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins)
+	std::optional<std::pair<std::pair<pmp::Scalar, pmp::Scalar>, std::vector<unsigned int>>> ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins)
 	{
 		// Check for empty mesh or point cloud
 		if (mesh.n_vertices() == 0 || ptCloud.empty())
@@ -21,9 +21,9 @@ namespace Geometry
 		// Compute distance field for the point cloud
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / DEFAULT_N_VOXELS_PER_MIN_DIMENSION;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / DEFAULT_N_VOXELS_PER_MIN_DIMENSION;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 			volExpansionFactor,
@@ -35,23 +35,23 @@ namespace Geometry
 
 		// Prepare for histogram computation
 		std::vector<unsigned int> histogram(nBins, 0);
-		float maxDistVal = std::numeric_limits<float>::lowest();
-		float minDistVal = std::numeric_limits<float>::max();
+		auto maxDistVal = std::numeric_limits<pmp::Scalar>::lowest();
+		auto minDistVal = std::numeric_limits<pmp::Scalar>::max();
 
 		// Iterate through vertices to compute distances and populate the histogram
 		for (const auto& v : mesh.vertices())
 		{
-			const auto vPos = mesh.position(v);
+			const auto& vPos = mesh.position(v);
 			const double vDistanceToTarget = TrilinearInterpolateScalarValue(vPos, df);
-			maxDistVal = std::max(maxDistVal, static_cast<float>(vDistanceToTarget));
-			minDistVal = std::min(minDistVal, static_cast<float>(vDistanceToTarget));
+			maxDistVal = std::max(maxDistVal, static_cast<pmp::Scalar>(vDistanceToTarget));
+			minDistVal = std::min(minDistVal, static_cast<pmp::Scalar>(vDistanceToTarget));
 		}
 
 		// Calculate histogram bin size and populate histogram
-		const float binSize = (maxDistVal - minDistVal) / nBins;
+		const pmp::Scalar binSize = (maxDistVal - minDistVal) / nBins;
 		for (const auto& v : mesh.vertices())
 		{
-			const auto vPos = mesh.position(v);
+			const auto& vPos = mesh.position(v);
 			const double vDistanceToTarget = TrilinearInterpolateScalarValue(vPos, df);
 			int binIndex = static_cast<int>((vDistanceToTarget - minDistVal) / binSize);
 			binIndex = std::min(binIndex, static_cast<int>(nBins) - 1); // Ensure binIndex is within range
@@ -71,11 +71,11 @@ namespace Geometry
 		// Compute distance field for the point cloud
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float ptCloudCellSize = ptCloudMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const pmp::Scalar ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar ptCloudCellSize = ptCloudMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 		const SDF::PointCloudDistanceFieldSettings ptCloudDfSettings{
 			ptCloudCellSize,
-			1.0f, // volExpansionFactor
+			1.0, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::BlurPostprocessingType::None
 		};
@@ -84,11 +84,11 @@ namespace Geometry
 		// Compute distance field for the mesh
 		const auto meshBBox = mesh.bounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const pmp::Scalar meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar meshCellSize = meshMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 		const SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
-			1.0f, // volExpansionFactor
+			1.0, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation::None, // Unsigned distance field
@@ -104,7 +104,7 @@ namespace Geometry
 		// Mesh to Point Cloud: Compute max distance using the distance field
 		for (const auto v : mesh.vertices())
 		{
-			const auto vPos = mesh.position(v);
+			const auto& vPos = mesh.position(v);
 			const double vDistanceToPointCloud = TrilinearInterpolateScalarValue(vPos, ptCloudDf);
 			maxDistMeshToPointCloud = std::max(maxDistMeshToPointCloud, vDistanceToPointCloud);
 		}
@@ -112,7 +112,7 @@ namespace Geometry
 		// Point Cloud to Mesh: Compute max distance using the distance field
 		for (const auto& p : ptCloud)
 		{
-			const double pDistanceToMesh = TrilinearInterpolateScalarValue(p, meshDf);
+			const double& pDistanceToMesh = TrilinearInterpolateScalarValue(p, meshDf);
 			maxDistPointCloudToMesh = std::max(maxDistPointCloudToMesh, pDistanceToMesh);
 		}
 
@@ -130,11 +130,11 @@ namespace Geometry
 		// Compute distance field for the mesh
 		const auto meshBBox = mesh.bounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const pmp::Scalar meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar meshCellSize = meshMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 		const SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
-			1.0f, // volExpansionFactor
+			1.0, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation::None, // Unsigned distance field
@@ -150,7 +150,7 @@ namespace Geometry
 		// Mesh to Point Cloud: Compute max distance using the distance field
 		for (const auto v : mesh.vertices())
 		{
-			const auto vPos = mesh.position(v);
+			const auto& vPos = mesh.position(v);
 			const double vDistanceToPointCloud = TrilinearInterpolateScalarValue(vPos, ptCloudDf);
 			maxDistMeshToPointCloud = std::max(maxDistMeshToPointCloud, vDistanceToPointCloud);
 		}
@@ -176,11 +176,11 @@ namespace Geometry
 		// Compute distance field for the mesh
 		const auto meshBBox = mesh.bounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const pmp::Scalar meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar meshCellSize = meshMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 		const SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
-			1.0f, // volExpansionFactor
+			1.0, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation::None, // Unsigned distance field
@@ -196,7 +196,7 @@ namespace Geometry
 		// Mesh to Ref Mesh: Compute max distance using the distance field
 		for (const auto v : mesh.vertices())
 		{
-			const auto vPos = mesh.position(v);
+			const auto& vPos = mesh.position(v);
 			const double vDistanceToRefMesh = TrilinearInterpolateScalarValue(vPos, refMeshDf);
 			maxDistMeshToRefMesh = std::max(maxDistMeshToRefMesh, vDistanceToRefMesh);
 		}
@@ -204,7 +204,7 @@ namespace Geometry
 		// Ref Mesh to Mesh: Compute max distance using the distance field
 		for (const auto v : refMesh.vertices())
 		{
-			const auto vPos = refMesh.position(v);
+			const auto& vPos = refMesh.position(v);
 			const double pDistanceToMesh = TrilinearInterpolateScalarValue(vPos, meshDf);
 			maxDistRefMeshToMesh = std::max(maxDistRefMeshToMesh, pDistanceToMesh);
 		}
@@ -224,11 +224,11 @@ namespace Geometry
 		const BaseMeshAdapter meshAdapter(std::make_shared<BaseMeshGeometryData>(mesh));
 		const auto meshBBox = meshAdapter.GetBounds();
 		const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		const float meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		const float meshCellSize = meshMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const pmp::Scalar meshMinSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		const pmp::Scalar meshCellSize = meshMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 		const SDF::DistanceFieldSettings meshDfSettings{
 			meshCellSize,
-			1.0f, // volExpansionFactor
+			1.0, // volExpansionFactor
 			DEFAULT_SCALAR_GRID_INIT_VAL,
 			SDF::KDTreeSplitType::Center,
 			SDF::SignComputation::None, // Unsigned distance field

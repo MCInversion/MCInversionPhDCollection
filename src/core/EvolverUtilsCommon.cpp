@@ -33,21 +33,21 @@ CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& a
 		if (stats.Min > measure) stats.Min = measure;
 		stats.Mean += measure;
 	}
-	stats.Mean /= static_cast<double>(mesh.n_vertices());
+	stats.Mean /= static_cast<pmp::Scalar>(mesh.n_vertices());
 	return stats;
 }
 
 /// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+constexpr pmp::Scalar SCALE_FACTOR_POWER = 1.0 / 2.0;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 5.0f;
+constexpr pmp::Scalar INV_SHRINK_FACTOR = 5.0;
 
-float GetStabilizationScalingFactor(const double& timeStep, const float& icoRadius, const unsigned int& icoSubdiv, const float& stabilizationFactor)
+pmp::Scalar GetStabilizationScalingFactor(const double& timeStep, const pmp::Scalar& icoRadius, const unsigned int& icoSubdiv, const pmp::Scalar& stabilizationFactor)
 {
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, icoSubdiv) - 1) + 3 * N_ICO_VERTS_0) / 3;
-	const float weighedIcoRadius = icoRadius;
-	const float expectedMeanCoVolArea = stabilizationFactor * (4.0f * static_cast<float>(M_PI) * weighedIcoRadius * weighedIcoRadius / static_cast<float>(expectedVertexCount));
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
+	const pmp::Scalar weighedIcoRadius = icoRadius;
+	const pmp::Scalar expectedMeanCoVolArea = stabilizationFactor * (4.0 * static_cast<pmp::Scalar>(M_PI) * weighedIcoRadius * weighedIcoRadius / static_cast<pmp::Scalar>(expectedVertexCount));
+	return pow(static_cast<pmp::Scalar>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }
 
 std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo)
@@ -64,7 +64,7 @@ std::string InterpretSolverErrorCode(const Eigen::ComputationInfo& cInfo)
 	return "Eigen::InvalidInput";
 }
 
-pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const pmp::vec3& vNormal, const float& weight)
+pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, const pmp::Vertex& v, const pmp::vec3& vNormal, const pmp::Scalar& weight)
 {
 	pmp::vec3 result{};
 	if (!mesh.has_vertex_property("v:normal"))
@@ -79,14 +79,14 @@ pmp::vec3 ComputeTangentialUpdateVelocityAtVertex(const pmp::SurfaceMesh& mesh, 
 		const auto e0Normalized = pmp::normalize(e0);
 		const auto e1Normalized = pmp::normalize(e1);
 		const auto eDot = pmp::dot(e0Normalized, e1Normalized);
-		result += (1.0f + eDot) * (e0 + e1);
+		result += (1.0 + eDot) * (e0 + e1);
 	}
-	result *= weight / static_cast<float>(mesh.valence(v));
+	result *= weight / static_cast<pmp::Scalar>(mesh.valence(v));
 	const auto resultDotNormal = pmp::dot(result, vNormal);
 	return (result - resultDotNormal * vNormal);
 }
 
-pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v, const pmp::vec2& vNormal, const float& weight)
+pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v, const pmp::vec2& vNormal, const pmp::Scalar& weight)
 {
 	pmp::vec2 result{};
 	if (!curve.has_vertex_property("v:normal") || curve.is_isolated(v) || curve.is_boundary(v))
@@ -95,7 +95,7 @@ pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& cu
 	const auto [vPrev, vNext] = curve.vertices(v);
 	const auto e0Vec = curve.position(vPrev) - curve.position(v);
 	const auto e1Vec = curve.position(vNext) - curve.position(v);
-	result += 0.5f * (e0Vec + e1Vec);
+	result += 0.5 * (e0Vec + e1Vec);
 	const auto resultDotNormal = pmp::dot(result, vNormal);
 	return (result - resultDotNormal * vNormal);
 }
@@ -119,10 +119,10 @@ bool IsRemeshingNecessary(const CoVolumeStats& stats, const double& tStep)
 	return stats.Max > 1.2 * tStep;
 }
 
-bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianConditionNumbers)
+bool IsRemeshingNecessary(const std::vector<pmp::Scalar>& equilateralJacobianConditionNumbers)
 {
-	float minVal = FLT_MAX;
-	float maxVal = -FLT_MAX;
+	pmp::Scalar minVal = FLT_MAX;
+	pmp::Scalar maxVal = -FLT_MAX;
 	for (const auto& val : equilateralJacobianConditionNumbers)
 	{
 		if (val < minVal) minVal = val;
@@ -134,10 +134,10 @@ bool IsRemeshingNecessary(const std::vector<float>& equilateralJacobianCondition
 
 bool IsNonFeatureRemeshingNecessary(const pmp::SurfaceMesh& mesh)
 {
-	float minVal = FLT_MAX;
-	float maxVal = -FLT_MAX;
-	const auto vQualityProp = mesh.get_vertex_property<float>("v:equilateralJacobianCondition");
-	const auto vIsFeature = mesh.get_vertex_property<bool>("v:feature");
+	pmp::Scalar minVal = FLT_MAX;
+	pmp::Scalar maxVal = -FLT_MAX;
+	const auto vQualityProp = mesh.get_vertex_property<pmp::Scalar>("v:equilateralJacobianCondition");
+	const auto vIsFeature = mesh.get_vertex_property<pmp::Scalar>("v:feature");
 
 	for (const auto v : mesh.vertices())
 	{
@@ -226,11 +226,11 @@ bool IsRemeshingNecessary(const pmp::SurfaceMesh& mesh, const Geometry::FaceQual
 
 // ------------------------------------------------------------------------------------
 
-bool ShouldDetectFeatures(const std::vector<float>& distancePerVertexValues)
+bool ShouldDetectFeatures(const std::vector<pmp::Scalar>& distancePerVertexValues)
 {
-	const float minDist = *std::min(distancePerVertexValues.begin(), distancePerVertexValues.end());
-	const float maxDist = *std::max(distancePerVertexValues.begin(), distancePerVertexValues.end());
-	return minDist < 0.9f * maxDist;
+	const pmp::Scalar minDist = *std::min(distancePerVertexValues.begin(), distancePerVertexValues.end());
+	const pmp::Scalar maxDist = *std::max(distancePerVertexValues.begin(), distancePerVertexValues.end());
+	return minDist < 0.9 * maxDist;
 	//return true;
 }
 
@@ -256,19 +256,19 @@ std::unordered_set<unsigned int>& GetRemeshingAdjustmentTimeIndices()
 
 bool ShouldAdjustRemeshingLengths(const unsigned int& ti /*, const unsigned int& NSteps*/)
 {
-	//const auto timePercentage = static_cast<unsigned int>(static_cast<float>(ti) / static_cast<float>(NSteps) * 100);
+	//const auto timePercentage = static_cast<unsigned int>(static_cast<pmp::Scalar>(ti) / static_cast<pmp::Scalar>(NSteps) * 100);
 	//return ADJUSTMENT_TIME_PERCENTAGES.contains(timePercentage);
 	return ADJUSTMENT_TIME_INDICES.contains(ti);
 }
 
-void AdjustRemeshingLengths(const float& decayFactor, float& minEdgeLength, float& maxEdgeLength, float& approxError)
+void AdjustRemeshingLengths(const pmp::Scalar& decayFactor, pmp::Scalar& minEdgeLength, pmp::Scalar& maxEdgeLength, pmp::Scalar& approxError)
 {
 	minEdgeLength *= decayFactor;
 	maxEdgeLength *= decayFactor;
-	approxError = 0.1f * (minEdgeLength + maxEdgeLength);
+	approxError = 0.1 * (minEdgeLength + maxEdgeLength);
 }
 
-pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, float radius, const ManifoldAdaptiveRemeshingParams& remeshingParams)
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigned int subdiv, pmp::Scalar radius, const ManifoldAdaptiveRemeshingParams& remeshingParams)
 {
 	if (radius < FLT_EPSILON)
 	{
@@ -277,11 +277,11 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigne
 
 	pmp::AdaptiveRemeshingSettings settings;
 
-	constexpr float baseIcoHalfAngle = 2.0f * static_cast<float>(M_PI) / 10.0f;
-	settings.MinEdgeLength = remeshingParams.MinEdgeMultiplier * 2.0f * radius * 
-		sin(baseIcoHalfAngle * pow(2.0f, -1.0f * static_cast<float>(subdiv))); // from icosahedron edge length
-	settings.MaxEdgeLength = 4.0f * settings.MinEdgeLength;
-	settings.ApproxError = 0.25f * (settings.MinEdgeLength + settings.MaxEdgeLength);
+	constexpr pmp::Scalar baseIcoHalfAngle = 2.0 * static_cast<pmp::Scalar>(M_PI) / 10.0;
+	settings.MinEdgeLength = remeshingParams.MinEdgeMultiplier * 2.0 * radius * 
+		sin(baseIcoHalfAngle * pow(2.0, -1.0 * static_cast<pmp::Scalar>(subdiv))); // from icosahedron edge length
+	settings.MaxEdgeLength = 4.0 * settings.MinEdgeLength;
+	settings.ApproxError = 0.25 * (settings.MinEdgeLength + settings.MaxEdgeLength);
 
 	settings.NRemeshingIterations = remeshingParams.NRemeshingIters;
 	settings.NTangentialSmoothingIters = remeshingParams.NTanSmoothingIters;
@@ -290,7 +290,7 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere_OLD(unsigne
 	return settings;
 }
 
-pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::shared_ptr<pmp::SurfaceMesh>& icosphere, float radius, const pmp::Point& center)
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::shared_ptr<pmp::SurfaceMesh>& icosphere, pmp::Scalar radius, const pmp::Point& center)
 {
 	if (!icosphere)
 	{
@@ -306,15 +306,15 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::
 
 	pmp::AdaptiveRemeshingSettings settings;
 
-	float minEdgeLength = std::numeric_limits<float>::max();
-	float maxEdgeLength = std::numeric_limits<float>::lowest();
-	float totalEdgeLength = 0.0f;
-	float maxDeviation = 0.0f;
+	pmp::Scalar minEdgeLength = std::numeric_limits<pmp::Scalar>::max();
+	pmp::Scalar maxEdgeLength = std::numeric_limits<pmp::Scalar>::lowest();
+	pmp::Scalar totalEdgeLength = 0.0;
+	pmp::Scalar maxDeviation = 0.0;
 
 	// Calculate edge lengths
 	for (const auto e : icosphere->edges())
 	{
-		float edgeLength = icosphere->edge_length(e);
+		pmp::Scalar edgeLength = icosphere->edge_length(e);
 		minEdgeLength = std::min(minEdgeLength, edgeLength);
 		maxEdgeLength = std::max(maxEdgeLength, edgeLength);
 		totalEdgeLength += edgeLength;
@@ -324,10 +324,10 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromIcoSphere(const std::
 	for (const auto f : icosphere->faces())
 	{
 		const pmp::Point faceCentroid = centroid(*icosphere, f);
-		const float distanceToCenter = norm(faceCentroid - center);
+		const pmp::Scalar distanceToCenter = norm(faceCentroid - center);
 
 		// Calculate the deviation from the ideal spherical radius
-		float deviation = std::abs(distanceToCenter - radius);
+		pmp::Scalar deviation = std::abs(distanceToCenter - radius);
 		maxDeviation = std::max(maxDeviation, deviation);
 	}
 
@@ -350,22 +350,22 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromMesh(const std::share
 
 	pmp::AdaptiveRemeshingSettings settings;
 
-	float minEdgeLength = std::numeric_limits<float>::max();
-	float maxEdgeLength = std::numeric_limits<float>::lowest();
+	pmp::Scalar minEdgeLength = std::numeric_limits<pmp::Scalar>::max();
+	pmp::Scalar maxEdgeLength = std::numeric_limits<pmp::Scalar>::lowest();
 
 	// Calculate edge lengths
 	for (const auto e : mesh->edges())
 	{
-		float edgeLength = mesh->edge_length(e);
+		pmp::Scalar edgeLength = mesh->edge_length(e);
 		minEdgeLength = std::min(minEdgeLength, edgeLength);
 		maxEdgeLength = std::max(maxEdgeLength, edgeLength);
 	}
 
 	// Calculate the maximum quadric approximation error across all vertices
-	float maxDeviation = -FLT_MAX;
+	pmp::Scalar maxDeviation = -FLT_MAX;
 	for (const auto v : mesh->vertices())
 	{
-		float deviation = Geometry::CalculateQuadricApproximationErrorAtVertex(*mesh, v);
+		pmp::Scalar deviation = Geometry::CalculateQuadricApproximationErrorAtVertex(*mesh, v);
 		maxDeviation = std::max(maxDeviation, deviation);
 	}
 
@@ -379,7 +379,7 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromMesh(const std::share
 	return settings;
 }
 
-pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& circlePolyline, float radius, const pmp::Point2& center)
+pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(const std::shared_ptr<pmp::ManifoldCurve2D>& circlePolyline, pmp::Scalar radius, const pmp::Point2& center)
 {
 	if (!circlePolyline)
 	{
@@ -393,15 +393,15 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(const std
 
 	pmp::AdaptiveRemeshingSettings settings;
 
-	float minEdgeLength = std::numeric_limits<float>::max();
-	float maxEdgeLength = std::numeric_limits<float>::lowest();
-	float totalEdgeLength = 0.0f;
-	float maxDeviation = 0.0f;
+	pmp::Scalar minEdgeLength = std::numeric_limits<pmp::Scalar>::max();
+	pmp::Scalar maxEdgeLength = std::numeric_limits<pmp::Scalar>::lowest();
+	pmp::Scalar totalEdgeLength = 0.0;
+	pmp::Scalar maxDeviation = 0.0;
 
 	// Calculate edge lengths
 	for (const auto e : circlePolyline->edges())
 	{
-		float edgeLength = circlePolyline->edge_length(e);
+		pmp::Scalar edgeLength = circlePolyline->edge_length(e);
 		minEdgeLength = std::min(minEdgeLength, edgeLength);
 		maxEdgeLength = std::max(maxEdgeLength, edgeLength);
 		totalEdgeLength += edgeLength;
@@ -411,10 +411,10 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCircleCurve(const std
 	for (const auto e : circlePolyline->edges())
 	{
 		const pmp::Point2 faceCentroid = centroid(*circlePolyline, e);
-		const float distanceToCenter = norm(faceCentroid - center);
+		const pmp::Scalar distanceToCenter = norm(faceCentroid - center);
 
 		// Calculate the deviation from the ideal spherical radius
-		float deviation = std::abs(distanceToCenter - radius);
+		pmp::Scalar deviation = std::abs(distanceToCenter - radius);
 		maxDeviation = std::max(maxDeviation, deviation);
 	}
 
@@ -437,22 +437,22 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shar
 
 	pmp::AdaptiveRemeshingSettings settings;
 
-	float minEdgeLength = std::numeric_limits<float>::max();
-	float maxEdgeLength = std::numeric_limits<float>::lowest();
+	pmp::Scalar minEdgeLength = std::numeric_limits<pmp::Scalar>::max();
+	pmp::Scalar maxEdgeLength = std::numeric_limits<pmp::Scalar>::lowest();
 
 	// Calculate edge lengths
 	for (const auto e : curve->edges())
 	{
-		float edgeLength = curve->edge_length(e);
+		pmp::Scalar edgeLength = curve->edge_length(e);
 		minEdgeLength = std::min(minEdgeLength, edgeLength);
 		maxEdgeLength = std::max(maxEdgeLength, edgeLength);
 	}
 
 	// Calculate the maximum quadric approximation error across all vertices
-	float maxDeviation = -FLT_MAX;
+	pmp::Scalar maxDeviation = -FLT_MAX;
 	for (const auto v : curve->vertices())
 	{
-		float deviation = Geometry::CalculateCircularApproximationErrorAtVertex(*curve, v);
+		pmp::Scalar deviation = Geometry::CalculateCircularApproximationErrorAtVertex(*curve, v);
 		maxDeviation = std::max(maxDeviation, deviation);
 	}
 

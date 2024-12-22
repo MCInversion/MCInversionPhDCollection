@@ -113,11 +113,11 @@ void PtCloudToDF()
 		const auto& ptCloud = ptCloudOpt.value();
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
-			1.0f,
+			1.0,
 			DBL_MAX,
 			SDF::BlurPostprocessingType::None
 		};
@@ -172,10 +172,10 @@ void PDanielPtCloudComparisonTest()
 		const auto& ptCloud = ptCloudOpt.value();
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 				volExpansionFactor,
@@ -210,11 +210,11 @@ void PDanielPtCloudComparisonTest()
 
 		MeshTopologySettings topoParams;
 		topoParams.FixSelfIntersections = true;
-		topoParams.MinEdgeMultiplier = 0.14f;
+		topoParams.MinEdgeMultiplier = 0.14;
 		topoParams.UseBackProjection = false;
-		topoParams.PrincipalCurvatureFactor = 3.2f;
-		topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
-		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.PrincipalCurvatureFactor = 3.2;
+		topoParams.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
+		topoParams.EdgeLengthDecayFactor = 0.7;
 		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 		topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
@@ -237,7 +237,7 @@ void PDanielPtCloudComparisonTest()
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true,
 			false
 		};
@@ -279,13 +279,13 @@ void RepulsiveSurfResultEvaluation()
 
 			{
 				const auto meshSurfArea = surface_area(mesh);
-				assert(meshSurfArea > 0.0f);
+				assert(meshSurfArea > 0.0);
 				const size_t nVerts = mesh.n_vertices();
-				const auto vertexDensity = static_cast<float>(nVerts) / meshSurfArea;
+				const auto vertexDensity = static_cast<pmp::Scalar>(nVerts) / meshSurfArea;
 				std::cout << "Evaluated vertex density = (nVerts / meshSurfArea) = " << nVerts << "/" << meshSurfArea << " = " << vertexDensity << " verts / unit^2.\n";
 				const auto bbox = mesh.bounds();
 				const auto bboxVolume = bbox.volume();
-				const auto vertexDensityPerUnitVolume = static_cast<float>(nVerts) / meshSurfArea * pow(bboxVolume, 2.0f / 3.0f);
+				const auto vertexDensityPerUnitVolume = static_cast<pmp::Scalar>(nVerts) / meshSurfArea * pow(bboxVolume, 2.0 / 3.0);
 				std::cout << "Evaluated vertex density normalized per unit volume = nVerts / meshSurfArea * meshBBoxVolume^(2/3) = " <<
 					nVerts << " / " << meshSurfArea << " * (" << bboxVolume << ")^(2/3) = " << vertexDensityPerUnitVolume << " verts.\n";
 			}
@@ -326,8 +326,8 @@ void HistogramResultEvaluation()
 
 	const std::map<std::string, pmp::vec3> correspondingCorrectionTranslations{
 		{"bunny_RepulsiveResult220", pmp::vec3{}},
-		{ "bunnyLSW150_Obstacle", pmp::vec3{0.001f, 0.001f, 0.001f} },
-		{ "bunnyLSW150_FullWrap", pmp::vec3{0.001f, 0.001f, 0.001f} },
+		{ "bunnyLSW150_Obstacle", pmp::vec3{0.001, 0.001, 0.001} },
+		{ "bunnyLSW150_FullWrap", pmp::vec3{0.001, 0.001, 0.001} },
 		{ "bunnyLSW200_Daniel30k", pmp::vec3{} }
 	};
 
@@ -428,8 +428,8 @@ void HausdorffDistanceMeasurementsPerTimeStep()
 
 	const std::map<std::string, pmp::vec3> correspondingCorrectionTranslations{
 		{"bunnyRepulsive", pmp::vec3{}},
-		{ "bunnyDanielLSW", pmp::vec3{0.001f, 0.001f, 0.001f} },
-		{ "bunnyLSWObstacle", pmp::vec3{0.001f, 0.001f, 0.001f} },
+		{ "bunnyDanielLSW", pmp::vec3{0.001, 0.001, 0.001} },
+		{ "bunnyLSWObstacle", pmp::vec3{0.001, 0.001, 0.001} },
 		{ "bunnyLSWFullWrap", pmp::vec3{} }
 	};
 
@@ -473,11 +473,11 @@ void HausdorffDistanceMeasurementsPerTimeStep()
 		// Compute distance field for the point cloud
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float ptCloudCellSize = ptCloudMinSize / static_cast<float>(nVoxelsPerMinDimension);
+		const pmp::Scalar ptCloudMinSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar ptCloudCellSize = ptCloudMinSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
 		const SDF::PointCloudDistanceFieldSettings ptCloudDfSettings{
 			ptCloudCellSize,
-				1.0f, // volExpansionFactor
+				1.0, // volExpansionFactor
 				Geometry::DEFAULT_SCALAR_GRID_INIT_VAL,
 				SDF::BlurPostprocessingType::None
 		};
@@ -589,10 +589,10 @@ void HigherGenusPtCloudLSW()
 		const auto& ptCloud = ptCloudOpt.value();
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 1.0f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 				volExpansionFactor,
@@ -627,11 +627,11 @@ void HigherGenusPtCloudLSW()
 
 		MeshTopologySettings topoParams;
 		topoParams.FixSelfIntersections = true;
-		topoParams.MinEdgeMultiplier = 0.14f;
+		topoParams.MinEdgeMultiplier = 0.14;
 		topoParams.UseBackProjection = false;
-		topoParams.PrincipalCurvatureFactor = 3.2f;
-		topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
-		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.PrincipalCurvatureFactor = 3.2;
+		topoParams.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
+		topoParams.EdgeLengthDecayFactor = 0.7;
 		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 		topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
@@ -654,7 +654,7 @@ void HigherGenusPtCloudLSW()
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true,
 			false
 		};
@@ -675,14 +675,14 @@ void HigherGenusPtCloudLSW()
 void TriTriIntersectionTests()
 {
 	const std::vector tri0Vertices{
-		pmp::vec3{0.0572398156f, -0.0717622489f, -1.03659534f},
-			pmp::vec3{0.198035538f, -0.0351596251f, -1.18061316f},
-			pmp::vec3{0.250069439f, -0.122829974f, -1.05019867f}
+		pmp::vec3{0.0572398156, -0.0717622489, -1.03659534},
+			pmp::vec3{0.198035538, -0.0351596251, -1.18061316},
+			pmp::vec3{0.250069439, -0.122829974, -1.05019867}
 	};
 	const std::vector tri1Vertices{
-		pmp::vec3{0.0789409578f, -0.0649886578f, -1.11610115f},
-			pmp::vec3{0.211945787f, 0.000253308594f, -1.07397616f},
-			pmp::vec3{0.233549535f, -0.0453912392f, -1.20364273f}
+		pmp::vec3{0.0789409578, -0.0649886578, -1.11610115},
+			pmp::vec3{0.211945787, 0.000253308594, -1.07397616},
+			pmp::vec3{0.233549535, -0.0453912392, -1.20364273}
 	};
 
 	if (Geometry::TriangleIntersectsTriangle(tri0Vertices, tri1Vertices))
@@ -767,10 +767,10 @@ void HurtadoMeshesIsosurfaceEvolverTests()
 		{ "engine", 20.0 },
 		{ "trex", 200.0 }
 	};
-	const std::map<std::string, float> resamplingFactors{
-		{"drone", 2.0f },
-		{ "engine", 4.0f },
-		{ "trex", 0.3f }
+	const std::map<std::string, pmp::Scalar> resamplingFactors{
+		{"drone", 2.0 },
+		{ "engine", 4.0 },
+		{ "trex", 0.3 }
 	};
 
 	for (const auto& name : meshNames)
@@ -779,10 +779,10 @@ void HurtadoMeshesIsosurfaceEvolverTests()
 		//mesh.read(dataDirPath + name + ".obj");
 		//const auto meshBBox = mesh.bounds();
 		//const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-		//const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		//const float maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-		//const float cellSize = minSize / nVoxelsPerMinDimension;
-		//constexpr float volExpansionFactor = 1.0f;
+		//const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		//const pmp::Scalar maxSize = std::max({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+		//const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		//constexpr pmp::Scalar volExpansionFactor = 1.0;
 		//const SDF::DistanceFieldSettings sdfSettings{
 		//	cellSize,
 		//	volExpansionFactor,
@@ -806,7 +806,7 @@ void HurtadoMeshesIsosurfaceEvolverTests()
 		//ExportToVTI(dataOutPath + name + "SDF", sdf);
 
 		std::cout << "Opening " << name << "_voxFieldSDF90_FSM_90.vti ...";
-		constexpr float volExpansionFactor = 1.0f;
+		constexpr pmp::Scalar volExpansionFactor = 1.0;
 		const auto sdf = ImportVTI(dataOutPath + name + "_voxFieldSDF90_FSM_90.vti");
 		std::cout << " done.\n";
 		const auto cellSize = sdf.CellSize();
@@ -821,9 +821,9 @@ void HurtadoMeshesIsosurfaceEvolverTests()
 
 		const MeshTopologySettings topoParams{
 			true,
-			0.24f, //0.1f, //0.4f,
+			0.24, //0.1, //0.4,
 			0.0,
-			1.0f,
+			1.0,
 			0.0,
 			2,
 			0.0,
@@ -832,13 +832,13 @@ void HurtadoMeshesIsosurfaceEvolverTests()
 			false,
 			FeatureDetectionType::MeanCurvature,
 			1.0 * M_PI_2 * 180.0, 2.0 * M_PI_2 * 180.0,
-			2.0f,
-			1.0f * static_cast<float>(M_PI_2),
+			2.0,
+			1.0 * static_cast<pmp::Scalar>(M_PI_2),
 			true
 		};
 
 		const double tau = (timeStepSizesForMeshes.contains(name) ? timeStepSizesForMeshes.at(name) : defaultTimeStep); // time step
-		const float resamplingFactor = (resamplingFactors.contains(name) ? resamplingFactors.at(name) : 1.5f);
+		const pmp::Scalar resamplingFactor = (resamplingFactors.contains(name) ? resamplingFactors.at(name) : 1.5);
 		IsoSurfaceEvolutionSettings seSettings{
 			name,
 			20,
@@ -846,13 +846,13 @@ void HurtadoMeshesIsosurfaceEvolverTests()
 			fieldIsoLevel,
 			isoLevel,
 			cellSize * resamplingFactor,
-			{1.0f, 1.0, 2.0, 1.0},
+			{1.0, 1.0, 2.0, 1.0},
 			topoParams,
 			true, false,
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true,
 			false
 		};
@@ -875,9 +875,9 @@ void HurtadoTrexIcosphereLSW()
 	constexpr double defaultTimeStep = 0.05;
 	SetRemeshingAdjustmentTimeIndices({ 3, 8, 10, 20, 50, 100, /* 120, 140, 145*/ });
 
-	constexpr float minSize = 3996.9329f;
-	constexpr float maxSize = 11613.2236f;
-	const pmp::vec3 center{ 5806.6118f, 2353.8142f, 2005.4388f };
+	constexpr pmp::Scalar minSize = 3996.9329;
+	constexpr pmp::Scalar maxSize = 11613.2236;
+	const pmp::vec3 center{ 5806.6118, 2353.8142, 2005.4388 };
 
 	std::cout << "Opening " << "trex_voxFieldSDF90_FSM_90.vti ...";
 	const auto sdf = ImportVTI(dataOutPath + "trex_voxFieldSDF90_FSM_90.vti");
@@ -891,11 +891,11 @@ void HurtadoTrexIcosphereLSW()
 
 	MeshTopologySettings topoParams;
 	topoParams.FixSelfIntersections = true;
-	topoParams.MinEdgeMultiplier = 0.14f;
+	topoParams.MinEdgeMultiplier = 0.14;
 	topoParams.UseBackProjection = false;
-	topoParams.PrincipalCurvatureFactor = 3.2f;
-	topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
-	topoParams.EdgeLengthDecayFactor = 0.7f;
+	topoParams.PrincipalCurvatureFactor = 3.2;
+	topoParams.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
+	topoParams.EdgeLengthDecayFactor = 0.7;
 	topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 	topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
@@ -918,12 +918,12 @@ void HurtadoTrexIcosphereLSW()
 		dataOutPath,
 		MeshLaplacian::Voronoi,
 		{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-		0.05f,
+		0.05,
 		true,
 		false
 	};
 	ReportInput(seSettings, std::cout);
-	SurfaceEvolver evolver(sdf, 1.0f, seSettings);
+	SurfaceEvolver evolver(sdf, 1.0, seSettings);
 
 	try
 	{
@@ -1007,7 +1007,7 @@ void ConvexHullRemeshingTests()
 		const auto [lengthMin, lengthMean, lengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(convexHull);
 		pmp::Remeshing remeshing(convexHull);
 		remeshing.convex_hull_adaptive_remeshing({
-			2.0f * lengthMin, 8.0f * lengthMin, 0.5f * lengthMin,
+			2.0 * lengthMin, 8.0 * lengthMin, 0.5 * lengthMin,
 			3, 10, true
 			});
 		const auto [newLengthMin, newLengthMean, newLengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(convexHull);
@@ -1098,15 +1098,15 @@ void ConvexHullEvolverTests()
 
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 		const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 		const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
 		MeshTopologySettings topoParams;
-		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.EdgeLengthDecayFactor = 0.7;
 		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 
 		AdvectionDiffusionParameters adParams{
@@ -1128,7 +1128,7 @@ void ConvexHullEvolverTests()
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true,
 			false,
 			false,
@@ -1230,17 +1230,17 @@ void IcoSphereEvolverTests()
 
 		const pmp::BoundingBox ptCloudBBox(ptCloud);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
 		const double isoLvlOffsetFactor = (timeStepSizesForPtClouds.contains(ptCloudName) ? isoLevelOffsetFactors.at(ptCloudName) : defaultOffsetFactor);
 		const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 		const double tau = (timeStepSizesForPtClouds.contains(ptCloudName) ? timeStepSizesForPtClouds.at(ptCloudName) : defaultTimeStep); // time step
 
 		MeshTopologySettings topoParams;
-		topoParams.MinEdgeMultiplier = 0.14f;
+		topoParams.MinEdgeMultiplier = 0.14;
 		topoParams.UseBackProjection = false;
-		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.EdgeLengthDecayFactor = 0.7;
 		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 
 		AdvectionDiffusionParameters adParams{
@@ -1263,7 +1263,7 @@ void IcoSphereEvolverTests()
 			dataOutPath,
 			MeshLaplacian::Voronoi,
 			{"minAngle", "maxAngle", "jacobianConditionNumber", "equilateralJacobianCondition",/* "stiffnessMatrixConditioning" */},
-			0.05f,
+			0.05,
 			true,
 			false,
 			false,

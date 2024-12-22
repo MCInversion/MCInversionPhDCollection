@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pmp/Types.h"
+
 #include "GeometryAdapters.h"
 
 #include <vector>
@@ -12,7 +14,7 @@ namespace Geometry
 	class Collision2DTree;
 
 	//! \brief the amount by which boxes of kd-tree nodes are inflated to account for round-off errors.
-	constexpr float BOX_INFLATION = 1e-6f;
+	constexpr pmp::Scalar BOX_INFLATION = 1e-6;
 
 	/**
 	 * \brief helper data item for splitting box.
@@ -41,7 +43,7 @@ namespace Geometry
 	using Triangles = std::vector<Triangle>;
 
 	// function used to find split position and fill child primitive buffers.
-	using SplitFunction = std::function<float(
+	using SplitFunction = std::function<pmp::Scalar(
 		const BoxSplitData&,               // data of box to be split
 		const std::vector<unsigned int>&,  // input face ids 
 		std::vector<unsigned int>&,        // output left face ids
@@ -49,10 +51,10 @@ namespace Geometry
 
 	// ===================== Split functions ================================
 
-	[[nodiscard]] float CenterSplitFunction(const BoxSplitData& splitData,
+	[[nodiscard]] pmp::Scalar CenterSplitFunction(const BoxSplitData& splitData,
 		const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut);
 
-	[[nodiscard]] float AdaptiveSplitFunction(const BoxSplitData& splitData,
+	[[nodiscard]] pmp::Scalar AdaptiveSplitFunction(const BoxSplitData& splitData,
 		const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut);
 
 	// ======================================================================
@@ -136,7 +138,7 @@ namespace Geometry
             }
 
 			unsigned int axis{0};
-			float splitPosition{ 0.0f };
+			pmp::Scalar splitPosition{ 0.0 };
 			pmp::BoundingBox box{};
 			std::vector<unsigned int> triangleIds{};
             Node* left_child{ nullptr };
@@ -185,7 +187,7 @@ namespace Geometry
 	using Edges = std::vector<Edge>;
 
 	// function used to find split position and fill child primitive buffers.
-	using SplitFunction2D = std::function<float(
+	using SplitFunction2D = std::function<pmp::Scalar(
 		const BoxSplitData2D&,             // data of box to be split
 		const std::vector<unsigned int>&,  // input edge ids 
 		std::vector<unsigned int>&,        // output left edge ids
@@ -193,10 +195,10 @@ namespace Geometry
 
 	// ===================== Split functions ================================
 
-	[[nodiscard]] float CenterSplitFunction2D(const BoxSplitData2D& splitData,
+	[[nodiscard]] pmp::Scalar CenterSplitFunction2D(const BoxSplitData2D& splitData,
 		const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
 
-	//[[nodiscard]] float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData,
+	//[[nodiscard]] pmp::Scalar AdaptiveSplitFunction2D(const BoxSplitData2D& splitData,
 	//	const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut);
 
 	// ======================================================================
@@ -253,7 +255,7 @@ namespace Geometry
 			}
 
 			unsigned int axis{ 0 };
-			float splitPosition{ 0.0f };
+			pmp::Scalar splitPosition{ 0.0 };
 			pmp::BoundingBox2 box{};
 			std::vector<unsigned int> edgeIds{};
 			Node* left_child{ nullptr };

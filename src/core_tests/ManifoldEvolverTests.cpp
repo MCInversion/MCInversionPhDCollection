@@ -21,9 +21,9 @@ const std::string dataOutPath = fsDataOutPath.string();
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, IntersectingInnerAndOuterCircles_InvalidArgThrown)
 {
     // Arrange
-    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 1.0, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
-    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(-0.7f, 0.0f), 0.5f, 32));
+    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(-0.7, 0.0), 0.5, 32));
 
     ManifoldEvolutionSettings strategySettings;
     auto customStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
@@ -38,7 +38,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, IntersectingInnerAndOuterCircles_I
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingCircle_SemiImplicitNoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 1.0, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
 
     ManifoldEvolutionSettings strategySettings;
@@ -72,14 +72,14 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingCircle_SemiImplicitNoReme
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0f - 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2f);
+        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0 - 2.0 * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingCircle_ExplicitNoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 1.0, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
 
     ManifoldEvolutionSettings strategySettings;
@@ -114,16 +114,16 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingCircle_ExplicitNoRemeshin
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0f - 2.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2f);
+        EXPECT_NEAR(norm(resultOuterCurve->position(pmp::Vertex(i))), std::sqrt(1.0 - 2.0 * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 1.0, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
-    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 16));
+    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.5, 16));
     innerCurves[0].negate_orientation();
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
@@ -159,20 +159,20 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_NoReme
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0f);
+        EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0);
     }
     for (int i = 0; i < 16; ++i)
     {
-	    EXPECT_GT(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), 0.75f);
+	    EXPECT_GT(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), 0.75);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_SlowerInnerEtaNoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 1.0f, 32);
+    pmp::ManifoldCurve2D outerCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 1.0, 32);
     std::vector<pmp::ManifoldCurve2D> innerCurves;
-    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.5f, 16));
+    innerCurves.push_back(pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.5, 16));
     innerCurves[0].negate_orientation();
     ManifoldEvolutionSettings strategySettings;
     strategySettings.TimeStep = 0.01;
@@ -216,18 +216,18 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkingAndExpandingCircle_Slower
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0f);
+        EXPECT_LT(norm(resultOuterCurve->position(pmp::Vertex(i))), 1.0);
     }
     for (int i = 0; i < 16; ++i)
     {
-        EXPECT_GT(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), 0.75f);
+        EXPECT_GT(norm(resultInnerCurves[0]->position(pmp::Vertex(i))), 0.75);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_NoInnerCurveNoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 32);
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 32);
     const auto targetPts = targetCurve.positions();
 
     ManifoldEvolutionSettings strategySettings;
@@ -262,15 +262,15 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingACirclePointCloud_No
 
     for (const auto vPos : resultOuterCurve->positions())
     {
-        EXPECT_LT(norm(vPos), 2.0f);
-        EXPECT_GT(norm(vPos), 1.0f);
+        EXPECT_LT(norm(vPos), 2.0);
+        EXPECT_GT(norm(vPos), 1.0);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_NoInnerCircleNoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 16);
     auto targetPts = targetCurve.positions();
     targetPts.erase(targetPts.begin());
     targetPts.erase(targetPts.begin());
@@ -315,9 +315,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     size_t nInvalidVertices = 0;
     for (const auto vPos : resultOuterCurve->positions())
     {
-        if (norm(vPos) > 2.0f)
+        if (norm(vPos) > 2.0)
             nInvalidVertices++;
-        else if (norm(vPos) < 1.0f)
+        else if (norm(vPos) < 1.0)
             nInvalidVertices++;
     }
     EXPECT_LT(static_cast<double>(nInvalidVertices) / resultOuterCurve->n_vertices(), 0.25);
@@ -326,7 +326,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_NoRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 16);
     auto targetPts = targetCurve.positions();
     targetPts.erase(targetPts.begin());
     targetPts.erase(targetPts.begin());
@@ -374,9 +374,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     size_t nInvalidVertices = 0;
     for (const auto vPos : resultOuterCurve->positions())
     {
-        if (norm(vPos) > 2.0f)
+        if (norm(vPos) > 2.0)
             nInvalidVertices++;
-        else if (norm(vPos) < 1.0f)
+        else if (norm(vPos) < 1.0)
             nInvalidVertices++;
     }
     std::cout << "resultOuterCurve->n_vertices() = " << resultOuterCurve->n_vertices() << "\n";
@@ -386,7 +386,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
 TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePointCloud_WithRemeshing)
 {
     // Arrange
-    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0f, 0.0f), 0.75f, 16);
+    pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 16);
     auto targetPts = targetCurve.positions();
     targetPts.erase(targetPts.begin());
     targetPts.erase(targetPts.begin());
@@ -452,9 +452,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteCirclePo
     size_t nInvalidVertices = 0;
     for (const auto vPos : resultOuterCurve->positions())
     {
-        if (norm(vPos) > 2.0f)
+        if (norm(vPos) > 2.0)
             nInvalidVertices++;
-        else if (norm(vPos) < 1.0f)
+        else if (norm(vPos) < 1.0)
             nInvalidVertices++;
     }
     std::cout << "resultOuterCurve->n_vertices() = " << resultOuterCurve->n_vertices() << "\n";
@@ -465,7 +465,7 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteDeformed
 {
     // Arrange
     pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::sine_deformed_circle(
-        pmp::Point2(0.0f, 0.0f), 6.5f, 30, 2.0f, 4);
+        pmp::Point2(0.0, 0.0), 6.5, 30, 2.0, 4);
     auto targetPts = targetCurve.positions();
     for (int i = 0; i < 7; ++i)
 		targetPts.erase(targetPts.begin());
@@ -537,9 +537,9 @@ TEST(ManifoldEvolverTests_ManifoldCurveSuite, ShrinkWrappingAnIncompleteDeformed
     size_t nInvalidVertices = 0;
     for (const auto vPos : resultOuterCurve->positions())
     {
-        if (norm(vPos) > 2.0f)
+        if (norm(vPos) > 2.0)
             nInvalidVertices++;
-        else if (norm(vPos) < 1.0f)
+        else if (norm(vPos) < 1.0)
             nInvalidVertices++;
     }
     std::cout << "resultOuterCurve->n_vertices() = " << resultOuterCurve->n_vertices() << "\n";
@@ -562,7 +562,7 @@ namespace
         // Calculate the center and the scale factor for normalization
         const auto center = bbox.center();
         const auto boxSize = bbox.max() - bbox.min();
-        const auto scale = 6.0f / std::max(boxSize[0], boxSize[1]); // Scale to fit [-3, 3] range
+        const auto scale = 6.0 / std::max(boxSize[0], boxSize[1]); // Scale to fit [-3, 3] range
 
         // Transform, center, and normalize the point cloud in one step
         std::vector<pmp::Point2> planarPtCloud;
@@ -574,8 +574,8 @@ namespace
                 (pt[1] - center[1]) * scale   // Normalize and center the y-coordinate
             };
             });
-        const auto cutCircleCenter = pmp::Point2{ 2.0f, 2.0f };
-        constexpr auto cutCircleRadius = 2.0f;
+        const auto cutCircleCenter = pmp::Point2{ 2.0, 2.0 };
+        constexpr auto cutCircleRadius = 2.0;
         planarPtCloud.erase(std::remove_if(planarPtCloud.begin(), planarPtCloud.end(),
             [&cutCircleCenter, &cutCircleRadius](const auto& pt)
             {
@@ -682,9 +682,9 @@ namespace
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, IntersectingInnerAndOuterSpheres_InvalidArgThrown)
 {
     // Arrange
-    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 1.0, 2);
     std::vector<pmp::SurfaceMesh> innerSurfaces;
-    innerSurfaces.push_back(ConstructIcoSphere(pmp::Point(-0.7f, 0.0f, 0.0f), 0.5f, 2));
+    innerSurfaces.push_back(ConstructIcoSphere(pmp::Point(-0.7, 0.0, 0.0), 0.5, 2));
 
     ManifoldEvolutionSettings strategySettings;
     auto customStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
@@ -699,7 +699,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, IntersectingInnerAndOuterSpheres
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_BarycentricSemiImplicitNoRemeshing)
 {
     // Arrange
-    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 1.0, 2);
     std::vector<pmp::SurfaceMesh> innerSurfaces;
 
     ManifoldEvolutionSettings strategySettings;
@@ -732,14 +732,14 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_BarycentricSemiI
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0f - 4.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2f);
+        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0 - 4.0 * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_BarycentricExplicitNoRemeshing)
 {
     // Arrange
-    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 1.0, 2);
     std::vector<pmp::SurfaceMesh> innerSurfaces;
 
     ManifoldEvolutionSettings strategySettings;
@@ -773,14 +773,14 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_BarycentricExpli
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0f - 4.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2f);
+        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0 - 4.0 * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_VoronoiSemiImplicitNoRemeshing)
 {
     // Arrange
-    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 1.0, 2);
     std::vector<pmp::SurfaceMesh> innerSurfaces;
 
     ManifoldEvolutionSettings strategySettings;
@@ -813,14 +813,14 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_VoronoiSemiImpli
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0f - 4.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2f);
+        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0 - 4.0 * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_VoronoiExplicitNoRemeshing)
 {
     // Arrange
-    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 1.0f, 2);
+    auto outerSurface = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 1.0, 2);
     std::vector<pmp::SurfaceMesh> innerSurfaces;
 
     ManifoldEvolutionSettings strategySettings;
@@ -854,19 +854,19 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkingSphere_VoronoiExplicitN
 
     for (int i = 0; i < 32; ++i)
     {
-        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0f - 4.0f * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2f);
+        EXPECT_NEAR(norm(resultOuterSurface->position(pmp::Vertex(i))), std::sqrt(1.0 - 4.0 * (globalSettings.NSteps * strategySettings.TimeStep)), 1e-2);
     }
 }
 
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoInnerSurfaceNoRemeshing)
 {
     // Arrange
-    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 2);
     auto targetPts = targetIcoSphere.positions();
     targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
         [](const pmp::Point& p) {
             // Filter points in the x > 0 && y > 0 && z > 0 octant
-            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+            return (p[0] > 0.0 && p[1] > 0.0 && p[2] > 0.0);
         }),
     targetPts.end());    
 
@@ -910,7 +910,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
     for (const auto v : resultOuterSurface->vertices())
     {
         const auto& pos = resultOuterSurface->position(v);
-        if (norm(pos) > 0.75f)
+        if (norm(pos) > 0.75)
             continue;
         countInSphere++;
     }
@@ -923,12 +923,12 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoRemeshing)
 {
     // Arrange
-    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 2);
     auto targetPts = targetIcoSphere.positions();
     targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
         [](const pmp::Point& p) {
             // Filter points in the x > 0 && y > 0 && z > 0 octant
-            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+            return (p[0] > 0.0 && p[1] > 0.0 && p[2] > 0.0);
         }),
         targetPts.end());
 
@@ -982,7 +982,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
     for (const auto v : resultOuterSurface->vertices())
     {
         const auto& pos = resultOuterSurface->position(v);
-        if (norm(pos) > 0.75f)
+        if (norm(pos) > 0.75)
             continue;
         countInSphere++;
     }
@@ -992,12 +992,12 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNoRemeshing)
 {
     // Arrange
-    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 2);
     auto targetPts = targetIcoSphere.positions();
     targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
         [](const pmp::Point& p) {
             // Filter points in the x > 0 && y > 0 && z > 0 octant
-            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+            return (p[0] > 0.0 && p[1] > 0.0 && p[2] > 0.0);
         }),
         targetPts.end());
 
@@ -1041,7 +1041,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
     size_t countInSphere = 0;
     for (const auto& vPos : resultInnerSurfaces[0]->positions())
     {
-        if (norm(vPos) < 0.4f)
+        if (norm(vPos) < 0.4)
             continue;
         countInSphere++;
     }
@@ -1051,12 +1051,12 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNoAdvectionNoRemeshing)
 {
     // Arrange
-    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 2);
     auto targetPts = targetIcoSphere.positions();
     targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
         [](const pmp::Point& p) {
             // Filter points in the x > 0 && y > 0 && z > 0 octant
-            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+            return (p[0] > 0.0 && p[1] > 0.0 && p[2] > 0.0);
         }),
         targetPts.end());
 
@@ -1095,7 +1095,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
     size_t countInSphere = 0;
     for (const auto& vPos : resultInnerSurfaces[0]->positions())
     {
-        if (norm(vPos) < 0.4f)
+        if (norm(vPos) < 0.4)
             continue;
         countInSphere++;
     }
@@ -1105,12 +1105,12 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfacePointCloud_NoOuterSurfaceNegSineAdvectionNoRemeshing)
 {
     // Arrange
-    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 2);
     auto targetPts = targetIcoSphere.positions();
     targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
         [](const pmp::Point& p) {
             // Filter points in the x > 0 && y > 0 && z > 0 octant
-            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+            return (p[0] > 0.0 && p[1] > 0.0 && p[2] > 0.0);
         }),
         targetPts.end());
 
@@ -1154,7 +1154,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
     size_t countInSphere = 0;
     for (const auto& vPos : resultInnerSurfaces[0]->positions())
     {
-        if (norm(vPos) < 0.4f)
+        if (norm(vPos) < 0.4)
             continue;
         countInSphere++;
     }
@@ -1164,12 +1164,12 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, ShrinkWrappingAnIncompleteSurfac
 TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, InnerOuterLSWOfAnIncompleteSpherePointCloud_WithRemeshing)
 {
     // Arrange
-    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0f, 0.0f, 0.0f), 0.75f, 2);
+    auto targetIcoSphere = ConstructIcoSphere(pmp::Point(0.0, 0.0, 0.0), 0.75, 2);
     auto targetPts = targetIcoSphere.positions();
     targetPts.erase(std::remove_if(targetPts.begin(), targetPts.end(),
         [](const pmp::Point& p) {
             // Filter points in the x > 0 && y > 0 && z > 0 octant
-            return (p[0] > 0.0f && p[1] > 0.0f && p[2] > 0.0f);
+            return (p[0] > 0.0 && p[1] > 0.0 && p[2] > 0.0);
         }),
         targetPts.end());
 
@@ -1223,7 +1223,7 @@ TEST(ManifoldEvolverTests_ManifoldSurfaceSuite, InnerOuterLSWOfAnIncompleteSpher
     for (const auto v : resultOuterSurface->vertices())
     {
         const auto& pos = resultOuterSurface->position(v);
-        if (norm(pos) > 0.75f)
+        if (norm(pos) > 0.75)
             continue;
         countInSphere++;
     }

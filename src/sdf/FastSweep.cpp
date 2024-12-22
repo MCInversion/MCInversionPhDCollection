@@ -174,8 +174,8 @@ namespace SDF
 
 		unsigned int s;
 		int ix, iy, gridPos;
-		double aa[3], tmp, eps = 1e-6;
-		double d_curr, d_new, a, b, c, D;
+		double aa[3], eps = 1e-6;
+		double d_new, a, b;
 
 		for (s = 0; s < NSweeps; s++)
 		{

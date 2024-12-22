@@ -15,7 +15,7 @@
 // ================================================================================================
 
 /// \brief a magic multiplier computing the radius of an ico-sphere that fits into the field's box.
-constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
+constexpr pmp::Scalar ICO_SPHERE_RADIUS_FACTOR = 0.4;
 
 /// \brief if true individual steps of surface evolution will be printed out into a given stream.
 #define REPORT_EVOL_STEPS false // Note: may affect performance
@@ -27,12 +27,12 @@ constexpr float ICO_SPHERE_RADIUS_FACTOR = 0.4f;
 #define REPAIR_INPUT_GRID true //Note: very useful! You never know what field we use! Infinities and nans lead to the Eigen::NoConvergence error code whose cause is difficult to find!
 
 /// \brief needs no explanation because it does not have one.
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.85f;
-//constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 1.0f;
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 0.93f;
-// constexpr float UNEXPLAINABLE_MAGIC_CONSTANT = 8.0f;
+// constexpr pmp::Scalar UNEXPLAINABLE_MAGIC_CONSTANT = 0.85;
+//constexpr pmp::Scalar UNEXPLAINABLE_MAGIC_CONSTANT = 1.0;
+// constexpr pmp::Scalar UNEXPLAINABLE_MAGIC_CONSTANT = 0.93;
+// constexpr pmp::Scalar UNEXPLAINABLE_MAGIC_CONSTANT = 8.0;
 
-//constexpr float INITIAL_AREA_SHRINK_RATE = 1.0f; //16.0f * M_PI; //>! initial shrink-rate of ico sphere surface area
+//constexpr pmp::Scalar INITIAL_AREA_SHRINK_RATE = 1.0; //16.0 * M_PI; //>! initial shrink-rate of ico sphere surface area
 
 // ================================================================================================
 
@@ -67,7 +67,7 @@ size_t SurfaceEvolver::DetectFeatures(const FeatureDetectionType& type) const
 
 // ================================================================================================
 
-SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
+SurfaceEvolver::SurfaceEvolver(const Geometry::ScalarGrid& field, const pmp::Scalar& fieldExpansionFactor, const SurfaceEvolutionSettings& settings)
 	: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
 {
 #if REPAIR_INPUT_GRID
@@ -88,8 +88,8 @@ void SurfaceEvolver::Preprocess()
 	auto& field = *m_Field;
 
 	// build ico-sphere
-	const float icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR * 
-		(m_EvolSettings.MinTargetSize + (0.5f + m_ExpansionFactor) * m_EvolSettings.MaxTargetSize);
+	const pmp::Scalar icoSphereRadius = ICO_SPHERE_RADIUS_FACTOR *
+		(m_EvolSettings.MinTargetSize + (0.5 + m_ExpansionFactor) * m_EvolSettings.MaxTargetSize);
 	m_StartingSurfaceRadius = icoSphereRadius;
 #if REPORT_EVOL_STEPS
 	std::cout << "Ico-Sphere Radius: " << icoSphereRadius << ",\n";
@@ -104,7 +104,7 @@ void SurfaceEvolver::Preprocess()
 	// >>> uniform scale to ensure numerical method's stability.
 	// >>> translation to origin for fields not centered at (0,0,0).
 	// >>> scaling factor value is intended for stabilization of the numerical method.
-	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
+	const pmp::Scalar scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, icoSphereRadius, icoSphereSubdiv);
 	m_ScalingFactor = scalingFactor;
 	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
 	const auto origin = m_EvolSettings.TargetOrigin;
@@ -113,16 +113,16 @@ void SurfaceEvolver::Preprocess()
 	std::cout << "Target Origin: {" << origin[0] << ", " << origin[1] << ", " << origin[2] << "},\n";
 #endif
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
 	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.0, 0.0, 0.0, -origin[0],
+		0.0, 1.0, 0.0, -origin[1],
+		0.0, 0.0, 1.0, -origin[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
@@ -214,16 +214,16 @@ void SurfaceEvolver::Evolve()
 	auto tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	const auto subdiv = static_cast<float>(m_EvolSettings.IcoSphereSubdivisionLevel);
-	const float r = m_StartingSurfaceRadius * m_ScalingFactor;
-	constexpr float baseIcoHalfAngle = 2.0f * M_PI / 10.0f;
-	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	//const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
-	//auto minEdgeLength = minEdgeMultiplier * (2.0f * r / (sqrt(phi * sqrt(5.0f)) * subdiv)); // from icosahedron edge length
-	auto minEdgeLength = minEdgeMultiplier * 2.0f * r * sin(baseIcoHalfAngle * pow(2.0f, -subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 4.0f * minEdgeLength;
-	auto approxError = 0.25f * (minEdgeLength + maxEdgeLength);
-	//auto approxError = 2.0f * minEdgeLength;
+	const auto subdiv = static_cast<pmp::Scalar>(m_EvolSettings.IcoSphereSubdivisionLevel);
+	const pmp::Scalar r = m_StartingSurfaceRadius * m_ScalingFactor;
+	constexpr pmp::Scalar baseIcoHalfAngle = 2.0 * M_PI / 10.0;
+	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	//const float phi = (1.0 + sqrt(5.0)) / 2.0; /// golden ratio.
+	//auto minEdgeLength = minEdgeMultiplier * (2.0 * r / (sqrt(phi * sqrt(5.0)) * subdiv)); // from icosahedron edge length
+	auto minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
+	auto maxEdgeLength = 4.0 * minEdgeLength;
+	auto approxError = 0.25 * (minEdgeLength + maxEdgeLength);
+	//auto approxError = 2.0 * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -235,7 +235,7 @@ void SurfaceEvolver::Evolve()
 	Eigen::MatrixXd sysRhs(NVertices, 3);
 	auto vDistance = m_EvolvingSurface->add_vertex_property<pmp::Scalar>("v:distance"); // vertex property for distance field values.
 	auto vFeature = m_EvolvingSurface->vertex_property<bool>("v:feature", false);
-	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0f);
+	auto vIsFeatureVal = m_EvolvingSurface->vertex_property<pmp::Scalar>("v:isFeature", -1.0);
 
 	// property container for surface vertex normals
 	pmp::VertexProperty<pmp::Point> vNormalsProp{};
@@ -268,8 +268,8 @@ void SurfaceEvolver::Evolve()
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(m_EvolSettings.TangentialVelocityWeight) * epsilonCtrlWeight;
-			if (tanRedistWeight > 0.0f)
+			const auto tanRedistWeight = static_cast<double>(m_EvolSettings.TangentialVelocityWeight) * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_EvolvingSurface, v, vNormal, tanRedistWeight);
@@ -307,7 +307,7 @@ void SurfaceEvolver::Evolve()
 		const auto vPos = m_EvolvingSurface->position(v);
 		const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 		vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-		vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
+		vIsFeatureVal[v] = (vFeature[v] ? 1.0 : -1.0);
 	}
 	Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
 	Geometry::ComputeVertexCurvaturesAndRelatedProperties(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);
@@ -400,7 +400,7 @@ void SurfaceEvolver::Evolve()
 
 		// --------------------------------------------------------------------
 
-		const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<float>("v:equilateralJacobianCondition");
+		const auto meshQualityProp = m_EvolvingSurface->get_vertex_property<pmp::Scalar>("v:equilateralJacobianCondition");
 		if (m_EvolSettings.DoRemeshing && IsRemeshingNecessary(meshQualityProp.vector()))
 		{
 			// remeshing
@@ -463,7 +463,7 @@ void SurfaceEvolver::Evolve()
 			const auto vPos = m_EvolvingSurface->position(v);
 			const double vDistanceToTarget = Geometry::TrilinearInterpolateScalarValue(vPos, field);
 			vDistance[v] = static_cast<pmp::Scalar>(vDistanceToTarget);
-			vIsFeatureVal[v] = (vFeature[v] ? 1.0f : -1.0f);
+			vIsFeatureVal[v] = (vFeature[v] ? 1.0 : -1.0);
 		}
 		Geometry::ComputeEdgeDihedralAngles(*m_EvolvingSurface);
 		Geometry::ComputeVertexCurvaturesAndRelatedProperties(*m_EvolvingSurface, m_EvolSettings.TopoParams.PrincipalCurvatureFactor);

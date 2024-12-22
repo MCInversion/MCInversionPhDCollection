@@ -23,8 +23,8 @@ struct SurfaceEvolutionSettings
 	AdvectionDiffusionParameters ADParams{}; //>! parameters for the advection-diffusion model.
 	MeshTopologySettings TopoParams{}; //>! parameters for mesh topology adjustments.
 
-	float MinTargetSize{ 1.0f }; //>! minimum size of the target mesh bounding box.
-	float MaxTargetSize{ 1.0f }; //>! maximum size of the target mesh bounding box.
+	pmp::Scalar MinTargetSize{ 1.0 }; //>! minimum size of the target mesh bounding box.
+	pmp::Scalar MaxTargetSize{ 1.0 }; //>! maximum size of the target mesh bounding box.
 	pmp::vec3 TargetOrigin{}; //>! origin of the evolution's target.
 
 	bool ExportSurfacePerTimeStep{ false }; //>! whether to export evolving surface for each time step.
@@ -34,7 +34,7 @@ struct SurfaceEvolutionSettings
 	MeshLaplacian LaplacianType{}; //>! type of mesh Laplacian.
 	TriangleMetrics TriMetrics{}; //>! list of triangle metrics to be computed.
 
-	float TangentialVelocityWeight{ 0.0f }; //>! the weight of tangential velocity update vector for each time step.
+	double TangentialVelocityWeight{ 0.0 }; //>! the weight of tangential velocity update vector for each time step.
 	bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
 	bool DoFeatureDetection{ true }; //>! if true, feature detection will take place prior to remeshing.
 	bool IdentityForBoundaryVertices{ true }; //>! if true, boundary vertices give rise to: updated vertex = previous vertex.
@@ -55,7 +55,7 @@ public:
 	 * \param fieldExpansionFactor     the factor by which target bounds are expanded (multiplying original bounds min dimension).
 	 * \param settings                 surface evolution settings.
 	 */
-	SurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const SurfaceEvolutionSettings& settings);
+	SurfaceEvolver(const Geometry::ScalarGrid& field, const pmp::Scalar& fieldExpansionFactor, const SurfaceEvolutionSettings& settings);
 
 	/**
 	 * \brief Main functionality.
@@ -118,9 +118,9 @@ private:
 	std::shared_ptr<Geometry::ScalarGrid> m_Field{ nullptr }; //>! scalar field environment.
 	std::shared_ptr<pmp::SurfaceMesh> m_EvolvingSurface{ nullptr }; //>! (stabilized) evolving surface.
 
-	float m_ExpansionFactor{ 0.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
-	pmp::Scalar m_StartingSurfaceRadius{ 1.0f }; //>! radius of the starting surface.
-	pmp::Scalar m_ScalingFactor{ 1.0f }; //>! stabilization scaling factor value.
+	pmp::Scalar m_ExpansionFactor{ 0.0 }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
+	pmp::Scalar m_StartingSurfaceRadius{ 1.0 }; //>! radius of the starting surface.
+	pmp::Scalar m_ScalingFactor{ 1.0 }; //>! stabilization scaling factor value.
 
 	std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh&, pmp::Vertex)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter MeshLaplacian.
 	std::function<double(const pmp::SurfaceMesh&, pmp::Vertex)> m_LaplacianAreaFunction{}; //>! a Laplacian area function chosen from parameter MeshLaplacian.

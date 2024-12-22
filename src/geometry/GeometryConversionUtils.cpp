@@ -579,7 +579,7 @@ namespace Geometry
 		return true;
 	}
 
-	std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel, std::optional<std::vector<float>*> chunkIdsVertexPropPtrOpt)
+	std::optional<BaseMeshGeometryData> ImportOBJMeshGeometryData(const std::string& absFileName, const bool& importInParallel, std::optional<std::vector<pmp::Scalar>*> chunkIdsVertexPropPtrOpt)
 	{
 		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
 		if (extension != "obj")
@@ -658,7 +658,7 @@ namespace Geometry
 			if (chunkIdsVertexPropPtrOpt.has_value())
 			{
 				const auto nVertsPerChunk = result.Vertices.size();
-				chunkIdsVertexPropPtrOpt.value()->insert(chunkIdsVertexPropPtrOpt.value()->end(), nVertsPerChunk, static_cast<float>(threadId));
+				chunkIdsVertexPropPtrOpt.value()->insert(chunkIdsVertexPropPtrOpt.value()->end(), nVertsPerChunk, static_cast<pmp::Scalar>(threadId));
 			}
 			resultData.Vertices.insert(resultData.Vertices.end(), result.Vertices.begin(), result.Vertices.end());
 			resultData.PolyIndices.insert(resultData.PolyIndices.end(), result.PolyIndices.begin(), result.PolyIndices.end());
@@ -1368,10 +1368,10 @@ namespace Geometry
 
 		using namespace quickhull;
 		// convert to quickhull-compatible data
-		std::vector<Vector3<float>> qhPtCloud;
+		std::vector<Vector3<pmp::Scalar>> qhPtCloud;
 		std::ranges::transform(points, std::back_inserter(qhPtCloud),
 			[](const pmp::Point& pmpPt) { return Vector3(pmpPt[0], pmpPt[1], pmpPt[2]); });
-		QuickHull<float> qh;
+		QuickHull<pmp::Scalar> qh;
 		const auto hullResult = qh.getConvexHull(qhPtCloud, true, false);
 		const auto& hullVertBuffer = hullResult.getVertexBuffer();
 
@@ -1421,7 +1421,7 @@ namespace Geometry
 		const auto vFirst = mesh.vertices().begin();
 		auto vCurrent = vFirst;
 		pmp::Point center = mesh.position(*vFirst);
-		pmp::Scalar radius = 0.0f;
+		pmp::Scalar radius = 0.0;
 
 		// Find the initial point farthest from the arbitrary start point
 		for (const auto v : mesh.vertices()) 
@@ -1434,7 +1434,7 @@ namespace Geometry
 		}
 
 		// Set sphere center to the midpoint of the initial and farthest point, radius as half the distance
-		center = (center + mesh.position(*vCurrent)) * 0.5f;
+		center = (center + mesh.position(*vCurrent)) * 0.5;
 		radius = norm(mesh.position(*vCurrent) - center);
 
 		// Ensure all points are within the sphere, adjust if necessary
@@ -1463,7 +1463,7 @@ namespace Geometry
 
 		// Start with the first point as the center
 		pmp::Point center = points[0];
-		pmp::Scalar radius = 0.0f;
+		pmp::Scalar radius = 0.0;
 
 		// First pass: find the farthest point from the initial point to set a rough sphere
 		for (const auto& point : points)
@@ -1476,7 +1476,7 @@ namespace Geometry
 
 		// Set initial sphere
 		center = (center + points[0] + radius * normalize(points[0] - center)) / 2.0;
-		radius /= 2.0f;
+		radius /= 2.0;
 
 		// Second pass: expand sphere to include all points
 		for (const auto& point : points)
@@ -1511,8 +1511,8 @@ namespace Geometry
 		BaseMeshGeometryData resultData;
 		resultData.Vertices = points;
 
-		const auto clustering = clusteringPercentageOfBallRadius / 100.0f;
-		const auto angleRad = angleThreshold / 180.0f * M_PI;
+		const auto clustering = clusteringPercentageOfBallRadius / 100.0;
+		const auto angleRad = angleThreshold / 180.0 * M_PI;
 
 		VCG_Mesh ptsMesh;
 		FillVCGMeshWithPoints(points, ptsMesh);
@@ -1616,7 +1616,7 @@ namespace Geometry
 		if (points.empty())
 		{
 			std::cerr << "Geometry::ComputeMinInterVertexDistance: points.empty()!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
 		// convert points to a compatible dataset
@@ -1658,7 +1658,7 @@ namespace Geometry
 		if (points.empty()) 
 		{
 			std::cerr << "Geometry::ComputeNearestNeighborMeanInterVertexDistance: points.empty()!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
 		// convert points to a compatible dataset
@@ -1682,14 +1682,14 @@ namespace Geometry
 				&query_pt[0], nNeighbors, &ret_index[0], &out_dist_sqr[0]);
 			ret_index.resize(num_results);
 			out_dist_sqr.resize(num_results);
-			if (num_results == 0) return 0.0f;
-			pmp::Scalar totalDistSq = 0.0f;
+			if (num_results == 0) return 0.0;
+			pmp::Scalar totalDistSq{ 0.0 };
 			for (size_t i = 0; i < num_results; ++i)
 				totalDistSq += out_dist_sqr[i];
-			return sqrt(totalDistSq / (static_cast<pmp::Scalar>(num_results) - 1.0f));
+			return sqrt(totalDistSq / (static_cast<pmp::Scalar>(num_results) - pmp::Scalar(1.0)));
 		};
 
-		pmp::Scalar totalDistance = 0.0f;
+		pmp::Scalar totalDistance = 0.0;
 		for (const auto& point : points)
 		{
 			totalDistance += do_knn_search(point);
@@ -1708,7 +1708,7 @@ namespace Geometry
 		if (points.size() < 2)
 		{
 			std::cerr << "Geometry::ComputeMinInterVertexDistanceBruteForce: points.size() < 2! No meaningful distance can be computed!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
 		pmp::Scalar minDistance = std::numeric_limits<pmp::Scalar>::max();
@@ -1732,7 +1732,7 @@ namespace Geometry
 		if (points.size() < 2)
 		{
 			std::cerr << "Geometry::ComputeMaxInterVertexDistanceBruteForce: points.size() < 2! No meaningful distance can be computed!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
 		pmp::Scalar maxDistance = 0;
@@ -1756,10 +1756,10 @@ namespace Geometry
 		if (points.size() < 2)
 		{
 			std::cerr << "Geometry::ComputeMeanInterVertexDistanceBruteForce: points.size() < 2! No meaningful distance can be computed!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
-		pmp::Scalar totalDistance = 0.0f;
+		pmp::Scalar totalDistance = 0.0;
 		size_t count = 0;
 		for (size_t i = 0; i < points.size(); ++i) 
 		{
@@ -1785,7 +1785,7 @@ namespace Geometry
 		PointCloud<pmp::Scalar> nfPoints;
 		nfPoints.pts.reserve(points.size());
 		for (const auto& p : points)
-			nfPoints.pts.push_back({ p[0], p[1], 0.0f });  // Nullify the z-coordinate
+			nfPoints.pts.push_back({ p[0], p[1], 0.0 });  // Nullify the z-coordinate
 
 		using PointCloudAdapter = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
 
@@ -1874,10 +1874,10 @@ namespace Geometry
 		}
 
 		// Find the nearest neighbor distance using KD-tree
-		const float query_pt[2] = { sampledPoint[0], sampledPoint[1] };
+		const pmp::Scalar query_pt[2] = { sampledPoint[0], sampledPoint[1] };
 		size_t nearest_index;
-		float out_dist_sqr;
-		nanoflann::KNNResultSet<float> resultSet(1);
+		pmp::Scalar out_dist_sqr;
+		nanoflann::KNNResultSet<pmp::Scalar> resultSet(1);
 		resultSet.init(&nearest_index, &out_dist_sqr);
 		kdTree.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters(10));
 
@@ -1899,10 +1899,10 @@ namespace Geometry
 		}
 
 		// Find the nearest neighbor distance using KD-tree
-		const float query_pt[3] = { sampledPoint[0], sampledPoint[1], sampledPoint[2] };
+		const pmp::Scalar query_pt[3] = { sampledPoint[0], sampledPoint[1], sampledPoint[2] };
 		size_t nearest_index;
-		float out_dist_sqr;
-		nanoflann::KNNResultSet<float> resultSet(1);
+		pmp::Scalar out_dist_sqr;
+		nanoflann::KNNResultSet<pmp::Scalar> resultSet(1);
 		resultSet.init(&nearest_index, &out_dist_sqr);
 		kdTree.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters(10));
 
@@ -1920,9 +1920,9 @@ namespace Geometry
 	//
 
 
-	std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const float& distTolerance)
+	std::vector<pmp::Point2> GetSliceOfThePointCloud(const std::vector<pmp::Point>& points, const pmp::Point& planePt, const pmp::vec3& planeNormal, const pmp::Scalar& distTolerance)
 	{
-		if (std::fabs(sqrnorm(planeNormal) - 1.0f) > FLT_EPSILON)
+		if (std::fabs(sqrnorm(planeNormal) - 1.0) > FLT_EPSILON)
 		{
 			std::cerr << "GetSliceOfThePointCloud: planeNormal needs to be normalized!\n";
 			return {};
@@ -2070,7 +2070,7 @@ namespace Geometry
 				// Handle linear segments by directly connecting the key points
 				const auto p1 = pmp::Point2(path.keyPoint1.x(), path.keyPoint1.y());
 				const auto p2 = pmp::Point2(path.keyPoint2.x(), path.keyPoint2.y());
-				if (norm(p1 - p2) < 1e-6f) 
+				if (norm(p1 - p2) < 1e-6) 
 					continue; // Skip zero-length segments
 
 				medialAxisData.Vertices.push_back(p1);
@@ -2179,7 +2179,7 @@ namespace Geometry
 				// Handle linear segments by directly connecting the key points
 				const auto p1 = pmp::Point2(path.keyPoint1.x(), path.keyPoint1.y());
 				const auto p2 = pmp::Point2(path.keyPoint2.x(), path.keyPoint2.y());
-				if (norm(p1 - p2) < 1e-6f)
+				if (norm(p1 - p2) < 1e-6)
 					continue; // Skip zero-length segments
 
 				medialAxisData.Vertices.push_back(p1);

@@ -8,7 +8,7 @@
 #define CHECK_LARGE_COORDS false
 
 #if CHECK_LARGE_COORDS
-constexpr float MAX_ABS_COORD = 1e+5;
+constexpr pmp::Scalar MAX_ABS_COORD = 1e+5;
 #endif
 
 namespace

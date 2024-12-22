@@ -1,5 +1,7 @@
 # pragma once
 
+#include "pmp/Types.h"
+
 #include "Grid.h"
 
 #include <functional>
@@ -452,7 +454,7 @@ namespace Geometry
 	struct MetaBallParams
 	{
 		pmp::vec3 Center{}; //! center of the metaball object 
-		float Radius{ 1.0f }; //! effective radius of the metaball object's zero isosurface
+		pmp::Scalar Radius{ 1.0 }; //! effective radius of the metaball object's zero isosurface
 		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a metaball object.
 	};
 
@@ -470,8 +472,8 @@ namespace Geometry
 	struct CapsuleParams
 	{
 		pmp::vec3 Position{}; //! base position of the capsule object
-		float Height{ 2.0f }; //! height of the capsule object
-		float Radius{ 1.0f }; //! radius of the capsule object
+		pmp::Scalar Height{ 2.0 }; //! height of the capsule object
+		pmp::Scalar Radius{ 1.0 }; //! radius of the capsule object
 		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a capsule object.
 	};
 
@@ -489,8 +491,8 @@ namespace Geometry
 	struct TorusParams
 	{
 		pmp::vec3 Center{}; //! base position of the torus object
-		float RingRadius{ 1.0f }; //! radius of the torus loop
-		float TubeRadius{ 0.3f }; //! radius of the torus tube
+		pmp::Scalar RingRadius{ 1.0 }; //! radius of the torus loop
+		pmp::Scalar TubeRadius{ 0.3 }; //! radius of the torus tube
 		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a torus object.
 	};
 
@@ -508,10 +510,10 @@ namespace Geometry
 	struct QuadricParams
 	{
 		pmp::vec3 Center{}; //! base position of the single-sheet hyperboloid object
-		float a{ 1.0f };
-		float b{ 1.0f };
-		float c{ 1.0f };
-		pmp::vec3 HalfSize{ 0.5f, 0.5f, 0.5f }; //! the half-size of the infinite hyperboloid's ROI.
+		pmp::Scalar a{ 1.0 };
+		pmp::Scalar b{ 1.0 };
+		pmp::Scalar c{ 1.0 };
+		pmp::vec3 HalfSize{ 0.5, 0.5, 0.5 }; //! the half-size of the infinite hyperboloid's ROI.
 		ScalarGridBoolOpFunction BoolOpFunction{ SimpleUnion }; //! a boolean functor for blending values of a torus object.
 	};
 
@@ -538,7 +540,7 @@ namespace Geometry
 	 * \return re-sampled grid.
 	 * NOTE: Using trilinear interpolation because the new cells don't need to align with the original grid's cells.
 	 */
-	[[nodiscard]] ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid);
+	[[nodiscard]] ScalarGrid ExtractReSampledGrid(const pmp::Scalar& newCellSize, const ScalarGrid& origGrid);
 
 	/**
 	 * \brief Searches the cell (ix, iy) and its neighbors at given radius for a local maximum of a 2D quadratic polynomial.

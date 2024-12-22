@@ -428,7 +428,7 @@ void SurfaceMeshIO::write_obj(const SurfaceMesh& mesh) const
     return result;
 }
 
-constexpr Scalar MAX_ALLOWED_SCALAR_VAL{ 1e+10f };
+constexpr Scalar MAX_ALLOWED_SCALAR_VAL{ 1e+10 };
 
 /// \brief A simple verification whether the vertex property contains values larger than MAX_ALLOWED_SCALAR_VAL
 [[nodiscard]] bool HasInvalidValues(const VertexProperty<Scalar>& scalarVProp)
@@ -575,11 +575,11 @@ void read_off_ascii(SurfaceMesh& mesh, FILE* in, const bool has_normals,
         {
             if (sscanf(lp, "%f %f %f%n", &r, &g, &b, &nc) == 3)
             {
-                if (r > 1.0f || g > 1.0f || b > 1.0f)
+                if (r > 1.0 || g > 1.0 || b > 1.0)
                 {
-                    r /= 255.0f;
-                    g /= 255.0f;
-                    b /= 255.0f;
+                    r /= 255.0;
+                    g /= 255.0;
+                    b /= 255.0;
                 }
                 colors[v] = Color(r, g, b);
             }
@@ -1292,7 +1292,11 @@ void SurfaceMeshIO::read_stl(SurfaceMesh& mesh) const
                     };
 
                     // read x, y, z
+#if PMP_SCALAR_TYPE_64
+                    sscanf(c + 6, "%lf %lf %lf", &p[0], &p[1], &p[2]);
+#else
                     sscanf(c + 6, "%f %f %f", &p[0], &p[1], &p[2]);
+#endif
 
                     // has vector been referenced before?
                     if ((vMapIt = vMap.find(p)) == vMap.end())

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pmp/Types.h"
 #include "geometry/CollisionKdTree.h"
 
 #include "pmp/BoundingBox.h"
@@ -13,7 +14,7 @@ namespace SDF
 	constexpr size_t MAX_VOXELIZER_DEPTH = 50;
 
 	//! \brief tolerance for leaf size verification.
-	constexpr float LEAF_SIZE_EPSILON = 1e-5f;
+	constexpr pmp::Scalar LEAF_SIZE_EPSILON = 1e-5;
 
 	//! \brief An Octree for generating a "voxel outline" of a mesh using its KD-tree.
 	class OctreeVoxelizer
@@ -25,7 +26,7 @@ namespace SDF
 		 * \param startBox          starting box, will be converted to a cube centered at the original box center.
 		 * \param targetLeafSize    the leaf size preference for this octree. This value will become the voxel size.
 		 */
-		OctreeVoxelizer(const Geometry::CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const float& targetLeafSize);
+		OctreeVoxelizer(const Geometry::CollisionKdTree& kdTree, const pmp::BoundingBox& startBox, const pmp::Scalar& targetLeafSize);
 
 		/**
 		 * \brief Collects leaf nodes' (cube) boxes and the distance values stored in the leaf nodes themselves.
@@ -63,7 +64,7 @@ namespace SDF
 
 			[[nodiscard]] bool IsALeaf() const
 			{
-				const float size = cubeBox.max()[0] - cubeBox.min()[0];
+				const pmp::Scalar size = cubeBox.max()[0] - cubeBox.min()[0];
 				return (children.empty() && octreeEnvironment->m_LeafSize < size + LEAF_SIZE_EPSILON);
 			}
 
@@ -84,7 +85,7 @@ namespace SDF
 		// =====================================================================
 
 		const Geometry::CollisionKdTree& m_KdTree;
-		float m_LeafSize{ 1.0 };
+		pmp::Scalar m_LeafSize{ 1.0 };
 		size_t m_NodeCount{ 0 };
 
 		Node* m_Root{ nullptr };
@@ -104,7 +105,7 @@ namespace SDF
 		 * \param startBox          starting box, will be converted to a square centered at the original box center.
 		 * \param targetLeafSize    the leaf size preference for this quadtree. This value will become the pixel size.
 		 */
-		QuadtreeVoxelizer(const Geometry::Collision2DTree& kdTree, const pmp::BoundingBox2& startBox, const float& targetLeafSize);
+		QuadtreeVoxelizer(const Geometry::Collision2DTree& kdTree, const pmp::BoundingBox2& startBox, const pmp::Scalar& targetLeafSize);
 
 		/**
 		 * \brief Collects leaf nodes' (square) boxes and the distance values stored in the leaf nodes themselves.
@@ -142,7 +143,7 @@ namespace SDF
 
 			[[nodiscard]] bool IsALeaf() const
 			{
-				const float size = squareBox.max()[0] - squareBox.min()[0];
+				const pmp::Scalar size = squareBox.max()[0] - squareBox.min()[0];
 				return (children.empty() && quadtreeEnvironment->m_LeafSize < size + LEAF_SIZE_EPSILON);
 			}
 
@@ -163,7 +164,7 @@ namespace SDF
 		// =====================================================================
 
 		const Geometry::Collision2DTree& m_KdTree;
-		float m_LeafSize{ 1.0 };
+		pmp::Scalar m_LeafSize{ 1.0 };
 		size_t m_NodeCount{ 0 };
 
 		Node* m_Root{ nullptr };

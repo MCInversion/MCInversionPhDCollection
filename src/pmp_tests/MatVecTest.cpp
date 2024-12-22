@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include <pmp/MatVec.h>
+#include <pmp/Types.h>
 
 using namespace pmp;
 
@@ -16,12 +16,12 @@ TEST(MatVecTest, allFinite)
 
 TEST(MatVecTest, nonFiniteInf)
 {
-    vec3 v(std::numeric_limits<float>::infinity());
+    vec3 v(std::numeric_limits<Scalar>::infinity());
     EXPECT_FALSE(v.allFinite());
 }
 
 TEST(MatVecTest, nonFiniteNaN)
 {
-    vec3 v(std::numeric_limits<float>::quiet_NaN());
+    vec3 v(std::numeric_limits<Scalar>::quiet_NaN());
     EXPECT_FALSE(v.allFinite());
 }

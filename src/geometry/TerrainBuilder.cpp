@@ -9,7 +9,7 @@
 namespace
 {
 	/// \brief Utility function to generate a random float between min and max
-	float RandomFloat(const float& min, const float& max)
+    pmp::Scalar RandomFloat(const pmp::Scalar& min, const pmp::Scalar& max)
 	{
 		static std::random_device rd;
 		static std::mt19937 gen(rd());
@@ -18,20 +18,20 @@ namespace
 	}
 
 	/// \brief Utility function to compute Perlin noise value
-	float PerlinNoise(
-		const float& x, const float& y, const float& scale, 
-		const size_t& octaves, const float& persistence, const float& lacunarity)
+    pmp::Scalar PerlinNoise(
+		const pmp::Scalar& x, const pmp::Scalar& y, const pmp::Scalar& scale,
+		const size_t& octaves, const pmp::Scalar& persistence, const pmp::Scalar& lacunarity)
 	{
-		float amplitude = 1.0f;
-		float frequency = 1.0f;
-		float noiseHeight = 0.0f;
+        pmp::Scalar amplitude = 1.0;
+        pmp::Scalar frequency = 1.0;
+        pmp::Scalar noiseHeight = 0.0;
 
 		for (size_t i = 0; i < octaves; ++i)
 		{
-			const float sampleX = x * frequency / scale;
-			const float sampleY = y * frequency / scale;
+			const pmp::Scalar sampleX = x * frequency / scale;
+			const pmp::Scalar sampleY = y * frequency / scale;
 
-			const float perlinValue = stb_perlin_noise3(sampleX, sampleY, 0.0f, 0, 0, 0);
+			const pmp::Scalar perlinValue = stb_perlin_noise3(sampleX, sampleY, 0.0, 0, 0, 0);
 			noiseHeight += perlinValue * amplitude;
 
 			amplitude *= persistence;
@@ -66,18 +66,18 @@ namespace Geometry
 	{
         std::vector<pmp::Point> samples;
         std::vector<pmp::Point> activeList;
-        const float radius = m_Settings.SamplingRadius;
-        const float radiusSquared = radius * radius;
-        const float cellSize = radius / std::sqrt(2.0f);
+        const pmp::Scalar radius = m_Settings.SamplingRadius;
+        const pmp::Scalar radiusSquared = radius * radius;
+        const pmp::Scalar cellSize = radius / std::sqrt(2.0);
 
         // Calculate the bounding box of the boundary polygon
         pmp::BoundingBox bbox(m_Settings.BoundaryLoopPolyline);
         const pmp::Point minPoint = bbox.min();
         const pmp::Point maxPoint = bbox.max();
-        const float minX = minPoint[0];
-        const float maxX = maxPoint[0];
-        const float minY = minPoint[1];
-        const float maxY = maxPoint[1];
+        const pmp::Scalar minX = minPoint[0];
+        const pmp::Scalar maxX = maxPoint[0];
+        const pmp::Scalar minY = minPoint[1];
+        const pmp::Scalar maxY = maxPoint[1];
 
         const int gridWidth = static_cast<int>((maxX - minX) / cellSize) + 1;
         const int gridHeight = static_cast<int>((maxY - minY) / cellSize) + 1;
@@ -99,24 +99,24 @@ namespace Geometry
         };
 
         // Start with a random point
-        auto initialPoint = pmp::Point(RandomFloat(minX, maxX), RandomFloat(minY, maxY), 0.0f);
+        auto initialPoint = pmp::Point(RandomFloat(minX, maxX), RandomFloat(minY, maxY), 0.0);
         while (!IsPointInPolygon(initialPoint, m_Settings.BoundaryLoopPolyline))
         {
-            initialPoint = pmp::Point(RandomFloat(minX, maxX), RandomFloat(minY, maxY), 0.0f);
+            initialPoint = pmp::Point(RandomFloat(minX, maxX), RandomFloat(minY, maxY), 0.0);
         }
         AddPoint(initialPoint);
 
         while (!activeList.empty())
         {
-            const auto randomIndex = static_cast<size_t>(RandomFloat(0.0f, static_cast<float>(activeList.size())));
+            const auto randomIndex = static_cast<size_t>(RandomFloat(0.0, static_cast<pmp::Scalar>(activeList.size())));
             pmp::Point point = activeList[randomIndex];
             bool found = false;
 
             for (size_t k = 0; k < m_Settings.SamplingAttempts; ++k)
             {
-                const float angle = RandomFloat(0.0f, 2.0f * 3.14159265359f);
-                const float distance = RandomFloat(radius, 2.0f * radius);
-                auto newPoint = pmp::Point(point[0] + distance * std::cos(angle), point[1] + distance * std::sin(angle), 0.0f);
+                const pmp::Scalar angle = RandomFloat(0.0, 2.0 * static_cast<pmp::Scalar>(M_PI));
+                const pmp::Scalar distance = RandomFloat(radius, 2.0 * radius);
+                auto newPoint = pmp::Point(point[0] + distance * std::cos(angle), point[1] + distance * std::sin(angle), 0.0);
 
                 if (!IsPointInPolygon(newPoint, m_Settings.BoundaryLoopPolyline))
                 {
@@ -159,8 +159,8 @@ namespace Geometry
 	{
 		for (auto& point : m_Result.Vertices)
 		{
-			float elevation = PerlinNoise(point[0], point[1], m_Settings.NoiseScale, m_Settings.Octaves, m_Settings.Persistence, m_Settings.Lacunarity);
-			elevation = m_Settings.MinElevation + (m_Settings.MaxElevation - m_Settings.MinElevation) * (elevation * 0.5f + 0.5f); // Normalize to [MinElevation, MaxElevation]
+            pmp::Scalar elevation = PerlinNoise(point[0], point[1], m_Settings.NoiseScale, m_Settings.Octaves, m_Settings.Persistence, m_Settings.Lacunarity);
+			elevation = m_Settings.MinElevation + (m_Settings.MaxElevation - m_Settings.MinElevation) * (elevation * 0.5 + 0.5); // Normalize to [MinElevation, MaxElevation]
 			point[2] = elevation;
 		}
 	}

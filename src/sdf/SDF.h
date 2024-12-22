@@ -1,8 +1,10 @@
 #pragma once
 
+#include "pmp/Types.h"
+#include "pmp/SurfaceMesh.h"
+
 #include "geometry/CollisionKdTree.h"
 #include "geometry/Grid.h"
-#include "pmp/SurfaceMesh.h"
 
 namespace SDF
 {
@@ -41,8 +43,8 @@ namespace SDF
 	/// \brief A wrapper for input settings for computing distance field.
 	struct DistanceFieldSettings
 	{
-		float CellSize{ 1.0f }; //>! size of a single distance voxel.
-		float VolumeExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of mesh's bounding box) for the resulting scalar grid volume.
+		pmp::Scalar CellSize{ 1.0 }; //>! size of a single distance voxel.
+		pmp::Scalar VolumeExpansionFactor{ 1.0 }; //>! expansion factor (how many times the minimum dimension of mesh's bounding box) for the resulting scalar grid volume.
 		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of mesh's bounding box gives rise to a truncation (cutoff) value for the distance field.
 		KDTreeSplitType KDTreeSplit{ KDTreeSplitType::Center }; //>! the choice of a split function for KD-tree.
 		SignComputation SignMethod{ SignComputation::None }; //>! method by which the sign of the distance field should be computed.
@@ -116,8 +118,8 @@ namespace SDF
 	/// \brief A wrapper for input settings for computing distance field.
 	struct PointCloudDistanceFieldSettings
 	{
-		float CellSize{ 1.0f }; //>! size of a single distance voxel.
-		float VolumeExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of the point cloud's bounding box) for the resulting scalar grid volume.
+		pmp::Scalar CellSize{ 1.0 }; //>! size of a single distance voxel.
+		pmp::Scalar VolumeExpansionFactor{ 1.0 }; //>! expansion factor (how many times the minimum dimension of the point cloud's bounding box) for the resulting scalar grid volume.
 		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of point cloud's bounding box gives rise to a truncation (cutoff) value for the distance field.
 		BlurPostprocessingType BlurType{ BlurPostprocessingType::None }; //>! type of blur filter to be used for post-processing.
 	};
@@ -193,8 +195,8 @@ namespace SDF
 	/// \brief A wrapper for input settings for computing distance field.
 	struct DistanceField2DSettings
 	{
-		float CellSize{ 1.0f }; //>! size of a single distance voxel.
-		float AreaExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of mesh's bounding box) for the resulting scalar grid volume.
+		pmp::Scalar CellSize{ 1.0 }; //>! size of a single distance voxel.
+		pmp::Scalar AreaExpansionFactor{ 1.0 }; //>! expansion factor (how many times the minimum dimension of mesh's bounding box) for the resulting scalar grid volume.
 		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of mesh's bounding box gives rise to a truncation (cutoff) value for the distance field.
 		KDTreeSplitType KDTreeSplit{ KDTreeSplitType::Center }; //>! the choice of a split function for KD-tree.
 		SignComputation2D SignMethod{ SignComputation2D::None }; //>! method by which the sign of the distance field should be computed.
@@ -264,8 +266,8 @@ namespace SDF
 	/// \brief A wrapper for input settings for computing distance field.
 	struct PointCloudDistanceField2DSettings
 	{
-		float CellSize{ 1.0f }; //>! size of a single distance voxel.
-		float AreaExpansionFactor{ 1.0f }; //>! expansion factor (how many times the minimum dimension of the point cloud's bounding box) for the resulting scalar grid volume.
+		pmp::Scalar CellSize{ 1.0 }; //>! size of a single distance voxel.
+		pmp::Scalar AreaExpansionFactor{ 1.0 }; //>! expansion factor (how many times the minimum dimension of the point cloud's bounding box) for the resulting scalar grid volume.
 		double TruncationFactor{ 0.1 }; //>! factor by which the minimum half-dimension of point cloud's bounding box gives rise to a truncation (cutoff) value for the distance field.
 	};
 

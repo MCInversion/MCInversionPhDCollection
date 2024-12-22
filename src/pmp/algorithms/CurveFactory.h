@@ -9,9 +9,9 @@ namespace pmp {
 
     /// \brief Vertices of an equilateral triangle with side 1 with barycenter at (0, 0).
     const std::vector BASE_EQUILATERAL_TRIANGLE_VERTS{ 
-        Point2{-0.5f, -sqrtf(3.0f) / 6.0f}, 
-        Point2{0.5f, -sqrtf(3.0f) / 6.0f}, 
-        Point2{0.0f, sqrtf(3.0f) / 3.0f} };
+        Point2{-0.5, -sqrtf(3.0) / 6.0}, 
+        Point2{0.5, -sqrtf(3.0) / 6.0}, 
+        Point2{0.0, sqrtf(3.0) / 3.0} };
 
     //! \addtogroup algorithms
     //! @{
@@ -22,26 +22,26 @@ namespace pmp {
     public:
         //! Generate a circular arc centered at \p center with radius \p radius, and with \p nSegments segments, start angle \p startAngle, and end angle \p endAngle
         static ManifoldCurve2D circle(
-            const Point2& center = Point2{0.0f, 0.0f},
-            Scalar radius = 1.0f,
+            const Point2& center = Point2{0.0, 0.0},
+            Scalar radius = 1.0,
             size_t nSegments = 6,
-            Scalar startAngle = 0.0f, 
-            Scalar endAngle = 2.0f * M_PI);
+            Scalar startAngle = 0.0, 
+            Scalar endAngle = 2.0 * M_PI);
         //! Generate a circular arc centered at \p center with radius \p radius, and with \p nSegments segments, start angle \p startAngle, and end angle \p endAngle deformed with a sine wave with \p amplitude and \p freq.
         static ManifoldCurve2D sine_deformed_circle(
-            const Point2& center = Point2{ 0.0f, 0.0f },
-            Scalar radius = 1.0f,
+            const Point2& center = Point2{ 0.0, 0.0 },
+            Scalar radius = 1.0,
             size_t nSegments = 6,
-            float amplitude = 1.0f,
-            float freq = 4,
-            Scalar startAngle = 0.0f,
-            Scalar endAngle = 2.0f * M_PI
+            Scalar amplitude = 1.0,
+            Scalar freq = 4,
+            Scalar startAngle = 0.0,
+            Scalar endAngle = 2.0 * M_PI
         );
         //! Generate a rectangular polyline centered at \p with sides \p sideX and \p sideY, and with \p nSegments, \p nChamfer, start angle \p startAngle, and end angle \p endAngle
         static ManifoldCurve2D rectangle(
-            const Point2& center = Point2{ 0.0f, 0.0f },
-            Scalar sideX = 1.0f,
-            Scalar sideY = 1.0f,
+            const Point2& center = Point2{ 0.0, 0.0 },
+            Scalar sideX = 1.0,
+            Scalar sideY = 1.0,
             size_t nSegments = 6,
             bool chamferCorners = true);
         //! Generate a resampled polyline from a given base polygon.
@@ -54,13 +54,13 @@ namespace pmp {
         //! Generate a hyperellipse centered at \p center with radii \p radiusX and \p radiusY of degree 
         //! \p degree, and with \p nSegments segments, start angle \p startAngle, and end angle \p endAngle
         static ManifoldCurve2D hyper_ellipse(
-			const Point2& center = Point2{ 0.0f, 0.0f },
-			Scalar radiusX = 1.0f,
-			Scalar radiusY = 1.0f,
+			const Point2& center = Point2{ 0.0, 0.0 },
+			Scalar radiusX = 1.0,
+			Scalar radiusY = 1.0,
             size_t degree = 4,
 			size_t nSegments = 6,
-			Scalar startAngle = 0.0f,
-			Scalar endAngle = 2.0f * M_PI
+			Scalar startAngle = 0.0,
+			Scalar endAngle = 2.0 * M_PI
 		);
     };
 } // namespace pmp

@@ -27,3 +27,5 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/../fade2d/x64/libgmp-10.dll"
     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/libgmp-10.dll"
 )
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC DSYSTEM_FONT_DIR=\"${SYSTEM_FONT_DIR}\")

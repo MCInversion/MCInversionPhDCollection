@@ -14,7 +14,7 @@ namespace
     {
         for (auto v : mesh.vertices())
         {
-            auto p = mesh.position(v);
+            auto& p = mesh.position(v);
             auto n = norm(p);
             mesh.position(v) = (1.0 / n) * p;
         }
@@ -26,10 +26,10 @@ namespace pmp {
 SurfaceMesh Shapes::tetrahedron()
 {
     SurfaceMesh mesh;
-    float a = 1.0f / 3.0f;
-    float b = sqrt(8.0f / 9.0f);
-    float c = sqrt(2.0f / 9.0f);
-    float d = sqrt(2.0f / 3.0f);
+    Scalar a = 1.0 / 3.0;
+    Scalar b = sqrt(8.0 / 9.0);
+    Scalar c = sqrt(2.0 / 9.0);
+    Scalar d = sqrt(2.0 / 3.0);
 
     auto v0 = mesh.add_vertex(Point(0, 0, 1));
     auto v1 = mesh.add_vertex(Point(-c, d, -a));
@@ -48,7 +48,7 @@ SurfaceMesh Shapes::hexahedron()
 {
     SurfaceMesh mesh;
 
-    float a = 1.0f / sqrt(3.0f);
+    Scalar a = 1.0 / sqrt(3.0);
     auto v0 = mesh.add_vertex(Point(-a, -a, -a));
     auto v1 = mesh.add_vertex(Point(a, -a, -a));
     auto v2 = mesh.add_vertex(Point(a, a, -a));
@@ -88,9 +88,9 @@ SurfaceMesh Shapes::icosahedron()
 {
     SurfaceMesh mesh;
 
-    float phi = (1.0f + sqrt(5.0f)) * 0.5f; // golden ratio
-    float a = 1.0f;
-    float b = 1.0f / phi;
+    Scalar phi = (1.0 + sqrt(5.0)) * 0.5; // golden ratio
+    Scalar a = 1.0;
+    Scalar b = 1.0 / phi;
 
     auto v1 = mesh.add_vertex(Point(0, b, -a));
     auto v2 = mesh.add_vertex(Point(b, a, 0));

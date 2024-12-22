@@ -1,12 +1,13 @@
-#include "MeshSelfIntersection.h"
+#include "pmp/Types.h"
+#include "pmp/algorithms/BarycentricCoordinates.h"
+#include "pmp/algorithms/Normals.h"
 
 #include "CollisionKdTree.h"
 #include "GeometryUtil.h"
 
-#include "pmp/algorithms/BarycentricCoordinates.h"
-#include "pmp/algorithms/Normals.h"
+#include "MeshSelfIntersection.h"
 
-constexpr float POLYLINE_END_DISTANCE_TOLERANCE = 1e-6f;
+constexpr pmp::Scalar POLYLINE_END_DISTANCE_TOLERANCE = 1e-6;
 
 namespace
 {

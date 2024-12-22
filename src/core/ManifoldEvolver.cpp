@@ -9,6 +9,7 @@
 #include "geometry/GridUtil.h"
 #include "geometry/IcoSphereBuilder.h"
 #include "geometry/MeshAnalysis.h"
+#include "geometry/GeometryIOUtils.h"
 
 #include "sdf/SDF.h"
 
@@ -49,7 +50,7 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
-	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
 
 	if (GetSettings().UseStabilizationViaScaling)
@@ -98,7 +99,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 		const auto minTargetSize = std::min(sizeVec[0], sizeVec[1]);
-		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 		ComputeVariableDistanceFields();
 	}
 
@@ -143,7 +144,7 @@ void ManifoldCurveEvolutionStrategy::Remesh()
 	m_RemeshTracker.Reset();
 }
 
-void ManifoldCurveEvolutionStrategy::ResizeRemeshingSettings(float resizeFactor)
+void ManifoldCurveEvolutionStrategy::ResizeRemeshingSettings(pmp::Scalar resizeFactor)
 {
 	GetSettings().TimeStep *= pow(resizeFactor, 2); // we also need to adjust time step to keep the initial stabilization
 	m_RemeshingSettings.AdjustAllRemeshingLengths(resizeFactor);
@@ -701,9 +702,9 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*m_OuterCurve, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec2 tanVelocity(0.0, 0.0);
-			if (tanRedistWeight > 0.0f)
+			if (tanRedistWeight > 0.0)
 			{
 				tanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterCurve, v, vNormal, tanRedistWeight);
 			}
@@ -777,9 +778,9 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const auto laplacianTerm = epsilonCtrlWeight * pmp::laplace_1D(*innerCurve, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec2 tanVelocity(0.0, 0.0);
-			if (tanRedistWeight > 0.0f)
+			if (tanRedistWeight > 0.0)
 			{
 				tanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerCurve, v, vNormal, tanRedistWeight);
 			}
@@ -804,7 +805,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 	}
 }
 
-std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
+std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
 {
 	if (!m_TargetPointCloud)
 	{
@@ -814,9 +815,9 @@ std::tuple<float, float, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmb
 
 	const pmp::BoundingBox2 ptCloudBBox(*m_TargetPointCloud);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-	const float minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
-	const float maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
-	const float cellSize = minSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	const pmp::Scalar minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const pmp::Scalar maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const auto cellSize = minSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	const SDF::PointCloudDistanceField2DSettings dfSettings{
 		cellSize,
 		GetSettings().FieldSettings.FieldExpansionFactor,
@@ -869,15 +870,15 @@ void ManifoldCurveEvolutionStrategy::ComputeVariableDistanceFields()
 	}
 }
 
-void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter)
+void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(pmp::Scalar minTargetSize, pmp::Scalar maxTargetSize, const pmp::Point2& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
 	{
 		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::ConstructInitialManifolds: Current setting is: UseInnerManifolds == false && UseOuterManifolds == false. This means there's nothing to evolve!\n");
 	}
 
-	const float outerCircleRadius = 0.5f * SPHERE_RADIUS_FACTOR *
-		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
+	const pmp::Scalar outerCircleRadius = 0.5 * SPHERE_RADIUS_FACTOR *
+		(minTargetSize + (0.5 + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
 	const auto nSegments = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
 
 	if (GetSettings().UseOuterManifolds)
@@ -905,7 +906,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 	//const auto circles = inscribedCircleCalculator.Calculate(calcData);
 
 	// Hardcoded inner curves:
-	//const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85f} };
+	//const auto circles = std::vector{ Circle2D{targetBoundsCenter, 1.85} };
 
 	//m_InnerCurves.reserve(circles.size());
 
@@ -923,20 +924,20 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(float minTargetSi
 }
 
 /// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER_1D = 1.0f;
+constexpr pmp::Scalar SCALE_FACTOR_POWER_1D = 1.0;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_1D = 20.0f; // TODO: seems like an overkill. Investigate
+constexpr pmp::Scalar INV_SHRINK_FACTOR_1D = 20.0; // TODO: seems like an overkill. Investigate
 
-void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
+void ManifoldCurveEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabilizationFactor)
 {
-	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0f - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
-	if (radius <= 0.0f)
+	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0 - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
+	if (radius <= 0.0)
 	{
 		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::StabilizeGeometries: m_InitialSphereSettings empty!\n");
 	}
 	const auto expectedVertexCount = static_cast<unsigned int>(pow(2, GetSettings().LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
-	const auto expectedMeanCoVolLength = (2.0f * static_cast<float>(M_PI) * radius / static_cast<float>(expectedVertexCount));
-	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
+	const auto expectedMeanCoVolLength = (2.0 * static_cast<pmp::Scalar>(M_PI) * radius / static_cast<pmp::Scalar>(expectedVertexCount));
+	const auto scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_1D, SCALE_FACTOR_POWER_1D);
 	GetScalingFactor() = scalingFactor;
 
 	// -----------------------------------------------------------------------------------------------
@@ -948,16 +949,16 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0,
+		0.0, scalingFactor, 0.0,
+		0.0, 0.0, 1.0
 	};
 	const pmp::Point2 origin = m_OuterCurve ? m_InitialSphereSettings[m_OuterCurve.get()].Center :
 		(!m_InnerCurves.empty() ? m_InitialSphereSettings[m_InnerCurves[0].get()].Center : pmp::Point2{ 0, 0 });
 	const pmp::mat3 transfMatrixGeomMove{
-		1.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, -origin[1],
-		0.0f, 0.0f, 1.0f
+		1.0, 0.0, -origin[0],
+		0.0, 1.0, -origin[1],
+		0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
@@ -974,7 +975,7 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(float stabilizationFact
 	}
 
 	// test box for geometry validation
-	const float evolBoxFactor = 5.0f * scalingFactor;
+	const pmp::Scalar evolBoxFactor = 5.0 * scalingFactor;
 	m_EvolBox = pmp::BoundingBox2(
 		pmp::Point2{ -radius, -radius } * evolBoxFactor,
 		pmp::Point2{ radius, radius } * evolBoxFactor);
@@ -1138,10 +1139,10 @@ bool CustomManifoldCurveEvolutionStrategy::HasValidInnerOuterManifolds() const
 	return true;
 }
 
-std::pair<float, float> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeRange() const
+std::pair<pmp::Scalar, pmp::Scalar> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeRange() const
 {
-	float minCoVolLength = FLT_MAX;
-	float maxCoVolLength = -FLT_MAX;
+	pmp::Scalar minCoVolLength = FLT_MAX;
+	pmp::Scalar maxCoVolLength = -FLT_MAX;
 
 	if (GetOuterCurve())
 	{
@@ -1149,7 +1150,7 @@ std::pair<float, float> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeR
 		for (const auto v : outerCurve.vertices())
 		{
 			const auto [eTo, eFrom] = outerCurve.edges(v);
-			const auto currentCoVolLength = 0.5f * (outerCurve.edge_length(eTo) + outerCurve.edge_length(eFrom));
+			const auto currentCoVolLength = 0.5 * (outerCurve.edge_length(eTo) + outerCurve.edge_length(eFrom));
 
 			if (currentCoVolLength > maxCoVolLength) maxCoVolLength = currentCoVolLength;
 			if (currentCoVolLength < minCoVolLength) minCoVolLength = currentCoVolLength;
@@ -1162,7 +1163,7 @@ std::pair<float, float> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeR
 		for (const auto v : innerCurve.vertices())
 		{
 			const auto [eTo, eFrom] = innerCurve.edges(v);
-			const auto currentCoVolLength = 0.5f * (innerCurve.edge_length(eTo) + innerCurve.edge_length(eFrom));
+			const auto currentCoVolLength = 0.5 * (innerCurve.edge_length(eTo) + innerCurve.edge_length(eFrom));
 
 			if (currentCoVolLength > maxCoVolLength) maxCoVolLength = currentCoVolLength;
 			if (currentCoVolLength < minCoVolLength) minCoVolLength = currentCoVolLength;
@@ -1172,10 +1173,10 @@ std::pair<float, float> CustomManifoldCurveEvolutionStrategy::CalculateCoVolumeR
 	return { minCoVolLength, maxCoVolLength };
 }
 
-void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor)
+void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(pmp::Scalar minLength, pmp::Scalar maxLength, pmp::Scalar stabilizationFactor)
 {
-	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
-	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
+	const pmp::Scalar expectedMeanCoVolLength = (1.0 - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
+	const pmp::Scalar scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
 	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
 	GetScalingFactor() = scalingFactor;
 
@@ -1188,14 +1189,14 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0,
+		0.0, scalingFactor, 0.0,
+		0.0, 0.0, 1.0
 	};
 
 	// extract origin and radius for m_EvolBox from the custom geometries
 	pmp::Point2 origin{};
-	float radius = 1.0f;
+	pmp::Scalar radius = 1.0;
 	if (GetOuterCurve())
 	{
 		const auto outerBounds = GetOuterCurve()->bounds();
@@ -1219,7 +1220,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 			{
 				const auto innerBounds = innerCurve->bounds();
 				const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
-				radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.8f, radius);
+				radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.8, radius);
 				origin += innerBounds.center();
 			}
 			// mean bounds center position for all initial curves
@@ -1229,9 +1230,9 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	}
 
 	const pmp::mat3 transfMatrixGeomMove{
-		1.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, -origin[1],
-		0.0f, 0.0f, 1.0f
+		1.0, 0.0, -origin[0],
+		0.0, 1.0, -origin[1],
+		0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	GetTransformToOriginal() = inverse(transfMatrixFull);
@@ -1248,7 +1249,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(float minLe
 	}
 
 	// test box for geometry validation
-	const float evolBoxFactor = 5.0f * scalingFactor;
+	const pmp::Scalar evolBoxFactor = 5.0 * scalingFactor;
 	GetEvolBox() = pmp::BoundingBox2(
 		pmp::Point2{ -radius, -radius } * evolBoxFactor,
 		pmp::Point2{ radius, radius } * evolBoxFactor);
@@ -1318,7 +1319,7 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 	const auto [minTargetSize, maxTargetSize, targetCenter] = ComputeAmbientFields();
 	ConstructInitialManifolds(minTargetSize, maxTargetSize, targetCenter);
 
-	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	GetFieldCellSize() = m_DistanceField ? m_DistanceField->CellSize() : minTargetSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	ComputeVariableDistanceFields();
 
 	if (GetSettings().UseStabilizationViaScaling)
@@ -1364,7 +1365,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 		const auto minTargetSize = std::min({ sizeVec[0], sizeVec[1], sizeVec[2] });
-		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 		ComputeVariableDistanceFields();
 	}
 
@@ -1405,7 +1406,7 @@ void ManifoldSurfaceEvolutionStrategy::Remesh()
 	m_RemeshTracker.Reset();
 }
 
-void ManifoldSurfaceEvolutionStrategy::ResizeRemeshingSettings(float resizeFactor)
+void ManifoldSurfaceEvolutionStrategy::ResizeRemeshingSettings(pmp::Scalar resizeFactor)
 {
 	GetSettings().TimeStep *= pow(resizeFactor, 2); // we also need to adjust time step to keep the initial stabilization
 	m_RemeshingSettings.AdjustAllRemeshingLengths(resizeFactor);
@@ -1619,8 +1620,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
-			if (tanRedistWeight > 0.0f)
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterSurface, v, vNormal, tanRedistWeight);
@@ -1740,8 +1741,8 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
-			if (tanRedistWeight > 0.0f)
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerSurface, v, vNormal, tanRedistWeight);
@@ -1859,9 +1860,9 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*m_OuterSurface, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec3 tanVelocity(0.0, 0.0, 0.0);
-			if (tanRedistWeight > 0.0f)
+			if (tanRedistWeight > 0.0)
 			{
 				tanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_OuterSurface, v, vNormal, tanRedistWeight);
 			}
@@ -1943,9 +1944,9 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const auto laplacianTerm = epsilonCtrlWeight * m_ExplicitLaplacianFunction(*innerSurface, v);
 
 			// Tangential redistribution velocity
-			const float tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
+			const auto tanRedistWeight = static_cast<double>(GetSettings().TangentialVelocityWeight) * std::abs(epsilonCtrlWeight);
 			pmp::vec3 tanVelocity(0.0, 0.0, 0.0);
-			if (tanRedistWeight > 0.0f)
+			if (tanRedistWeight > 0.0)
 			{
 				tanVelocity = ComputeTangentialUpdateVelocityAtVertex(*innerSurface, v, vNormal, tanRedistWeight);
 			}
@@ -1971,7 +1972,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 }
 
 
-std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAmbientFields()
+std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAmbientFields()
 {
 	if (!m_TargetPointCloud)
 	{
@@ -1981,9 +1982,9 @@ std::tuple<float, float, pmp::Point> ManifoldSurfaceEvolutionStrategy::ComputeAm
 
 	const pmp::BoundingBox ptCloudBBox(*m_TargetPointCloud);
 	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-	const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-	const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-	const float cellSize = minSize / static_cast<float>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
+	const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+	const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+	const auto cellSize = minSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
 	const SDF::PointCloudDistanceFieldSettings dfSettings{
 		cellSize,
 		GetSettings().FieldSettings.FieldExpansionFactor,
@@ -2035,15 +2036,15 @@ void ManifoldSurfaceEvolutionStrategy::ComputeVariableDistanceFields()
 	}
 }
 
-void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter)
+void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(pmp::Scalar minTargetSize, pmp::Scalar maxTargetSize, const pmp::Point& targetBoundsCenter)
 {
 	if (!GetSettings().UseInnerManifolds && !GetSettings().UseOuterManifolds)
 	{
 		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds: Current setting is: UseInnerManifolds == false && UseOuterManifolds == false. This means there's nothing to evolve!\n");
 	}
 
-	const float outerSphereRadius = 0.5f * SPHERE_RADIUS_FACTOR *
-		(minTargetSize + (0.5f + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
+	const pmp::Scalar outerSphereRadius = 0.5 * SPHERE_RADIUS_FACTOR *
+		(minTargetSize + (0.5 + GetSettings().FieldSettings.FieldExpansionFactor) * maxTargetSize);
 
 	if (GetSettings().UseOuterManifolds)
 	{
@@ -2072,7 +2073,7 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 	//};	
 	//ParticleSwarmDistanceFieldInscribedSphereCalculator inscribedSphereCalculator;
 	//const auto spheres = inscribedSphereCalculator.Calculate(calcData);
-	//const std::vector spheres = {Sphere3D{pmp::Point(0, 0, 0), 0.7f}};
+	//const std::vector spheres = {Sphere3D{pmp::Point(0, 0, 0), 0.7}};
 
 	//m_InnerSurfaces.reserve(spheres.size());
 
@@ -2098,20 +2099,20 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(float minTarget
 }
 
 /// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER_2D = 1.0f / 2.0f;
+constexpr pmp::Scalar SCALE_FACTOR_POWER_2D = 1.0 / 2.0;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR_2D = 5.0f;
+constexpr pmp::Scalar INV_SHRINK_FACTOR_2D = 5.0;
 
-void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFactor)
+void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabilizationFactor)
 {
-	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0f - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
-	if (radius <= 0.0f)
+	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0 - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
+	if (radius <= 0.0)
 	{
 		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::StabilizeGeometries: m_InitialSphereSettings empty!\n");
 	}
 	const unsigned int expectedVertexCount = (N_ICO_EDGES_0 * static_cast<unsigned int>(pow(4, GetSettings().LevelOfDetail) - 1) + 3 * N_ICO_VERTS_0) / 3;
-	const float expectedMeanCoVolArea = (4.0f * static_cast<float>(M_PI) * radius * radius / static_cast<float>(expectedVertexCount));
-	const auto scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+	const pmp::Scalar expectedMeanCoVolArea = (4.0 * static_cast<pmp::Scalar>(M_PI) * radius * radius / static_cast<pmp::Scalar>(expectedVertexCount));
+	const auto scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	GetScalingFactor() = scalingFactor;
 	
 	// -----------------------------------------------------------------------------------------------
@@ -2123,18 +2124,18 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
 	const pmp::Point origin = m_OuterSurface ? m_InitialSphereSettings[m_OuterSurface.get()].Center :
 		(!m_InnerSurfaces.empty() ? m_InitialSphereSettings[m_InnerSurfaces[0].get()].Center : pmp::Point{0, 0, 0});
 	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.0, 0.0, 0.0, -origin[0],
+		0.0, 1.0, 0.0, -origin[1],
+		0.0, 0.0, 1.0, -origin[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	m_TransformToOriginal = inverse(transfMatrixFull);
@@ -2151,7 +2152,7 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(float stabilizationFa
 	}
 
 	// test box for geometry validation
-	const float evolBoxFactor = 5.0f * scalingFactor;
+	const pmp::Scalar evolBoxFactor = 5.0 * scalingFactor;
 	m_EvolBox = pmp::BoundingBox(
 		pmp::Point{ -radius, -radius, -radius } * evolBoxFactor,
 		pmp::Point{ radius, radius, radius } * evolBoxFactor);
@@ -2295,10 +2296,10 @@ bool CustomManifoldSurfaceEvolutionStrategy::HasValidInnerOuterManifolds() const
 	return true;
 }
 
-std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolumeRange() const
+std::pair<pmp::Scalar, pmp::Scalar> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolumeRange() const
 {
-	float minCoVolArea = FLT_MAX;
-	float maxCoVolArea = -FLT_MAX;
+	pmp::Scalar minCoVolArea = FLT_MAX;
+	pmp::Scalar maxCoVolArea = -FLT_MAX;
 
 	if (GetOuterSurface())
 	{
@@ -2327,10 +2328,10 @@ std::pair<float, float> CustomManifoldSurfaceEvolutionStrategy::CalculateCoVolum
 	return { minCoVolArea, maxCoVolArea };
 }
 
-void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor)
+void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(pmp::Scalar minArea, pmp::Scalar maxArea, pmp::Scalar stabilizationFactor)
 {
-	const float expectedMeanCoVolLength = (1.0f - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
-	const float scalingFactor = pow(static_cast<float>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+	const pmp::Scalar expectedMeanCoVolLength = (1.0 - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
+	const pmp::Scalar scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
 	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
 	GetScalingFactor() = scalingFactor;
 
@@ -2343,20 +2344,20 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
 
 	// extract origin and radius for m_EvolBox from the custom geometries
 	pmp::Point origin{};
-	float radius = 1.0f;
+	pmp::Scalar radius = 1.0;
 	if (GetOuterSurface())
 	{
 		const auto outerBounds = GetOuterSurface()->bounds();
 		const auto outerBoundsSize = outerBounds.max() - outerBounds.min();
-		radius = std::max({ outerBoundsSize[0], outerBoundsSize[1], outerBoundsSize[2] }) * 0.5f;
+		radius = std::max({ outerBoundsSize[0], outerBoundsSize[1], outerBoundsSize[2] }) * 0.5;
 		origin = outerBounds.center();
 	}
 	else
@@ -2365,7 +2366,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 		{
 			const auto innerBounds = innerSurface->bounds();
 			const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
-			radius = std::max(std::max({ innerBoundsSize[0], innerBoundsSize[1], innerBoundsSize[2] }) * 0.5f, radius);
+			radius = std::max(std::max({ innerBoundsSize[0], innerBoundsSize[1], innerBoundsSize[2] }) * 0.5, radius);
 			origin += innerBounds.center();
 		}
 		// mean bounds center position for all initial curves
@@ -2373,10 +2374,10 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 			origin /= static_cast<pmp::Scalar>(GetInnerSurfaces().size());
 	}
 	const pmp::mat4 transfMatrixGeomMove{
-		1.0f, 0.0f, 0.0f, -origin[0],
-		0.0f, 1.0f, 0.0f, -origin[1],
-		0.0f, 0.0f, 1.0f, -origin[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.0, 0.0, 0.0, -origin[0],
+		0.0, 1.0, 0.0, -origin[1],
+		0.0, 0.0, 1.0, -origin[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	const auto transfMatrixFull = transfMatrixGeomScale * transfMatrixGeomMove;
 	GetTransformToOriginal() = inverse(transfMatrixFull);
@@ -2393,7 +2394,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(float min
 	}
 
 	// test box for geometry validation
-	const float evolBoxFactor = 5.0f * scalingFactor;
+	const pmp::Scalar evolBoxFactor = 5.0 * scalingFactor;
 	GetEvolBox() = pmp::BoundingBox(
 		pmp::Point{ -radius, -radius, -radius } * evolBoxFactor,
 		pmp::Point{ radius, radius, radius } * evolBoxFactor);

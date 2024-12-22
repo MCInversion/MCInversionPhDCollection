@@ -25,7 +25,7 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 	}
 
 	// project the original edge to the new remeshed curve
-	const auto refPt = m_PrevRefEdge->StartPt * m_PrevRefEdge->Param + m_PrevRefEdge->EndPt * (1.0f - m_PrevRefEdge->Param);
+	const auto refPt = m_PrevRefEdge->StartPt * m_PrevRefEdge->Param + m_PrevRefEdge->EndPt * (1.0 - m_PrevRefEdge->Param);
 	const auto kdTree = std::make_unique<EdgeKdTree>(std::make_shared<ManifoldCurve2D>(m_Curve), 0);
 	const auto nearest = kdTree->nearest(refPt);
 	m_RefEdge.Edge = nearest.edge;
@@ -35,7 +35,7 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 	if (totalParamLength < FLT_EPSILON)
 	{
 		std::cerr << "\nEvolvingArcLengthCalculator::UpdateRefEdge: totalParamLength < FLT_EPSILON (this shouldn't happen)! \n";
-		m_RefEdge.Param = 1.0f;
+		m_RefEdge.Param = 1.0;
 		m_PrevRefEdge = nullptr;
 		return;
 	}
@@ -47,7 +47,7 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 	{
 		// the new ref point reaches to the next edge (forwards preference)
 		m_RefEdge.Edge = m_Curve.edge_from(m_Curve.to_vertex(m_RefEdge.Edge));
-		m_RefEdge.Param = 1.0f;
+		m_RefEdge.Param = 1.0;
 		m_PrevRefEdge = nullptr;
 		return;
 	}
@@ -55,12 +55,12 @@ void EvolvingArcLengthCalculator::UpdateRefEdge()
 	if (newParamDist > totalParamLength)
 	{
 		std::cerr << "\nEvolvingArcLengthCalculator::UpdateRefEdge: newParamDist > totalParamLength (this shouldn't happen)! \n";
-		m_RefEdge.Param = 1.0f;
+		m_RefEdge.Param = 1.0;
 		m_PrevRefEdge = nullptr;
 		return;
 	}
 
-	m_RefEdge.Param = 1.0f - (newParamDist / totalParamLength);
+	m_RefEdge.Param = 1.0 - (newParamDist / totalParamLength);
 	m_PrevRefEdge = nullptr;
 }
 
@@ -72,11 +72,11 @@ std::vector<Scalar> EvolvingArcLengthCalculator::CalculateArcLengths()
 		return {};
 	}
 
-	std::vector<Scalar> result(m_Curve.n_vertices(), -1.0f);
+	std::vector<Scalar> result(m_Curve.n_vertices(), -1.0);
 
 	// Initialize at the reference edge
 	Vertex vStart = m_Curve.to_vertex(m_RefEdge.Edge);
-	Scalar cumulativeLength = m_Curve.edge_length(m_RefEdge.Edge) * (1.0f - m_RefEdge.Param);
+	Scalar cumulativeLength = m_Curve.edge_length(m_RefEdge.Edge) * (1.0 - m_RefEdge.Param);
 
 	result[vStart.idx()] = cumulativeLength;
 
@@ -140,5 +140,5 @@ bool EvolvingArcLengthCalculator::RefEdgeValid(const bool& checkPosition)
 		std::cerr << "\nEvolvingArcLengthCalculator::RefPointValid: totalAffectedDistance < FLT_EPSILON (this shouldn't happen)!\n";
 		return false;
 	}
-	return m_RefEdge.Param >= 0.0f && m_RefEdge.Param <= totalAffectedDistance;
+	return m_RefEdge.Param >= 0.0 && m_RefEdge.Param <= totalAffectedDistance;
 }

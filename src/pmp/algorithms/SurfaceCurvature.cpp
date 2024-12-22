@@ -381,7 +381,7 @@ void SurfaceCurvature::curvature_to_texture_coordinates() const
         kmax = std::max(fabs(kmin), fabs(kmax));
         for (auto v : mesh_.vertices())
         {
-            tex[v] = TexCoord((0.5f * curvatures[v] / kmax) + 0.5f, 0.0);
+            tex[v] = TexCoord((0.5 * curvatures[v] / kmax) + 0.5, 0.0);
         }
     }
     else // unsigned

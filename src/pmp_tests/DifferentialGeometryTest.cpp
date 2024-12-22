@@ -108,9 +108,9 @@ public:
 
     void SetUp() override
     {
-        v0 = curve.add_vertex(Point2(-1.1f, 0.0f));
-        v1 = curve.add_vertex(Point2(1.15f, 0.0f));
-        v = curve.add_vertex(Point2(-0.1f, 0.5f));
+        v0 = curve.add_vertex(Point2(-1.1, 0.0));
+        v1 = curve.add_vertex(Point2(1.15, 0.0));
+        v = curve.add_vertex(Point2(-0.1, 0.5));
         e0 = curve.add_edge(v1, v);
         e1 = curve.add_edge(v, v0);
     }
@@ -124,21 +124,21 @@ TEST_F(DifferentialGeometryCurveTest, laplace_1D_TestCase)
     const auto vIso = curve.add_vertex(Point2(1.0, 1.0));
     const auto laplaceIsolated = laplace_1D(curve, vIso);
 
-    EXPECT_NEAR(laplaceCentral[0], 0.0276f, 1e-4f);
-    EXPECT_NEAR(laplaceCentral[1], -0.6644f, 1e-4f);
-    EXPECT_NEAR(laplaceBoundary0[0], 0.0f, 1e-4f);
-    EXPECT_NEAR(laplaceBoundary0[1], 0.0f, 1e-4f);
-    EXPECT_NEAR(laplaceBoundary1[0], 0.0f, 1e-4f);
-    EXPECT_NEAR(laplaceBoundary1[1], 0.0f, 1e-4f);
-    EXPECT_NEAR(laplaceIsolated[0], 0.0f, 1e-4f);
-    EXPECT_NEAR(laplaceIsolated[1], 0.0f, 1e-4f);
+    EXPECT_NEAR(laplaceCentral[0], 0.0276, 1e-4);
+    EXPECT_NEAR(laplaceCentral[1], -0.6644, 1e-4);
+    EXPECT_NEAR(laplaceBoundary0[0], 0.0, 1e-4);
+    EXPECT_NEAR(laplaceBoundary0[1], 0.0, 1e-4);
+    EXPECT_NEAR(laplaceBoundary1[0], 0.0, 1e-4);
+    EXPECT_NEAR(laplaceBoundary1[1], 0.0, 1e-4);
+    EXPECT_NEAR(laplaceIsolated[0], 0.0, 1e-4);
+    EXPECT_NEAR(laplaceIsolated[1], 0.0, 1e-4);
 }
 
 TEST_F(DifferentialGeometryCurveTest, laplace_implicit_1D_TestCase)
 {
     const auto laplaceWeightsCentral = laplace_implicit_1D(curve, v);
 
-    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v0), 0.7259f, 1e-4f);
-    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v1), 0.6028f, 1e-4f);
-    EXPECT_NEAR(laplaceWeightsCentral.weightSum, 1.3287f, 1e-4f);
+    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v0), 0.7259, 1e-4);
+    EXPECT_NEAR(laplaceWeightsCentral.vertexWeights.at(v1), 0.6028, 1e-4);
+    EXPECT_NEAR(laplaceWeightsCentral.weightSum, 1.3287, 1e-4);
 }

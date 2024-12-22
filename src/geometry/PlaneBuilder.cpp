@@ -6,8 +6,8 @@ namespace Geometry
 	{
 		m_BaseResult = std::make_unique<BaseMeshGeometryData>();
 
-		const float width = m_Settings.Width;
-		const float depth = m_Settings.Depth;
+		const pmp::Scalar width = m_Settings.Width;
+		const pmp::Scalar depth = m_Settings.Depth;
 		const auto orig = m_Settings.Origin;
 
 		const size_t nXSegments = m_Settings.nWidthSegments;
@@ -27,10 +27,10 @@ namespace Geometry
 
 		for (unsigned int i = 0; i < nYVerts; i++)
 		{
-			const float yParam = orig[1] + static_cast<float>(i) / static_cast<float>(nYSegments) * depth;
+			const pmp::Scalar yParam = orig[1] + static_cast<pmp::Scalar>(i) / static_cast<pmp::Scalar>(nYSegments) * depth;
 			for (unsigned int j = 0; j < nXVerts; j++)
 			{
-				const float xParam = orig[0] + static_cast<float>(j) / static_cast<float>(nXSegments) * width;
+				const pmp::Scalar xParam = orig[0] + static_cast<pmp::Scalar>(j) / static_cast<pmp::Scalar>(nXSegments) * width;
 				m_BaseResult->Vertices.emplace_back(pmp::vec3{ xParam, yParam, orig[2] });
 
 				if (i > 0 && j > 0)
@@ -47,7 +47,7 @@ namespace Geometry
 
 		if (m_Settings.ComputeNormals)
 		{
-			const auto unitNormal = pmp::vec3{ 0.0f, 0.0f, 1.0f };
+			const auto unitNormal = pmp::vec3{ 0.0, 0.0, 1.0 };
 			m_BaseResult->VertexNormals = std::vector(nVertices, unitNormal);
 		}
 	}

@@ -38,7 +38,7 @@ using namespace pmp;
 #endif
 
 
-constexpr float COORD_TOLERANCE = 1e-6f;
+constexpr pmp::Scalar COORD_TOLERANCE{ 1e-6 };
 
 // Iterator Tests
 TEST(EmptyManifoldCurve2D_Tests, VertexIterator_Empty)
@@ -527,7 +527,7 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, SplitEdge)
 {
     // Arrange
     const auto e = Edge{ 8 };
-    constexpr auto param = 0.5f;
+    constexpr auto param = 0.5;
 
     EXPORT_BEFORE(curve, "ManifoldCurve2DTest_ClosedArc_SplitEdge");
 
@@ -551,7 +551,7 @@ TEST_F(ManifoldCurve2DTest_ClosedArc, SplitEdgeWithVertex)
 {
     // Arrange
     const auto e = Edge{ 8 };
-    const Point2 newPos(0.5f, 0.5f);
+    const Point2 newPos(0.5, 0.5);
 
     EXPORT_BEFORE(curve, "ManifoldCurve2DTest_ClosedArc_SplitEdgeWithVertex");
 
@@ -855,7 +855,7 @@ TEST_F(ManifoldCurve2DTest_OpenArc, SplitEdgeWithVertex)
 {
     // Arrange
     const auto e = Edge{ 8 };
-    const Point2 newPos(0.5f, 0.5f);
+    const Point2 newPos(0.5, 0.5);
 
     EXPORT_BEFORE(curve, "ManifoldCurve2DTest_OpenArc_SplitEdgeWithVertex");
 
@@ -908,7 +908,7 @@ TEST_F(ManifoldCurve2DTest_OpenArc, SplitEdge)
 {
     // Arrange
     const auto e = Edge{ 8 };
-    constexpr auto param = 0.5f;
+    constexpr auto param = 0.5;
 
     EXPORT_BEFORE(curve, "ManifoldCurve2DTest_OpenArc_SplitEdge");
 
@@ -957,7 +957,7 @@ TEST_F(ManifoldCurve2DTest_OpenArc, Transformation)
     // Arrange
     const Vertex v1 = *curve.vertices_begin();
     const Vertex v2 = *(curve.vertices_begin() + 8);
-    const mat3 transform = scaling_matrix_2d(2.0f);
+    const mat3 transform = scaling_matrix_2d(Scalar(2.0));
 
     EXPORT_BEFORE(curve, "ManifoldCurve2DTest_OpenArc_Transformation");
 
@@ -968,11 +968,11 @@ TEST_F(ManifoldCurve2DTest_OpenArc, Transformation)
 
     // Assert
     auto pos1 = curve.position(v1);
-    EXPECT_NEAR(pos1[0], 2.0f, COORD_TOLERANCE);
-    EXPECT_NEAR(pos1[1], 0.0f, COORD_TOLERANCE);
+    EXPECT_NEAR(pos1[0], Scalar(2.0), COORD_TOLERANCE);
+    EXPECT_NEAR(pos1[1], Scalar(0.0), COORD_TOLERANCE);
     auto pos2 = curve.position(v2);
-    EXPECT_NEAR(pos2[0], 0.0f, COORD_TOLERANCE);
-    EXPECT_NEAR(pos2[1], 2.0f, COORD_TOLERANCE);
+    EXPECT_NEAR(pos2[0], Scalar(0.0), COORD_TOLERANCE);
+    EXPECT_NEAR(pos2[1], Scalar(2.0), COORD_TOLERANCE);
 }
 
 // Tessellation Operations

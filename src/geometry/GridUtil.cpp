@@ -1,14 +1,15 @@
-#include "GridUtil.h"
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/TriangleKdTree.h"
 
+#include "GridUtil.h"
+
 namespace
 {
 
 	/// \brief Utility function to generate a random float between min and max using a seeded generator
-	float RandomFloat(const float& min, const float& max, std::mt19937& gen)
+	float RandomFloat(const pmp::Scalar& min, const pmp::Scalar& max, std::mt19937& gen)
 	{
 		std::uniform_real_distribution<> dis(min, max);
 		return dis(gen);
@@ -16,23 +17,23 @@ namespace
 
 	[[nodiscard]] std::vector<pmp::Point2> PoissonSamplePointsInGrid(
 		const pmp::BoundingBox2& bbox,
-		float samplingRadius,
+		pmp::Scalar samplingRadius,
 		unsigned int seed,
 		unsigned int samplingAttempts = 30)
 	{
 		std::mt19937 gen(seed); // Initialize the random number generator with the provided seed
 		std::vector<pmp::Point2> samples;
 		std::vector<pmp::Point2> activeList;
-		const float radiusSquared = samplingRadius * samplingRadius;
-		const float cellSize = samplingRadius / std::sqrt(2.0f);
+		const pmp::Scalar radiusSquared = samplingRadius * samplingRadius;
+		const pmp::Scalar cellSize = samplingRadius / std::sqrt(2.0);
 
 		// Get the bounding box dimensions
 		const pmp::Point2 minPoint = bbox.min();
 		const pmp::Point2 maxPoint = bbox.max();
-		const float minX = minPoint[0];
-		const float maxX = maxPoint[0];
-		const float minY = minPoint[1];
-		const float maxY = maxPoint[1];
+		const pmp::Scalar minX = minPoint[0];
+		const pmp::Scalar maxX = maxPoint[0];
+		const pmp::Scalar minY = minPoint[1];
+		const pmp::Scalar maxY = maxPoint[1];
 
 		const int gridWidth = static_cast<int>((maxX - minX) / cellSize) + 1;
 		const int gridHeight = static_cast<int>((maxY - minY) / cellSize) + 1;
@@ -61,15 +62,15 @@ namespace
 		while (!activeList.empty())
 		{
 			// Randomly choose an active point
-			size_t randomIndex = static_cast<size_t>(RandomFloat(0.0f, static_cast<float>(activeList.size()), gen));
+			size_t randomIndex = static_cast<size_t>(RandomFloat(0.0, static_cast<pmp::Scalar>(activeList.size()), gen));
 			pmp::Point2 point = activeList[randomIndex];
 			bool found = false;
 
 			// Generate new points around the active point
 			for (unsigned int k = 0; k < samplingAttempts; ++k)
 			{
-				float angle = RandomFloat(0.0f, 2.0f * 3.14159265359f, gen);
-				float distance = RandomFloat(samplingRadius, 2.0f * samplingRadius, gen);
+				pmp::Scalar angle = RandomFloat(0.0, 2.0 * static_cast<pmp::Scalar>(M_PI), gen);
+				pmp::Scalar distance = RandomFloat(samplingRadius, 2.0 * samplingRadius, gen);
 				pmp::Point2 newPoint(point[0] + distance * std::cos(angle), point[1] + distance * std::sin(angle));
 
 				// Check if the new point is within the bounding box
@@ -557,8 +558,8 @@ namespace Geometry
 		const auto& gridBox = grid.Box();
 		const auto dMin = subBox.min() - gridBox.min();
 		const auto dMax = subBox.max() - gridBox.min();
-		assert(dMin[0] >= 0.0f && dMin[1] >= 0.0f && dMin[2] >= 0.0f);
-		assert(dMax[0] >= 0.0f && dMax[1] >= 0.0f && dMax[2] >= 0.0f);
+		assert(dMin[0] >= 0.0 && dMin[1] >= 0.0 && dMin[2] >= 0.0);
+		assert(dMax[0] >= 0.0 && dMax[1] >= 0.0 && dMax[2] >= 0.0);
 
 		// compute sub-grid bounds
 		const auto& cellSize = grid.CellSize();
@@ -1160,18 +1161,18 @@ namespace Geometry
 		// Calculate grid-related properties
 		const auto& gridBox = vectorGrid.Box();
 		const auto gridBoxSize = gridBox.max() - gridBox.min();
-		const float minSize = std::min(gridBoxSize[0], gridBoxSize[1]);
-		const float maxSize = std::max(gridBoxSize[0], gridBoxSize[1]);
-		const float area = minSize * maxSize;
+		const pmp::Scalar minSize = std::min(gridBoxSize[0], gridBoxSize[1]);
+		const pmp::Scalar maxSize = std::max(gridBoxSize[0], gridBoxSize[1]);
+		const pmp::Scalar area = minSize * maxSize;
 
 		// Estimate total number of sample points (based on NSamplePts setting)
 		unsigned int totalSamplePoints = settings.NSamplePts;
 
 		// Calculate the area per sample point
-		float areaPerPoint = area / static_cast<float>(totalSamplePoints);
+		pmp::Scalar areaPerPoint = area / static_cast<pmp::Scalar>(totalSamplePoints);
 
 		// Calculate the sampling radius assuming uniform distribution
-		float samplingRadius = std::sqrt(areaPerPoint / 3.14159265359f);
+		pmp::Scalar samplingRadius = std::sqrt(areaPerPoint / static_cast<pmp::Scalar>(M_PI));
 
 		// Generate seed points using Poisson disk sampling
 		std::vector<pmp::Point2> seedPoints = PoissonSamplePointsInGrid(
@@ -1256,18 +1257,18 @@ namespace Geometry
 		// Calculate grid-related properties
 		const auto& gridBox = vectorGrid.Box();
 		const auto gridBoxSize = gridBox.max() - gridBox.min();
-		const float minSize = std::min(gridBoxSize[0], gridBoxSize[1]);
-		const float maxSize = std::max(gridBoxSize[0], gridBoxSize[1]);
-		const float area = minSize * maxSize;
+		const pmp::Scalar minSize = std::min(gridBoxSize[0], gridBoxSize[1]);
+		const pmp::Scalar maxSize = std::max(gridBoxSize[0], gridBoxSize[1]);
+		const pmp::Scalar area = minSize * maxSize;
 
 		// Estimate total number of sample points based on the settings
 		unsigned int totalSamplePoints = settings.NSamplePts;
 
 		// Calculate the area per sample point
-		float areaPerPoint = area / static_cast<float>(totalSamplePoints);
+		pmp::Scalar areaPerPoint = area / static_cast<pmp::Scalar>(totalSamplePoints);
 
 		// Calculate the sampling radius assuming uniform distribution
-		float samplingRadius = std::sqrt(areaPerPoint / 3.14159265359f);
+		pmp::Scalar samplingRadius = std::sqrt(areaPerPoint / static_cast<pmp::Scalar>(M_PI));
 
 		// Generate seed points using Poisson disk sampling
 		std::vector<pmp::Point2> seedPoints = PoissonSamplePointsInGrid(
@@ -1330,7 +1331,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny, Nz] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1344,7 +1345,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny, Nz] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1360,7 +1361,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1373,7 +1374,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::round((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1413,7 +1414,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny, Nz] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1435,14 +1436,14 @@ namespace Geometry
 		const auto& values = grid.Values();
 		return {
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix) * cellSize,
-				boxMin[1] + static_cast<float>(iy) * cellSize,
-				boxMin[2] + static_cast<float>(iz) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+				boxMin[2] + static_cast<pmp::Scalar>(iz) * cellSize
 			},
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
-				boxMin[1] + static_cast<float>(iy + 1) * cellSize,
-				boxMin[2] + static_cast<float>(iz + 1) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy + 1) * cellSize,
+				boxMin[2] + static_cast<pmp::Scalar>(iz + 1) * cellSize
 			},
 			values[i000], values[i100], values[i010], values[i110],
 			values[i001], values[i101], values[i011], values[i111]
@@ -1451,7 +1452,7 @@ namespace Geometry
 
 	double TrilinearInterpolateScalarValue(const pmp::vec3& samplePt, const ScalarGrid& grid)
 	{
-		assert(grid.IsValid() && grid.CellSize() > 0.0f);
+		assert(grid.IsValid() && grid.CellSize() > 0.0);
 		const auto surrCellVals = GetSurroundingCells(samplePt, grid);
 		const auto x = static_cast<double>(samplePt[0]), y = static_cast<double>(samplePt[1]), z = static_cast<double>(samplePt[2]);
 		// cell min
@@ -1526,7 +1527,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny, Nz] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1550,14 +1551,14 @@ namespace Geometry
 		const auto& valuesZ = grid.ValuesZ();
 		return {
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix) * cellSize,
-				boxMin[1] + static_cast<float>(iy) * cellSize,
-				boxMin[2] + static_cast<float>(iz) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+				boxMin[2] + static_cast<pmp::Scalar>(iz) * cellSize
 			},
 			pmp::vec3{
-				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
-				boxMin[1] + static_cast<float>(iy + 1) * cellSize,
-				boxMin[2] + static_cast<float>(iz + 1) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy + 1) * cellSize,
+				boxMin[2] + static_cast<pmp::Scalar>(iz + 1) * cellSize
 			},
 			pmp::dvec3{valuesX[i000], valuesY[i000], valuesZ[i000]},
 			pmp::dvec3{valuesX[i100], valuesY[i100], valuesZ[i100]},
@@ -1573,7 +1574,7 @@ namespace Geometry
 
 	pmp::dvec3 TrilinearInterpolateVectorValue(const pmp::vec3& samplePt, const VectorGrid& grid)
 	{
-		assert(grid.IsValid() && grid.CellSize() > 0.0f);
+		assert(grid.IsValid() && grid.CellSize() > 0.0);
 		const auto surrCellVals = GetSurroundingCells(samplePt, grid);
 		const auto x = static_cast<double>(samplePt[0]), y = static_cast<double>(samplePt[1]), z = static_cast<double>(samplePt[2]);
 		// cell min
@@ -1647,7 +1648,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1663,12 +1664,12 @@ namespace Geometry
 		const auto& values = grid.Values();
 		return {
 			pmp::vec2{
-				boxMin[0] + static_cast<float>(ix) * cellSize,
-				boxMin[1] + static_cast<float>(iy) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy) * cellSize
 			},
 			pmp::vec2{
-				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
-				boxMin[1] + static_cast<float>(iy + 1) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy + 1) * cellSize
 			},
 			values[i00], values[i10], values[i01], values[i11]
 		};
@@ -1676,7 +1677,7 @@ namespace Geometry
 
 	double BilinearInterpolateScalarValue(const pmp::vec2& samplePt, const ScalarGrid2D& grid)
 	{
-		assert(grid.IsValid() && grid.CellSize() > 0.0f);
+		assert(grid.IsValid() && grid.CellSize() > 0.0);
 		const auto surrCellVals = GetSurroundingCells2D(samplePt, grid);
 		const auto x = static_cast<double>(samplePt[0]), y = static_cast<double>(samplePt[1]);
 
@@ -1709,7 +1710,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto ix = std::max(std::min(static_cast<size_t>(std::floor((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
 		const auto iy = std::max(std::min(static_cast<size_t>(std::floor((samplePt[1] - boxMin[1]) / cellSize)), Ny - 1), ZERO_CELL_ID);
@@ -1726,12 +1727,12 @@ namespace Geometry
 		const auto& valuesY = grid.ValuesY();
 		return {
 			pmp::vec2{
-				boxMin[0] + static_cast<float>(ix) * cellSize,
-				boxMin[1] + static_cast<float>(iy) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy) * cellSize
 			},
 			pmp::vec2{
-				boxMin[0] + static_cast<float>(ix + 1) * cellSize,
-				boxMin[1] + static_cast<float>(iy + 1) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(ix + 1) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(iy + 1) * cellSize
 			},
 			pmp::dvec2{valuesX[i00], valuesY[i00]},
 			pmp::dvec2{valuesX[i10], valuesY[i10]},
@@ -1742,7 +1743,7 @@ namespace Geometry
 
 	pmp::dvec2 BilinearInterpolateVectorValue(const pmp::vec2& samplePt, const VectorGrid2D& grid)
 	{
-		assert(grid.IsValid() && grid.CellSize() > 0.0f);
+		assert(grid.IsValid() && grid.CellSize() > 0.0);
 		const auto surrCellVals = GetSurroundingCells2D(samplePt, grid);
 		const auto x = static_cast<double>(samplePt[0]), y = static_cast<double>(samplePt[1]);
 
@@ -1774,7 +1775,7 @@ namespace Geometry
 	{
 		const auto& [Nx, Ny] = grid.Dimensions();
 		const auto& boxMin = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		// Find the closest grid point
 		const auto ix = std::max(std::min(static_cast<size_t>(std::round((samplePt[0] - boxMin[0]) / cellSize)), Nx - 1), ZERO_CELL_ID);
@@ -1798,8 +1799,8 @@ namespace Geometry
 			size_t neighborIndex = Nx * neighborY + neighborX;
 
 			neighborPts[i] = pmp::vec2{
-				boxMin[0] + static_cast<float>(neighborX) * cellSize,
-				boxMin[1] + static_cast<float>(neighborY) * cellSize
+				boxMin[0] + static_cast<pmp::Scalar>(neighborX) * cellSize,
+				boxMin[1] + static_cast<pmp::Scalar>(neighborY) * cellSize
 			};
 
 			neighborVals[i] = pmp::dvec2{ valuesX[neighborIndex], valuesY[neighborIndex] };
@@ -1808,8 +1809,8 @@ namespace Geometry
 		// Center point and value
 		size_t centerIndex = Nx * iy + ix;
 		pmp::vec2 centerPt{
-			boxMin[0] + static_cast<float>(ix) * cellSize,
-			boxMin[1] + static_cast<float>(iy) * cellSize
+			boxMin[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+			boxMin[1] + static_cast<pmp::Scalar>(iy) * cellSize
 		};
 		pmp::dvec2 centerVal{ valuesX[centerIndex], valuesY[centerIndex] };
 
@@ -1871,7 +1872,7 @@ namespace Geometry
 
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto Nx = static_cast<unsigned int>(dim.Nx);
 		const auto Ny = static_cast<unsigned int>(dim.Ny);
@@ -1884,7 +1885,7 @@ namespace Geometry
 			// ----------------------------------
 			if (iz % progressStep == 0)
 			{
-				const float progress = static_cast<float>(iz) / static_cast<float>(Nz);
+				const pmp::Scalar progress = static_cast<pmp::Scalar>(iz) / static_cast<pmp::Scalar>(Nz);
 				std::cout << "Geometry::ComputeInteriorExteriorSignFromMeshNormals: " << progress << " %\n";
 			}
 			// ----------------------------------
@@ -1894,9 +1895,9 @@ namespace Geometry
 				for (unsigned int ix = 0; ix < Nx; ix++)
 				{
 					const auto gridPt = pmp::Point{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
+						orig[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+						orig[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+						orig[2] + static_cast<pmp::Scalar>(iz) * cellSize
 					};
 
 					const auto nearestNeighbor = ptrMeshKDTree->nearest(gridPt);
@@ -1965,7 +1966,7 @@ namespace Geometry
 
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto Nx = static_cast<unsigned int>(dim.Nx);
 		const auto Ny = static_cast<unsigned int>(dim.Ny);
@@ -1982,7 +1983,7 @@ namespace Geometry
 			// ----------------------------------
 			if (iz % progressStep == 0)
 			{
-				const float progress = static_cast<float>(iz) / static_cast<float>(Nz);
+				const pmp::Scalar progress = static_cast<pmp::Scalar>(iz) / static_cast<pmp::Scalar>(Nz);
 				std::cout << "Geometry::ComputeMeshSignedDistanceFromNormals: " << progress << " %\n";
 			}
 			// ----------------------------------
@@ -1991,9 +1992,9 @@ namespace Geometry
 			{
 				for (unsigned int ix = 0; ix < Nx; ix++)
 				{
-					gridPt[0] = orig[0] + static_cast<float>(ix) * cellSize;
-					gridPt[1] = orig[1] + static_cast<float>(iy) * cellSize;
-					gridPt[2] = orig[2] + static_cast<float>(iz) * cellSize;
+					gridPt[0] = orig[0] + static_cast<pmp::Scalar>(ix) * cellSize;
+					gridPt[1] = orig[1] + static_cast<pmp::Scalar>(iy) * cellSize;
+					gridPt[2] = orig[2] + static_cast<pmp::Scalar>(iz) * cellSize;
 
 					const auto nearestNeighbor = ptrMeshKDTree->nearest(gridPt);
 
@@ -2076,7 +2077,7 @@ namespace Geometry
 		// parameter check
 		if (params.Radius < FLT_EPSILON)
 		{
-			std::cerr << "ApplyMetaBallToGrid: Invalid parameter. params.Radius <= 0.0f!\n";
+			std::cerr << "ApplyMetaBallToGrid: Invalid parameter. params.Radius <= 0.0!\n";
 			return;
 		}
 
@@ -2085,13 +2086,13 @@ namespace Geometry
 
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		// metaball ROI (region of influence (box))
-		const float radius = params.Radius;
+		const pmp::Scalar radius = params.Radius;
 		const auto& center = params.Center;
 		const auto radiusVec = pmp::vec3(radius, radius, radius);
-		const float radiusSq = radius * radius;
+		const pmp::Scalar radiusSq = radius * radius;
 		const auto roi = pmp::BoundingBox(center - radiusVec, center + radiusVec);
 
 		if (!grid.Box().Intersects(roi))
@@ -2120,9 +2121,9 @@ namespace Geometry
 				for (unsigned int ix = ixMin; ix < ixMax; ix++)
 				{
 					const auto gridPt = pmp::Point{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
+						orig[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+						orig[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+						orig[2] + static_cast<pmp::Scalar>(iz) * cellSize
 					};
 					const auto posVect = gridPt - center;
 					const auto distSq = static_cast<double>(dot(posVect, posVect) / radiusSq);
@@ -2141,12 +2142,12 @@ namespace Geometry
 		// parameter check
 		if (params.Height < FLT_EPSILON)
 		{
-			std::cerr << "ApplyCapsuleDistanceFieldToGrid: Invalid parameter. params.Height <= 0.0f!\n";
+			std::cerr << "ApplyCapsuleDistanceFieldToGrid: Invalid parameter. params.Height <= 0.0!\n";
 			return;
 		}
 		if (params.Radius < FLT_EPSILON)
 		{
-			std::cerr << "ApplyCapsuleDistanceFieldToGrid: Invalid parameter. params.Radius <= 0.0f!\n";
+			std::cerr << "ApplyCapsuleDistanceFieldToGrid: Invalid parameter. params.Radius <= 0.0!\n";
 			return;
 		}
 
@@ -2155,14 +2156,14 @@ namespace Geometry
 
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		// capsule ROI (region of influence (box))
-		const float radius = params.Radius;
-		const float height = params.Height;
+		const pmp::Scalar radius = params.Radius;
+		const pmp::Scalar height = params.Height;
 		const auto& position = params.Position;
 		const auto radiusVec = pmp::vec3(radius, radius, radius);
-		const auto heightVec = pmp::vec3(0.0f, 0.0f, height);
+		const auto heightVec = pmp::vec3(0.0, 0.0, height);
 		const auto roi = pmp::BoundingBox(position - radiusVec, position + heightVec + radiusVec);
 
 		if (!grid.Box().Intersects(roi))
@@ -2181,12 +2182,12 @@ namespace Geometry
 				for (unsigned int ix = 0; ix < Nx; ix++)
 				{
 					const auto gridPt = pmp::Point{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
+						orig[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+						orig[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+						orig[2] + static_cast<pmp::Scalar>(iz) * cellSize
 					};
 					const auto posVect = gridPt - position;
-					const auto posVectClamped = pmp::vec3{ posVect[0], posVect[1], posVect[2] - std::clamp<float>(posVect[2], 0.0f, height + radius) };
+					const auto posVectClamped = pmp::vec3{ posVect[0], posVect[1], posVect[2] - std::clamp<pmp::Scalar>(posVect[2], 0.0, height + radius) };
 					const auto dist = static_cast<double>(norm(posVectClamped)) - static_cast<double>(radius);
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
 					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
@@ -2203,11 +2204,11 @@ namespace Geometry
 	{
 		// parameter check
 		if (params.RingRadius < FLT_EPSILON) {
-			std::cerr << "ApplyTorusDistanceFieldToGrid: Invalid parameter. params.RingRadius <= 0.0f!\n";
+			std::cerr << "ApplyTorusDistanceFieldToGrid: Invalid parameter. params.RingRadius <= 0.0!\n";
 			return;
 		}
 		if (params.TubeRadius < FLT_EPSILON) {
-			std::cerr << "ApplyTorusDistanceFieldToGrid: Invalid parameter. params.TubeRadius <= 0.0f!\n";
+			std::cerr << "ApplyTorusDistanceFieldToGrid: Invalid parameter. params.TubeRadius <= 0.0!\n";
 			return;
 		}
 
@@ -2215,11 +2216,11 @@ namespace Geometry
 		auto& values = grid.Values();
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		// torus ROI (region of influence (box))
-		const float ringRadius = params.RingRadius;
-		const float tubeRadius = params.TubeRadius;
+		const pmp::Scalar ringRadius = params.RingRadius;
+		const pmp::Scalar tubeRadius = params.TubeRadius;
 		const auto& center = params.Center;
 
 		const auto roi = pmp::BoundingBox{
@@ -2239,14 +2240,14 @@ namespace Geometry
 			for (unsigned int iy = 0; iy < Ny; iy++) {
 				for (unsigned int ix = 0; ix < Nx; ix++) {
 					const auto gridPt = pmp::Point{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
+						orig[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+						orig[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+						orig[2] + static_cast<pmp::Scalar>(iz) * cellSize
 					};
 					const auto posVect = gridPt - center;
 
 					// Calculate distance from grid point to the torus
-					const float len = sqrt(posVect[0] * posVect[0] + posVect[1] * posVect[1]) - ringRadius;
+					const pmp::Scalar len = sqrt(posVect[0] * posVect[0] + posVect[1] * posVect[1]) - ringRadius;
 					const auto dist = static_cast<double>(sqrt(len * len + posVect[2] * posVect[2]) - tubeRadius);
 
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
@@ -2264,15 +2265,15 @@ namespace Geometry
 	{
 		// parameter check
 		if (params.a < FLT_EPSILON) {
-			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.a <= 0.0f!\n";
+			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.a <= 0.0!\n";
 			return;
 		}
 		if (params.b < FLT_EPSILON) {
-			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.b <= 0.0f!\n";
+			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.b <= 0.0!\n";
 			return;
 		}
 		if (params.c < FLT_EPSILON) {
-			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.c <= 0.0f!\n";
+			std::cerr << "ApplyHyperboloidDistanceFieldToGrid: Invalid parameter. params.c <= 0.0!\n";
 			return;
 		}
 
@@ -2280,7 +2281,7 @@ namespace Geometry
 		auto& values = grid.Values();
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		// torus ROI (region of influence (box))
 		const auto& halfSize = params.HalfSize;
@@ -2306,9 +2307,9 @@ namespace Geometry
 				for (unsigned int ix = 0; ix < Nx; ix++) 
 				{
 					const auto gridPt = pmp::Point{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
+						orig[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+						orig[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+						orig[2] + static_cast<pmp::Scalar>(iz) * cellSize
 					};
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
 					if (!roi.Contains(gridPt))
@@ -2320,10 +2321,10 @@ namespace Geometry
 					const auto posVect = gridPt - center;
 
 					// Calculate distance from grid point to the hyperboloid aligned with the x-axis
-					const float hyperboloidValue =
+					const pmp::Scalar hyperboloidValue =
 						(posVect[0] / params.a) * (posVect[0] / params.a) -
 						(posVect[1] / params.b) * (posVect[1] / params.b) -
-						(posVect[2] / params.c) * (posVect[2] / params.c) + 1.0f;
+						(posVect[2] / params.c) * (posVect[2] / params.c) + 1.0;
 					const auto dist = static_cast<double>(sqrt(std::abs(hyperboloidValue)));
 
 					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
@@ -2336,15 +2337,15 @@ namespace Geometry
 	{
 		// parameter check
 		if (params.a < FLT_EPSILON) {
-			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.a <= 0.0f!\n";
+			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.a <= 0.0!\n";
 			return;
 		}
 		if (params.b < FLT_EPSILON) {
-			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.b <= 0.0f!\n";
+			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.b <= 0.0!\n";
 			return;
 		}
 		if (params.c < FLT_EPSILON) {
-			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.c <= 0.0f!\n";
+			std::cerr << "ApplyEllipsoidDistanceFieldToGrid: Invalid parameter. params.c <= 0.0!\n";
 			return;
 		}
 
@@ -2352,7 +2353,7 @@ namespace Geometry
 		auto& values = grid.Values();
 		const auto& dim = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		// torus ROI (region of influence (box))
 		const auto& halfSize = params.HalfSize;
@@ -2378,9 +2379,9 @@ namespace Geometry
 				for (unsigned int ix = 0; ix < Nx; ix++)
 				{
 					const auto gridPt = pmp::Point{
-						orig[0] + static_cast<float>(ix) * cellSize,
-						orig[1] + static_cast<float>(iy) * cellSize,
-						orig[2] + static_cast<float>(iz) * cellSize
+						orig[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+						orig[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+						orig[2] + static_cast<pmp::Scalar>(iz) * cellSize
 					};
 					const unsigned int gridPos = Nx * Ny * iz + Nx * iy + ix;
 					if (!roi.Contains(gridPt))
@@ -2392,10 +2393,10 @@ namespace Geometry
 					const auto posVect = gridPt - center;
 
 					// Calculate distance from grid point to the ellipsoid aligned with the x-axis
-					const float hyperboloidValue =
+					const pmp::Scalar hyperboloidValue =
 						(posVect[0] / params.a) * (posVect[0] / params.a) +
 						(posVect[1] / params.b) * (posVect[1] / params.b) +
-						(posVect[2] / params.c) * (posVect[2] / params.c) - 1.0f;
+						(posVect[2] / params.c) * (posVect[2] / params.c) - 1.0;
 					const auto dist = static_cast<double>(sqrt(std::abs(hyperboloidValue)));
 
 					values[gridPos] = params.BoolOpFunction(values[gridPos], dist);
@@ -2404,7 +2405,7 @@ namespace Geometry
 		}
 	}
 
-	ScalarGrid ExtractReSampledGrid(const float& newCellSize, const ScalarGrid& origGrid)
+	ScalarGrid ExtractReSampledGrid(const pmp::Scalar& newCellSize, const ScalarGrid& origGrid)
 	{
 		if (std::abs(newCellSize - origGrid.CellSize()) < FLT_EPSILON)
 			return origGrid;
@@ -2426,9 +2427,9 @@ namespace Geometry
 				for (unsigned int ix = 0; ix < Nx; ix++)
 				{
 					const auto newGridPt = pmp::Point{
-						newOrigin[0] + static_cast<float>(ix) * newCellSize,
-						newOrigin[1] + static_cast<float>(iy) * newCellSize,
-						newOrigin[2] + static_cast<float>(iz) * newCellSize
+						newOrigin[0] + static_cast<pmp::Scalar>(ix) * newCellSize,
+						newOrigin[1] + static_cast<pmp::Scalar>(iy) * newCellSize,
+						newOrigin[2] + static_cast<pmp::Scalar>(iz) * newCellSize
 					};
 
 					const unsigned int newGridPos = Nx * Ny * iz + Nx * iy + ix;
@@ -2467,8 +2468,8 @@ namespace Geometry
 		}
 
 		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
-		Matrix<float, 9, 6> A;
-		Vector<float, 9> b;
+		Matrix<pmp::Scalar, 9, 6> A;
+		Vector<pmp::Scalar, 9> b;
 
 		// normalized cell coordinates
 		A << 1, -1, -1, 1, 1, 1,
@@ -2486,12 +2487,12 @@ namespace Geometry
 			b[i] = neighborhood_values[i];
 		}
 
-		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
-		const float a10 = coeffs[1];
-		const float a01 = coeffs[2];
-		const float a20 = coeffs[3];
-		const float a11 = coeffs[4];
-		const float a02 = coeffs[5];
+		const auto coeffs = A.colPivHouseholderQr().solve(b);
+		const pmp::Scalar a10 = coeffs[1];
+		const pmp::Scalar a01 = coeffs[2];
+		const pmp::Scalar a20 = coeffs[3];
+		const pmp::Scalar a11 = coeffs[4];
+		const pmp::Scalar a02 = coeffs[5];
 
 		// Solve for the critical point
 		Matrix2f H;
@@ -2541,8 +2542,8 @@ namespace Geometry
 		}
 
 		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
-		Matrix<float, 9, 6> A;
-		Vector<float, 9> b;
+		Matrix<pmp::Scalar, 9, 6> A;
+		Vector<pmp::Scalar, 9> b;
 
 		// normalized cell coordinates
 		A << 1, -1, -1, 1, 1, 1,
@@ -2560,12 +2561,12 @@ namespace Geometry
 			b[i] = neighborhood_values[i];
 		}
 
-		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
-		const float a10 = coeffs[1];
-		const float a01 = coeffs[2];
-		const float a20 = coeffs[3];
-		const float a11 = coeffs[4];
-		const float a02 = coeffs[5];
+		const auto coeffs = A.colPivHouseholderQr().solve(b);
+		const pmp::Scalar a10 = coeffs[1];
+		const pmp::Scalar a01 = coeffs[2];
+		const pmp::Scalar a20 = coeffs[3];
+		const pmp::Scalar a11 = coeffs[4];
+		const pmp::Scalar a02 = coeffs[5];
 
 		// Solve for the critical point
 		Matrix2f H;
@@ -2612,8 +2613,8 @@ namespace Geometry
 		}
 
 		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
-		Matrix<float, 9, 6> A;
-		Vector<float, 9> b;
+		Matrix<pmp::Scalar, 9, 6> A;
+		Vector<pmp::Scalar, 9> b;
 
 		// normalized cell coordinates
 		A << 1, -1, -1, 1, 1, 1,
@@ -2631,13 +2632,13 @@ namespace Geometry
 			b[i] = neighborhood_values[i];
 		}
 
-		const Vector<float, 6> coeffs = A.colPivHouseholderQr().solve(b);
+		const auto coeffs = A.colPivHouseholderQr().solve(b);
 
-		const float a10 = coeffs[1];
-		const float a01 = coeffs[2];
-		const float a20 = coeffs[3];
-		const float a11 = coeffs[4];
-		const float a02 = coeffs[5];
+		const pmp::Scalar a10 = coeffs[1];
+		const pmp::Scalar a01 = coeffs[2];
+		const pmp::Scalar a20 = coeffs[3];
+		const pmp::Scalar a11 = coeffs[4];
+		const pmp::Scalar a02 = coeffs[5];
 
 		// Solve for the critical point
 		Matrix2f H;
@@ -2671,7 +2672,7 @@ namespace Geometry
 		const auto& valuesX = vecGrid.ValuesX();
 		const auto& valuesY = vecGrid.ValuesY();
 
-		float divergenceSum = 0.0f;
+		pmp::Scalar divergenceSum = 0.0;
 		const int r = static_cast<int>(radius);
 
 		// Iterate over the 4 key points in the neighborhood of the cell (ix, iy)
@@ -2689,19 +2690,19 @@ namespace Geometry
 			const int nj = std::clamp(static_cast<int>(iy) + dj, 1, static_cast<int>(Ny) - 2);
 
 			// Approximate divergence: calculating partial derivatives of vector components with respect to x and y
-			float divX = 0.0f;
-			float divY = 0.0f;
+			pmp::Scalar divX = 0.0;
+			pmp::Scalar divY = 0.0;
 
 			// Compute divergence for X component (partial derivative with respect to x)
-			if (ni > 0 && ni < Nx - 1)
+			if (ni > 0 && ni < static_cast<int>(Nx - 1))
 			{
-				divX = (valuesX[Nx * nj + ni + 1] - valuesX[Nx * nj + ni - 1]) / 2.0f;
+				divX = (valuesX[Nx * nj + ni + 1] - valuesX[Nx * nj + ni - 1]) / 2.0;
 			}
 
 			// Compute divergence for Y component (partial derivative with respect to y)
-			if (nj > 0 && nj < Ny - 1)
+			if (nj > 0 && nj < static_cast<int>(Ny - 1))
 			{
-				divY = (valuesY[Nx * (nj + 1) + ni] - valuesY[Nx * (nj - 1) + ni]) / 2.0f;
+				divY = (valuesY[Nx * (nj + 1) + ni] - valuesY[Nx * (nj - 1) + ni]) / 2.0;
 			}
 
 			// Sum up the divergence for the selected points
@@ -2709,10 +2710,10 @@ namespace Geometry
 		}
 
 		// Average divergence over the neighborhood
-		const float avgDivergence = divergenceSum / 9.0f;
+		const pmp::Scalar avgDivergence = divergenceSum / 9.0;
 
 		// We consider this point convergent or divergent if the average divergence is significantly non-zero
-		constexpr float divergenceThreshold = 1e-3f;
+		constexpr pmp::Scalar divergenceThreshold = 1e-3;
 		return std::abs(avgDivergence) > divergenceThreshold;
 	}
 
@@ -2787,16 +2788,16 @@ namespace Geometry
 			b[i] = neighborhood_values[i];
 		}
 
-		const Vector<float, 10> coeffs = A.colPivHouseholderQr().solve(b);
-		const float a100 = coeffs[1];
-		const float a010 = coeffs[2];
-		const float a001 = coeffs[3];
-		const float a200 = coeffs[4];
-		const float a110 = coeffs[5];
-		const float a101 = coeffs[6];
-		const float a011 = coeffs[7];
-		const float a020 = coeffs[8];
-		const float a002 = coeffs[9];
+		const auto coeffs = A.colPivHouseholderQr().solve(b);
+		const pmp::Scalar a100 = coeffs[1];
+		const pmp::Scalar a010 = coeffs[2];
+		const pmp::Scalar a001 = coeffs[3];
+		const pmp::Scalar a200 = coeffs[4];
+		const pmp::Scalar a110 = coeffs[5];
+		const pmp::Scalar a101 = coeffs[6];
+		const pmp::Scalar a011 = coeffs[7];
+		const pmp::Scalar a020 = coeffs[8];
+		const pmp::Scalar a002 = coeffs[9];
 
 		// Solve for the critical point by finding the gradient and Hessian
 		Matrix3f H;
@@ -2840,10 +2841,10 @@ namespace Geometry
 			const unsigned int subNy = maxY - minY + 1;
 
 			const auto& orig = grid.Box().min();
-			const float cellSize = grid.CellSize();
+			const pmp::Scalar cellSize = grid.CellSize();
 			pmp::BoundingBox2 subBox(
-				pmp::vec2(orig[0] + (minX + 0.5f) * cellSize, orig[1] + (minY + 0.5f) * cellSize),
-				pmp::vec2(orig[0] + (maxX - 0.5f) * cellSize, orig[1] + (maxY - 0.5f) * cellSize)
+				pmp::vec2(orig[0] + (minX + 0.5) * cellSize, orig[1] + (minY + 0.5) * cellSize),
+				pmp::vec2(orig[0] + (maxX - 0.5) * cellSize, orig[1] + (maxY - 0.5) * cellSize)
 			);
 
 			ScalarGrid2D subGrid(cellSize, subBox);
@@ -2878,10 +2879,10 @@ namespace Geometry
 			const unsigned int subNz = maxZ - minZ + 1;
 
 			const auto& orig = grid.Box().min();
-			const float cellSize = grid.CellSize();
+			const pmp::Scalar cellSize = grid.CellSize();
 			pmp::BoundingBox2 subBox(
-				pmp::vec2(orig[1] + (minY + 0.5f) * cellSize, orig[2] + (minZ + 0.5f) * cellSize),
-				pmp::vec2(orig[1] + (maxY - 0.5f) * cellSize, orig[2] + (maxZ - 0.5f) * cellSize)
+				pmp::vec2(orig[1] + (minY + 0.5) * cellSize, orig[2] + (minZ + 0.5) * cellSize),
+				pmp::vec2(orig[1] + (maxY - 0.5) * cellSize, orig[2] + (maxZ - 0.5) * cellSize)
 			);
 
 			ScalarGrid2D subGrid(cellSize, subBox);
@@ -2916,10 +2917,10 @@ namespace Geometry
 			const unsigned int subNz = maxZ - minZ + 1;
 
 			const auto& orig = grid.Box().min();
-			const float cellSize = grid.CellSize();
+			const pmp::Scalar cellSize = grid.CellSize();
 			pmp::BoundingBox2 subBox(
-				pmp::vec2(orig[0] + (minX + 0.5f) * cellSize, orig[2] + (minZ + 0.5f) * cellSize),
-				pmp::vec2(orig[0] + (maxX - 0.5f) * cellSize, orig[2] + (maxZ - 0.5f) * cellSize)
+				pmp::vec2(orig[0] + (minX + 0.5) * cellSize, orig[2] + (minZ + 0.5) * cellSize),
+				pmp::vec2(orig[0] + (maxX - 0.5) * cellSize, orig[2] + (maxZ - 0.5) * cellSize)
 			);
 
 			ScalarGrid2D subGrid(cellSize, subBox);
@@ -2968,9 +2969,9 @@ namespace Geometry
 			return {};
 		
 		// calculate average position of the local max
-		const float avgX = ((*localMaxXY)[0] + (*localMaxYZ)[0] + (*localMaxXZ)[0]) / 3.0f;
-		const float avgY = ((*localMaxXY)[1] + (*localMaxYZ)[1] + (*localMaxXZ)[1]) / 3.0f;
-		const float avgZ = ((*localMaxXZ)[1] + (*localMaxYZ)[0] + (*localMaxXY)[1]) / 3.0f;
+		const pmp::Scalar avgX = ((*localMaxXY)[0] + (*localMaxYZ)[0] + (*localMaxXZ)[0]) / 3.0;
+		const pmp::Scalar avgY = ((*localMaxXY)[1] + (*localMaxYZ)[1] + (*localMaxXZ)[1]) / 3.0;
+		const pmp::Scalar avgZ = ((*localMaxXZ)[1] + (*localMaxYZ)[0] + (*localMaxXY)[1]) / 3.0;
 
 		return pmp::Point(
 			avgX,
@@ -2990,7 +2991,7 @@ namespace Geometry
 		const auto& valuesY = vecGrid.ValuesY();
 		const auto& valuesZ = vecGrid.ValuesZ();
 
-		float divergenceSum = 0.0f;
+		pmp::Scalar divergenceSum = 0.0;
 		const int r = static_cast<int>(radius);
 
 		// Iterate over the 6 key points in the neighborhood of the cell (ix, iy, iz)
@@ -3011,26 +3012,26 @@ namespace Geometry
 			const int nk = std::clamp(static_cast<int>(iz) + dk, 1, static_cast<int>(Nz) - 2);
 
 			// Approximate divergence: calculating partial derivatives of vector components with respect to x, y, and z
-			float divX = 0.0f;
-			float divY = 0.0f;
-			float divZ = 0.0f;
+			pmp::Scalar divX = 0.0;
+			pmp::Scalar divY = 0.0;
+			pmp::Scalar divZ = 0.0;
 
 			// Compute divergence for X component (partial derivative with respect to x)
-			if (ni > 0 && ni < Nx - 1)
+			if (ni > 0 && ni < static_cast<int>(Nx - 1))
 			{
-				divX = (valuesX[Nx * Ny * nk + Nx * nj + (ni + 1)] - valuesX[Nx * Ny * nk + Nx * nj + (ni - 1)]) / 2.0f;
+				divX = (valuesX[Nx * Ny * nk + Nx * nj + (ni + 1)] - valuesX[Nx * Ny * nk + Nx * nj + (ni - 1)]) / 2.0;
 			}
 
 			// Compute divergence for Y component (partial derivative with respect to y)
-			if (nj > 0 && nj < Ny - 1)
+			if (nj > 0 && nj < static_cast<int>(Ny - 1))
 			{
-				divY = (valuesY[Nx * Ny * nk + Nx * (nj + 1) + ni] - valuesY[Nx * Ny * nk + Nx * (nj - 1) + ni]) / 2.0f;
+				divY = (valuesY[Nx * Ny * nk + Nx * (nj + 1) + ni] - valuesY[Nx * Ny * nk + Nx * (nj - 1) + ni]) / 2.0;
 			}
 
 			// Compute divergence for Z component (partial derivative with respect to z)
-			if (nk > 0 && nk < Nz - 1)
+			if (nk > 0 && nk < static_cast<int>(Nz - 1))
 			{
-				divZ = (valuesZ[Nx * Ny * (nk + 1) + Nx * nj + ni] - valuesZ[Nx * Ny * (nk - 1) + Nx * nj + ni]) / 2.0f;
+				divZ = (valuesZ[Nx * Ny * (nk + 1) + Nx * nj + ni] - valuesZ[Nx * Ny * (nk - 1) + Nx * nj + ni]) / 2.0;
 			}
 
 			// Sum up the divergence for the selected points
@@ -3038,10 +3039,10 @@ namespace Geometry
 		}
 
 		// Average divergence over the neighborhood
-		const float avgDivergence = divergenceSum / 9.0f;
+		const pmp::Scalar avgDivergence = divergenceSum / 9.0;
 
 		// We consider this point convergent or divergent if the average divergence is significantly non-zero
-		constexpr float divergenceThreshold = 1e-3f;
+		constexpr pmp::Scalar divergenceThreshold = 1e-3;
 		return std::abs(avgDivergence) > divergenceThreshold;
 	}
 
@@ -3060,10 +3061,10 @@ namespace Geometry
 
 		// Calculate the bounding box for the subgrid
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 		pmp::BoundingBox2 subBox(
 			pmp::vec2(orig[0] + ix0 * cellSize + FLT_EPSILON, orig[1] + iy0 * cellSize + FLT_EPSILON),
-			pmp::vec2(orig[0] + (ix1 - 0.5f) * cellSize, orig[1] + (iy1 - 0.5f) * cellSize)
+			pmp::vec2(orig[0] + (ix1 - 0.5) * cellSize, orig[1] + (iy1 - 0.5) * cellSize)
 		);
 
 		// Create the subgrid
@@ -3104,10 +3105,10 @@ namespace Geometry
 
 		// Calculate the bounding box for the subgrid
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 		pmp::BoundingBox subBox(
 			pmp::vec3(orig[0] + ix0 * cellSize + FLT_EPSILON, orig[1] + iy0 * cellSize + FLT_EPSILON, orig[2] + iz0 * cellSize + FLT_EPSILON),
-			pmp::vec3(orig[0] + (ix1 - 0.5f) * cellSize, orig[1] + (iy1 - 0.5f) * cellSize, orig[2] + (iz1 - 0.5f) * cellSize)
+			pmp::vec3(orig[0] + (ix1 - 0.5) * cellSize, orig[1] + (iy1 - 0.5) * cellSize, orig[2] + (iz1 - 0.5) * cellSize)
 		);
 
 		// Create the subgrid

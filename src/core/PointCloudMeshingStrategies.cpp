@@ -26,7 +26,7 @@ namespace IMB
 		std::cerr << "EmptyMeshingStrategy::ProcessImpl: attempting to NOT triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 	}
 
-	constexpr float MAGIC_RADIUS_MULTIPLIER = 1.9f;
+	constexpr pmp::Scalar MAGIC_RADIUS_MULTIPLIER = 1.9;
 
 	void BallPivotingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
@@ -35,7 +35,7 @@ namespace IMB
 		// Compute an appropriate radius based on point distribution
 		const auto meanDistance = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ioPoints, 6);
 		const auto ballRadius = meanDistance * MAGIC_RADIUS_MULTIPLIER;
-		constexpr auto clusteringPercentage = (1.0f / MAGIC_RADIUS_MULTIPLIER) * 100.0f;
+		constexpr auto clusteringPercentage = (1.0 / MAGIC_RADIUS_MULTIPLIER) * 100.0;
 
 		const auto meshDataOpt = Geometry::ComputeBallPivotingMeshFromPoints(ioPoints, ballRadius, clusteringPercentage);
 		if (!meshDataOpt.has_value())
@@ -70,10 +70,10 @@ namespace IMB
 
 		const pmp::BoundingBox ptCloudBBox(ioPoints);
 		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
-		const float minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
-		const float cellSize = minSize / nVoxelsPerMinDimension;
-		constexpr float volExpansionFactor = 0.5f;
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+		constexpr pmp::Scalar volExpansionFactor = 0.5;
 		const SDF::PointCloudDistanceFieldSettings dfSettings{
 			cellSize,
 				volExpansionFactor,
@@ -84,11 +84,11 @@ namespace IMB
 
 		MeshTopologySettings topoParams;
 		topoParams.FixSelfIntersections = true;
-		topoParams.MinEdgeMultiplier = 0.14f;
+		topoParams.MinEdgeMultiplier = 0.14;
 		topoParams.UseBackProjection = false;
-		topoParams.PrincipalCurvatureFactor = 3.2f;
-		topoParams.CriticalMeanCurvatureAngle = 1.0f * static_cast<float>(M_PI_2);
-		topoParams.EdgeLengthDecayFactor = 0.7f;
+		topoParams.PrincipalCurvatureFactor = 3.2;
+		topoParams.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
+		topoParams.EdgeLengthDecayFactor = 0.7;
 		topoParams.ExcludeEdgesWithoutBothFeaturePts = true;
 		topoParams.FeatureType = FeatureDetectionType::MeanCurvature;
 
@@ -111,7 +111,7 @@ namespace IMB
 			"",
 			MeshLaplacian::Voronoi,
 			{"equilateralJacobianCondition"},
-			0.05f,
+			0.05,
 			true,
 			false
 		};

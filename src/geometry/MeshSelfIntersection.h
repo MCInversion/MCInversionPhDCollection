@@ -1,8 +1,9 @@
 #pragma once
 
-#include "CollisionKdTree.h"
-
+#include "pmp/Types.h"
 #include <pmp/SurfaceMesh.h>
+
+#include "CollisionKdTree.h"
 
 #include <vector>
 #include <unordered_map>

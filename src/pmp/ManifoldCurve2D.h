@@ -510,10 +510,10 @@ namespace pmp
         void collapse_edge(Vertex v0, Vertex v1, bool keepStartVertex = true);
 
         //! Splits (subdivides) edge \p e with a new vertex lin. interpolated between its endpoints with \p param.
-        Vertex split_edge(Edge e, float param = 0.5f);
+        Vertex split_edge(Edge e, Scalar param = 0.5);
 
         //! Splits (subdivides) edge with a new vertex lin. interpolated between its endpoints \p v0 and \p v1 with \p param.
-        Vertex split_edge(Vertex v0, Vertex v1, float param = 0.5f);
+        Vertex split_edge(Vertex v0, Vertex v1, Scalar param = 0.5);
 
         //! Splits (subdivides) edge \p e with a new vertex given by position \p pNew.
         Vertex split_edge_with_vertex(Edge e, const Point2& pNew);

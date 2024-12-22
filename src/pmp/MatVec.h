@@ -14,6 +14,7 @@
 
 #include <Eigen/Dense>
 
+#include "pmp/Types.h"
 #include "pmp/Exceptions.h"
 
 namespace pmp {
@@ -339,8 +340,8 @@ using Mat3 = Matrix<Scalar, 3, 3>;
 template <typename Scalar>
 using Mat2 = Matrix<Scalar, 2, 2>;
 
-//! template specialization for a vector of two float values
-using vec2 = Vector<float, 2>;
+//! template specialization for a vector of two Scalar values
+using vec2 = Vector<Scalar, 2>;
 //! template specialization for a vector of two double values
 using dvec2 = Vector<double, 2>;
 //! template specialization for a vector of two bool values
@@ -350,8 +351,8 @@ using ivec2 = Vector<int, 2>;
 //! template specialization for a vector of two unsigned int values
 using uvec2 = Vector<unsigned int, 2>;
 
-//! template specialization for a vector of three float values
-using vec3 = Vector<float, 3>;
+//! template specialization for a vector of three Scalar values
+using vec3 = Vector<Scalar, 3>;
 //! template specialization for a vector of three double values
 using dvec3 = Vector<double, 3>;
 //! template specialization for a vector of three bool values
@@ -361,8 +362,8 @@ using ivec3 = Vector<int, 3>;
 //! template specialization for a vector of three unsigned int values
 using uvec3 = Vector<unsigned int, 3>;
 
-//! template specialization for a vector of four float values
-using vec4 = Vector<float, 4>;
+//! template specialization for a vector of four Scalar values
+using vec4 = Vector<Scalar, 4>;
 //! template specialization for a vector of four double values
 using dvec4 = Vector<double, 4>;
 //! template specialization for a vector of four bool values
@@ -372,19 +373,19 @@ using ivec4 = Vector<int, 4>;
 //! template specialization for a vector of four unsigned int values
 using uvec4 = Vector<unsigned int, 4>;
 
-//! template specialization for a quaternion of four float values
-using quat = Vector<float, 4>;
+//! template specialization for a quaternion of four Scalar values
+using quat = Vector<Scalar, 4>;
 
-//! template specialization for a 2x2 matrix of float values
-using mat2 = Mat2<float>;
+//! template specialization for a 2x2 matrix of Scalar values
+using mat2 = Mat2<Scalar>;
 //! template specialization for a 2x2 matrix of double values
 using dmat2 = Mat2<double>;
-//! template specialization for a 3x3 matrix of float values
-using mat3 = Mat3<float>;
+//! template specialization for a 3x3 matrix of Scalar values
+using mat3 = Mat3<Scalar>;
 //! template specialization for a 3x3 matrix of double values
 using dmat3 = Mat3<double>;
-//! template specialization for a 4x4 matrix of float values
-using mat4 = Mat4<float>;
+//! template specialization for a 4x4 matrix of Scalar values
+using mat4 = Mat4<Scalar>;
 //! template specialization for a 4x4 matrix of double values
 using dmat4 = Mat4<double>;
 
@@ -577,7 +578,7 @@ Mat4<Scalar> viewport_matrix(Scalar l, Scalar b, Scalar w, Scalar h)
     m(1, 3) = 0.5 * h + b;
     m(2, 2) = 0.5;
     m(2, 3) = 0.5;
-    m(3, 3) = 1.0f;
+    m(3, 3) = 1.0;
 
     return m;
 }
@@ -595,7 +596,7 @@ Mat4<Scalar> inverse_viewport_matrix(Scalar l, Scalar b, Scalar w, Scalar h)
     m(1, 3) = -1.0 - (b + b) / h;
     m(2, 2) = 2.0;
     m(2, 3) = -1.0;
-    m(3, 3) = 1.0f;
+    m(3, 3) = 1.0;
 
     return m;
 }
@@ -613,7 +614,7 @@ Mat4<Scalar> frustum_matrix(Scalar l, Scalar r, Scalar b, Scalar t, Scalar n,
     m(1, 2) = (t + b) / (t - b);
     m(2, 2) = -(f + n) / (f - n);
     m(2, 3) = -f * (n + n) / (f - n);
-    m(3, 2) = -1.0f;
+    m(3, 2) = -1.0;
 
     return m;
 }
@@ -712,7 +713,7 @@ template <typename Scalar>
 Mat4<Scalar> translation_matrix(const Vector<Scalar, 3>& t)
 {
     Mat4<Scalar> m(Scalar(0));
-    m(0, 0) = m(1, 1) = m(2, 2) = m(3, 3) = 1.0f;
+    m(0, 0) = m(1, 1) = m(2, 2) = m(3, 3) = 1.0;
     m(0, 3) = t[0];
     m(1, 3) = t[1];
     m(2, 3) = t[2];
@@ -725,7 +726,7 @@ template <typename Scalar>
 Mat3<Scalar> translation_matrix(const Vector<Scalar, 2>& t)
 {
     Mat3<Scalar> m(Scalar(0));
-    m(0, 0) = m(1, 1) = m(2, 2) = 1.0f;
+    m(0, 0) = m(1, 1) = m(2, 2) = 1.0;
     m(0, 2) = t[0];
     m(1, 2) = t[1];
     return m;
@@ -737,7 +738,7 @@ Mat4<Scalar> scaling_matrix(const Scalar s)
 {
     Mat4<Scalar> m(Scalar(0));
     m(0, 0) = m(1, 1) = m(2, 2) = s;
-    m(3, 3) = 1.0f;
+    m(3, 3) = 1.0;
 
     return m;
 }
@@ -750,7 +751,7 @@ Mat4<Scalar> scaling_matrix(const Vector<Scalar, 3>& s)
     m(0, 0) = s[0];
     m(1, 1) = s[1];
     m(2, 2) = s[2];
-    m(3, 3) = 1.0f;
+    m(3, 3) = 1.0;
 
     return m;
 }
@@ -761,7 +762,7 @@ Mat3<Scalar> scaling_matrix_2d(const Scalar s)
 {
     Mat3<Scalar> m(Scalar(0));
     m(0, 0) = m(1, 1) = s;
-    m(2, 2) = 1.0f;
+    m(2, 2) = 1.0;
 
     return m;
 }
@@ -773,7 +774,7 @@ Mat3<Scalar> scaling_matrix_2d(const Vector<Scalar, 2>& s)
     Mat3<Scalar> m(Scalar(0));
     m(0, 0) = s[0];
     m(1, 1) = s[1];
-    m(2, 2) = 1.0f;
+    m(2, 2) = 1.0;
 
     return m;
 }
@@ -861,7 +862,7 @@ template <typename Scalar>
 Mat4<Scalar> rotation_matrix(const Vector<Scalar, 3>& axis, Scalar angle)
 {
     Mat4<Scalar> m(Scalar(0));
-    Scalar a = angle * Scalar(M_PI / 180.0f);
+    Scalar a = angle * Scalar(M_PI / 180.0);
     Scalar c = cosf(a);
     Scalar s = sinf(a);
     Scalar one_m_c = Scalar(1) - c;
@@ -879,7 +880,7 @@ Mat4<Scalar> rotation_matrix(const Vector<Scalar, 3>& axis, Scalar angle)
     m(2, 1) = ax[2] * ax[1] * one_m_c + ax[0] * s;
     m(2, 2) = ax[2] * ax[2] * one_m_c + c;
 
-    m(3, 3) = 1.0f;
+    m(3, 3) = 1.0;
 
     return m;
 }
@@ -888,7 +889,7 @@ Mat4<Scalar> rotation_matrix(const Vector<Scalar, 3>& axis, Scalar angle)
 template <typename Scalar>
 Mat4<Scalar> rotation_matrix(const Vector<Scalar, 4>& quat)
 {
-    Mat4<Scalar> m(0.0f);
+    Mat4<Scalar> m(0.0);
     Scalar s1(1);
     Scalar s2(2);
 
@@ -904,7 +905,7 @@ Mat4<Scalar> rotation_matrix(const Vector<Scalar, 4>& quat)
     m(1, 2) = s2 * quat[1] * quat[2] + s2 * quat[3] * quat[0];
     m(2, 2) = s1 - s2 * quat[0] * quat[0] - s2 * quat[1] * quat[1];
 
-    m(3, 3) = 1.0f;
+    m(3, 3) = 1.0;
 
     return m;
 }
@@ -1060,7 +1061,7 @@ Mat4<Scalar> inverse(const Mat4<Scalar>& m)
     Vector<Scalar, 4> Col0(m(0, 0), m(0, 1), m(0, 2), m(0, 3));
 
     Scalar Determinant = dot(Col0, Row0);
-    //if (std::fabsf(Determinant) < 1e-10f)
+    //if (std::fabsf(Determinant) < 1e-10)
     //{
     //    throw SolverException("4x4 matrix not invertible");
     //}
@@ -1283,10 +1284,10 @@ inline Scalar distance(const Vector<Scalar, N>& v0, const Vector<Scalar, N>& v1)
 template <typename Scalar>
 [[nodiscard]] quat quat_from_axis_angle(const Vector<Scalar, 3>& axis, const Scalar& angle)
 {
-    assert(std::fabs(norm(axis) - 1.0f) < 1e-3f);
+    assert(std::fabs(norm(axis) - 1.0) < 1e-3);
 
-    const float halfAngle = angle / 2.0f;
-    const float sinHalfAngle = sin(halfAngle);
+    const Scalar halfAngle = angle / 2.0;
+    const Scalar sinHalfAngle = sin(halfAngle);
 
     quat result{};
     result[0] = axis[0] * sinHalfAngle;
@@ -1302,10 +1303,10 @@ template <typename Scalar>
 void apply_quaternion(Vector<Scalar, 3>& vec, const quat& q)
 {
     // compute quat * vector
-    const float ix = q[3] * vec[0] + q[1] * vec[2] - q[2] * vec[1];
-    const float iy = q[3] * vec[1] + q[2] * vec[0] - q[0] * vec[2];
-    const float iz = q[3] * vec[2] + q[0] * vec[1] - q[1] * vec[0];
-    const float iw = -q[0] * vec[0] - q[1] * vec[1] - q[2] * vec[2];
+    const Scalar ix = q[3] * vec[0] + q[1] * vec[2] - q[2] * vec[1];
+    const Scalar iy = q[3] * vec[1] + q[2] * vec[0] - q[0] * vec[2];
+    const Scalar iz = q[3] * vec[2] + q[0] * vec[1] - q[1] * vec[0];
+    const Scalar iw = -q[0] * vec[0] - q[1] * vec[1] - q[2] * vec[2];
 
     // compute result * inverse quat
     vec = Vector<Scalar, 3>{

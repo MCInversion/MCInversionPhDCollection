@@ -58,7 +58,7 @@ size_t IsoSurfaceEvolver::DetectFeatures(const FeatureDetectionType& type) const
 
 // ================================================================================================
 
-IsoSurfaceEvolver::IsoSurfaceEvolver(const Geometry::ScalarGrid& field, const float& fieldExpansionFactor, const IsoSurfaceEvolutionSettings& settings)
+IsoSurfaceEvolver::IsoSurfaceEvolver(const Geometry::ScalarGrid& field, const pmp::Scalar& fieldExpansionFactor, const IsoSurfaceEvolutionSettings& settings)
 	: m_EvolSettings(settings), m_Field(std::make_shared<Geometry::ScalarGrid>(field)), m_ExpansionFactor(fieldExpansionFactor)
 {
 #if REPAIR_INPUT_GRID
@@ -93,17 +93,17 @@ void IsoSurfaceEvolver::Preprocess()
 	// Ilatsik's Marching cubes implementation outputs a mesh from a grid with unit cell size, and zero origin (0,0,0)
 	const auto& orig = reSampledField.Box().min();
 	const pmp::mat4 voxelTransformMat{
-		cellSize, 0.0f, 0.0f, orig[0],
-		0.0f, cellSize, 0.0f, orig[1],
-		0.0f, 0.0f, cellSize, orig[2],
-		0.0f, 0.0f, 0.0f, 1.0f
+		cellSize, 0.0, 0.0, orig[0],
+		0.0, cellSize, 0.0, orig[1],
+		0.0, 0.0, cellSize, orig[2],
+		0.0, 0.0, 0.0, 1.0
 	};
 	(*m_EvolvingSurface) *= voxelTransformMat;
 
 	// basic 1-iter remesh for bad quality mesh from marching cubes
-	const float minEdgeLength =static_cast<float>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	const float maxEdgeLength = 4.0f * minEdgeLength;
-	const float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
+	const auto minEdgeLength =static_cast<pmp::Scalar>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	const pmp::Scalar maxEdgeLength = 4.0 * minEdgeLength;
+	const pmp::Scalar approxError = 0.25 * (minEdgeLength + maxEdgeLength);
 	pmp::Remeshing remeshing(*m_EvolvingSurface);
 	remeshing.adaptive_remeshing({
 		minEdgeLength, maxEdgeLength, approxError,
@@ -115,17 +115,17 @@ void IsoSurfaceEvolver::Preprocess()
 	// >>> uniform scale to ensure numerical method's stability.
 	// >>> translation to origin for fields not centered at (0,0,0).
 	// >>> scaling factor value is intended for stabilization of the numerical method.
-	const float scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, cellSize);
+	const pmp::Scalar scalingFactor = GetStabilizationScalingFactor(m_EvolSettings.TimeStep, cellSize);
 	m_ScalingFactor = scalingFactor;
 	m_EvolSettings.FieldIsoLevel *= static_cast<double>(scalingFactor);
 #if REPORT_EVOL_STEPS
 	std::cout << "Stabilization Scaling Factor: " << scalingFactor << ",\n";
 #endif
 	const pmp::mat4 transfMatrixGeomScale{
-		scalingFactor, 0.0f, 0.0f, 0.0f,
-		0.0f, scalingFactor, 0.0f, 0.0f,
-		0.0f, 0.0f, scalingFactor, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		scalingFactor, 0.0, 0.0, 0.0,
+		0.0, scalingFactor, 0.0, 0.0,
+		0.0, 0.0, scalingFactor, 0.0,
+		0.0, 0.0, 0.0, 1.0
 	};
 	m_TransformToOriginal = inverse(transfMatrixGeomScale);
 
@@ -217,11 +217,11 @@ void IsoSurfaceEvolver::Evolve()
 	const auto& tStep = m_EvolSettings.TimeStep;
 
 	// ........ evaluate edge lengths for remeshing ....................
-	const float cellSize = m_EvolSettings.ReSampledGridCellSize * m_ScalingFactor;
-	float minEdgeLength = static_cast<float>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	float maxEdgeLength = 4.0f * minEdgeLength;
-	float approxError = 0.25f * (minEdgeLength + maxEdgeLength);
-	//auto approxError = 2.0f * minEdgeLength;
+	const pmp::Scalar cellSize = m_EvolSettings.ReSampledGridCellSize * m_ScalingFactor;
+	auto minEdgeLength = static_cast<pmp::Scalar>(M_SQRT2) * cellSize * m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	pmp::Scalar maxEdgeLength = 4.0 * minEdgeLength;
+	pmp::Scalar approxError = 0.25 * (minEdgeLength + maxEdgeLength);
+	//auto approxError = 2.0 * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -262,8 +262,8 @@ void IsoSurfaceEvolver::Evolve()
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
-			if (tanRedistWeight > 0.0f)
+			const pmp::Scalar tanRedistWeight = m_EvolSettings.TangentialVelocityWeight * epsilonCtrlWeight;
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_EvolvingSurface, v, vNormal, tanRedistWeight);
@@ -482,14 +482,14 @@ void ReportInput(const IsoSurfaceEvolutionSettings& evolSettings, std::ostream& 
 }
 
 /// \brief The power of the stabilizing scale factor.
-constexpr float SCALE_FACTOR_POWER = 1.0f / 2.0f;
+constexpr pmp::Scalar SCALE_FACTOR_POWER = 1.0 / 2.0;
 /// \brief the reciprocal value of how many times the surface area element shrinks during evolution.
-constexpr float INV_SHRINK_FACTOR = 5.0f;
+constexpr pmp::Scalar INV_SHRINK_FACTOR = 5.0;
 
-float GetStabilizationScalingFactor(const double& timeStep, const float& cellSize, const float& stabilizationFactor)
+pmp::Scalar GetStabilizationScalingFactor(const double& timeStep, const pmp::Scalar& cellSize, const pmp::Scalar& stabilizationFactor)
 {
-	// const float expectedMeanCoVolArea = stabilizationFactor * 2.0f * sqrt(3.0f) * (cellSize * cellSize) / 3.0f;
-	const float expectedMeanCoVolArea = stabilizationFactor * 4.0f * sqrt(2.0f) * (cellSize * cellSize) / 3.0f;
-	return pow(static_cast<float>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
+	// const float expectedMeanCoVolArea = stabilizationFactor * 2.0 * sqrt(3.0) * (cellSize * cellSize) / 3.0;
+	const pmp::Scalar expectedMeanCoVolArea = stabilizationFactor * 4.0 * sqrt(2.0) * (cellSize * cellSize) / 3.0;
+	return pow(static_cast<pmp::Scalar>(timeStep) / expectedMeanCoVolArea * INV_SHRINK_FACTOR, SCALE_FACTOR_POWER);
 }
 

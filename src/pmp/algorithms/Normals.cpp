@@ -210,15 +210,15 @@ Normal2 Normals2::compute_vertex_normal(const ManifoldCurve2D& curve, Vertex v)
     }
 
     // Compute the average normal
-    Normal2 vertex_normal(0.0f, 0.0f);
+    Normal2 vertex_normal(0.0, 0.0);
     for (const auto& normal : edge_normals)
     {
         vertex_normal += normal;
     }
 
     // Normalize the vertex normal
-    float length = std::sqrt(vertex_normal[0] * vertex_normal[0] + vertex_normal[1] * vertex_normal[1]);
-    if (length > 0.0f)
+    Scalar length = std::sqrt(vertex_normal[0] * vertex_normal[0] + vertex_normal[1] * vertex_normal[1]);
+    if (length > 0.0)
     {
         vertex_normal /= length;
     }
@@ -243,8 +243,8 @@ Normal2 Normals2::compute_edge_normal(const ManifoldCurve2D& curve, Edge e)
     Normal2 normal(edge_vector[1], -edge_vector[0]);
 
     // Normalize the normal
-    float length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1]);
-    if (length > 0.0f)
+    Scalar length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1]);
+    if (length > 0.0)
     {
         normal /= length;
     }

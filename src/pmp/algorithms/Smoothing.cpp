@@ -112,7 +112,7 @@ void Smoothing::explicit_smoothing(unsigned int iters, bool use_uniform_laplace)
         // step 2: move each vertex by its (damped) Laplacian
         for (auto v : mesh_.vertices())
         {
-            points[v] += 0.5f * laplace[v];
+            points[v] += 0.5 * laplace[v];
         }
     }
 

@@ -42,9 +42,9 @@ const std::string dataOutPath = fsDataOutPath.string();
 
 namespace
 {
-    [[nodiscard]] std::map<Vertex, float> ComputeLocalCurvature(const ManifoldCurve2D& curve)
+    [[nodiscard]] std::map<Vertex, Scalar> ComputeLocalCurvature(const ManifoldCurve2D& curve)
     {
-        std::map<Vertex, float> curvatures;
+        std::map<Vertex, Scalar> curvatures;
         for (auto v : curve.vertices())
         {
             auto [vPrev, vNext] = curve.vertices(v);
@@ -54,20 +54,20 @@ namespace
             Point2 pPrev = curve.position(vPrev);
             Point2 pNext = curve.position(vNext);
 
-            const float curvature = std::abs((pNext[0] - p[0]) * (p[1] - pPrev[1]) -
+            const Scalar curvature = std::abs((pNext[0] - p[0]) * (p[1] - pPrev[1]) -
                 (pNext[1] - p[1]) * (p[0] - pPrev[0]));
             curvatures[v] = curvature;
         }
         return curvatures;
     }
 
-    [[nodiscard]] std::map<Vertex, float> ComputeLocalDensities(const ManifoldCurve2D& curve, float edgeLength)
+    [[nodiscard]] std::map<Vertex, Scalar> ComputeLocalDensities(const ManifoldCurve2D& curve, Scalar edgeLength)
     {
-        std::map<Vertex, float> densities;
+        std::map<Vertex, Scalar> densities;
 
         for (auto v : curve.vertices())
         {
-            float localDensity = 0.0f;
+            Scalar localDensity = 0.0;
             int count = 0;
 
             // Get the outgoing and incoming edges
@@ -90,28 +90,28 @@ namespace
             if (count > 0)
             {
                 localDensity /= count;
-                densities[v] = 1.0f / localDensity; // Local density is the inverse of average edge length
+                densities[v] = 1.0 / localDensity; // Local density is the inverse of average edge length
             }
             else
             {
-                densities[v] = 1.0f / edgeLength; // Default to edgeLength for isolated vertices
+                densities[v] = 1.0 / edgeLength; // Default to edgeLength for isolated vertices
             }
         }
 
         return densities;
     }
 
-    [[nodiscard]] float ComputeMeanDensity(const std::map<Vertex, float>& densities)
+    [[nodiscard]] Scalar ComputeMeanDensity(const std::map<Vertex, Scalar>& densities)
     {
-        const float totalDensity = std::accumulate(densities.begin(), densities.end(), 0.0f,
-            [](float sum, const std::pair<Vertex, float>& p) { return sum + p.second; });
+        const Scalar totalDensity = std::accumulate(densities.begin(), densities.end(), 0.0,
+            [](Scalar sum, const std::pair<Vertex, Scalar>& p) { return sum + p.second; });
 
         return totalDensity / densities.size();
     }
 
-    [[nodiscard]] float ComputeMeanCurvature(const std::map<Vertex, float>& curvatures)
+    [[nodiscard]] Scalar ComputeMeanCurvature(const std::map<Vertex, Scalar>& curvatures)
     {
-        float totalCurvature = 0.0f;
+        Scalar totalCurvature = 0.0;
         for (const auto& [vertex, curvature] : curvatures)
         {
             totalCurvature += curvature;
@@ -119,9 +119,9 @@ namespace
         return totalCurvature / curvatures.size();
     }
 
-    [[nodiscard]] float ComputeDensityVariance(const std::map<Vertex, float>& densities, float meanDensity)
+    [[nodiscard]] Scalar ComputeDensityVariance(const std::map<Vertex, Scalar>& densities, Scalar meanDensity)
     {
-        float variance = 0.0f;
+        Scalar variance = 0.0;
         for (const auto& [v, density] : densities)
         {
             variance += (density - meanDensity) * (density - meanDensity);
@@ -130,9 +130,9 @@ namespace
         return variance / densities.size();
     }
 
-    [[nodiscard]] float ComputeCurvatureVariance(const std::map<Vertex, float>& curvatures, float meanCurvature)
+    [[nodiscard]] Scalar ComputeCurvatureVariance(const std::map<Vertex, Scalar>& curvatures, Scalar meanCurvature)
     {
-        float variance = 0.0f;
+        Scalar variance = 0.0;
         for (const auto& [vertex, curvature] : curvatures)
         {
             variance += (curvature - meanCurvature) * (curvature - meanCurvature);
@@ -153,14 +153,14 @@ protected:
         DeformCircleWithSineWave(1.0, 4);
     }
 
-    void DeformCircleWithSineWave(float amplitude, float freq)
+    void DeformCircleWithSineWave(Scalar amplitude, Scalar freq)
     {
         for (const auto v : curve.vertices())
         {
             Point2 p = curve.position(v) - Point2(0, 0);
-            const float angle = atan2(p[1], p[0]);
+            const Scalar angle = atan2(p[1], p[0]);
             vec2 direction = normalize(p);
-            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0f);
+            curve.position(v) += direction * amplitude * (sin(freq * angle) + 1.0);
         }
     }
 };
@@ -168,7 +168,7 @@ protected:
 TEST_F(CurveRemeshingTests_DeformedCircle, UniformRemeshing_VertexDensity)
 {
     // Arrange
-    constexpr float edgeLength = 0.2f;
+    constexpr Scalar edgeLength = 0.2;
     constexpr unsigned int iterations = 10;
     CurveRemeshing remesher(curve);
 
@@ -180,23 +180,23 @@ TEST_F(CurveRemeshingTests_DeformedCircle, UniformRemeshing_VertexDensity)
     EXPORT_AFTER(curve, "CurveRemeshingTests_DeformedCircle_UniformRemeshing");
 
     // Assert
-    const std::map<Vertex, float> densities = ComputeLocalDensities(curve, edgeLength);
-    const float meanDensity = ComputeMeanDensity(densities);
-    const float densityVariance = ComputeDensityVariance(densities, meanDensity);
-    EXPECT_NEAR(1.0 / meanDensity, edgeLength, 0.05f);
-    EXPECT_LT(densityVariance, 0.1f);
+    const std::map<Vertex, Scalar> densities = ComputeLocalDensities(curve, edgeLength);
+    const Scalar meanDensity = ComputeMeanDensity(densities);
+    const Scalar densityVariance = ComputeDensityVariance(densities, meanDensity);
+    EXPECT_NEAR(1.0 / meanDensity, edgeLength, 0.05);
+    EXPECT_LT(densityVariance, 0.1);
 }
 
 TEST_F(CurveRemeshingTests_DeformedCircle, AdaptiveRemeshing_VertexDensity)
 {
     // Arrange
-    constexpr float edgeLength = 0.2f;
+    constexpr Scalar edgeLength = 0.2;
     constexpr unsigned int iterations = 10;
     CurveRemeshing remesher(curve);
     AdaptiveRemeshingSettings settings;
     settings.MinEdgeLength = edgeLength;
-    settings.MaxEdgeLength = 1.5f * edgeLength;
-    settings.ApproxError = 0.05f * edgeLength;
+    settings.MaxEdgeLength = 1.5 * edgeLength;
+    settings.ApproxError = 0.05 * edgeLength;
     settings.NRemeshingIterations = iterations;
     settings.NTangentialSmoothingIters = 6;
     settings.UseProjection = true;
@@ -207,14 +207,14 @@ TEST_F(CurveRemeshingTests_DeformedCircle, AdaptiveRemeshing_VertexDensity)
     EXPORT_AFTER(curve, "CurveRemeshingTests_DeformedCircle_AdaptiveRemeshing");
 
     // Assert
-    const std::map<Vertex, float> curvatures = ComputeLocalCurvature(curve);
-    const std::map<Vertex, float> densities = ComputeLocalDensities(curve, edgeLength);
-    const float meanCurvature = ComputeMeanCurvature(curvatures);
-    const float curvatureVariance = ComputeCurvatureVariance(curvatures, meanCurvature);
+    const std::map<Vertex, Scalar> curvatures = ComputeLocalCurvature(curve);
+    const std::map<Vertex, Scalar> densities = ComputeLocalDensities(curve, edgeLength);
+    const Scalar meanCurvature = ComputeMeanCurvature(curvatures);
+    const Scalar curvatureVariance = ComputeCurvatureVariance(curvatures, meanCurvature);
 
-    const float meanDensity = ComputeMeanDensity(densities);
-    const float densityVariance = ComputeDensityVariance(densities, meanDensity);
+    const Scalar meanDensity = ComputeMeanDensity(densities);
+    const Scalar densityVariance = ComputeDensityVariance(densities, meanDensity);
 
-    EXPECT_LT(curvatureVariance, 0.1f);
-    EXPECT_LT(densityVariance, 0.1f);
+    EXPECT_LT(curvatureVariance, 0.1);
+    EXPECT_LT(densityVariance, 0.1);
 }

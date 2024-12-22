@@ -180,7 +180,7 @@ TEST(IntersectionUtilTests, TriangleIntersectsTriangle_AlmostTouching)
 //{
 //    // Arrange
 //    const std::vector triangle1 = { vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0) };
-//    const std::vector triangle2 = { vec3(0.4f, 0.4f, -0.5f), vec3(1.5f, 0.5f, 0.5f), vec3(0.5f, 1.5f, 0.5f) };
+//    const std::vector triangle2 = { vec3(0.4, 0.4, -0.5), vec3(1.5, 0.5, 0.5), vec3(0.5, 1.5, 0.5) };
 //
 //    // Act
 //    const auto intersection = ComputeTriangleTriangleIntersectionLine(triangle1, triangle2);
@@ -197,7 +197,7 @@ TEST(IntersectionUtilTests, ComputeTriangleTriangleIntersectionLine)
 {
     // Arrange
     const std::vector triangle1 = { vec3(0, 0, 0), vec3(2, 0, 0), vec3(0, 2, 0) };
-    const std::vector triangle2 = { vec3(0.4f, 0.4f, -0.2f), vec3(1.5f, 0.5f, 0.2f), vec3(0.5f, 1.5f, 0.2f) };
+    const std::vector triangle2 = { vec3(0.4, 0.4, -0.2), vec3(1.5, 0.5, 0.2), vec3(0.5, 1.5, 0.2) };
 
     // Act
 	const auto intersection = ComputeTriangleTriangleIntersectionLine(triangle1, triangle2);
@@ -205,8 +205,8 @@ TEST(IntersectionUtilTests, ComputeTriangleTriangleIntersectionLine)
     // Assert
 	EXPECT_TRUE(intersection.has_value());
     if (intersection) {
-        EXPECT_VEC3_NEAR(intersection->first, vec3(0.95f, 0.45f, 0), 1e-6);
-        EXPECT_VEC3_NEAR(intersection->second, vec3(0.45f, 0.95f, 0), 1e-6);
+        EXPECT_VEC3_NEAR(intersection->first, vec3(0.95, 0.45, 0), 1e-6);
+        EXPECT_VEC3_NEAR(intersection->second, vec3(0.45, 0.95, 0), 1e-6);
     }
 }
 

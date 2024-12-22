@@ -27,7 +27,7 @@ void RemeshingTests()
 	pmp::SurfaceMesh mesh;
 	mesh.read(dataDirPath + "bunny_no_holes2.obj");
 
-	float meanEdgeLength = 0.0f;
+	pmp::Scalar meanEdgeLength = 0.0;
 	for (const auto& e : mesh.edges())
 	{
 		meanEdgeLength += mesh.edge_length(e);
@@ -38,7 +38,7 @@ void RemeshingTests()
 	constexpr int normalDeviation = 180;
 	constexpr int aspectRatio = 10;
 	pmp::Decimation decim(mesh);
-	decim.initialize(aspectRatio, 0.0, 0.0, normalDeviation, 0.0f);
+	decim.initialize(aspectRatio, 0.0, 0.0, normalDeviation, 0.0);
 	decim.decimate(mesh.n_vertices() * 0.01 * targetDecimPercentage);*/
 
 
@@ -49,8 +49,8 @@ void RemeshingTests()
 void MobiusStripVoxelization()
 {
 	constexpr Geometry::MobiusStripSettings mSettings{
-		1.0f,
-			1.0f,
+		    1.0,
+			1.0,
 			40,
 			10,
 			false,
@@ -65,8 +65,8 @@ void MobiusStripVoxelization()
 	mMesh.write(dataOutPath + "mobius.obj");
 	auto bbox = mMesh.bounds();
 	const auto bboxSize = bbox.max() - bbox.min();
-	bbox.expand(0.1f * bboxSize[0], 0.1f * bboxSize[1], bboxSize[2]);
-	Geometry::ScalarGrid grid(0.02f, bbox);
+	bbox.expand(0.1 * bboxSize[0], 0.1 * bboxSize[1], bboxSize[2]);
+	Geometry::ScalarGrid grid(0.02, bbox);
 	Geometry::ComputeInteriorExteriorSignFromMeshNormals(grid, mMesh);
 
 	ExportToVTI(dataOutPath + "MobiusSignVals", grid);
@@ -76,22 +76,22 @@ void MetaballTest()
 {
 	constexpr double initVal = 0.0;
 	// grid containing both balls
-	//Geometry::ScalarGrid grid(0.05f, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0f, 10.0f, 10.0f} }, initVal);
+	//Geometry::ScalarGrid grid(0.05, pmp::BoundingBox{ pmp::vec3{}, pmp::vec3{10.0, 10.0, 10.0} }, initVal);
 
 	// grid containing a clipped voxel field of the balls
-	/**/Geometry::ScalarGrid grid(1.0f, pmp::BoundingBox{
-		pmp::vec3{2.1f, 3.0f, 1.6f},
-			pmp::vec3{7.3f, 8.3f, 6.2f} }, initVal);
+	/**/Geometry::ScalarGrid grid(1.0, pmp::BoundingBox{
+		pmp::vec3{2.1, 3.0, 1.6},
+			pmp::vec3{7.3, 8.3, 6.2} }, initVal);
 
 	const Geometry::ScalarGridBoolOpFunction opFnc = Geometry::SimpleUnion;
 
 	// apply balls
 	const Geometry::MetaBallParams mBall1Params = {
-		pmp::vec3{3.0f, 4.0f, 4.0f}, 4.0f, opFnc
+		pmp::vec3{3.0, 4.0, 4.0}, 4.0, opFnc
 	};
 	ApplyMetaBallToGrid(grid, mBall1Params);
 	const Geometry::MetaBallParams mBall2Params = {
-		pmp::vec3{4.0f, 5.0f, 4.0f}, 5.0f, opFnc
+		pmp::vec3{4.0, 5.0, 4.0}, 5.0, opFnc
 	};
 	ApplyMetaBallToGrid(grid, mBall2Params);
 
@@ -214,7 +214,7 @@ void MMapOBJChunkMarkingTest()
 		pmp::SurfaceMesh parImportedMesh;
 		std::optional<Geometry::BaseMeshGeometryData> baseDataOpt;
 
-		std::vector<float> threadIds;
+		std::vector<pmp::Scalar> threadIds;
 		baseDataOpt = Geometry::ImportOBJMeshGeometryData(dataDirPath + meshName + ".obj", true, &threadIds);
 		if (!baseDataOpt.has_value())
 		{
@@ -230,7 +230,7 @@ void MMapOBJChunkMarkingTest()
 			std::cerr << "parImportedMesh.n_vertices() != threadIds.size()!\n";
 			break;
 		}
-		auto vThreadIdProp = parImportedMesh.add_vertex_property<float>("v:threadId");
+		auto vThreadIdProp = parImportedMesh.add_vertex_property<pmp::Scalar>("v:threadId");
 		for (const auto& v : parImportedMesh.vertices())
 		{
 			vThreadIdProp[v] = threadIds[v.idx()];

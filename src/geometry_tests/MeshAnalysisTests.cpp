@@ -1,14 +1,15 @@
 #include "gtest/gtest.h"
 
-#include "geometry/MeshAnalysis.h"
+#include "pmp/Types.h"
+#include "pmp/algorithms/CurveFactory.h"
 
-#include <pmp/Types.h>
-#include <optional>
+#include "geometry/MeshAnalysis.h"
 
 #include "geometry/CollisionKdTree.h"
 #include "geometry/GeometryAdapters.h"
 #include "geometry/IcoSphereBuilder.h"
-#include "pmp/algorithms/CurveFactory.h"
+
+#include <optional>
 
 using namespace Geometry;
 using namespace pmp;
@@ -27,7 +28,7 @@ TEST(PMPManifoldCurve2DHasSelfIntersectionsTests, EmptyCurveThrowsException)
 TEST(PMPManifoldCurve2DHasSelfIntersectionsTests, SimpleClosedCurveHasNoIntersections)
 {
     // Arrange
-    const ManifoldCurve2D simpleCurve = CurveFactory::circle(Point2(0.0f, 0.0f), 1.0f, 32);
+    const ManifoldCurve2D simpleCurve = CurveFactory::circle(Point2(0.0, 0.0), 1.0, 32);
 
     // Act
     const bool hasIntersections = PMPManifoldCurve2DHasSelfIntersections(simpleCurve);
@@ -40,10 +41,10 @@ TEST(PMPManifoldCurve2DHasSelfIntersectionsTests, SelfIntersectingCurveReturnsTr
 {
     // Arrange
     ManifoldCurve2D selfIntersectingCurve;
-    selfIntersectingCurve.add_vertex(Point2(0.0f, 0.0f));
-    selfIntersectingCurve.add_vertex(Point2(1.0f, 0.0f));
-    selfIntersectingCurve.add_vertex(Point2(0.5f, 1.0f));
-    selfIntersectingCurve.add_vertex(Point2(1.5f, 1.0f));
+    selfIntersectingCurve.add_vertex(Point2(0.0, 0.0));
+    selfIntersectingCurve.add_vertex(Point2(1.0, 0.0));
+    selfIntersectingCurve.add_vertex(Point2(0.5, 1.0));
+    selfIntersectingCurve.add_vertex(Point2(1.5, 1.0));
     selfIntersectingCurve.add_edge(Vertex(0), Vertex(1));
     selfIntersectingCurve.add_edge(Vertex(1), Vertex(2));
     selfIntersectingCurve.add_edge(Vertex(2), Vertex(3));
@@ -61,8 +62,8 @@ TEST(PMPManifoldCurve2DHasSelfIntersectionsTests, SelfIntersectingCurveReturnsTr
 TEST(IsPointInsidePMPManifoldCurveTests, PointInsideCircleReturnsTrue)
 {
     // Arrange
-    const ManifoldCurve2D circle = CurveFactory::circle(Point2(0.0f, 0.0f), 1.0f, 32);
-    const Point2 pointInside(0.5f, 0.5f);
+    const ManifoldCurve2D circle = CurveFactory::circle(Point2(0.0, 0.0), 1.0, 32);
+    const Point2 pointInside(0.5, 0.5);
 
     // Act
     const bool isInside = IsPointInsidePMPManifoldCurve(pointInside, circle);
@@ -74,8 +75,8 @@ TEST(IsPointInsidePMPManifoldCurveTests, PointInsideCircleReturnsTrue)
 TEST(IsPointInsidePMPManifoldCurveTests, PointOutsideCircleReturnsFalse)
 {
     // Arrange
-    const ManifoldCurve2D circle = CurveFactory::circle(Point2(0.0f, 0.0f), 1.0f, 32);
-    const Point2 pointOutside(2.0f, 2.0f);
+    const ManifoldCurve2D circle = CurveFactory::circle(Point2(0.0, 0.0), 1.0, 32);
+    const Point2 pointOutside(2.0, 2.0);
 
     // Act
     const bool isInside = IsPointInsidePMPManifoldCurve(pointOutside, circle);
@@ -87,8 +88,8 @@ TEST(IsPointInsidePMPManifoldCurveTests, PointOutsideCircleReturnsFalse)
 TEST(IsPointInsidePMPManifoldCurveTests, PointOnCircleBoundaryReturnsFalse)
 {
     // Arrange
-    const ManifoldCurve2D circle = CurveFactory::circle(Point2(0.0f, 0.0f), 1.0f, 32);
-    const Point2 pointOnBoundary(1.0f, 0.0f);
+    const ManifoldCurve2D circle = CurveFactory::circle(Point2(0.0, 0.0), 1.0, 32);
+    const Point2 pointOnBoundary(1.0, 0.0);
 
     // Act
     const bool isInside = IsPointInsidePMPManifoldCurve(pointOnBoundary, circle);
@@ -101,15 +102,15 @@ TEST(IsPointInsidePMPManifoldCurveTests, PointInsideConcaveCurveReturnsTrue)
 {
     // Arrange
     ManifoldCurve2D concaveCurve;
-    concaveCurve.add_vertex(Point2(0.0f, 0.0f));
-    concaveCurve.add_vertex(Point2(2.0f, 0.0f));
-    concaveCurve.add_vertex(Point2(1.0f, 1.0f));
-    concaveCurve.add_vertex(Point2(1.0f, 2.0f));
+    concaveCurve.add_vertex(Point2(0.0, 0.0));
+    concaveCurve.add_vertex(Point2(2.0, 0.0));
+    concaveCurve.add_vertex(Point2(1.0, 1.0));
+    concaveCurve.add_vertex(Point2(1.0, 2.0));
     concaveCurve.add_edge(Vertex(0), Vertex(1));
     concaveCurve.add_edge(Vertex(1), Vertex(2));
     concaveCurve.add_edge(Vertex(2), Vertex(3));
     concaveCurve.add_edge(Vertex(3), Vertex(0));
-    const Point2 pointInside(1.0f, 0.5f);
+    const Point2 pointInside(1.0, 0.5);
 
     // Act
     const bool isInside = IsPointInsidePMPManifoldCurve(pointInside, concaveCurve);
@@ -122,15 +123,15 @@ TEST(IsPointInsidePMPManifoldCurveTests, PointOutsideConcaveCurveReturnsFalse)
 {
     // Arrange
     ManifoldCurve2D concaveCurve;
-    concaveCurve.add_vertex(Point2(0.0f, 0.0f));
-    concaveCurve.add_vertex(Point2(2.0f, 0.0f));
-    concaveCurve.add_vertex(Point2(1.0f, 1.0f));
-    concaveCurve.add_vertex(Point2(1.0f, 2.0f));
+    concaveCurve.add_vertex(Point2(0.0, 0.0));
+    concaveCurve.add_vertex(Point2(2.0, 0.0));
+    concaveCurve.add_vertex(Point2(1.0, 1.0));
+    concaveCurve.add_vertex(Point2(1.0, 2.0));
     concaveCurve.add_edge(Vertex(0), Vertex(1));
     concaveCurve.add_edge(Vertex(1), Vertex(2));
     concaveCurve.add_edge(Vertex(2), Vertex(3));
     concaveCurve.add_edge(Vertex(3), Vertex(0));
-    const Point2 pointOutside(1.5f, 1.5f);
+    const Point2 pointOutside(1.5, 1.5);
 
     // Act
     const bool isInside = IsPointInsidePMPManifoldCurve(pointOutside, concaveCurve);
@@ -146,21 +147,21 @@ TEST(IsPointInsidePMPSurfaceMeshTests, IcoSphere_SamplePtRaysPassingThroughFace)
 {
     // Arrange
     constexpr unsigned int icoSphereSubdiv = 2;
-    constexpr float icoSphereRadius = 1.0f;
+    constexpr pmp::Scalar icoSphereRadius = 1.0;
     IcoSphereBuilder icoBuilder({ icoSphereSubdiv, icoSphereRadius });
     icoBuilder.BuildBaseData();
     icoBuilder.BuildPMPSurfaceMesh();
     SurfaceMesh icoSphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
-    const auto rotMatrix = rotation_matrix(vec3{ 0.0f, 0.0f, 1.0f }, 0.1f * static_cast<float>(M_PI));
+    const auto rotMatrix = rotation_matrix(vec3{ 0.0, 0.0, 1.0 }, 0.1 * static_cast<pmp::Scalar>(M_PI));
     icoSphereMesh *= rotMatrix;
 
     const PMPSurfaceMeshAdapter icoSphereAdapter(std::make_shared<SurfaceMesh>(icoSphereMesh));
     const auto surfaceKdTree = std::make_shared<CollisionKdTree>(icoSphereAdapter, CenterSplitFunction);
 
-    const Point insidePoint(0.5f, 0.0f, 0.0f); // Clearly inside the sphere
-    const Point onSurfacePoint(1.0f, 0.0f, 0.0f); // On the surface of the sphere
-    const Point outsidePoint(1.5f, 0.0f, 0.0f); // Clearly outside the sphere
-    const Point outsideNegXPoint(-1.5f, 0.0f, 0.0f); // Clearly outside, but the +X ray intersects the surface twice
+    const Point insidePoint(0.5, 0.0, 0.0); // Clearly inside the sphere
+    const Point onSurfacePoint(1.0, 0.0, 0.0); // On the surface of the sphere
+    const Point outsidePoint(1.5, 0.0, 0.0); // Clearly outside the sphere
+    const Point outsideNegXPoint(-1.5, 0.0, 0.0); // Clearly outside, but the +X ray intersects the surface twice
 
     // Act
     const bool isInsidePointInside = IsPointInsidePMPSurfaceMesh(insidePoint, surfaceKdTree);
@@ -179,7 +180,7 @@ TEST(IsPointInsidePMPSurfaceMeshTests, IcoSphere_SamplePtRaysPassingThroughShare
 {
     // Arrange
     constexpr unsigned int icoSphereSubdiv = 2;
-    constexpr float icoSphereRadius = 1.0f;
+    constexpr pmp::Scalar icoSphereRadius = 1.0;
     IcoSphereBuilder icoBuilder({ icoSphereSubdiv, icoSphereRadius });
     icoBuilder.BuildBaseData();
     icoBuilder.BuildPMPSurfaceMesh();
@@ -188,10 +189,10 @@ TEST(IsPointInsidePMPSurfaceMeshTests, IcoSphere_SamplePtRaysPassingThroughShare
     const PMPSurfaceMeshAdapter icoSphereAdapter(std::make_shared<SurfaceMesh>(icoSphereMesh));
     const auto surfaceKdTree = std::make_shared<CollisionKdTree>(icoSphereAdapter, CenterSplitFunction);
 
-    const Point insidePoint(0.5f, 0.0f, 0.0f); // Clearly inside the sphere
-    const Point onSurfacePoint(1.0f, 0.0f, 0.0f); // On the surface of the sphere
-    const Point outsidePoint(1.5f, 0.0f, 0.0f); // Clearly outside the sphere
-    const Point outsideNegXPoint(-1.5f, 0.0f, 0.0f); // Clearly outside, but the +X ray intersects the surface twice
+    const Point insidePoint(0.5, 0.0, 0.0); // Clearly inside the sphere
+    const Point onSurfacePoint(1.0, 0.0, 0.0); // On the surface of the sphere
+    const Point outsidePoint(1.5, 0.0, 0.0); // Clearly outside the sphere
+    const Point outsideNegXPoint(-1.5, 0.0, 0.0); // Clearly outside, but the +X ray intersects the surface twice
 
     // Act
     const bool isInsidePointInside = IsPointInsidePMPSurfaceMesh(insidePoint, surfaceKdTree);
@@ -210,21 +211,21 @@ TEST(IsPointInsidePMPSurfaceMeshTests, IcoSphere_SamplePtRaysPassingThroughShare
 {
 	// Arrange
     constexpr unsigned int icoSphereSubdiv = 2;
-    constexpr float icoSphereRadius = 1.0f;
+    constexpr pmp::Scalar icoSphereRadius = 1.0;
     IcoSphereBuilder icoBuilder({ icoSphereSubdiv, icoSphereRadius });
     icoBuilder.BuildBaseData();
     icoBuilder.BuildPMPSurfaceMesh();
     SurfaceMesh icoSphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
-    const auto rotMatrix = rotation_matrix(vec3{ 0.0f, 1.0f, 0.0f }, 0.1f * static_cast<float>(M_PI));
+    const auto rotMatrix = rotation_matrix(vec3{ 0.0, 1.0, 0.0 }, 0.1 * static_cast<pmp::Scalar>(M_PI));
     icoSphereMesh *= rotMatrix;
 
     const PMPSurfaceMeshAdapter icoSphereAdapter(std::make_shared<SurfaceMesh>(icoSphereMesh));
     const auto surfaceKdTree = std::make_shared<CollisionKdTree>(icoSphereAdapter, CenterSplitFunction);
 
-    const Point insidePoint(0.5f, 0.0f, 0.0f); // Clearly inside the sphere
-    const Point onSurfacePoint(1.0f, 0.0f, 0.0f); // On the surface of the sphere
-    const Point outsidePoint(1.5f, 0.0f, 0.0f); // Clearly outside the sphere
-    const Point outsideNegXPoint(-1.5f, 0.0f, 0.0f); // Clearly outside, but the +X ray intersects the surface twice
+    const Point insidePoint(0.5, 0.0, 0.0); // Clearly inside the sphere
+    const Point onSurfacePoint(1.0, 0.0, 0.0); // On the surface of the sphere
+    const Point outsidePoint(1.5, 0.0, 0.0); // Clearly outside the sphere
+    const Point outsideNegXPoint(-1.5, 0.0, 0.0); // Clearly outside, but the +X ray intersects the surface twice
 
     // Act
     const bool isInsidePointInside = IsPointInsidePMPSurfaceMesh(insidePoint, surfaceKdTree);
@@ -244,12 +245,12 @@ TEST(IsPointInsidePMPSurfaceMeshTests, ConcaveDumbbellShapeSamplePtRays)
     // Arrange
     BaseMeshGeometryData meshData;
     meshData.Vertices = {
-        Point{ 0.955864f,  0.797707f, -0.797707f }, Point{ 0.894073f, -0.838166f, -0.838166f },
-        Point{ 0.894073f,  0.838166f,  0.838166f }, Point{ 0.955864f, -0.797707f,  0.797707f },
-        Point{-0.894073f,  0.838166f, -0.838166f }, Point{-0.955864f, -0.797707f, -0.797707f },
-        Point{-0.955864f,  0.797707f,  0.797707f }, Point{-0.894073f, -0.838166f,  0.838166f },
-        Point{-0.058848f, -0.401921f, -0.401921f }, Point{-0.058848f,  0.401921f,  0.401921f },
-        Point{ 0.058848f, -0.401921f,  0.401921f }, Point{ 0.058848f,  0.401921f, -0.401921f }
+        Point{ 0.955864,  0.797707, -0.797707 }, Point{ 0.894073, -0.838166, -0.838166 },
+        Point{ 0.894073,  0.838166,  0.838166 }, Point{ 0.955864, -0.797707,  0.797707 },
+        Point{-0.894073,  0.838166, -0.838166 }, Point{-0.955864, -0.797707, -0.797707 },
+        Point{-0.955864,  0.797707,  0.797707 }, Point{-0.894073, -0.838166,  0.838166 },
+        Point{-0.058848, -0.401921, -0.401921 }, Point{-0.058848,  0.401921,  0.401921 },
+        Point{ 0.058848, -0.401921,  0.401921 }, Point{ 0.058848,  0.401921, -0.401921 }
     };
     meshData.PolyIndices = {
         { 4, 9, 11 }, { 9, 7, 10 }, { 6, 5, 7 }, { 1, 10, 8 },
@@ -261,11 +262,11 @@ TEST(IsPointInsidePMPSurfaceMeshTests, ConcaveDumbbellShapeSamplePtRays)
     const BaseMeshAdapter baseAdapter(std::make_shared<BaseMeshGeometryData>(meshData));
     const auto surfaceKdTree = std::make_shared<CollisionKdTree>(baseAdapter, CenterSplitFunction);
 
-    const Point outsidePointTwoTransitions(0.02f, 0.11925f, 0.61f);
-    const Point insidePointOneTransition(0.02f, 0.11925f, -0.014083f);
-    const Point outsidePointNoTransitions(0.02f, 0.11925f, 0.90422f);
-    const Point outsidePointFourTransitions(-1.6135f, -0.029103f, 0.70568f);
-    const Point insidePointThreeTransitions(-0.77095f, -0.2763f, 0.53413f);
+    const Point outsidePointTwoTransitions(0.02, 0.11925, 0.61);
+    const Point insidePointOneTransition(0.02, 0.11925, -0.014083);
+    const Point outsidePointNoTransitions(0.02, 0.11925, 0.90422);
+    const Point outsidePointFourTransitions(-1.6135, -0.029103, 0.70568);
+    const Point insidePointThreeTransitions(-0.77095, -0.2763, 0.53413);
 
     // Act
     const bool resultOutsideTwoTransitions = IsPointInsidePMPSurfaceMesh(outsidePointTwoTransitions, surfaceKdTree);

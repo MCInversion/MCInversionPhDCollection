@@ -76,7 +76,7 @@ Point centroid(const SurfaceMesh& mesh, Face f)
 Point2 centroid(const ManifoldCurve2D& curve, Edge e)
 {
     const auto [v0, v1] = curve.vertices(e);
-    return 0.5f * (curve.position(v0) + curve.position(v1));
+    return 0.5 * (curve.position(v0) + curve.position(v1));
 }
 
 Point centroid(const SurfaceMesh& mesh)
@@ -339,7 +339,7 @@ ImplicitLaplaceInfo laplace_implicit_voronoi(const SurfaceMesh& mesh, Vertex v)
     }
 
     const auto area = static_cast<Scalar>(voronoi_area(mesh, v));
-    const Scalar areaNorm = (2.0f * area);
+    const Scalar areaNorm = (2.0 * area);
     for (auto& [v, weight] : result.vertexWeights)
         weight /= areaNorm;
 
@@ -364,7 +364,7 @@ ImplicitLaplaceInfo laplace_implicit_barycentric(const SurfaceMesh& mesh, Vertex
     }
 
     const auto area = static_cast<Scalar>(barycentric_area(mesh, v));
-    const Scalar areaNorm = (2.0f * area);
+    const Scalar areaNorm = (2.0 * area);
     for (auto& [v, weight] : result.vertexWeights)
         weight /= areaNorm;
 
@@ -388,9 +388,9 @@ ImplicitLaplaceInfo laplace_implicit_1D(const ManifoldCurve2D& curve, Vertex v)
 
     const Scalar h = l0 + l1;  // Effective double length of the control volume
 
-    result.vertexWeights[vPrev] = 2.0f / (h * l0);
-    result.vertexWeights[vNext] = 2.0f / (h * l1);
-    result.weightSum = 2.0f / h * (1.0f / l0 + 1.0f / l1);
+    result.vertexWeights[vPrev] = 2.0 / (h * l0);
+    result.vertexWeights[vNext] = 2.0 / (h * l1);
+    result.weightSum = 2.0 / h * (1.0 / l0 + 1.0 / l1);
 
     return result;
 }
@@ -410,7 +410,7 @@ Point2 laplace_1D(const ManifoldCurve2D& curve, Vertex v)
 
     const Scalar h = l0 + l1;  // Effective double length of the control volume
 
-    laplace += (2.0f / h) * ((curve.position(vNext) - curve.position(v)) / l1 - (curve.position(v) - curve.position(vPrev)) / l0);
+    laplace += (2.0 / h) * ((curve.position(vNext) - curve.position(v)) / l1 - (curve.position(v) - curve.position(vPrev)) / l0);
 
     return laplace;
 }
@@ -484,7 +484,7 @@ Scalar vertex_curvature(const ManifoldCurve2D& curve, Vertex v)
     // Calculate the area of triangle (pPrev, p, pNext) using the determinant method
     const Scalar area = (pPrev[0] * (p[1] - pNext[1]) +
         p[0] * (pNext[1] - pPrev[1]) +
-        pNext[0] * (pPrev[1] - p[1])) * 0.5f;
+        pNext[0] * (pPrev[1] - p[1])) * 0.5;
 
     const Scalar l2 = norm(pNext - pPrev); // triangle hypotenuse
 

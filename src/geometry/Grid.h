@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pmp/Types.h"
 #include "pmp/BoundingBox.h"
 
 #include <vector>
@@ -29,9 +30,9 @@ namespace Geometry
 	class ScalarGrid
 	{
 	public:
-		ScalarGrid(const float& cellSize, const pmp::BoundingBox& box);
+		ScalarGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box);
 
-		ScalarGrid(const float& cellSize, const pmp::BoundingBox& box, const double& initVal);
+		ScalarGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box, const double& initVal);
 
 		// ====== Getters ======================
 
@@ -55,12 +56,12 @@ namespace Geometry
 			return m_Dimensions;
 		}
 
-		float& CellSize()
+		pmp::Scalar& CellSize()
 		{
 			return m_CellSize;
 		}
 
-		[[nodiscard]] const float& CellSize() const
+		[[nodiscard]] const pmp::Scalar& CellSize() const
 		{
 			return m_CellSize;
 		}
@@ -115,7 +116,7 @@ namespace Geometry
 	private:
 		pmp::BoundingBox m_Box{};
 		GridDimensions m_Dimensions{};
-		float m_CellSize{};
+		pmp::Scalar m_CellSize{};
 		std::vector<double> m_Values{};
 		std::vector<bool> m_FrozenValues{};
 	};
@@ -130,9 +131,9 @@ namespace Geometry
 		 */
 		explicit VectorGrid(const ScalarGrid& scalarGrid);
 
-		VectorGrid(const float& cellSize, const pmp::BoundingBox& box);
+		VectorGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box);
 
-		VectorGrid(const float& cellSize, const pmp::BoundingBox& box, const pmp::vec3& initVal);
+		VectorGrid(const pmp::Scalar& cellSize, const pmp::BoundingBox& box, const pmp::vec3& initVal);
 
 		// ====== Getters ======================
 
@@ -156,12 +157,12 @@ namespace Geometry
 			return m_Dimensions;
 		}
 
-		float& CellSize()
+		pmp::Scalar& CellSize()
 		{
 			return m_CellSize;
 		}
 
-		[[nodiscard]] const float& CellSize() const
+		[[nodiscard]] const pmp::Scalar& CellSize() const
 		{
 			return m_CellSize;
 		}
@@ -236,7 +237,7 @@ namespace Geometry
 	private:
 		pmp::BoundingBox m_Box{};
 		GridDimensions m_Dimensions{};
-		float m_CellSize{};
+		pmp::Scalar m_CellSize{};
 
 		std::vector<double> m_ValuesX{};
 		std::vector<double> m_ValuesY{};
@@ -263,9 +264,9 @@ namespace Geometry
 	class ScalarGrid2D
 	{
 	public:
-		ScalarGrid2D(const float& cellSize, const pmp::BoundingBox2& box);
+		ScalarGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box);
 
-		ScalarGrid2D(const float& cellSize, const pmp::BoundingBox2& box, const double& initVal);
+		ScalarGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box, const double& initVal);
 
 		// ====== Getters ======================
 
@@ -289,12 +290,12 @@ namespace Geometry
 			return m_Dimensions;
 		}
 
-		float& CellSize()
+		pmp::Scalar& CellSize()
 		{
 			return m_CellSize;
 		}
 
-		[[nodiscard]] const float& CellSize() const
+		[[nodiscard]] const pmp::Scalar& CellSize() const
 		{
 			return m_CellSize;
 		}
@@ -349,7 +350,7 @@ namespace Geometry
 	private:
 		pmp::BoundingBox2 m_Box{};
 		GridDimensions2D m_Dimensions{};
-		float m_CellSize{};
+		pmp::Scalar m_CellSize{};
 		std::vector<double> m_Values{};
 		std::vector<bool> m_FrozenValues{};
 	};
@@ -364,9 +365,9 @@ namespace Geometry
 		 */
 		explicit VectorGrid2D(const ScalarGrid2D& scalarGrid);
 
-		VectorGrid2D(const float& cellSize, const pmp::BoundingBox2& box);
+		VectorGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box);
 
-		VectorGrid2D(const float& cellSize, const pmp::BoundingBox2& box, const pmp::vec2& initVal);
+		VectorGrid2D(const pmp::Scalar& cellSize, const pmp::BoundingBox2& box, const pmp::vec2& initVal);
 
 		// ====== Getters ======================
 
@@ -390,12 +391,12 @@ namespace Geometry
 			return m_Dimensions;
 		}
 
-		float& CellSize()
+		pmp::Scalar& CellSize()
 		{
 			return m_CellSize;
 		}
 
-		[[nodiscard]] const float& CellSize() const
+		[[nodiscard]] const pmp::Scalar& CellSize() const
 		{
 			return m_CellSize;
 		}
@@ -460,7 +461,7 @@ namespace Geometry
 	private:
 		pmp::BoundingBox2 m_Box{};
 		GridDimensions2D m_Dimensions{};
-		float m_CellSize{};
+		pmp::Scalar m_CellSize{};
 
 		std::vector<double> m_ValuesX{};
 		std::vector<double> m_ValuesY{};

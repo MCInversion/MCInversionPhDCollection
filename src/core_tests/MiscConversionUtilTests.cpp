@@ -25,23 +25,23 @@ const std::string dataOutPath = fsDataOutPath.string();
 TEST(ApproximateMeshPatchWithQuadric, ApplyHyperboloidDistanceFieldFromMesh1Ring)
 {
     // Arrange
-    constexpr float roiHalfDim = 5.0f;
-    constexpr float roiDim = 2.0f * roiHalfDim;
-    const auto box = BoundingBox{ vec3{0.0f, 0.0f, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
+    constexpr pmp::Scalar roiHalfDim = 5.0;
+    constexpr pmp::Scalar roiDim = 2.0 * roiHalfDim;
+    const auto box = BoundingBox{ vec3{0.0, 0.0, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
     const auto fieldCenter = box.center();
-    constexpr float cellSize = 0.1f;
+    constexpr pmp::Scalar cellSize = 0.1;
     constexpr double initVal = DEFAULT_SCALAR_GRID_INIT_VAL;
     ScalarGrid grid(cellSize, box, initVal);
 
     BaseMeshGeometryData saddleBaseMesh;
     saddleBaseMesh.Vertices = std::vector{
-        Point{0.035850f, 0.421721f, 0.525021f},
-        Point{-0.065786f, 0.509711f, -0.487154f},
-        Point{0.549778f, 0.034613f, 0.180541f},
-        Point{-0.413034f, 0.047552f, 0.450408f},
-        Point{-0.011141f, 0.240242f, 0.022254f}, // central vertex
-        Point{0.383242f, 0.051138f, -0.414398f},
-        Point{-0.579564f, -0.043537f, -0.144535f},
+        Point{0.035850, 0.421721, 0.525021},
+        Point{-0.065786, 0.509711, -0.487154},
+        Point{0.549778, 0.034613, 0.180541},
+        Point{-0.413034, 0.047552, 0.450408},
+        Point{-0.011141, 0.240242, 0.022254}, // central vertex
+        Point{0.383242, 0.051138, -0.414398},
+        Point{-0.579564, -0.043537, -0.144535},
     };
     saddleBaseMesh.PolyIndices = std::vector{
         std::vector<unsigned int>{0, 2, 4},
@@ -65,19 +65,19 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyHyperboloidDistanceFieldFromMesh1Ring
     const auto tangent1 = normalize(cross(normal, arbitraryVec));
     const auto reorientToStandardX = rotation_matrix(standardX, tangent1);
 
-    const auto tangentHyperboloidCenter = saddleBaseMesh.Vertices[4] - (1.0f / curvature.max) * normal;
+    const auto tangentHyperboloidCenter = saddleBaseMesh.Vertices[4] - (1.0 / curvature.max) * normal;
 
     const auto translateToHyperboloidCenter = translation_matrix(-tangentHyperboloidCenter);
     const auto translateToFieldCenter = translation_matrix(fieldCenter);
     const auto affineTransformToStandardTangentPoint = translateToFieldCenter * (reorientToStandardNormal * reorientToStandardX) * translateToHyperboloidCenter;
 
-    constexpr Scalar CURVATURE_EPSILON{ 1e-6f };
+    constexpr Scalar CURVATURE_EPSILON{ 1e-6 };
     QuadricParams params{
         fieldCenter,
-        0.5f / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
-        0.5f / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
-        0.5f / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
-        vec3{1, 1, 1} * (roiHalfDim / 2.5f),
+        0.5 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        0.5 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        0.5 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
+        vec3{1, 1, 1} * (roiHalfDim / 2.5),
         DistanceUnion
     };
 
@@ -92,23 +92,23 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyHyperboloidDistanceFieldFromMesh1Ring
 TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingConvex)
 {
     // Arrange
-    constexpr float roiHalfDim = 5.0f;
-    constexpr float roiDim = 2.0f * roiHalfDim;
-    const auto box = BoundingBox{ vec3{0.0f, 0.0f, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
+    constexpr pmp::Scalar roiHalfDim = 5.0;
+    constexpr pmp::Scalar roiDim = 2.0 * roiHalfDim;
+    const auto box = BoundingBox{ vec3{0.0, 0.0, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
     const auto fieldCenter = box.center();
-    constexpr float cellSize = 0.1f;
+    constexpr pmp::Scalar cellSize = 0.1;
     constexpr double initVal = DEFAULT_SCALAR_GRID_INIT_VAL;
     ScalarGrid grid(cellSize, box, initVal);
     
     BaseMeshGeometryData convexBaseMesh;
     convexBaseMesh.Vertices = std::vector{
-        Point{0.035850f, 0.248725f, 0.525021f},
-        Point{0.549778f, 0.208385f, 0.180541f},
-        Point{-0.011141f, 0.539888f, 0.022254f},
-        Point{-0.441162f, 0.128599f, -0.144535f},
-        Point{-0.065786f, 0.314575f, -0.487154f},
-        Point{-0.413034f, 0.047552f, 0.450408f},
-        Point{0.383242f, 0.184812f, -0.414398f},
+        Point{0.035850, 0.248725, 0.525021},
+        Point{0.549778, 0.208385, 0.180541},
+        Point{-0.011141, 0.539888, 0.022254},
+        Point{-0.441162, 0.128599, -0.144535},
+        Point{-0.065786, 0.314575, -0.487154},
+        Point{-0.413034, 0.047552, 0.450408},
+        Point{0.383242, 0.184812, -0.414398},
     };
     convexBaseMesh.PolyIndices = std::vector{
         std::vector<unsigned int>{0, 1, 2},
@@ -131,18 +131,18 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingCo
     const auto tangent1 = normalize(cross(normal, arbitraryVec));
     const auto reorientToStandardX = rotation_matrix(vec3{ 1, 0, 0 }, tangent1); // Reorient to the X-axis
 
-    const auto ellipsoidCenter = convexBaseMesh.Vertices[4] - (1.0f / curvature.max) * normal;
+    const auto ellipsoidCenter = convexBaseMesh.Vertices[4] - (1.0 / curvature.max) * normal;
     const auto translateToEllipsoidCenter = translation_matrix(-ellipsoidCenter);
     const auto translateToFieldCenter = translation_matrix(fieldCenter);
     const auto affineTransform = /*translateToFieldCenter * (reorientToStandardNormal * reorientToStandardX) **/ translateToEllipsoidCenter;
 
-    constexpr Scalar CURVATURE_EPSILON{ 1e-6f };
+    constexpr Scalar CURVATURE_EPSILON{ 1e-6 };
     QuadricParams params{
         fieldCenter,
-        1.0f / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
-        1.0f / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
-        1.0f / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
-        vec3{1, 1, 1} *(roiHalfDim / 2.5f),
+        1.0 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
+        1.0 / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
+        1.0 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        vec3{1, 1, 1} *(roiHalfDim / 2.5),
         DistanceUnion
     };
 
@@ -158,23 +158,23 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingCo
 TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingConcave)
 {
     // Arrange
-    constexpr float roiHalfDim = 5.0f;
-    constexpr float roiDim = 2.0f * roiHalfDim;
-    const auto box = BoundingBox{ vec3{0.0f, 0.0f, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
+    constexpr pmp::Scalar roiHalfDim = 5.0;
+    constexpr pmp::Scalar roiDim = 2.0 * roiHalfDim;
+    const auto box = BoundingBox{ vec3{0.0, 0.0, -roiHalfDim}, vec3{roiDim, roiDim, roiHalfDim} };
     const auto fieldCenter = box.center();
-    constexpr float cellSize = 0.1f;
+    constexpr pmp::Scalar cellSize = 0.1;
     constexpr double initVal = DEFAULT_SCALAR_GRID_INIT_VAL;
     ScalarGrid grid(cellSize, box, initVal);
 
     BaseMeshGeometryData concaveBaseMesh;
     concaveBaseMesh.Vertices = std::vector{
-        Point{0.035850f, 0.248725f, 0.525021f},
-        Point{0.549778f, 0.208385f, 0.180541f},
-        Point{-0.011141f, -0.149904f, 0.022254f},
-        Point{-0.441162f, 0.128599f, -0.144535f},
-        Point{-0.065786f, 0.314575f, -0.487154f},
-        Point{-0.413034f, 0.047552f, 0.450408f},
-        Point{0.383242f, 0.184812f, -0.414398f},
+        Point{0.035850, 0.248725, 0.525021},
+        Point{0.549778, 0.208385, 0.180541},
+        Point{-0.011141, -0.149904, 0.022254},
+        Point{-0.441162, 0.128599, -0.144535},
+        Point{-0.065786, 0.314575, -0.487154},
+        Point{-0.413034, 0.047552, 0.450408},
+        Point{0.383242, 0.184812, -0.414398},
     };
     concaveBaseMesh.PolyIndices = std::vector{
         std::vector<unsigned int>{0, 1, 2},
@@ -197,18 +197,18 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingCo
     const auto tangent1 = normalize(cross(normal, arbitraryVec));
     const auto reorientToStandardX = rotation_matrix(vec3{ 1, 0, 0 }, tangent1); // Reorient to the X-axis
 
-    const auto ellipsoidCenter = concaveBaseMesh.Vertices[4] - (1.0f / curvature.max) * normal;
+    const auto ellipsoidCenter = concaveBaseMesh.Vertices[4] - (1.0 / curvature.max) * normal;
     const auto translateToEllipsoidCenter = translation_matrix(-ellipsoidCenter);
     const auto translateToFieldCenter = translation_matrix(fieldCenter);
     const auto affineTransform = translateToFieldCenter * (reorientToStandardNormal * reorientToStandardX) * translateToEllipsoidCenter;
 
-    constexpr Scalar CURVATURE_EPSILON{ 1e-6f };
+    constexpr Scalar CURVATURE_EPSILON{ 1e-6 };
     QuadricParams params{
         fieldCenter,
-        1.0f / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
-        1.0f / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
-        1.0f / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
-        vec3{1, 1, 1} *(roiHalfDim / 2.5f),
+        1.0 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
+        1.0 / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
+        1.0 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        vec3{1, 1, 1} *(roiHalfDim / 2.5),
         DistanceUnion
     };
 

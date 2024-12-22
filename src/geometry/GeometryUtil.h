@@ -2,7 +2,6 @@
 
 #include <optional>
 
-#include "pmp/MatVec.h"
 #include "pmp/Types.h"
 
 // forward declarations
@@ -83,11 +82,11 @@ namespace Geometry
 	struct Ray
 	{
 		pmp::vec3 StartPt{};
-		pmp::vec3 Direction{ 1.0f, 0.0f, 0.0f };
-		pmp::vec3 InvDirection{ 1.0f, FLT_MAX, FLT_MAX };
-		float ParamMin{ 0.0f };
-		float ParamMax{ FLT_MAX };
-		float HitParam{ FLT_MAX };
+		pmp::vec3 Direction{ 1.0, 0.0, 0.0 };
+		pmp::vec3 InvDirection{ 1.0, FLT_MAX, FLT_MAX };
+		pmp::Scalar ParamMin{ 0.0 };
+		pmp::Scalar ParamMax{ FLT_MAX };
+		pmp::Scalar HitParam{ FLT_MAX };
 
 		// dir vector dimension indices:
 		unsigned int kx{ 0 };
@@ -95,9 +94,9 @@ namespace Geometry
 		unsigned int kz{ 0 };
 
 		// shear constants:
-		float Sx{ 0.0f };
-		float Sy{ 0.0f };
-		float Sz{ 0.0f };
+		pmp::Scalar Sx{ 0.0 };
+		pmp::Scalar Sy{ 0.0 };
+		pmp::Scalar Sz{ 0.0 };
 
 		/**
 		 * \brief Constructor. Construct from startPt and direction vector as in [Woop, Benthin, Wald, 2013].
@@ -152,16 +151,16 @@ namespace Geometry
 	 */
 	[[nodiscard]] bool SphereIntersectsSphere3D(const pmp::Point& center1, const pmp::Scalar& radius1, const pmp::Point& center2, const pmp::Scalar& radius2);
 
-	constexpr float INTERSECTION_EPSILON{ 1e-5f };
+	constexpr pmp::Scalar INTERSECTION_EPSILON{ 1e-5 };
 
 	/// \brief a wrapper for the parameters of 2D ray intersecting
 	struct Ray2D
 	{
 		pmp::Point2 StartPt;    //>! Starting point of the ray
 		pmp::vec2 Direction;    //>! Unit direction vector
-		float ParamMin{ INTERSECTION_EPSILON }; //>! Minimum parametric distance (slightly farther from the origin to avoid intersection of ray fans)
-		float ParamMax{ FLT_MAX }; //>! Maximum parametric distance (initially set to a large value)
-		float HitParam{ FLT_MAX }; //>! Parametric distance of the closest intersection (initially set to a large value)
+		pmp::Scalar ParamMin{ INTERSECTION_EPSILON }; //>! Minimum parametric distance (slightly farther from the origin to avoid intersection of ray fans)
+		pmp::Scalar ParamMax{ FLT_MAX }; //>! Maximum parametric distance (initially set to a large value)
+		pmp::Scalar HitParam{ FLT_MAX }; //>! Parametric distance of the closest intersection (initially set to a large value)
 
 		Ray2D(const pmp::Point2& startPt, const pmp::vec2& direction)
 			: StartPt(startPt), Direction(direction) {}
@@ -185,6 +184,6 @@ namespace Geometry
 	 * \param tMaxOut       The maximum parametric distance of intersection.
 	 * \return              True if the ray intersects the bounding box, false otherwise.
 	 */
-	[[nodiscard]] bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, float& tMinOut, float& tMaxOut);
+	[[nodiscard]] bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, pmp::Scalar& tMinOut, pmp::Scalar& tMaxOut);
 
 } // namespace Geometry

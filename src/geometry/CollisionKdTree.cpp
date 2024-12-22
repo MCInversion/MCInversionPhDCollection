@@ -153,9 +153,9 @@ namespace Geometry
 	// =================== Split functions ==================================================================
 	//
 
-	[[nodiscard]] float TriangleMin(const Triangle& tri, const std::vector<pmp::vec3>& vertices, const unsigned int& axisId)
+	[[nodiscard]] pmp::Scalar TriangleMin(const Triangle& tri, const std::vector<pmp::vec3>& vertices, const unsigned int& axisId)
 	{
-		float min = FLT_MAX;
+		pmp::Scalar min = FLT_MAX;
 
 		if (vertices[tri.v0Id][axisId] < min)
 			min = vertices[tri.v0Id][axisId];
@@ -169,9 +169,9 @@ namespace Geometry
 		return min;
 	}
 
-	[[nodiscard]] float TriangleMax(const Triangle& tri, const std::vector<pmp::vec3>& vertices, const unsigned int& axisId)
+	[[nodiscard]] pmp::Scalar TriangleMax(const Triangle& tri, const std::vector<pmp::vec3>& vertices, const unsigned int& axisId)
 	{
-		float max = -FLT_MAX;
+		pmp::Scalar max = -FLT_MAX;
 
 		if (vertices[tri.v0Id][axisId] > max)
 			max = vertices[tri.v0Id][axisId];
@@ -186,7 +186,7 @@ namespace Geometry
 	}
 
 	// simple center split function
-	float CenterSplitFunction(const BoxSplitData& splitData, 
+	pmp::Scalar CenterSplitFunction(const BoxSplitData& splitData,
 		const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut)
 	{
 		const size_t nFaces = facesIn.size();
@@ -197,13 +197,13 @@ namespace Geometry
 		const auto& vertices = splitData.kdTree->VertexPositions();
 		const auto& triVertexIds = splitData.kdTree->TriVertexIds();
 
-		const float splitPos = center[axisId];
+		const pmp::Scalar splitPos = center[axisId];
 		leftFacesOut.reserve(nFaces);
 		rightFacesOut.reserve(nFaces);
 		for (const auto& fId : facesIn)
 		{
-			const float min = TriangleMin(triVertexIds[fId], vertices, axisId);
-			const float max = TriangleMax(triVertexIds[fId], vertices, axisId);
+			const pmp::Scalar min = TriangleMin(triVertexIds[fId], vertices, axisId);
+			const pmp::Scalar max = TriangleMax(triVertexIds[fId], vertices, axisId);
 
 			if (min <= splitPos)
 				leftFacesOut.emplace_back(fId);
@@ -223,7 +223,7 @@ namespace Geometry
 	// TODO: fix this & add a version with intrinsics
 	// Fast kd-tree Construction with an Adaptive Error-Bounded Heuristic (Hunt, Mark, Stoll)
 	//
-	float AdaptiveSplitFunction(const BoxSplitData& splitData, const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut)
+	pmp::Scalar AdaptiveSplitFunction(const BoxSplitData& splitData, const std::vector<unsigned int>& facesIn, std::vector<unsigned int>& leftFacesOut, std::vector<unsigned int>& rightFacesOut)
 	{
 		const auto nFaces = static_cast<unsigned int>(facesIn.size());
 		const auto& box = *splitData.box;
@@ -231,30 +231,30 @@ namespace Geometry
 		const auto& vertices = splitData.kdTree->VertexPositions();
 		const auto& triVertexIds = splitData.kdTree->TriVertexIds();
 
-		const float tot_BoxArea = 
-			2.0f * (box.max()[0] - box.min()[0]) +
-			2.0f * (box.max()[1] - box.min()[1]) +
-			2.0f * (box.max()[2] - box.min()[2]);
+		const pmp::Scalar tot_BoxArea =
+			2.0 * (box.max()[0] - box.min()[0]) +
+			2.0 * (box.max()[1] - box.min()[1]) +
+			2.0 * (box.max()[2] - box.min()[2]);
 
 		unsigned int i, j;
 
 		// === Stage 1: Initial sampling of C_L(x) and C_R(x) ========================================================
 
 		// split interval limits:
-		const float a = box.min()[axisId];
-		const float b = box.max()[axisId];
+		const pmp::Scalar a = box.min()[axisId];
+		const pmp::Scalar b = box.max()[axisId];
 
 		// splits:
-		std::vector<float> bCutPos = std::vector<float>(BOX_CUTS + 2);
+		std::vector<pmp::Scalar> bCutPos = std::vector<pmp::Scalar>(BOX_CUTS + 2);
 		for (i = 0; i <= BOX_CUTS + 1; i++) 
-			bCutPos[i] = a * (1.0f - (static_cast<float>(i) / static_cast<float>(BOX_CUTS + 1))) + b * (static_cast<float>(i) / static_cast<float>(BOX_CUTS + 1));
+			bCutPos[i] = a * (1.0 - (static_cast<pmp::Scalar>(i) / static_cast<pmp::Scalar>(BOX_CUTS + 1))) + b * (static_cast<pmp::Scalar>(i) / static_cast<pmp::Scalar>(BOX_CUTS + 1));
 
 		// set C_L(x) = 0, C_R(x) = 0
 		auto C_L = std::vector<unsigned int>(BOX_CUTS + 2);
 		auto C_R = std::vector<unsigned int>(BOX_CUTS + 2);
 
-		auto faceMins = std::vector<float>(nFaces);
-		auto faceMaxes = std::vector<float>(nFaces);
+		auto faceMins = std::vector<pmp::Scalar>(nFaces);
+		auto faceMaxes = std::vector<pmp::Scalar>(nFaces);
 
 		for (i = 0; i < nFaces; i++)
 		{
@@ -272,28 +272,28 @@ namespace Geometry
 
 		// ===== Stage 2: Sample range [0, nFaces] uniformly & count the number of samples within each segment ======
 
-		auto S_L = std::vector<float>(BOX_CUTS + 1);
-		auto S_R = std::vector<float>(BOX_CUTS + 1);
+		auto S_L = std::vector<pmp::Scalar>(BOX_CUTS + 1);
+		auto S_R = std::vector<pmp::Scalar>(BOX_CUTS + 1);
 
-		float ran_s;
+		pmp::Scalar ran_s;
 
 		for (i = 0; i < BOX_CUTS; i++) 
 		{
-			ran_s = static_cast<float>(i + 1) / static_cast<float>(BOX_CUTS + 1) * static_cast<float>(nFaces);
+			ran_s = static_cast<pmp::Scalar>(i + 1) / static_cast<pmp::Scalar>(BOX_CUTS + 1) * static_cast<pmp::Scalar>(nFaces);
 
 			for (j = 0; j <= BOX_CUTS; j++) 
 			{
-				S_L[j] += (ran_s > static_cast<float>(C_L[j]) && ran_s < static_cast<float>(C_L[j + 1]) ? 1 : 0);
-				S_R[j] += (ran_s > static_cast<float>(C_R[j]) && ran_s < static_cast<float>(C_R[j + 1]) ? 1 : 0);
+				S_L[j] += (ran_s > static_cast<pmp::Scalar>(C_L[j]) && ran_s < static_cast<pmp::Scalar>(C_L[j + 1]) ? 1 : 0);
+				S_R[j] += (ran_s > static_cast<pmp::Scalar>(C_R[j]) && ran_s < static_cast<pmp::Scalar>(C_R[j + 1]) ? 1 : 0);
 			}
 		}
 		std::ranges::reverse(S_R);
 
 		// ==== Stage 3: add more sampling positions to subdivided segments ===========================================
 
-		auto all_splt_L = std::vector<float>(2 * BOX_CUTS);
-		auto all_splt_R = std::vector<float>(2 * BOX_CUTS);
-		float segLen = (b - a) / static_cast<float>(BOX_CUTS + 1);
+		auto all_splt_L = std::vector<pmp::Scalar>(2 * BOX_CUTS);
+		auto all_splt_R = std::vector<pmp::Scalar>(2 * BOX_CUTS);
+		pmp::Scalar segLen = (b - a) / static_cast<pmp::Scalar>(BOX_CUTS + 1);
 		unsigned int nSeg_L = 0, nSeg_R = 0;
 
 		for (i = 0; i <= BOX_CUTS; i++)
@@ -306,34 +306,34 @@ namespace Geometry
 
 			for (j = 0; j < S_L[i]; j++) 
 			{
-				all_splt_L[nSeg_L++] = bCutPos[i] + static_cast<float>(j + 1) / (S_L[i] + 1) * segLen;
+				all_splt_L[nSeg_L++] = bCutPos[i] + static_cast<pmp::Scalar>(j + 1) / (S_L[i] + 1) * segLen;
 			}
 			for (j = 0; j < S_R[i]; j++) 
 			{
-				all_splt_R[nSeg_R++] = bCutPos[i] + static_cast<float>(j + 1) / (S_R[i] + 1) * segLen;
+				all_splt_R[nSeg_R++] = bCutPos[i] + static_cast<pmp::Scalar>(j + 1) / (S_R[i] + 1) * segLen;
 			}
 		}
 
 		// Compute surface area heuristic SAH:
 		// remaining two dimensions of the child box candidates
-		const float boxDim0 = box.max()[(axisId + 1) % 3] - box.min()[(axisId + 1) % 3];
-		const float boxDim1 = box.max()[(axisId + 2) % 3] - box.min()[(axisId + 2) % 3];
+		const pmp::Scalar boxDim0 = box.max()[(axisId + 1) % 3] - box.min()[(axisId + 1) % 3];
+		const pmp::Scalar boxDim1 = box.max()[(axisId + 2) % 3] - box.min()[(axisId + 2) % 3];
 
-		auto SA_L = std::vector<float>(2 * BOX_CUTS);
-		auto SA_R = std::vector<float>(2 * BOX_CUTS);
+		auto SA_L = std::vector<pmp::Scalar>(2 * BOX_CUTS);
+		auto SA_R = std::vector<pmp::Scalar>(2 * BOX_CUTS);
 
 		// SA_L(x) = (boxDim_L(x) + boxDim0 + boxDim1) * 2.0 / tot_BoxArea
 		// SA_R(x) = (boxDim_R(x) + boxDim0 + boxDim1) * 2.0 / tot_BoxArea
 
 		for (i = 0; i < 2 * BOX_CUTS; i++) 
 		{
-			SA_L[i] = ((all_splt_L[i] - a) + boxDim0 + boxDim1) * 2.0f / tot_BoxArea;
-			SA_R[i] = ((b - all_splt_R[i]) + boxDim0 + boxDim1) * 2.0f / tot_BoxArea;
+			SA_L[i] = ((all_splt_L[i] - a) + boxDim0 + boxDim1) * 2.0 / tot_BoxArea;
+			SA_R[i] = ((b - all_splt_R[i]) + boxDim0 + boxDim1) * 2.0 / tot_BoxArea;
 		}
 
 		// ==== Stage 4: RESAMPLE C_L and C_R on all sample points & construct an approximation of cost(x) to minimize
-		float min, max;
-		auto cost = std::vector<float>(2 * BOX_CUTS);
+		pmp::Scalar min, max;
+		auto cost = std::vector<pmp::Scalar>(2 * BOX_CUTS);
 
 		// cost(x) = C_L(x) * SA_L(x) + C_R(x) * SA_R(x):
 		for (i = 0; i < nFaces; i++)
@@ -343,14 +343,14 @@ namespace Geometry
 
 			for (j = 0; j < 2 * BOX_CUTS; j++) 
 			{
-				cost[j] += static_cast<float>(min < all_splt_L[j] ? 1 : 0) * SA_L[j] + static_cast<float>(max > all_splt_R[j] ? 1 : 0) * SA_R[j];
+				cost[j] += static_cast<pmp::Scalar>(min < all_splt_L[j] ? 1 : 0) * SA_L[j] + static_cast<pmp::Scalar>(max > all_splt_R[j] ? 1 : 0) * SA_R[j];
 			}
 		}
 
 		// ==== Stage 5: Minimize cost(x) & classify primitives  =====================================================
 
-		float bestSplit = 0.5f * (a + b); // if this loop fails to initialize bestSplit, set it to middle
-		float minCost = FLT_MAX;
+		pmp::Scalar bestSplit = 0.5 * (a + b); // if this loop fails to initialize bestSplit, set it to middle
+		pmp::Scalar minCost = FLT_MAX;
 
 		for (i = 1; i < 2 * BOX_CUTS; i++) 
 		{
@@ -435,7 +435,7 @@ namespace Geometry
 	}
 
 	[[nodiscard]] pmp::BoundingBox GetChildBox(
-		const pmp::BoundingBox& parentBox, const float& splitPos, const unsigned int& axisId, const bool& isLeft)
+		const pmp::BoundingBox& parentBox, const pmp::Scalar& splitPos, const unsigned int& axisId, const bool& isLeft)
 	{
 		pmp::BoundingBox childBox(parentBox);
 		if (isLeft)
@@ -612,9 +612,9 @@ namespace Geometry
 	{
 		const auto center = box.center();
 		const pmp::vec3 halfSize{
-			0.5f * (box.max()[0] - box.min()[0]),
-			0.5f * (box.max()[1] - box.min()[1]),
-			0.5f * (box.max()[2] - box.min()[2])
+			0.5 * (box.max()[0] - box.min()[0]),
+			0.5 * (box.max()[1] - box.min()[1]),
+			0.5 * (box.max()[2] - box.min()[2])
 		};
 		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		std::stack<Node*> nodeStack{};
@@ -665,9 +665,9 @@ namespace Geometry
 	{
 		const auto center = box.center();
 		const pmp::vec3 halfSize{
-			0.5f * (box.max()[0] - box.min()[0]),
-			0.5f * (box.max()[1] - box.min()[1]),
-			0.5f * (box.max()[2] - box.min()[2])
+			0.5 * (box.max()[0] - box.min()[0]),
+			0.5 * (box.max()[1] - box.min()[1]),
+			0.5 * (box.max()[2] - box.min()[2])
 		};
 		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		const size_t expectedStackHeight = GetAverageStackHeight(m_NodeCount);
@@ -910,7 +910,7 @@ namespace Geometry
 	}
 
 	[[nodiscard]] pmp::BoundingBox2 GetChildBox(
-		const pmp::BoundingBox2& parentBox, const float& splitPos, const unsigned int& axisId, const bool& isLeft)
+		const pmp::BoundingBox2& parentBox, const pmp::Scalar& splitPos, const unsigned int& axisId, const bool& isLeft)
 	{
 		pmp::BoundingBox2 childBox(parentBox);
 		if (isLeft)
@@ -1001,8 +1001,8 @@ namespace Geometry
 	{
 		const auto center = box.center();
 		const pmp::vec2 halfSize{
-			0.5f * (box.max()[0] - box.min()[0]),
-			0.5f * (box.max()[1] - box.min()[1])
+			0.5 * (box.max()[0] - box.min()[0]),
+			0.5 * (box.max()[1] - box.min()[1])
 		};
 		std::vector eVerts{ pmp::vec2(), pmp::vec2() };
 		std::stack<Node*> nodeStack{};
@@ -1065,9 +1065,9 @@ namespace Geometry
 		return 1; //  Y-axis;
 	}
 
-	[[nodiscard]] float EdgeMin(const Edge& e, const std::vector<pmp::vec2>& vertices, const unsigned int& axisId)
+	[[nodiscard]] pmp::Scalar EdgeMin(const Edge& e, const std::vector<pmp::vec2>& vertices, const unsigned int& axisId)
 	{
-		float min = FLT_MAX;
+		pmp::Scalar min = FLT_MAX;
 
 		if (vertices[e.v0Id][axisId] < min)
 			min = vertices[e.v0Id][axisId];
@@ -1078,9 +1078,9 @@ namespace Geometry
 		return min;
 	}
 
-	[[nodiscard]] float EdgeMax(const Edge& e, const std::vector<pmp::vec2>& vertices, const unsigned int& axisId)
+	[[nodiscard]] pmp::Scalar EdgeMax(const Edge& e, const std::vector<pmp::vec2>& vertices, const unsigned int& axisId)
 	{
-		float max = -FLT_MAX;
+		pmp::Scalar max = -FLT_MAX;
 
 		if (vertices[e.v0Id][axisId] > max)
 			max = vertices[e.v0Id][axisId];
@@ -1091,7 +1091,7 @@ namespace Geometry
 		return max;
 	}
 
-	float CenterSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
+	pmp::Scalar CenterSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
 	{
 		const size_t nEdges = edgesIn.size();
 
@@ -1101,13 +1101,13 @@ namespace Geometry
 		const auto& vertices = splitData.kdTree->VertexPositions();
 		const auto& edgeVertexIds = splitData.kdTree->EdgeVertexIds();
 
-		const float splitPos = center[axisId];
+		const pmp::Scalar splitPos = center[axisId];
 		leftEdgesOut.reserve(nEdges);
 		rightEdgesOut.reserve(nEdges);
 		for (const auto& eId : edgesIn)
 		{
-			const float min = EdgeMin(edgeVertexIds[eId], vertices, axisId);
-			const float max = EdgeMax(edgeVertexIds[eId], vertices, axisId);
+			const pmp::Scalar min = EdgeMin(edgeVertexIds[eId], vertices, axisId);
+			const pmp::Scalar max = EdgeMax(edgeVertexIds[eId], vertices, axisId);
 
 			if (min <= splitPos)
 				leftEdgesOut.emplace_back(eId);
@@ -1121,9 +1121,9 @@ namespace Geometry
 		return splitPos;
 	}
 
-	//float AdaptiveSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
+	//pmp::Scalar AdaptiveSplitFunction2D(const BoxSplitData2D& splitData, const std::vector<unsigned int>& edgesIn, std::vector<unsigned int>& leftEdgesOut, std::vector<unsigned int>& rightEdgesOut)
 	//{
-	//	return 0.0f;
+	//	return 0.0;
 	//}
 
 	void Collision2DTree::BuildRecurse(Node* node, const pmp::BoundingBox2& box, const std::vector<unsigned int>& edgeIds, unsigned int remainingDepth)

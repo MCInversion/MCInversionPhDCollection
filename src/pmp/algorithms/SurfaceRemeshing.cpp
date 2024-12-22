@@ -349,13 +349,13 @@ void SurfaceRemeshing::split_long_edges()
                 is_feature = efeature_[e];
                 is_boundary = mesh_.is_boundary(e);
 
-                vnew = mesh_.add_vertex((p0 + p1) * 0.5f);
+                vnew = mesh_.add_vertex((p0 + p1) * 0.5);
                 mesh_.split(e, vnew);
 
                 // need normal or sizing for adaptive refinement
                 vnormal_[vnew] =
                     SurfaceNormals::compute_vertex_normal(mesh_, vnew);
-                vsizing_[vnew] = 0.5f * (vsizing_[v0] + vsizing_[v1]);
+                vsizing_[vnew] = 0.5 * (vsizing_[v0] + vsizing_[v1]);
 
                 if (is_feature)
                 {
@@ -776,7 +776,7 @@ void SurfaceRemeshing::remove_caps()
 
                 // project v onto feature edge
                 if (efeature_[e])
-                    points_[v] = (a + c) * 0.5f;
+                    points_[v] = (a + c) * 0.5;
 
                 // flip
                 mesh_.flip(e);

@@ -424,12 +424,12 @@ void Remeshing::split_long_edges(unsigned int nIterations)
                 is_feature = efeature_[e];
                 is_boundary = mesh_.is_boundary(e);
 
-                vnew = mesh_.add_vertex((p0 + p1) * 0.5f);
+                vnew = mesh_.add_vertex((p0 + p1) * 0.5);
                 mesh_.split(e, vnew);
 
                 // need normal or sizing for adaptive refinement
                 vnormal_[vnew] = Normals::compute_vertex_normal(mesh_, vnew);
-                vsizing_[vnew] = 0.5f * (vsizing_[v0] + vsizing_[v1]);
+                vsizing_[vnew] = 0.5 * (vsizing_[v0] + vsizing_[v1]);
 
                 if (is_feature)
                 {
@@ -850,7 +850,7 @@ void Remeshing::remove_caps()
 
                 // project v onto feature edge
                 if (efeature_[e])
-                    points_[v] = (a + c) * 0.5f;
+                    points_[v] = (a + c) * 0.5;
 
                 // flip
                 mesh_.flip(e);
@@ -1219,11 +1219,11 @@ void CurveRemeshing::split_long_edges(unsigned int nIterations)
                 const Point2& p0 = curve_.position(v0);
                 const Point2& p1 = curve_.position(v1);
 
-                vnew = curve_.split_edge_with_vertex(e, (p0 + p1) * 0.5f);
+                vnew = curve_.split_edge_with_vertex(e, (p0 + p1) * 0.5);
 
                 // need normal or sizing for adaptive refinement
                 vnormal_[vnew] = Normals2::compute_vertex_normal(curve_, vnew);
-                vsizing_[vnew] = 0.5f * (vsizing_[v0] + vsizing_[v1]);
+                vsizing_[vnew] = 0.5 * (vsizing_[v0] + vsizing_[v1]);
 
                 // Check if either vertex is a feature vertex
                 if (vfeature_[v0] || vfeature_[v1])

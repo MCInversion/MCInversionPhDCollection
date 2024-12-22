@@ -20,13 +20,13 @@ namespace Geometry
 {
 
 	/// \brief Computes minimum angle of a triangle
-	[[nodiscard]] float GetMinAngleOfTriangle(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	[[nodiscard]] pmp::Scalar GetMinAngleOfTriangle(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
 	{
 		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
 		if (nVerts != 3)
-			return -1.0f; // Error, face with three vertices is needed!
+			return -1.0; // Error, face with three vertices is needed!
 
-		float result = FLT_MAX;
+		pmp::Scalar result = FLT_MAX;
 		for (const auto h : mesh.halfedges(face))
 		{	
 			const auto hPrev = mesh.prev_halfedge(h);
@@ -37,13 +37,13 @@ namespace Geometry
 
 			const auto e0 = mesh.position(v0) - mesh.position(v);
 			const auto e1 = mesh.position(v1) - mesh.position(v);
-			const float l0 = pmp::norm(e0);
-			const float l1 = pmp::norm(e1);
+			const pmp::Scalar l0 = pmp::norm(e0);
+			const pmp::Scalar l1 = pmp::norm(e1);
 			if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
-				return 0.0f;
+				return 0.0;
 
-			const float dot01 = pmp::dot(e0, e1);
-			const float vertAngle = acos(dot01 / (l0 * l1));
+			const pmp::Scalar dot01 = pmp::dot(e0, e1);
+			const pmp::Scalar vertAngle = acos(dot01 / (l0 * l1));
 
 			if (vertAngle < result)
 				result = vertAngle;
@@ -53,13 +53,13 @@ namespace Geometry
 	}
 
 	/// \brief Computes maximum angle of a triangle
-	[[nodiscard]] float GetMaxAngleOfTriangle(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	[[nodiscard]] pmp::Scalar GetMaxAngleOfTriangle(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
 	{
 		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
 		if (nVerts != 3)
-			return -1.0f; // Error, face with three vertices is needed!
+			return -1.0; // Error, face with three vertices is needed!
 
-		float result = -FLT_MAX;
+		pmp::Scalar result = -FLT_MAX;
 		for (const auto h : mesh.halfedges(face))
 		{
 			const auto hPrev = mesh.prev_halfedge(h);
@@ -70,13 +70,13 @@ namespace Geometry
 
 			const auto e0 = mesh.position(v0) - mesh.position(v);
 			const auto e1 = mesh.position(v1) - mesh.position(v);
-			const float l0 = pmp::norm(e0);
-			const float l1 = pmp::norm(e1);
+			const pmp::Scalar l0 = pmp::norm(e0);
+			const pmp::Scalar l1 = pmp::norm(e1);
 			if (l0 < FLT_EPSILON || l1 < FLT_EPSILON)
-				return 0.0f;
+				return 0.0;
 
-			const float dot01 = pmp::dot(e0, e1);
-			const float vertAngle = acos(dot01 / (l0 * l1));
+			const pmp::Scalar dot01 = pmp::dot(e0, e1);
+			const pmp::Scalar vertAngle = acos(dot01 / (l0 * l1));
 
 			if (vertAngle > result)
 				result = vertAngle;
@@ -87,11 +87,11 @@ namespace Geometry
 
 	/// \brief Computes the condition number of a Jacobian of this triangle.
 	///        Note: The Jacobian corresponds to the planar transformation from unit triangle (0, 0), (1, 0), (0, 1) to the evaluated triangle.
-	[[nodiscard]] float GetConditionNumberOfTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	[[nodiscard]] pmp::Scalar GetConditionNumberOfTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
 	{
 		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
 		if (nVerts != 3)
-			return -1.0f; // Error, face with three vertices is needed!
+			return -1.0; // Error, face with three vertices is needed!
 
 		const auto h = mesh.halfedge(face);
 		const auto hPrev = mesh.prev_halfedge(h);
@@ -105,9 +105,9 @@ namespace Geometry
 		const auto e2 = pmp::cross(e0, e1); // tri plane normal
 
 		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
-		const float l0 = pmp::norm(e0);
-		const float l1 = pmp::norm(e1);
-		const float lNorm = pmp::norm(e2);
+		const pmp::Scalar l0 = pmp::norm(e0);
+		const pmp::Scalar l1 = pmp::norm(e1);
+		const pmp::Scalar lNorm = pmp::norm(e2);
 		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON || lNorm < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
@@ -115,38 +115,38 @@ namespace Geometry
 		const auto zVector = pmp::normalize(e2);
 		const auto yVector = pmp::perp(xVector, zVector);		
 
-		const float e0X = pmp::norm(e0);
-		constexpr float e0Y = 0.0f;
+		const pmp::Scalar e0X = pmp::norm(e0);
+		constexpr pmp::Scalar e0Y = 0.0;
 
-		const float e1X = pmp::dot(e1, xVector);
-		const float e1Y = pmp::dot(e1, yVector);
+		const pmp::Scalar e1X = pmp::dot(e1, xVector);
+		const pmp::Scalar e1Y = pmp::dot(e1, yVector);
 
-		const float detJ = e0X * e1Y - e1X * e0Y;
-		if (std::fabs(detJ) < 1e-5f)
+		const pmp::Scalar detJ = e0X * e1Y - e1X * e0Y;
+		if (std::abs<pmp::Scalar>(detJ) < 1e-5)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const pmp::mat3 J{
-			e0X, e1X, 0.0f,
-			e0Y, e1Y, 0.0f,
-			0.0f, 0.0f, 1.0f
+			e0X, e1X, 0.0,
+			e0Y, e1Y, 0.0,
+			0.0, 0.0, 1.0
 		};
 		const auto JInv = pmp::inverse(J);
 
-		/*const float jNorm1 = norm(J);
-		const float jInvNorm1 = norm(JInv);*/
+		/*const pmp::Scalar jNorm1 = norm(J);
+		const pmp::Scalar jInvNorm1 = norm(JInv);*/
 
 		// 1-norm of Jacobian and its inverse
-		float jNorm1 = -FLT_MAX;
-		float jInvNorm1 = -FLT_MAX;
+		pmp::Scalar jNorm1 = -FLT_MAX;
+		pmp::Scalar jInvNorm1 = -FLT_MAX;
 		for (unsigned int i = 0; i < 2; i++)
 		{
-			float jColSum = 0.0f;
-			float jInvColSum = 0.0f;
+			pmp::Scalar jColSum = 0.0;
+			pmp::Scalar jInvColSum = 0.0;
 			for (unsigned int j = 0; j < 2; j++)
 			{
 				const unsigned int elementId = 3 * j + i;
-				jColSum += std::fabs(J[elementId]);
-				jInvColSum += std::fabs(JInv[elementId]);
+				jColSum += std::abs<pmp::Scalar>(J[elementId]);
+				jInvColSum += std::abs<pmp::Scalar>(JInv[elementId]);
 			}
 			if (jColSum > jNorm1)
 				jNorm1 = jColSum;
@@ -157,11 +157,11 @@ namespace Geometry
 		return jNorm1 * jInvNorm1;
 	}
 
-	float GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	pmp::Scalar GetConditionNumberOfEquilateralTriangleJacobian(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
 	{
 		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
 		if (nVerts != 3)
-			return -1.0f; // Error, face with three vertices is needed!
+			return -1.0; // Error, face with three vertices is needed!
 
 		const auto h = mesh.halfedge(face);
 		const auto hPrev = mesh.prev_halfedge(h);
@@ -169,16 +169,16 @@ namespace Geometry
 		const auto v = mesh.from_vertex(h);
 		const auto v0 = mesh.from_vertex(hPrev);
 		const auto v1 = mesh.to_vertex(h);
-		const auto e0Midpoint = 0.5f * (mesh.position(v) + mesh.position(v0));
+		const auto e0Midpoint = 0.5 * (mesh.position(v) + mesh.position(v0));
 
 		const auto e0 = mesh.position(v0) - e0Midpoint;
 		const auto e1 = mesh.position(v1) - e0Midpoint;
 		const auto e2 = pmp::cross(e0, e1); // tri plane normal
 
 		// Jacobian is weighed by uniform scaling of the triangle. We normalize the edge vectors to assume the triangle is a unit triangle.
-		const float l0 = pmp::norm(e0);
-		const float l1 = pmp::norm(e1);
-		const float lNorm = pmp::norm(e2);
+		const pmp::Scalar l0 = pmp::norm(e0);
+		const pmp::Scalar l1 = pmp::norm(e1);
+		const pmp::Scalar lNorm = pmp::norm(e2);
 		if (l0 < FLT_EPSILON || l1 < FLT_EPSILON || lNorm < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
@@ -186,38 +186,38 @@ namespace Geometry
 		const auto zVector = pmp::normalize(e2);
 		const auto yVector = pmp::perp(xVector, zVector);
 
-		const float e0X = 2.0f * pmp::norm(e0);
-		constexpr float e0Y = 0.0f;
+		const pmp::Scalar e0X = 2.0 * pmp::norm(e0);
+		constexpr pmp::Scalar e0Y = 0.0;
 
-		const float e1X = pmp::dot(e1, xVector);
-		const float e1Y = pmp::dot(e1, yVector);
+		const pmp::Scalar e1X = pmp::dot(e1, xVector);
+		const pmp::Scalar e1Y = pmp::dot(e1, yVector);
 
-		const float detJ = (e0X * e1Y - e1X * e0Y);
-		if (std::fabs(detJ) < FLT_EPSILON)
+		const pmp::Scalar detJ = (e0X * e1Y - e1X * e0Y);
+		if (std::abs<pmp::Scalar>(detJ) < FLT_EPSILON)
 			return FLT_MAX; // singular Jacobian has an infinite condition number
 
 		const pmp::mat3 J{
-			e0X, e1X, 0.0f,
-			e0Y, e1Y, 0.0f,
-			0.0f, 0.0f, 1.0f
+			e0X, e1X, 0.0,
+			e0Y, e1Y, 0.0,
+			0.0, 0.0, 1.0
 		};
 		const auto JInv = pmp::inverse(J);
 
-		/*const float jNorm1 = norm(J);
-		const float jInvNorm1 = norm(JInv);*/
+		/*const pmp::Scalar jNorm1 = norm(J);
+		const pmp::Scalar jInvNorm1 = norm(JInv);*/
 
 		// 1-norm of Jacobian and its inverse
-		float jNorm1 = -FLT_MAX;
-		float jInvNorm1 = -FLT_MAX;
+		pmp::Scalar jNorm1 = -FLT_MAX;
+		pmp::Scalar jInvNorm1 = -FLT_MAX;
 		for (unsigned int i = 0; i < 2; i++)
 		{
-			float jColSum = 0.0f;
-			float jInvColSum = 0.0f;
+			pmp::Scalar jColSum = 0.0;
+			pmp::Scalar jInvColSum = 0.0;
 			for (unsigned int j = 0; j < 2; j++)
 			{
 				const unsigned int elementId = 3 * j + i;
-				jColSum += std::fabs(J[elementId]);
-				jInvColSum += std::fabs(JInv[elementId]);
+				jColSum += std::abs<pmp::Scalar>(J[elementId]);
+				jInvColSum += std::abs<pmp::Scalar>(JInv[elementId]);
 			}
 			if (jColSum > jNorm1)
 				jNorm1 = jColSum;
@@ -229,14 +229,14 @@ namespace Geometry
 	}
 
 	/// \brief Computes Schewchuk's "stiffness matrix conditioning" number of a given triangle face. For more information see chapter 3 of [Schewchuk, 2002].
-	[[nodiscard]] float ComputeStiffnessMatrixConditioningForTriangle(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
+	[[nodiscard]] pmp::Scalar ComputeStiffnessMatrixConditioningForTriangle(const pmp::SurfaceMesh& mesh, const pmp::Face& face)
 	{
 		const auto nVerts = std::distance(mesh.vertices(face).begin(), mesh.vertices(face).end());
 		if (nVerts != 3)
-			return -1.0f; // Error, face with three vertices is needed!
+			return -1.0; // Error, face with three vertices is needed!
 
 		const auto area_notNorm = pmp::triangle_area(mesh, face);
-		if (area_notNorm < 1e-6f)
+		if (area_notNorm < 1e-6)
 			return FLT_MAX;
 
 		// TODO: normalization still produces complex roots, what to do about it?
@@ -258,15 +258,15 @@ namespace Geometry
 		const auto area = area_notNorm / maxLenSq;
 
 		const auto lSqSumSq = (l0Sq + l1Sq + l2Sq) * (l0Sq + l1Sq + l2Sq);
-		const auto valReal = (l0Sq + l1Sq + l2Sq) / (8.0f * area);
-		const auto valImag = sqrt(48.0f * area - lSqSumSq) / (8.0f * area);
+		const auto valReal = (l0Sq + l1Sq + l2Sq) / (8.0 * area);
+		const auto valImag = sqrt(48.0 * area - lSqSumSq) / (8.0 * area);
 		return sqrt(valReal * valReal + valImag * valImag);
 	}
 
-	using FaceMetricFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Face&)>;
-	//using VertexMetricFunction = std::function<float(const pmp::SurfaceMesh&, const pmp::Vertex&)>;
+	using FaceMetricFunction = std::function<pmp::Scalar(const pmp::SurfaceMesh&, const pmp::Face&)>;
+	//using VertexMetricFunction = std::function<pmp::Scalar(const pmp::SurfaceMesh&, const pmp::Vertex&)>;
 
-	constexpr float METRIC_MAX_VAL = 1e+12;
+	constexpr pmp::Scalar METRIC_MAX_VAL = 1e+12;
 
 	/**
 	 * \brief Computes interpolated triangle metric for each mesh vertex & stores it as vertex property.
@@ -280,15 +280,15 @@ namespace Geometry
 		if (!mesh.is_triangle_mesh())
 			return false; // unable to process non-triangle meshes
 
-		auto vProp = mesh.vertex_property<pmp::Scalar>("v:" + metricName, 0.0f);
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:" + metricName, 0.0);
 
 		for (const auto v : mesh.vertices())
 		{
-			float mean = 0.0;
+			pmp::Scalar mean = 0.0;
 			for (const auto f : mesh.faces(v))
 			{
 				const auto val = metricFunc(mesh, f);
-				if (val < 0.0f)
+				if (val < 0.0)
 					return false; // Error, invalid triangle
 
 				if (std::fabsf(val) > METRIC_MAX_VAL)
@@ -298,7 +298,7 @@ namespace Geometry
 			if (mean < FLT_EPSILON)
 				return false;
 			const auto nAdjacentFaces = std::distance(mesh.faces(v).begin(), mesh.faces(v).end());
-			mean /= static_cast<float>(nAdjacentFaces);
+			mean /= static_cast<pmp::Scalar>(nAdjacentFaces);
 			vProp[v] = mean;
 		}
 		return true;
@@ -363,7 +363,7 @@ namespace Geometry
 
 	void ComputeEdgeDihedralAngles(pmp::SurfaceMesh& mesh)
 	{
-		auto eProp = mesh.edge_property<pmp::Scalar>("e:dihedralAngle", 2.0f * M_PI);
+		auto eProp = mesh.edge_property<pmp::Scalar>("e:dihedralAngle", 2.0 * M_PI);
 
 		for (const auto e : mesh.edges())
 		{
@@ -380,13 +380,13 @@ namespace Geometry
 			eProp[e] = angleBetweenNormals + M_PI_2;
 		}
 
-		auto vProp = mesh.vertex_property<pmp::Scalar>("v:dihedralAngle", 2.0f * M_PI);
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:dihedralAngle", 2.0 * M_PI);
 		for (const auto v : mesh.vertices())
 		{
 			if (mesh.is_boundary(v))
 				continue;
 
-			pmp::Scalar dihedralAngleSum = 0.0f;
+			pmp::Scalar dihedralAngleSum = 0.0;
 			for (const auto w : mesh.vertices(v))
 			{
 				const auto hFrom = mesh.find_halfedge(v, w);
@@ -401,7 +401,7 @@ namespace Geometry
 		}
 	}
 
-	void ComputeVertexCurvaturesAndRelatedProperties(pmp::SurfaceMesh& mesh, const float& principalCurvatureFactor)
+	void ComputeVertexCurvaturesAndRelatedProperties(pmp::SurfaceMesh& mesh, const pmp::Scalar& principalCurvatureFactor)
 	{
 		pmp::Curvature curvAlg{ mesh };
 		curvAlg.analyze_tensor(1);
@@ -410,7 +410,7 @@ namespace Geometry
 		auto vMaxCurvature = mesh.vertex_property<pmp::Scalar>("v:maxCurvature");
 		auto vMeanCurvature = mesh.vertex_property<pmp::Scalar>("v:meanCurvature");
 		auto vGaussianCurvature = mesh.vertex_property<pmp::Scalar>("v:GaussianCurvature");
-		auto vIsCDSVal = mesh.vertex_property<pmp::Scalar>("v:isCDS", -1.0f);
+		auto vIsCDSVal = mesh.vertex_property<pmp::Scalar>("v:isCDS", -1.0);
 
 		for (const auto v : mesh.vertices())
 		{
@@ -418,13 +418,13 @@ namespace Geometry
 			vMaxCurvature[v] = curvAlg.max_curvature(v);
 			vMeanCurvature[v] = vMinCurvature[v] + vMaxCurvature[v];
 			vGaussianCurvature[v] = vMinCurvature[v] * vMaxCurvature[v];
-			vIsCDSVal[v] = pmp::IsConvexDominantSaddle(vMinCurvature[v], vMaxCurvature[v], principalCurvatureFactor) ? 1.0f : -1.0f;
+			vIsCDSVal[v] = pmp::IsConvexDominantSaddle(vMinCurvature[v], vMaxCurvature[v], principalCurvatureFactor) ? 1.0 : -1.0;
 		}
 	}
 
 	void ComputeZLevelElevations(pmp::SurfaceMesh& mesh)
 	{
-		auto vProp = mesh.vertex_property<pmp::Scalar>("v:zLevelElevation", 0.0f);
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:zLevelElevation", 0.0);
 		for (const auto v : mesh.vertices())
 		{
 			const auto& vPos = mesh.position(v);
@@ -436,7 +436,7 @@ namespace Geometry
 	{
 		pmp::Scalar lengthSqMin = FLT_MAX;
 		pmp::Scalar lengthSqMax = -FLT_MAX;
-		pmp::Scalar lengthSqMean= 0.0f;
+		pmp::Scalar lengthSqMean= 0.0;
 		for (const auto e : mesh.edges())
 		{
 			const pmp::Scalar edgeLengthSq = mesh.edge_length_sq(e);
@@ -484,7 +484,7 @@ namespace Geometry
 		{
 			vMinCurvature[v] = curvAlg.min_curvature(v);
 			vMaxCurvature[v] = curvAlg.max_curvature(v);
-			vMeanCurvature[v] = (vMinCurvature[v] + vMaxCurvature[v]) * 0.5f;
+			vMeanCurvature[v] = (vMinCurvature[v] + vMaxCurvature[v]) * 0.5;
 		}
 	}
 
@@ -515,11 +515,11 @@ namespace Geometry
 
 	static void ComputeSaliency(pmp::SurfaceMesh& mesh, const std::vector<double>& sigmas)
 	{
-		auto saliency = mesh.vertex_property<pmp::Scalar>("v:saliency", 0.0f);
+		auto saliency = mesh.vertex_property<pmp::Scalar>("v:saliency", 0.0);
 
 		for (auto v : mesh.vertices()) 
 		{
-			pmp::Scalar saliencyValue = 0.0f;
+			pmp::Scalar saliencyValue = 0.0;
 			for (double sigma : sigmas) 
 			{
 				const double fine = GaussianWeight(mesh, v, sigma);
@@ -585,7 +585,7 @@ namespace Geometry
 		return true;
 	}
 
-	void PrintHistogramResultData(const std::pair<std::pair<float, float>, std::vector<unsigned int>>& histData, std::ostream& os)
+	void PrintHistogramResultData(const std::pair<std::pair<pmp::Scalar, pmp::Scalar>, std::vector<unsigned int>>& histData, std::ostream& os)
 	{
 		if (std::abs(histData.first.first - histData.first.second) < FLT_EPSILON || histData.second.empty())
 		{
@@ -594,7 +594,7 @@ namespace Geometry
 		}
 		const auto& [range, bins] = histData;
 		const auto& [minDistVal, maxDistVal] = range;
-		const float binSize = (maxDistVal - minDistVal) / static_cast<float>(bins.size());
+		const pmp::Scalar binSize = (maxDistVal - minDistVal) / static_cast<pmp::Scalar>(bins.size());
 
 		// Print the first bin with -inf lower bound
 		os << "( -inf.. " << std::fixed << std::setprecision(7) << (minDistVal + binSize) << ") : " << bins.front() << '\n';
@@ -821,18 +821,18 @@ namespace Geometry
 		}
 
 		auto fProp = mesh.get_face_property<bool>(propName);
-		auto vProp = mesh.vertex_property<pmp::Scalar>("v:" + propName, 0.0f);
+		auto vProp = mesh.vertex_property<pmp::Scalar>("v:" + propName, 0.0);
 
 		for (const auto v : mesh.vertices())
 		{
-			pmp::Scalar mean = 0.0f;
+			pmp::Scalar mean = 0.0;
 			for (const auto f : mesh.faces(v))
 			{
-				const auto val = (fProp[f] ? 1.0f : -1.0f);
+				const auto val = (fProp[f] ? 1.0 : -1.0);
 				mean += val;
 			}
 			const auto nAdjacentFaces = std::distance(mesh.faces(v).begin(), mesh.faces(v).end());
-			mean /= static_cast<float>(nAdjacentFaces);
+			mean /= static_cast<pmp::Scalar>(nAdjacentFaces);
 			vProp[v] = mean;
 		}
 	}
@@ -921,8 +921,8 @@ namespace Geometry
 				const auto vecB = b.second - barycenter;
 				pmp::Scalar angleA = atan2(dot(cross(refVec, vecA), bucketOrientation), dot(refVec, vecA));
 				pmp::Scalar angleB = atan2(dot(cross(refVec, vecB), bucketOrientation), dot(refVec, vecB));
-				angleA = angleA < 0.0f ? (2.0f * static_cast<pmp::Scalar>(M_PI) + angleA) : angleA;
-				angleB = angleB < 0.0f ? (2.0f * static_cast<pmp::Scalar>(M_PI) + angleB) : angleB;
+				angleA = angleA < 0.0 ? (2.0 * static_cast<pmp::Scalar>(M_PI) + angleA) : angleA;
+				angleB = angleB < 0.0 ? (2.0 * static_cast<pmp::Scalar>(M_PI) + angleB) : angleB;
 				if (std::abs(angleA - angleB) < FLT_MIN)
 					return norm(vecA) < norm(vecB);
 				return angleA < angleB;
@@ -931,7 +931,7 @@ namespace Geometry
 			for (unsigned int i = 0; i < facePtData.size(); ++i)
 			{
 				const auto& p = facePtData[i].second;
-				if (i > 0 && norm(p - facePtData[i - 1].second) < 1e-6f)
+				if (i > 0 && norm(p - facePtData[i - 1].second) < 1e-6)
 				{
 					continue; // duplicate pts
 				}
@@ -1020,7 +1020,7 @@ namespace Geometry
 		const auto ptrMeshCollisionKdTree = std::make_unique<CollisionKdTree>(meshAdapter, CenterSplitFunction);
 
 		// Cast a ray in an arbitrary direction (e.g., +X direction)
-		Ray ray(point, pmp::vec3(1.0f, 0.0f, 0.0f));
+		Ray ray(point, pmp::vec3(1.0, 0.0, 0.0));
 		return ptrMeshCollisionKdTree->IsRayStartPointInsideTriangleMesh(ray);
 	}
 
@@ -1030,7 +1030,7 @@ namespace Geometry
 			return false;
 
 		// Cast a ray in an arbitrary direction (e.g., +X direction)
-		Ray ray(point, pmp::vec3(1.0f, 0.0f, 0.0f));
+		Ray ray(point, pmp::vec3(1.0, 0.0, 0.0));
 		return meshKdTree->IsRayStartPointInsideTriangleMesh(ray);
 	}
 
@@ -1038,7 +1038,7 @@ namespace Geometry
 	{
 		struct TangentQuadricParams
 		{
-			pmp::Scalar a{ 1.0f }, b{ 1.0f }, c{ 1.0f };
+			pmp::Scalar a{ 1.0 }, b{ 1.0 }, c{ 1.0 };
 			pmp::Point center{};
 		};
 
@@ -1046,11 +1046,11 @@ namespace Geometry
 		{
 			pmp::vec3 P(point[0] - params.center[0], point[1] - params.center[1], point[2] - params.center[2]);
 
-			const float k0 = std::sqrt((P[0] / params.a) * (P[0] / params.a) + (P[1] / params.b) * (P[1] / params.b) + (P[2] / params.c) * (P[2] / params.c));
-			const float k1 = std::sqrt((P[0] / (params.a * params.a)) * (P[0] / (params.a * params.a)) +
+			const pmp::Scalar k0 = std::sqrt((P[0] / params.a) * (P[0] / params.a) + (P[1] / params.b) * (P[1] / params.b) + (P[2] / params.c) * (P[2] / params.c));
+			const pmp::Scalar k1 = std::sqrt((P[0] / (params.a * params.a)) * (P[0] / (params.a * params.a)) +
 				(P[1] / (params.b * params.b)) * (P[1] / (params.b * params.b)) +
 				(P[2] / (params.c * params.c)) * (P[2] / (params.c * params.c)));
-			return std::max(k0 * (k0 - 1.f) / k1, 0.f);
+			return std::max<pmp::Scalar>(k0 * (k0 - 1.f) / k1, 0.0);
 		}
 
 		[[nodiscard]] pmp::Scalar DistanceToTangentHyperboloid(const pmp::Point& point, const TangentQuadricParams& params)
@@ -1059,13 +1059,13 @@ namespace Geometry
 			// Calculate the one-sheet hyperboloid function value at the point
 			const float hyperboloidValue = (P[0] / params.a) * (P[0] / params.a) +
 				(P[1] / params.b) * (P[1] / params.b) -
-				(P[2] / params.c) * (P[2] / params.c) - 1.0f;
+				(P[2] / params.c) * (P[2] / params.c) - 1.0;
 			return std::sqrt(std::abs(hyperboloidValue)); // need to make the distance positive
 		}
 
 		struct TangentCircleParams
 		{
-			pmp::Scalar r{ 1.0f };
+			pmp::Scalar r{ 1.0 };
 			pmp::Point2 center{};
 		};
 
@@ -1078,7 +1078,7 @@ namespace Geometry
 
 	} // anonymous namespace
 
-	constexpr pmp::Scalar CURVATURE_EPSILON{ 1e-6f };
+	constexpr pmp::Scalar CURVATURE_EPSILON{ 1e-6 };
 
 	pmp::Scalar CalculateQuadricApproximationErrorAtVertex(const pmp::SurfaceMesh& mesh, pmp::Vertex v)
 	{
@@ -1087,7 +1087,7 @@ namespace Geometry
 		if (std::fabs(curvature.gauss) < CURVATURE_EPSILON) // curvature.gauss = curvature.min * curvature.max			
 		{
 			// no quadric of reasonable size can be fitted to the mesh vertex surroundings because the surface is flat.
-			return 0.0f;
+			return 0.0;
 		}
 
 		TangentQuadricParams qParams;
@@ -1095,16 +1095,16 @@ namespace Geometry
 		if (curvature.gauss > 0)
 		{
 			// Estimate tangent ellipsoid parameters (a, b, c) from the curvature
-			qParams.a = 1.0f / std::sqrt(std::max(curvature.max, CURVATURE_EPSILON));
-			qParams.b = 1.0f / std::sqrt(std::max(curvature.mean, CURVATURE_EPSILON));
-			qParams.c = 1.0f / std::sqrt(std::max(curvature.min, CURVATURE_EPSILON));
+			qParams.a = 1.0 / std::sqrt(std::max(curvature.max, CURVATURE_EPSILON));
+			qParams.b = 1.0 / std::sqrt(std::max(curvature.mean, CURVATURE_EPSILON));
+			qParams.c = 1.0 / std::sqrt(std::max(curvature.min, CURVATURE_EPSILON));
 		}
 		else
 		{
 			// Estimate tangent single-sheet hyperboloid parameters (a, b, c) from the curvature
-			qParams.a = 1.0f / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON));
-			qParams.b = 1.0f / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON));
-			qParams.c = 1.0f / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON));
+			qParams.a = 1.0 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON));
+			qParams.b = 1.0 / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON));
+			qParams.c = 1.0 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON));
 		}
 
 		const auto distanceFromQuadric	= (curvature.gauss > 0) ? DistanceToTangentEllipsoid : DistanceToTangentHyperboloid;
@@ -1139,14 +1139,14 @@ namespace Geometry
 		}
 
 		TangentCircleParams cParams;
-		cParams.r = 1.0f / std::sqrt(std::max(curvature, CURVATURE_EPSILON));
+		cParams.r = 1.0 / std::sqrt(std::max(curvature, CURVATURE_EPSILON));
 
 		const auto normal = pmp::Normals2::compute_vertex_normal(curve, v);
 		cParams.center = curve.position(v) - cParams.r * normal;
 
 		const auto [vPrev, vNext] = curve.vertices(v);
-		const auto centroid0 = 0.5f * (curve.position(vPrev) + curve.position(v));
-		const auto centroid1 = 0.5f * (curve.position(v) + curve.position(vNext));
+		const auto centroid0 = 0.5 * (curve.position(vPrev) + curve.position(v));
+		const auto centroid1 = 0.5 * (curve.position(v) + curve.position(vNext));
 
 		return std::max(
 			DistanceToTangentCircle(centroid0, cParams),
@@ -1253,7 +1253,7 @@ namespace Geometry
 		if (curve.n_vertices() == 0)
 		{
 			std::cerr << "GetCurveBoundsMinDimension: curve.n_vertices() == 0!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
 		const auto bbox = curve.bounds();
@@ -1266,7 +1266,7 @@ namespace Geometry
 		if (curve.n_vertices() == 0)
 		{
 			std::cerr << "GetCurveBoundsMaxDimension: curve.n_vertices() == 0!\n";
-			return -1.0f;
+			return -1.0;
 		}
 
 		const auto bbox = curve.bounds();
@@ -1279,7 +1279,7 @@ namespace Geometry
 		if (curve.n_vertices() == 0)
 		{
 			std::cerr << "GetCurveBoundsMinMaxDimensions: curve.n_vertices() == 0!\n";
-			return { -1.0f, -1.0 };
+			return { -1.0, -1.0 };
 		}
 
 		const auto bbox = curve.bounds();

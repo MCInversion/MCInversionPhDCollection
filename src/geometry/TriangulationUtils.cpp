@@ -17,13 +17,13 @@ namespace
         return normal;
     }
 
-    //[[nodiscard]] std::vector<pmp::Point> GetSubdividedOffsetPolyline(const std::vector<pmp::Point>& polyline, float maxSegmentLength, float offsetDistance)
+    //[[nodiscard]] std::vector<pmp::Point> GetSubdividedOffsetPolyline(const std::vector<pmp::Point>& polyline, pmp::Scalar maxSegmentLength, pmp::Scalar offsetDistance)
     //{
     //    std::vector<pmp::Point> subdivided;
 
     //    auto offsetPoint = [offsetDistance](const pmp::Point& p1, const pmp::Point& p2) -> pmp::Point {
     //        pmp::Point direction = p2 - p1;
-    //        pmp::Point perpendicular(-direction[1], direction[0], 0.0f); // Perpendicular to the segment in the xy plane
+    //        pmp::Point perpendicular(-direction[1], direction[0], 0.0); // Perpendicular to the segment in the xy plane
     //        perpendicular /= std::sqrt(perpendicular[0] * perpendicular[0] + perpendicular[1] * perpendicular[1]); // Normalize
     //        return p1 + offsetDistance * perpendicular;
     //    };
@@ -33,14 +33,14 @@ namespace
     //        pmp::Point p1 = polyline[i];
     //        pmp::Point p2 = polyline[(i + 1) % polyline.size()]; // Wrap around to the start for closed loop
     //        subdivided.push_back(offsetPoint(p1, p2)); // Offset the first point of the segment
-    //        const float segmentLength = norm(p2 - p1);
+    //        const pmp::Scalar segmentLength = norm(p2 - p1);
     //        if (segmentLength > maxSegmentLength)
     //        {
     //            const int numSubdivisions = static_cast<int>(std::ceil(segmentLength / maxSegmentLength));
     //            for (int j = 1; j < numSubdivisions; ++j)
     //            {
-    //                float t = static_cast<float>(j) / numSubdivisions;
-    //                pmp::Point interpolated = (1.0f - t) * p1 + t * p2;
+    //                pmp::Scalar t = static_cast<pmp::Scalar>(j) / numSubdivisions;
+    //                pmp::Point interpolated = (1.0 - t) * p1 + t * p2;
     //                subdivided.push_back(offsetPoint(interpolated, p2)); // Offset the interpolated points
     //            }
     //        }
@@ -50,21 +50,21 @@ namespace
     //}
 
 	/// \brief Function to get subdivided offset polyline indices considering only 2D points
-    [[nodiscard]] std::vector<int> GetSubdividedOffsetPolylineIndices2D(const std::vector<pmp::Point>& polyline, const std::vector<pmp::Point>& pointSet, float maxSegmentLength)
+    [[nodiscard]] std::vector<int> GetSubdividedOffsetPolylineIndices2D(const std::vector<pmp::Point>& polyline, const std::vector<pmp::Point>& pointSet, pmp::Scalar maxSegmentLength)
     {
         std::vector<pmp::Point> subdivided;
         std::unordered_set<int> uniqueIndices;
 
         auto subdivideSegment = [&](const pmp::Point& p1, const pmp::Point& p2) {
             subdivided.push_back(p1);
-            const float segmentLength = norm(p2 - p1);
+            const pmp::Scalar segmentLength = norm(p2 - p1);
             if (segmentLength > maxSegmentLength)
             {
                 const int numSubdivisions = static_cast<int>(std::ceil(segmentLength / maxSegmentLength));
                 for (int j = 1; j < numSubdivisions; ++j)
                 {
-                    float t = static_cast<float>(j) / numSubdivisions;
-                    pmp::Point interpolated = (1.0f - t) * p1 + t * p2;
+                    pmp::Scalar t = static_cast<pmp::Scalar>(j) / numSubdivisions;
+                    pmp::Point interpolated = (1.0 - t) * p1 + t * p2;
                     subdivided.push_back(interpolated);
                 }
             }
@@ -183,7 +183,7 @@ namespace Geometry
         std::cout << "Geometry::TriangulateWithFade2D: Vertex indices extracted.\n";
     }
 
-	constexpr float MAGIC_RADIUS_MULTIPLIER = 2.5f;
+	constexpr pmp::Scalar MAGIC_RADIUS_MULTIPLIER = 2.5;
 
 	void TriangulateWithVCGBPA(BaseMeshGeometryData& data)
 	{
@@ -196,7 +196,7 @@ namespace Geometry
 		// Compute an appropriate radius based on point distribution
 		const auto meanDistance = Geometry::ComputeNearestNeighborMeanInterVertexDistance(data.Vertices, 6);
 		const auto ballRadius = meanDistance * MAGIC_RADIUS_MULTIPLIER;
-		constexpr auto clusteringPercentage = (1.0f / MAGIC_RADIUS_MULTIPLIER) * 100.0f;
+		constexpr auto clusteringPercentage = (1.0 / MAGIC_RADIUS_MULTIPLIER) * 100.0;
 
 		const auto meshDataOpt = ComputeBallPivotingMeshFromPoints(data.Vertices, ballRadius, clusteringPercentage);
 		if (!meshDataOpt.has_value())

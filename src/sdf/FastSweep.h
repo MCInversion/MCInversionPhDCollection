@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pmp/Types.h"
 #include "geometry/Grid.h"
 
 namespace SDF

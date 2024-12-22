@@ -30,12 +30,12 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_BaseWatertightTetrahedron)
 
     const auto meshBBox = meshAdapter.GetBounds();
     const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-    const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceFieldSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation::VoxelFloodFill,
@@ -49,9 +49,9 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_BaseWatertightTetrahedron)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_fullTetra_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
-    ASSERT_EQ(sdf.Dimensions().Nz, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
+    ASSERT_EQ(sdf.Dimensions().Nz, 31);
     auto index = [&sdf](size_t i, size_t j, size_t k) {
         return i + j * sdf.Dimensions().Nx + k * sdf.Dimensions().Nx * sdf.Dimensions().Ny;
     };
@@ -60,10 +60,10 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_BaseWatertightTetrahedron)
     EXPECT_NEAR(sdf.Values()[index(1, 12, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 1, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 12, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(12, 12, 0)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[2] }, Point(0.25f, 0.25f, -1.0f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0f, 0.25f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25f, -1.0f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0f, 1.0f, 1.0f))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(12, 12, 0)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[2] }, Point(0.25, 0.25, -1.0))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0, 0.25, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25, -1.0, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0, 1.0, 1.0))), cellSize);
 }
 
 TEST(DistanceField3DTests, DistanceFieldGenerator_BaseOpenTetrahedron)
@@ -77,12 +77,12 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_BaseOpenTetrahedron)
 
     const auto meshBBox = meshAdapter.GetBounds();
     const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-    const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceFieldSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation::None,
@@ -96,9 +96,9 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_BaseOpenTetrahedron)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_tetraWithoutBottomFace_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
-    ASSERT_EQ(sdf.Dimensions().Nz, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
+    ASSERT_EQ(sdf.Dimensions().Nz, 31);
     auto index = [&sdf](size_t i, size_t j, size_t k) {
         return i + j * sdf.Dimensions().Nx + k * sdf.Dimensions().Nx * sdf.Dimensions().Ny;
     };
@@ -107,9 +107,9 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_BaseOpenTetrahedron)
     EXPECT_NEAR(sdf.Values()[index(1, 12, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 1, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 12, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0f, 0.25f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25f, -1.0f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0f, 1.0f, 1.0f))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0, 0.25, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25, -1.0, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0, 1.0, 1.0))), cellSize);
 }
 
 TEST(DistanceField3DTests, DistanceFieldGenerator_PMPWatertightTetrahedron)
@@ -123,12 +123,12 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPWatertightTetrahedron)
 
     const auto meshBBox = meshAdapter.GetBounds();
     const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-    const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceFieldSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation::VoxelFloodFill,
@@ -142,9 +142,9 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPWatertightTetrahedron)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_fullTetra_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
-    ASSERT_EQ(sdf.Dimensions().Nz, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
+    ASSERT_EQ(sdf.Dimensions().Nz, 31);
     auto index = [&sdf](size_t i, size_t j, size_t k) {
         return i + j * sdf.Dimensions().Nx + k * sdf.Dimensions().Nx * sdf.Dimensions().Ny;
     };
@@ -153,10 +153,10 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPWatertightTetrahedron)
     EXPECT_NEAR(sdf.Values()[index(1, 12, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 1, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 12, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(12, 12, 0)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[2] }, Point(0.25f, 0.25f, -1.0f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0f, 0.25f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25f, -1.0f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0f, 1.0f, 1.0f))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(12, 12, 0)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[2] }, Point(0.25, 0.25, -1.0))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0, 0.25, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25, -1.0, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0, 1.0, 1.0))), cellSize);
 }
 
 TEST(DistanceField3DTests, DistanceFieldGenerator_PMPOpenTetrahedron)
@@ -170,12 +170,12 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPOpenTetrahedron)
 
     const auto meshBBox = meshAdapter.GetBounds();
     const auto meshBBoxSize = meshBBox.max() - meshBBox.min();
-    const float minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min({ meshBBoxSize[0], meshBBoxSize[1], meshBBoxSize[2] });
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceFieldSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation::None,
@@ -189,9 +189,9 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPOpenTetrahedron)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_tetraWithoutBottomFace_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
-    ASSERT_EQ(sdf.Dimensions().Nz, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
+    ASSERT_EQ(sdf.Dimensions().Nz, 31);
     auto index = [&sdf](size_t i, size_t j, size_t k) {
         return i + j * sdf.Dimensions().Nx + k * sdf.Dimensions().Nx * sdf.Dimensions().Ny;
     };
@@ -200,9 +200,9 @@ TEST(DistanceField3DTests, DistanceFieldGenerator_PMPOpenTetrahedron)
     EXPECT_NEAR(sdf.Values()[index(1, 12, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 1, 12)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(12, 12, 1)], 1.0, cellSize);
-    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0f, 0.25f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25f, -1.0f, 0.25f))), cellSize);
-    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0f, 1.0f, 1.0f))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(0, 12, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[3], tetraVertices[2] }, Point(-1.0, 0.25, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(12, 0, 12)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[0], tetraVertices[1], tetraVertices[3] }, Point(0.25, -1.0, 0.25))), cellSize);
+    EXPECT_NEAR(sdf.Values()[index(20, 20, 20)], sqrt(GetDistanceToTriangleSq(std::vector{ tetraVertices[1], tetraVertices[2], tetraVertices[3] }, Point(1.0, 1.0, 1.0))), cellSize);
 }
 
 TEST(DistanceField3DTests, PointCloudDistanceFieldGenerator_TetrahedronPointCloud)
@@ -211,12 +211,12 @@ TEST(DistanceField3DTests, PointCloudDistanceFieldGenerator_TetrahedronPointClou
     const std::vector points = { Point(0, 0, 0), Point(1, 0, 0), Point(0, 1, 0), Point(0, 0, 1) };
     const auto pointBBox = BoundingBox(points);
     const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-    const float minSize = std::min({ pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2] });
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min({ pointBBoxSize[0], pointBBoxSize[1], pointBBoxSize[2] });
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const PointCloudDistanceFieldSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         BlurPostprocessingType::None
     };
@@ -227,9 +227,9 @@ TEST(DistanceField3DTests, PointCloudDistanceFieldGenerator_TetrahedronPointClou
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_tetraPoints_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
-    ASSERT_EQ(sdf.Dimensions().Nz, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
+    ASSERT_EQ(sdf.Dimensions().Nz, 31);
     auto index = [&sdf](size_t i, size_t j, size_t k) {
         return i + j * sdf.Dimensions().Nx + k * sdf.Dimensions().Nx * sdf.Dimensions().Ny;
     };

@@ -46,8 +46,8 @@ namespace
     [[nodiscard]] std::vector<pmp::Point2> ParseDAttribute(const std::string& dData)
     {
         std::vector<pmp::Point2> points;
-        float currentX = 0.0f, currentY = 0.0f;
-        float startX = 0.0f, startY = 0.0f;
+        pmp::Scalar currentX = 0.0, currentY = 0.0;
+        pmp::Scalar startX = 0.0, startY = 0.0;
 
         auto tokens = Tokenize(dData);
         char currentCommand = 0;
@@ -64,8 +64,8 @@ namespace
 
             switch (currentCommand) {
             case 'M': { // Move to (absolute)
-                float x = std::stof(tokens[i++]);
-                float y = std::stof(tokens[i++]);
+                pmp::Scalar x = std::stof(tokens[i++]);
+                pmp::Scalar y = std::stof(tokens[i++]);
                 currentX = x;
                 currentY = y;
                 startX = currentX;
@@ -75,8 +75,8 @@ namespace
                 break;
             }
             case 'm': { // Move to (relative)
-                float dx = std::stof(tokens[i++]);
-                float dy = std::stof(tokens[i++]);
+                pmp::Scalar dx = std::stof(tokens[i++]);
+                pmp::Scalar dy = std::stof(tokens[i++]);
                 currentX += dx;
                 currentY += dy;
                 startX = currentX;
@@ -87,8 +87,8 @@ namespace
             }
             case 'L': { // Line to (absolute)
                 while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
-                    float x = std::stof(tokens[i++]);
-                    float y = std::stof(tokens[i++]);
+                    pmp::Scalar x = std::stof(tokens[i++]);
+                    pmp::Scalar y = std::stof(tokens[i++]);
                     currentX = x;
                     currentY = y;
                     points.emplace_back(currentX, currentY);
@@ -97,8 +97,8 @@ namespace
             }
             case 'l': { // Line to (relative)
                 while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
-                    float dx = std::stof(tokens[i++]);
-                    float dy = std::stof(tokens[i++]);
+                    pmp::Scalar dx = std::stof(tokens[i++]);
+                    pmp::Scalar dy = std::stof(tokens[i++]);
                     currentX += dx;
                     currentY += dy;
                     points.emplace_back(currentX, currentY);
@@ -107,7 +107,7 @@ namespace
             }
             case 'V': { // Vertical line to (absolute)
                 while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
-                    float y = std::stof(tokens[i++]);
+                    pmp::Scalar y = std::stof(tokens[i++]);
                     currentY = y;
                     points.emplace_back(currentX, currentY);
                 }
@@ -115,7 +115,7 @@ namespace
             }
             case 'v': { // Vertical line to (relative)
                 while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
-                    float dy = std::stof(tokens[i++]);
+                    pmp::Scalar dy = std::stof(tokens[i++]);
                     currentY += dy;
                     points.emplace_back(currentX, currentY);
                 }
@@ -123,7 +123,7 @@ namespace
             }
             case 'H': { // Horizontal line to (absolute)
                 while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
-                    float x = std::stof(tokens[i++]);
+                    pmp::Scalar x = std::stof(tokens[i++]);
                     currentX = x;
                     points.emplace_back(currentX, currentY);
                 }
@@ -131,7 +131,7 @@ namespace
             }
             case 'h': { // Horizontal line to (relative)
                 while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
-                    float dx = std::stof(tokens[i++]);
+                    pmp::Scalar dx = std::stof(tokens[i++]);
                     currentX += dx;
                     points.emplace_back(currentX, currentY);
                 }

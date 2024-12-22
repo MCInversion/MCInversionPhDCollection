@@ -55,19 +55,19 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 
 #if VERIFY_SOLUTION_WITHIN_BOUNDS
 	auto bbox = m_EvolvingSurface->bounds();
-	bbox.expand(0.5f * STARTING_SPHERE_RADIUS, 0.5f * STARTING_SPHERE_RADIUS, 0.5f * STARTING_SPHERE_RADIUS);
+	bbox.expand(0.5 * STARTING_SPHERE_RADIUS, 0.5 * STARTING_SPHERE_RADIUS, 0.5 * STARTING_SPHERE_RADIUS);
 #endif
 
 	// ........ evaluate edge lengths for remeshing ....................
-	//const float phi = (1.0f + sqrt(5.0f)) / 2.0f; /// golden ratio.
-	const auto subdiv = static_cast<float>(STARTING_SPHERE_SUBDIVISION + iter);
-	constexpr float r = STARTING_SPHERE_RADIUS;
-	constexpr float baseIcoHalfAngle = 2.0f * M_PI / 10.0f;
-	const float minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	//auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0f, subdiv - 1) * sqrt(phi * sqrt(5.0f)))); // from icosahedron edge length
-	auto minEdgeLength = minEdgeMultiplier * 2.0f * r * sin(baseIcoHalfAngle * pow(2.0f, -subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 1.5f * minEdgeLength;
-	auto approxError = 0.25f * (minEdgeLength + maxEdgeLength);
+	//const pmp::Scalar phi = (1.0 + sqrt(5.0)) / 2.0; /// golden ratio.
+	const auto subdiv = static_cast<pmp::Scalar>(STARTING_SPHERE_SUBDIVISION + iter);
+	constexpr pmp::Scalar r = STARTING_SPHERE_RADIUS;
+	constexpr pmp::Scalar baseIcoHalfAngle = 2.0 * M_PI / 10.0;
+	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
+	//auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0, subdiv - 1) * sqrt(phi * sqrt(5.0)))); // from icosahedron edge length
+	auto minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
+	auto maxEdgeLength = 1.5 * minEdgeLength;
+	auto approxError = 0.25 * (minEdgeLength + maxEdgeLength);
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -92,8 +92,8 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 
 			const Eigen::Vector3d vertexRhs = vPosToUpdate;
 			sysRhs.row(v.idx()) = vertexRhs;
-			const float tanRedistWeight = m_EvolSettings.TangentialVelocityWeight;
-			if (tanRedistWeight > 0.0f)
+			const auto tanRedistWeight = m_EvolSettings.TangentialVelocityWeight;
+			if (tanRedistWeight > 0.0)
 			{
 				// compute tangential velocity
 				const auto vTanVelocity = ComputeTangentialUpdateVelocityAtVertex(*m_EvolvingSurface, v, vNormal, tanRedistWeight);

@@ -10,8 +10,8 @@ namespace Geometry
 	*/
 	struct MobiusStripSettings
 	{
-		float RingRadius{ 1.0f }; //! radius of the Mobius ring.
-		float SweepLineLength{ 0.3f }; //! length of the sweep line of the Mobius strip.
+		pmp::Scalar RingRadius{ 1.0 }; //! radius of the Mobius ring.
+		pmp::Scalar SweepLineLength{ 0.3 }; //! length of the sweep line of the Mobius strip.
 		unsigned int RingSegments{ 10 }; //! number of segments per Mobius ring.
 		unsigned int SweepSegments{ 5 }; //! number of segments along the swept line.
 		bool UseQuads{ false }; //! if true the torus surface will be composed of quads instead of triangles.
@@ -39,15 +39,15 @@ namespace Geometry
 				std::cerr << "MobiusStripBuilder::MobiusStripBuilder: m_Settings.RingSegments < 4, setting m_Settings.RingSegments = 3!\n";
 				m_Settings.RingSegments = 3;
 			}
-			if (m_Settings.RingRadius <= 0.0f)
+			if (m_Settings.RingRadius <= 0.0)
 			{
 				std::cerr << "MobiusStripBuilder::MobiusStripBuilder: m_Settings.RingRadius <= 0.0, setting m_Settings.RingRadius = 1.0!\n";
-				m_Settings.RingRadius = 1.0f;
+				m_Settings.RingRadius = 1.0;
 			}
-			if (m_Settings.SweepLineLength <= 0.0f)
+			if (m_Settings.SweepLineLength <= 0.0)
 			{
 				std::cerr << "MobiusStripBuilder::MobiusStripBuilder: m_Settings.SweepLineLength <= 0.0, setting m_Settings.SweepLineLength = 0.3!\n";
-				m_Settings.SweepLineLength = 0.3f;
+				m_Settings.SweepLineLength = 0.3;
 			}
 		}
 

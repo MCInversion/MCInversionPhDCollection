@@ -8,6 +8,7 @@
 #include "geometry/GridUtil.h"
 #include "geometry/GeometryUtil.h"
 #include "geometry/GeometryAdapters.h"
+#include "geometry/GeometryIOUtils.h"
 
 using namespace SDF;
 using namespace Geometry;
@@ -17,6 +18,26 @@ using namespace pmp;
 constexpr size_t HASH_square_SDF{ 11463448448184433784 };
 constexpr size_t HASH_openSquare_SDF{ 9360073553033082223 };
 constexpr size_t HASH_squarePts_SDF{ 12327925769871880303 };
+
+[[nodiscard]] bool TestExportDFAndPointCloud(const Geometry::ScalarGrid2D& df, const std::vector<pmp::Point2>& pts, const std::string& absFileName)
+{
+    ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
+    constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+    ExportScalarGrid2DToPNG(absFileName + "incompleteCircleDF.png", df,
+        Geometry::BilinearInterpolateScalarValue,
+        //Geometry::GetNearestNeighborScalarValue2D,
+        10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+}
+
+[[nodiscard]] bool TestExportDFAndCurve(const Geometry::ScalarGrid2D& df, const std::vector<pmp::Point2>& pts, const std::string& absFileName)
+{
+    ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
+    constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+    ExportScalarGrid2DToPNG(absFileName + ".png", df,
+        Geometry::BilinearInterpolateScalarValue,
+        //Geometry::GetNearestNeighborScalarValue2D,
+        10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+}
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 {
@@ -29,12 +50,12 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation2D::PixelFloodFill,
@@ -47,8 +68,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_square_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
@@ -75,12 +96,12 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation2D::None,
@@ -93,8 +114,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_openSquare_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
@@ -121,12 +142,12 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation2D::PixelFloodFill,
@@ -139,8 +160,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_square_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
@@ -168,12 +189,12 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const float minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX,
         KDTreeSplitType::Center,
         SignComputation2D::None,
@@ -186,8 +207,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_openSquare_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };
@@ -208,12 +229,12 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
     const std::vector points = { Point2(0, 0), Point2(1, 0), Point2(1, 1), Point2(0, 1) };
     const auto pointBBox = BoundingBox2(points);
     const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-    const float minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-    const float cellSize = minSize / 10.0f;
+    const pmp::Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
 
     const PointCloudDistanceField2DSettings sdfSettings{
         cellSize,
-        1.0f,
+        1.0,
         DBL_MAX
     };
 
@@ -223,8 +244,8 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
     // Assert
     ASSERT_TRUE(sdf.IsValid());
     EXPECT_EQ(HashScalarGrid(sdf), HASH_squarePts_SDF);
-    ASSERT_EQ(sdf.Dimensions().Nx, 30);
-    ASSERT_EQ(sdf.Dimensions().Ny, 30);
+    ASSERT_EQ(sdf.Dimensions().Nx, 31);
+    ASSERT_EQ(sdf.Dimensions().Ny, 31);
     auto index = [&sdf](size_t i, size_t j) {
         return i + j * sdf.Dimensions().Nx;
     };

@@ -12,7 +12,7 @@ namespace Geometry
 	/// \param[in] ptCloud   input point cloud. 
 	/// \param[in] nBins     the number of histogram bins fitting [maxDistVal, minDistVal] interval.
 	/// \return optional histogram output as pair { [maxDistVal, minDistVal] range, bin counts }.
-	[[nodiscard]] std::optional<std::pair<std::pair<float, float>, std::vector<unsigned int>>>
+	[[nodiscard]] std::optional<std::pair<std::pair<pmp::Scalar, pmp::Scalar>, std::vector<unsigned int>>>
 		ComputeMeshDistanceToPointCloudPerVertexHistogram(const pmp::SurfaceMesh& mesh, const std::vector<pmp::vec3>& ptCloud, const unsigned int& nBins);
 
 	/// \brief Computes Hausdorff distance between mesh and a point cloud.

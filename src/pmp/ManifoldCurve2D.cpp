@@ -403,7 +403,7 @@ namespace pmp
         delete_vertex(v0, true);
     }
 
-    Vertex ManifoldCurve2D::split_edge(Edge e, float param)
+    Vertex ManifoldCurve2D::split_edge(Edge e, Scalar param)
     {
         // before:
 		//
@@ -419,7 +419,7 @@ namespace pmp
         const Vertex v0 = econn_[e].start_;
         const Vertex v1 = econn_[e].end_;
 
-        const Point2 newPos = (1.0f - param) * position(v0) + param * position(v1);
+        const Point2 newPos = (1.0 - param) * position(v0) + param * position(v1);
         const Vertex v = add_vertex(newPos);
 
         const Edge eNew = new_edge(v, v1);
@@ -435,7 +435,7 @@ namespace pmp
         return v;
     }
 
-    Vertex ManifoldCurve2D::split_edge(Vertex v0, Vertex v1, float param)
+    Vertex ManifoldCurve2D::split_edge(Vertex v0, Vertex v1, Scalar param)
     {
         // before:
         //
@@ -449,7 +449,7 @@ namespace pmp
         //
 
         const Edge e = vconn_[v0].from_;
-        const Point2 newPos = (1.0f - param) * position(v0) + param * position(v1);
+        const Point2 newPos = (1.0 - param) * position(v0) + param * position(v1);
         const Vertex v = add_vertex(newPos);
 
         const Edge eNew = new_edge(v, v1);

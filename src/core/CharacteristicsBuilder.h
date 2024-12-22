@@ -19,7 +19,7 @@ struct CharacteristicsBuilderSettings
     SDF::PointCloudDistanceField2DSettings DFSettings;
     bool ConstructInwardCharacteristics{ false };
     bool ConstructOutwardCharacteristics{ true };
-    float DivFieldThresholdFactor{ 0.01f }; //>! during clipping of rays by divergence field this threshold is used for valuating whether a ray should be clipped.
+    pmp::Scalar DivFieldThresholdFactor{ 0.01 }; //>! during clipping of rays by divergence field this threshold is used for valuating whether a ray should be clipped.
 };
 
 /**
@@ -95,7 +95,7 @@ public:
 private:
 
     /// \brief Generates initial rays from points on the curve with estimated normals.
-    [[nodiscard]] std::vector<Geometry::Ray2D> GenerateInitialRays(const float& fanAngleStep) const;
+    [[nodiscard]] std::vector<Geometry::Ray2D> GenerateInitialRays(const pmp::Scalar& fanAngleStep) const;
 
 
     // -------------------------------------------------------------------------------------

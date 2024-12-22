@@ -3,7 +3,7 @@
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/ArcLengthCalculator.h"
-#include "pmp/MatVec.h"
+#include "pmp/Types.h"
 
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
@@ -64,9 +64,9 @@ constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
  */
 struct AmbientFieldSettings
 {
-    float FieldExpansionFactor{ 1.0f }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
+    pmp::Scalar FieldExpansionFactor{ 1.0 }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
     unsigned int NVoxelsPerMinDimension{ 20 }; //>! the number of voxels per smallest dimension of the resulting scalar grid.
-    float FieldIsoLevel{ 0.0f }; //>! target level of the scalar field (e.g. zero distance to target manifold).
+    pmp::Scalar FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target manifold).
 };
 
 /**
@@ -75,8 +75,8 @@ struct AmbientFieldSettings
  */
 struct FeatureDetectionSettings
 {
-    float PrincipalCurvatureFactor{ 2.0f }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
-    float CriticalMeanCurvatureAngle{ 1.0f * static_cast<float>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 	
+    pmp::Scalar PrincipalCurvatureFactor{ 2.0 }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+    pmp::Scalar CriticalMeanCurvatureAngle{ 1.0 * static_cast<pmp::Scalar>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 	
 };
 
 /**
@@ -175,16 +175,16 @@ struct GlobalManifoldEvolutionSettings
 
     bool DoRemeshing{ true }; //>! if true, adaptive remeshing will be performed after the first 10-th of time steps.
     std::unordered_set<unsigned int> RemeshingResizeTimeIds{}; //>! a list of time indices during which remeshing lengths are resized by a given factor.
-    float RemeshingResizeFactor{ 0.98f }; //>! a factor by which remeshing edge lengths are downsized when a particular time step (logged in RemeshingResizeTimeIds) is reached. DISCLAIMER: This value is not used if RemeshingResizeTimeIds is empty!
+    pmp::Scalar RemeshingResizeFactor{ 0.98 }; //>! a factor by which remeshing edge lengths are downsized when a particular time step (logged in RemeshingResizeTimeIds) is reached. DISCLAIMER: This value is not used if RemeshingResizeTimeIds is empty!
 
     bool DetectFeatures{ true }; //>! if true, vertices with critical curvature will be marked as feature and frozen with respect to remeshing to avoid evolution past the target.
 };
 
 /// \brief Stabilization weight param from [0, 1]
-constexpr float STABILIZATION_FACTOR{ 1.0f };
+constexpr pmp::Scalar STABILIZATION_FACTOR{ 1.0 };
 
 /// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
-constexpr float SPHERE_RADIUS_FACTOR = 0.8f;
+constexpr pmp::Scalar SPHERE_RADIUS_FACTOR = 0.8;
 
 //
 // ===============================================================================================
@@ -242,7 +242,7 @@ public:
     /**
      * \brief Resizes remeshing settings the evolving manifold(s) by a given factor.
      */
-    virtual void ResizeRemeshingSettings(float resizeFactor) = 0;
+    virtual void ResizeRemeshingSettings(pmp::Scalar resizeFactor) = 0;
 
     /**
      * \brief Marks essential vertices that should not be displaced by remeshing as feature.
@@ -288,7 +288,7 @@ protected:
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    virtual void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) = 0;
+    virtual void StabilizeGeometries(pmp::Scalar stabilizationFactor = STABILIZATION_FACTOR) = 0;
 
     /// \brief A getter for the numerical integration step function.
     NumericalStepIntegrateFunction& GetIntegrate()
@@ -328,8 +328,8 @@ private:
     ManifoldEvolutionSettings m_Settings{};       //>! settings for the evolution strategy.
     NumericalStepIntegrateFunction m_Integrate{}; //>! numerical integration function (clearly, derived classes have different coefficients/matrices).
 
-    pmp::Scalar m_ScalingFactor{ 1.0f }; //>! the computed scaling factor for numerical stabilization.
-    pmp::Scalar m_FieldCellSize{ 0.1f }; //>! standardized cell size for the variable distance fields.
+    pmp::Scalar m_ScalingFactor{ 1.0 }; //>! the computed scaling factor for numerical stabilization.
+    pmp::Scalar m_FieldCellSize{ 0.1 }; //>! standardized cell size for the variable distance fields.
 };
 
 /**
@@ -404,7 +404,7 @@ public:
     /**
 	 * \brief Resizes remeshing settings the evolving manifold(s) by a given factor.
 	 */
-    void ResizeRemeshingSettings(float resizeFactor) override;
+    void ResizeRemeshingSettings(pmp::Scalar resizeFactor) override;
 
     /**
 	 * \brief Marks essential vertices that should not be displaced by remeshing as feature.
@@ -498,17 +498,17 @@ protected:
 
     /// \brief Calculate the m_DistanceField and m_DFNegNormalizedGradient.
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
-    [[nodiscard]] std::tuple<float, float, pmp::Point2> ComputeAmbientFields();
+    [[nodiscard]] std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point2> ComputeAmbientFields();
 
     /// \brief Construct m_OuterCurve and m_InnerCurves from settings.
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
-    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point2& targetBoundsCenter);
+    void ConstructInitialManifolds(pmp::Scalar minTargetSize, pmp::Scalar maxTargetSize, const pmp::Point2& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) override;
+    void StabilizeGeometries(pmp::Scalar stabilizationFactor = STABILIZATION_FACTOR) override;
 
     /// \brief A getter for the scalar grid interpolator function.
     ScalarGridInterpolationFunction2D& GetScalarInterpolate()
@@ -652,13 +652,13 @@ private:
     [[nodiscard]] bool HasValidInnerOuterManifolds() const;
 
     /// \brief Computes the full range of co-volume sizes (lengths) to help compute the stabilization scaling factor.
-    [[nodiscard]] std::pair<float, float> CalculateCoVolumeRange() const;
+    [[nodiscard]] std::pair<pmp::Scalar, pmp::Scalar> CalculateCoVolumeRange() const;
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
 	/// \param[in] minLength               the minimum length of a 1D co-volume within the custom curves.
 	/// \param[in] maxLength               the maximum length of a 1D co-volume within the custom curves.
 	/// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(float minLength, float maxLength, float stabilizationFactor = 1.0f);
+    void StabilizeCustomGeometries(pmp::Scalar minLength, pmp::Scalar maxLength, pmp::Scalar stabilizationFactor = 1.0);
 };
 
 /**
@@ -736,7 +736,7 @@ public:
     /**
 	 * \brief Resizes remeshing settings the evolving manifold(s) by a given factor.
 	 */
-    void ResizeRemeshingSettings(float resizeFactor) override;
+    void ResizeRemeshingSettings(pmp::Scalar resizeFactor) override;
 
     /**
 	 * \brief Marks essential vertices that should not be displaced by remeshing as feature.
@@ -806,17 +806,17 @@ protected:
 
     /// \brief Compute fields m_DistanceField and m_DFNegNormalizedGradient.
     /// \return triple { minTargetSize, maxTargetSize, targetBoundsCenter }.
-    [[nodiscard]] std::tuple<float, float, pmp::Point> ComputeAmbientFields();
+    [[nodiscard]] std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point> ComputeAmbientFields();
 
     /// \brief Construct m_OuterSurface and m_InnerSurfaces from settings.
     /// \param[in] minTargetSize        minimal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] maxTargetSize        maximal size of the target data bounding box. Used for computing the radius of the outer manifold.
     /// \param[in] targetBoundsCenter   the center of the target data bounding box. Used for proper centering the initial outer manifold.
-    void ConstructInitialManifolds(float minTargetSize, float maxTargetSize, const pmp::Point& targetBoundsCenter);
+    void ConstructInitialManifolds(pmp::Scalar minTargetSize, pmp::Scalar maxTargetSize, const pmp::Point& targetBoundsCenter);
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeGeometries(float stabilizationFactor = STABILIZATION_FACTOR) override;
+    void StabilizeGeometries(pmp::Scalar stabilizationFactor = STABILIZATION_FACTOR) override;
 
     /// \brief A getter for the inverse stabilization transformation matrix.
     pmp::mat4& GetTransformToOriginal()
@@ -998,13 +998,13 @@ private:
     [[nodiscard]] bool HasValidInnerOuterManifolds() const;
 
     /// \brief Computes the full range of co-volume sizes (lengths) to help compute the stabilization scaling factor.
-    [[nodiscard]] std::pair<float, float> CalculateCoVolumeRange() const;
+    [[nodiscard]] std::pair<pmp::Scalar, pmp::Scalar> CalculateCoVolumeRange() const;
 
     /// \brief Transform all of the geometries so that numerical stability is ensured.
     /// \param[in] minArea                 the minimum area of a 2D co-volume within the custom surfaces.
     /// \param[in] maxArea                 the maximum area of a 2D co-volume within the custom surfaces.
     /// \param[in] stabilizationFactor     a multiplier for stabilizing mean co-volume measure.
-    void StabilizeCustomGeometries(float minArea, float maxArea, float stabilizationFactor = STABILIZATION_FACTOR);
+    void StabilizeCustomGeometries(pmp::Scalar minArea, pmp::Scalar maxArea, pmp::Scalar stabilizationFactor = STABILIZATION_FACTOR);
 };
 
 //

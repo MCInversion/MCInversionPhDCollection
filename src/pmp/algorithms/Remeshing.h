@@ -18,9 +18,9 @@ namespace pmp {
  */
 struct AdaptiveRemeshingSettings
 {
-    Scalar MinEdgeLength{ 1.0f };
-    Scalar MaxEdgeLength{ 2.0f };
-    Scalar ApproxError{ 1.5f };
+    Scalar MinEdgeLength{ 1.0 };
+    Scalar MaxEdgeLength{ 2.0 };
+    Scalar ApproxError{ 1.5 };
     unsigned int NRemeshingIterations{ 10 };
     unsigned int NTangentialSmoothingIters{ 6 };
     bool UseProjection{ true };

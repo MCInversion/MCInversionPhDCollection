@@ -22,7 +22,7 @@ namespace SDF
 
 		const auto& dims = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		std::vector triangle{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		pmp::vec3 voxelCenter, voxelMin, voxelMax;
@@ -33,17 +33,17 @@ namespace SDF
 			{
 				for (unsigned int ix = 0; ix < dims.Nx; ix++)
 				{
-					voxelCenter[0] = orig[0] + (static_cast<float>(ix) + 0.5f) * cellSize;
-					voxelCenter[1] = orig[1] + (static_cast<float>(iy) + 0.5f) * cellSize;
-					voxelCenter[2] = orig[2] + (static_cast<float>(iz) + 0.5f) * cellSize;
+					voxelCenter[0] = orig[0] + (static_cast<pmp::Scalar>(ix) + 0.5) * cellSize;
+					voxelCenter[1] = orig[1] + (static_cast<pmp::Scalar>(iy) + 0.5) * cellSize;
+					voxelCenter[2] = orig[2] + (static_cast<pmp::Scalar>(iz) + 0.5) * cellSize;
 
-					voxelMin[0] = voxelCenter[0] - 0.5f * cellSize;
-					voxelMin[1] = voxelCenter[1] - 0.5f * cellSize;
-					voxelMin[2] = voxelCenter[2] - 0.5f * cellSize;
+					voxelMin[0] = voxelCenter[0] - 0.5 * cellSize;
+					voxelMin[1] = voxelCenter[1] - 0.5 * cellSize;
+					voxelMin[2] = voxelCenter[2] - 0.5 * cellSize;
 
-					voxelMax[0] = voxelCenter[0] + 0.5f * cellSize;
-					voxelMax[1] = voxelCenter[1] + 0.5f * cellSize;
-					voxelMax[2] = voxelCenter[2] + 0.5f * cellSize;
+					voxelMax[0] = voxelCenter[0] + 0.5 * cellSize;
+					voxelMax[1] = voxelCenter[1] + 0.5 * cellSize;
+					voxelMax[2] = voxelCenter[2] + 0.5 * cellSize;
 
 					const pmp::BoundingBox voxelBox{ voxelMin , voxelMax };
 					std::vector<unsigned int> voxelTriangleIds{};
@@ -81,7 +81,7 @@ namespace SDF
 		assert(m_KdTree);
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 		const auto& gridBox = grid.Box();
 		const auto octreeVox = OctreeVoxelizer(*m_KdTree, gridBox, cellSize);
 
@@ -90,9 +90,9 @@ namespace SDF
 		std::vector<double> valueBuffer{};
 		octreeVox.GetLeafBoxesAndValues(boxBuffer, valueBuffer);
 		const size_t nOutlineVoxels = boxBuffer.size();
-		const float gBoxMinX = gridBox.min()[0];
-		const float gBoxMinY = gridBox.min()[1];
-		const float gBoxMinZ = gridBox.min()[2];
+		const pmp::Scalar gBoxMinX = gridBox.min()[0];
+		const pmp::Scalar gBoxMinY = gridBox.min()[1];
+		const pmp::Scalar gBoxMinZ = gridBox.min()[2];
 
 		const auto& dims = grid.Dimensions();
 		const auto Nx = static_cast<unsigned int>(dims.Nx);
@@ -102,9 +102,9 @@ namespace SDF
 		for (size_t i = 0; i < nOutlineVoxels; i++)
 		{
 			// transform from real space to grid index space
-			ix = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
-			iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
-			iz = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
+			ix = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
+			iy = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
+			iz = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
 
 			gridPos = Nx * Ny * iz + Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];
@@ -258,9 +258,9 @@ namespace SDF
 			<< (bbox.max()[1] - bbox.min()[1]) << ", "
 			<< (bbox.max()[2] - bbox.min()[2]) << "},\n";
 		os << "           Center: {"
-			<< 0.5f * (bbox.max()[0] + bbox.min()[0]) << ", "
-		    << 0.5f * (bbox.max()[1] + bbox.min()[1]) << ", "
-		    << 0.5f * (bbox.max()[2] + bbox.min()[2]) << "},\n";
+			<< 0.5 * (bbox.max()[0] + bbox.min()[0]) << ", "
+		    << 0.5 * (bbox.max()[1] + bbox.min()[1]) << ", "
+		    << 0.5 * (bbox.max()[2] + bbox.min()[2]) << "},\n";
 		os << "----------------------------------------------------------------------\n";
 		os << "CellSize: " << settings.CellSize << "\n";
 		os << "VolumeExpansionFactor: " << settings.VolumeExpansionFactor << "\n";
@@ -302,8 +302,8 @@ namespace SDF
 		const DistanceFieldSettings& settings,
 		const std::optional<pmp::BoundingBox>& customFieldBox)
 	{
-		assert(settings.CellSize > 0.0f);
-		assert(settings.VolumeExpansionFactor >= 0.0f);
+		assert(settings.CellSize > 0.0);
+		assert(settings.VolumeExpansionFactor >= 0.0);
 		assert(settings.TruncationFactor > 0);
 
 		m_Mesh = inputMesh.Clone();
@@ -341,11 +341,11 @@ namespace SDF
 
 		auto sdfBBox = customFieldBox.value_or(m_Mesh->GetBounds());
 		const auto size = sdfBBox.max() - sdfBBox.min();
-		const float minSize = std::min({ size[0], size[1], size[2] });
+		const pmp::Scalar minSize = std::min({ size[0], size[1], size[2] });
 
-		if (settings.VolumeExpansionFactor > 0.0f && !customFieldBox.has_value())
+		if (settings.VolumeExpansionFactor > 0.0 && !customFieldBox.has_value())
 		{
-			const float expansion = settings.VolumeExpansionFactor * minSize;
+			const pmp::Scalar expansion = settings.VolumeExpansionFactor * minSize;
 			sdfBBox.expand(expansion, expansion, expansion);
 		}
 
@@ -557,8 +557,8 @@ namespace SDF
 		// grid sub-bounds
 		const auto dMin = origMeshBox.min() - gridBox.min();
 		const auto dMax = origMeshBox.max() - gridBox.min();
-		assert(dMin[0] >= 0.0f && dMin[1] >= 0.0f && dMin[2] >= 0.0f);
-		assert(dMax[0] >= 0.0f && dMax[1] >= 0.0f && dMax[2] >= 0.0f);
+		assert(dMin[0] >= 0.0 && dMin[1] >= 0.0 && dMin[2] >= 0.0);
+		assert(dMax[0] >= 0.0 && dMax[1] >= 0.0 && dMax[2] >= 0.0);
 
 		// compute sub-grid bounds
 		const auto& cellSize = grid.CellSize();
@@ -575,7 +575,7 @@ namespace SDF
 		const auto& orig = grid.Box().min();
 
 		pmp::vec3 gridPt;
-		const pmp::vec3 rayXDir{ 1.0f, 0.0, 0.0 };
+		const pmp::vec3 rayXDir{ 1.0, 0.0, 0.0 };
 		Geometry::Ray ray{ gridPt, rayXDir };
 
 		for (unsigned int iz = iZStart; iz < iZEnd; iz++)
@@ -604,8 +604,8 @@ namespace SDF
 
 	Geometry::ScalarGrid PointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::vec3>& inputPoints, const PointCloudDistanceFieldSettings& settings)
 	{
-		assert(settings.CellSize > 0.0f);
-		assert(settings.VolumeExpansionFactor >= 0.0f);
+		assert(settings.CellSize > 0.0);
+		assert(settings.VolumeExpansionFactor >= 0.0);
 		assert(settings.TruncationFactor > 0);
 		if (inputPoints.empty())
 		{
@@ -614,11 +614,11 @@ namespace SDF
 
 		pmp::BoundingBox dfBBox(inputPoints);
 		const auto size = dfBBox.max() - dfBBox.min();
-		const float minSize = std::min({ size[0], size[1], size[2] });
+		const pmp::Scalar minSize = std::min({ size[0], size[1], size[2] });
 
-		if (settings.VolumeExpansionFactor > 0.0f)
+		if (settings.VolumeExpansionFactor > 0.0)
 		{
-			const float expansion = settings.VolumeExpansionFactor * minSize;
+			const pmp::Scalar expansion = settings.VolumeExpansionFactor * minSize;
 			dfBBox.expand(expansion, expansion, expansion);
 		}
 
@@ -665,12 +665,12 @@ namespace SDF
 		}
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto& gridBox = grid.Box();
-		const float gBoxMinX = gridBox.min()[0];
-		const float gBoxMinY = gridBox.min()[1];
-		const float gBoxMinZ = gridBox.min()[2];
+		const pmp::Scalar gBoxMinX = gridBox.min()[0];
+		const pmp::Scalar gBoxMinY = gridBox.min()[1];
+		const pmp::Scalar gBoxMinZ = gridBox.min()[2];
 
 		const auto& dims = grid.Dimensions();
 		const auto Nx = static_cast<unsigned int>(dims.Nx);
@@ -701,8 +701,8 @@ namespace SDF
 		const DistanceField2DSettings& settings, 
 		const std::optional<pmp::BoundingBox2>& customFieldBox)
 	{
-		assert(settings.CellSize > 0.0f);
-		assert(settings.AreaExpansionFactor >= 0.0f);
+		assert(settings.CellSize > 0.0);
+		assert(settings.AreaExpansionFactor >= 0.0);
 		assert(settings.TruncationFactor > 0);
 
 		m_Curve = inputCurve.Clone();
@@ -740,11 +740,11 @@ namespace SDF
 
 		auto sdfBBox = customFieldBox.value_or(m_Curve->GetBounds());
 		const auto size = sdfBBox.max() - sdfBBox.min();
-		const float minSize = std::min( size[0], size[1] );
+		const pmp::Scalar minSize = std::min( size[0], size[1] );
 
-		if (settings.AreaExpansionFactor > 0.0f && !customFieldBox.has_value())
+		if (settings.AreaExpansionFactor > 0.0 && !customFieldBox.has_value())
 		{
-			const float expansion = settings.AreaExpansionFactor * minSize;
+			const pmp::Scalar expansion = settings.AreaExpansionFactor * minSize;
 			sdfBBox.expand(expansion, expansion);
 		}
 
@@ -833,7 +833,7 @@ namespace SDF
 
 		const auto& dims = grid.Dimensions();
 		const auto& orig = grid.Box().min();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		std::vector edge{ pmp::vec2(), pmp::vec2() };
 		pmp::vec2 pixelCenter, pixelMin, pixelMax;
@@ -842,14 +842,14 @@ namespace SDF
 		{
 			for (unsigned int ix = 0; ix < dims.Nx; ix++)
 			{
-				pixelCenter[0] = orig[0] + (static_cast<float>(ix) + 0.5f) * cellSize;
-				pixelCenter[1] = orig[1] + (static_cast<float>(iy) + 0.5f) * cellSize;
+				pixelCenter[0] = orig[0] + (static_cast<pmp::Scalar>(ix) + 0.5) * cellSize;
+				pixelCenter[1] = orig[1] + (static_cast<pmp::Scalar>(iy) + 0.5) * cellSize;
 
-				pixelMin[0] = pixelCenter[0] - 0.5f * cellSize;
-				pixelMin[1] = pixelCenter[1] - 0.5f * cellSize;
+				pixelMin[0] = pixelCenter[0] - 0.5 * cellSize;
+				pixelMin[1] = pixelCenter[1] - 0.5 * cellSize;
 
-				pixelMax[0] = pixelCenter[0] + 0.5f * cellSize;
-				pixelMax[1] = pixelCenter[1] + 0.5f * cellSize;
+				pixelMax[0] = pixelCenter[0] + 0.5 * cellSize;
+				pixelMax[1] = pixelCenter[1] + 0.5 * cellSize;
 
 				const pmp::BoundingBox2 pixelBox{ pixelMin , pixelMax };
 				std::vector<unsigned int> pixelEdgeIds{};
@@ -885,7 +885,7 @@ namespace SDF
 		assert(m_KdTree);
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 		auto gridBox = grid.Box();
 		const auto gridBoxSize = gridBox.max() - gridBox.min();
 		gridBox.expand(Geometry::BOX_INFLATION * gridBoxSize[0], Geometry::BOX_INFLATION * gridBoxSize[1]);
@@ -896,8 +896,8 @@ namespace SDF
 		std::vector<double> valueBuffer{};
 		quadtreeVox.GetLeafBoxesAndValues(boxBuffer, valueBuffer);
 		const size_t nOutlinePixels = boxBuffer.size();
-		const float gBoxMinX = gridBox.min()[0];
-		const float gBoxMinY = gridBox.min()[1];
+		const pmp::Scalar gBoxMinX = gridBox.min()[0];
+		const pmp::Scalar gBoxMinY = gridBox.min()[1];
 
 		const auto& dims = grid.Dimensions();
 		const auto Nx = static_cast<unsigned int>(dims.Nx);
@@ -906,8 +906,8 @@ namespace SDF
 		for (size_t i = 0; i < nOutlinePixels; i++)
 		{
 			// transform from real space to grid index space
-			//ix = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
-			//iy = static_cast<unsigned int>(std::floor((0.5f * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
+			//ix = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
+			//iy = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 			
 			const double param = 0.5;
 			ix = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[0] + param * boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
@@ -981,8 +981,8 @@ namespace SDF
 
 	Geometry::ScalarGrid2D PlanarPointCloudDistanceFieldGenerator::Generate(const std::vector<pmp::Point2>& inputPoints, const PointCloudDistanceField2DSettings& settings)
 	{
-		assert(settings.CellSize > 0.0f);
-		assert(settings.AreaExpansionFactor >= 0.0f);
+		assert(settings.CellSize > 0.0);
+		assert(settings.AreaExpansionFactor >= 0.0);
 		assert(settings.TruncationFactor > 0);
 		if (inputPoints.empty())
 		{
@@ -991,11 +991,11 @@ namespace SDF
 
 		pmp::BoundingBox2 dfBBox(inputPoints);
 		const auto size = dfBBox.max() - dfBBox.min();
-		const float minSize = std::min(size[0], size[1]);
+		const pmp::Scalar minSize = std::min(size[0], size[1]);
 
-		if (settings.AreaExpansionFactor > 0.0f)
+		if (settings.AreaExpansionFactor > 0.0)
 		{
-			const float expansion = settings.AreaExpansionFactor * minSize;
+			const pmp::Scalar expansion = settings.AreaExpansionFactor * minSize;
 			dfBBox.expand(expansion, expansion);
 		}
 
@@ -1042,11 +1042,11 @@ namespace SDF
 		}
 		auto& gridVals = grid.Values();
 		auto& gridFrozenVals = grid.FrozenValues();
-		const float cellSize = grid.CellSize();
+		const pmp::Scalar cellSize = grid.CellSize();
 
 		const auto& gridBox = grid.Box();
-		const float gBoxMinX = gridBox.min()[0];
-		const float gBoxMinY = gridBox.min()[1];
+		const pmp::Scalar gBoxMinX = gridBox.min()[0];
+		const pmp::Scalar gBoxMinY = gridBox.min()[1];
 
 		const auto& dims = grid.Dimensions();
 		const auto Nx = static_cast<unsigned int>(dims.Nx);

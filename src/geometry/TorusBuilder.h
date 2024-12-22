@@ -10,8 +10,8 @@ namespace Geometry
 	*/
 	struct TorusSettings
 	{
-		float RingRadius{ 1.0f }; //! radius of the torus ring.
-		float TubeRadius{ 0.3f }; //! radius of the tube of the torus.
+		pmp::Scalar RingRadius{ 1.0 }; //! radius of the torus ring.
+		pmp::Scalar TubeRadius{ 0.3 }; //! radius of the tube of the torus.
 		unsigned int RingSegments{ 10 }; //! number of segments per torus ring.
 		unsigned int TubeSegments{ 5 }; //! number of segments along torus tube.
 		bool UseQuads{ false }; //! if true the torus surface will be composed of quads instead of triangles.
@@ -39,15 +39,15 @@ namespace Geometry
 				std::cerr << "TorusBuilder::TorusBuilder: m_Settings.RingSegments < 4, setting m_Settings.RingSegments = 3!\n";
 				m_Settings.RingSegments = 3;
 			}
-			if (m_Settings.RingRadius <= 0.0f)
+			if (m_Settings.RingRadius <= 0.0)
 			{
 				std::cerr << "TorusBuilder::TorusBuilder: m_Settings.RingRadius <= 0.0, setting m_Settings.RingRadius = 1.0!\n";
-				m_Settings.RingRadius = 1.0f;
+				m_Settings.RingRadius = 1.0;
 			}
-			if (m_Settings.TubeRadius <= 0.0f)
+			if (m_Settings.TubeRadius <= 0.0)
 			{
 				std::cerr << "TorusBuilder::TorusBuilder: m_Settings.TubeRadius <= 0.0, setting m_Settings.TubeRadius = 0.3!\n";
-				m_Settings.TubeRadius = 0.3f;
+				m_Settings.TubeRadius = 0.3;
 			}
 		}
 
