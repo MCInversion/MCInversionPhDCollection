@@ -9,6 +9,7 @@
 #include "geometry/GeometryUtil.h"
 #include "geometry/GeometryAdapters.h"
 #include "geometry/GeometryIOUtils.h"
+#include "pmp/algorithms/CurveFactory.h"
 
 using namespace SDF;
 using namespace Geometry;
@@ -183,6 +184,81 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurveUns
     EXPECT_NEAR(sdf.Values()[index(29, 14)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(14, 29)], 1.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(14, 14)], -0.5, cellSize);
+}
+
+TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurveUnsignedInFirstQuadrant)
+{
+    // Arrange
+    const vec2 translateToFirstQuadrant{ 2.5, 3.7 };
+    const std::vector curveVertices = {
+    	Point2(0, 0) + translateToFirstQuadrant,
+    	Point2(1, 0) + translateToFirstQuadrant,
+    	Point2(1, 1) + translateToFirstQuadrant,
+    	Point2(0, 1) + translateToFirstQuadrant
+    };
+    BaseCurveGeometryData curveData;
+    curveData.Vertices = curveVertices;
+    curveData.EdgeIndices = { {0, 1}, {1, 2}, {2, 3}, {3, 0} };
+    const BaseCurveAdapter curveAdapter(std::make_shared<BaseCurveGeometryData>(curveData));
+
+    const auto curveBBox = curveAdapter.GetBounds();
+    const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
+    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
+
+    const DistanceField2DSettings sdfSettings{
+        cellSize,
+        1.0,
+        DBL_MAX,
+        KDTreeSplitType::Center,
+        SignComputation2D::None,
+        PreprocessingType2D::Quadtree
+    };
+
+    // Act
+    const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_BASE_CURVE(sdf, curveAdapter.Get(), "SimpleClosedBaseCurveUnsignedInFirstQuadrant");
+
+    // Assert
+    ASSERT_TRUE(sdf.IsValid());
+}
+
+TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurveUnsignedInFirstQuadrant)
+{
+    // Arrange
+    const vec2 translateToFirstQuadrant{ 2.5, 3.7 };
+    const std::vector curveVertices = {
+        Point2(0, 0) + translateToFirstQuadrant,
+        Point2(1, 0) + translateToFirstQuadrant,
+        Point2(1, 1) + translateToFirstQuadrant,
+        Point2(0, 1) + translateToFirstQuadrant
+    };
+    ManifoldCurve2D curve;
+    std::vector<Vertex> vertices;
+    std::ranges::transform(curveVertices, std::back_inserter(vertices), [&curve](const auto v) { return curve.add_vertex(v); });
+    for (size_t i = 0; i < vertices.size(); ++i) { curve.new_edge(vertices[i], vertices[(i + 1) % vertices.size()]); }
+    const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(curve));
+
+    const auto curveBBox = curveAdapter.GetBounds();
+    const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
+    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const pmp::Scalar cellSize = minSize / 10.0;
+
+    const DistanceField2DSettings sdfSettings{
+        cellSize,
+        1.0,
+        DBL_MAX,
+        KDTreeSplitType::Center,
+        SignComputation2D::None,
+        PreprocessingType2D::Quadtree
+    };
+
+    // Act
+    const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_CURVE(sdf, curveAdapter.Get(), "SimpleClosedManifoldCurveUnsignedInFirstQuadrant");
+
+    // Assert
+    ASSERT_TRUE(sdf.IsValid());
 }
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
@@ -363,4 +439,106 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
     EXPECT_NEAR(sdf.Values()[index(29, 14)], sqrt(5.0) / 2.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(14, 29)], sqrt(5.0) / 2.0, cellSize);
     EXPECT_NEAR(sdf.Values()[index(29, 29)], sqrt(2.0), cellSize);
+}
+
+TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_MoreComplexPointCloud)
+{
+    // Arrange
+    std::vector points{
+        Point2{39.507142, 14.544772},
+        Point2{46.104261, 5.542495},
+        Point2{61.36143, 4.906308},
+        Point2{68.282948, 13.11281},
+        Point2{66.153916, 31.426095},
+        Point2{69.924933, 39.754365},
+        Point2{111.082270, 39.723965},
+        Point2{117.795930, 46.528945},
+        Point2{117.765430, 66.419005},
+        Point2{113.358230, 72.215125},
+        Point2{89.030514, 71.743755},
+        Point2{82.788235, 77.337235},
+        Point2{87.565954, 122.613040},
+        Point2{80.332640, 129.222760},
+        Point2{68.372952, 128.366110},
+        Point2{61.451434, 122.392570},
+        Point2{57.089489, 85.394595},
+        Point2{36.929786, 84.297475},
+        Point2{10.835265, 83.544745},
+        Point2{3.558908, 76.519305},
+        Point2{3.558908, 57.450225},
+        Point2{10.584357, 47.664785},
+        Point2{32.413427, 48.166595},
+        Point2{40.865615, 41.985195}
+    };
+    const auto sampledCurve = CurveFactory::sampled_polygon(points, 50, false);
+    points = sampledCurve.positions();
+    const auto pointBBox = BoundingBox2(points);
+    const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+    const Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
+
+    const PointCloudDistanceField2DSettings sdfSettings{
+        cellSize,
+        1.0,
+        DBL_MAX
+    };
+
+    // Act
+    const auto sdf = PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings);
+    EXPORT_FIELD_AND_PT_CLOUD(sdf, points, "MoreComplexPointCloud");
+
+    // Assert
+    ASSERT_TRUE(sdf.IsValid());
+}
+
+TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_MoreComplexPolygonalManifoldCurve)
+{
+    // Arrange
+    const std::vector points{
+        Point2{39.507142, 14.544772},
+        Point2{46.104261, 5.542495},
+        Point2{61.36143, 4.906308},
+        Point2{68.282948, 13.11281},
+        Point2{66.153916, 31.426095},
+        Point2{69.924933, 39.754365},
+        Point2{111.082270, 39.723965},
+        Point2{117.795930, 46.528945},
+        Point2{117.765430, 66.419005},
+        Point2{113.358230, 72.215125},
+        Point2{89.030514, 71.743755},
+        Point2{82.788235, 77.337235},
+        Point2{87.565954, 122.613040},
+        Point2{80.332640, 129.222760},
+        Point2{68.372952, 128.366110},
+        Point2{61.451434, 122.392570},
+        Point2{57.089489, 85.394595},
+        Point2{36.929786, 84.297475},
+        Point2{10.835265, 83.544745},
+        Point2{3.558908, 76.519305},
+        Point2{3.558908, 57.450225},
+        Point2{10.584357, 47.664785},
+        Point2{32.413427, 48.166595},
+        Point2{40.865615, 41.985195}
+    };
+    const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(CurveFactory::sampled_polygon(points, 50, false)));
+    const auto curveBBox = curveAdapter.GetBounds();
+    const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
+
+    const DistanceField2DSettings sdfSettings{
+        cellSize,
+        1.0,
+        DBL_MAX,
+        KDTreeSplitType::Center,
+        SignComputation2D::None,
+        PreprocessingType2D::Quadtree
+    };
+
+    // Act
+    const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_CURVE(sdf, curveAdapter.Get(), "MoreComplexPolygonalManifoldCurve");
+
+    // Assert
+    ASSERT_TRUE(sdf.IsValid());
 }

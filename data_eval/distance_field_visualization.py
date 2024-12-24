@@ -144,6 +144,7 @@ def draw_grid_lines(ax, bbox_min, bbox_max, nx, ny, cell_size):
         y = bbox_min[1] + i * cell_size
         ax.plot([bbox_min[0], bbox_max[0]], [y, y], color=grid_color, linewidth=0.5, alpha=0.5)
 
+# Main visualization function
 def visualize_field_and_curve(directory, base_filename):
     """Visualize the distance field and its corresponding curve."""
     gdim2d_path = os.path.join(directory, f"{base_filename}.gdim2d")
@@ -156,10 +157,18 @@ def visualize_field_and_curve(directory, base_filename):
 
     # Read grid dimensions and bounding box
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(gdim2d_path)
-    extent = [bbox_min[0], bbox_max[0], bbox_max[1], bbox_min[1]]
+    # Adjust the extent using the real-world coordinates, scaled by pixel dimensions
+    # The extent is calculated as bbox_min to (bbox_min + (number of cells * cell size))
+    extent = [
+        bbox_min[0],  # X-min
+        bbox_min[0] + nx * cell_size,  # X-max
+        bbox_min[1],  # Y-min
+        bbox_min[1] + ny * cell_size  # Y-max
+    ]
 
     # Load distance field image
     distance_field_img = imageio.imread(distance_field_path)
+    distance_field_img = np.flipud(distance_field_img)
 
     # Determine if the PLY file contains edges or just points
     with open(curve_path, 'r') as f:
@@ -175,8 +184,7 @@ def visualize_field_and_curve(directory, base_filename):
 
     # Plot the field and curve or points
     fig, ax = plt.subplots(figsize=(8, 6))
-
-    ax.imshow(distance_field_img, extent=extent, origin='upper', cmap='viridis')
+    ax.imshow(distance_field_img, extent=extent, origin='upper')
 
     if is_polyline:
         ax.plot(curve_data[:, 0], curve_data[:, 1], color='black', linewidth=2, label='Curve')
@@ -185,7 +193,6 @@ def visualize_field_and_curve(directory, base_filename):
 
     ax.set_xlim([bbox_min[0], bbox_max[0]])
     ax.set_ylim([bbox_min[1], bbox_max[1]])
-    ax.invert_yaxis()
 
     # Draw grid lines if enabled
     if draw_grid_lines:
@@ -213,8 +220,12 @@ directory = "../output/sdf_tests"
 #base_filename = "SimpleClosedManifoldCurve"
 #base_filename = "SimpleOpenBaseCurve"
 #base_filename = "SimpleOpenManifoldCurve"
-base_filename = "SimplePointCloud"
+#base_filename = "SimplePointCloud"
 #base_filename = "SimpleClosedBaseCurve"
 #base_filename = "SimpleClosedBaseCurveUnsigned"
+#base_filename = "MoreComplexPolygonalManifoldCurve"
+#base_filename = "MoreComplexPointCloud"
+base_filename = "SimpleClosedBaseCurveUnsignedInFirstQuadrant"
+#base_filename = "SimpleClosedManifoldCurveUnsignedInFirstQuadrant"
 
 visualize_field_and_curve(directory, base_filename)
