@@ -5,7 +5,6 @@
 
 #include <unordered_map>
 
-#include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
 

@@ -1,7 +1,6 @@
 
 #include "gtest/gtest.h"
 
-#include "pmp/Types.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Normals.h"
 

@@ -3,6 +3,7 @@
 
 #include "utils/IncrementalUtils.h"
 #include "utils/StringUtils.h"
+
 #include "IncrementalProgressUtils.h"
 
 #define CHECK_LARGE_COORDS false

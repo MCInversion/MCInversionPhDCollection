@@ -1,9 +1,10 @@
 #pragma once
 
-#include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
+
 #include "MarchingCubes.h"
+
 #include <optional>
 #include <nanoflann.hpp>
 
@@ -288,9 +289,6 @@ namespace Geometry
 
 	/// \brief Computes the medial axis of a given 2D curve.
 	[[nodiscard]] std::optional<BaseCurveGeometryData> CalculateApproxMedialAxisFromCurve(const pmp::ManifoldCurve2D& curve);
-
-	/// \brief A PLY exporter for a general curve geometry.
-	[[nodiscard]] bool ExportBaseCurveGeometryDataToPLY(const BaseCurveGeometryData& geomData, const std::string& absFileName);
 
 	[[nodiscard]] std::optional<BaseCurveGeometryData> GetMedialAxisOfSawhneysStupidMATAlgorithm(unsigned char shape);
 } // namespace Geometry

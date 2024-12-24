@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
 
 #include "GeometryConversionUtils.h"

@@ -1,8 +1,5 @@
 #pragma once
 
-#include "pmp/Types.h"
-#include "pmp/ManifoldCurve2D.h"
-
 #include "geometry/GeometryConversionUtils.h"
 #include "geometry/Grid.h"
 
@@ -14,6 +11,9 @@
 
 /// \brief Export 2D manifold curve to PLY data.
 [[nodiscard]] bool ExportManifoldCurve2DToPLY(const pmp::ManifoldCurve2D& curve, const std::string& fileName);
+
+/// \brief A PLY exporter for a general curve geometry.
+[[nodiscard]] bool ExportBaseCurveGeometryDataToPLY(const Geometry::BaseCurveGeometryData& geomData, const std::string& absFileName);
 
 /// \brief A wrapper for normalized RGB values in a color scheme
 struct RGBColor

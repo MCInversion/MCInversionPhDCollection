@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pmp/Types.h"
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
 #include "GeometryConversionUtils.h"
@@ -311,6 +310,24 @@ namespace Geometry
 			return bb;
 		}
 
+		/**
+		 * \brief Retrieves the curve data.
+		 * \return Reference to BaseCurveGeometryData.
+		 */
+		BaseCurveGeometryData& Get()
+		{
+			return *m_BaseCurve;
+		}
+
+		/**
+		 * \brief Retrieves the curve data (const version).
+		 * \return Constant reference to BaseCurveGeometryData.
+		 */
+		[[nodiscard]] const BaseCurveGeometryData& Get() const
+		{
+			return *m_BaseCurve;
+		}
+
 	private:
 		std::shared_ptr<BaseCurveGeometryData> m_BaseCurve;
 	};
@@ -370,6 +387,24 @@ namespace Geometry
 		[[nodiscard]] pmp::BoundingBox2 GetBounds() const override
 		{
 			return m_ManifoldCurve->bounds();
+		}
+
+		/**
+		 * \brief Retrieves the curve data.
+		 * \return Reference to pmp::ManifoldCurve2D.
+		 */
+		pmp::ManifoldCurve2D& Get()
+		{
+			return *m_ManifoldCurve;
+		}
+
+		/**
+		 * \brief Retrieves the curve data (const version).
+		 * \return Constant reference to pmp::ManifoldCurve2D.
+		 */
+		[[nodiscard]] const pmp::ManifoldCurve2D& Get() const
+		{
+			return *m_ManifoldCurve;
 		}
 
 	private:

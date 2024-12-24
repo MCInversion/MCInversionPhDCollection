@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pmp/Types.h"
 #include "pmp/ManifoldCurve2D.h"
 
 #include <Eigen/Dense>

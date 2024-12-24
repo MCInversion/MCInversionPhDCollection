@@ -19,17 +19,19 @@ constexpr size_t HASH_square_SDF{ 11463448448184433784 };
 constexpr size_t HASH_openSquare_SDF{ 9360073553033082223 };
 constexpr size_t HASH_squarePts_SDF{ 12327925769871880303 };
 
-[[nodiscard]] bool TestExportDFAndPointCloud(const Geometry::ScalarGrid2D& df, const std::vector<pmp::Point2>& pts, const std::string& absFileName)
-{
-    ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
-    constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
-    ExportScalarGrid2DToPNG(absFileName + "incompleteCircleDF.png", df,
-        Geometry::BilinearInterpolateScalarValue,
-        //Geometry::GetNearestNeighborScalarValue2D,
-        10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
-}
+#define EXPORT_FIELDS_AND_SOURCES true
 
-[[nodiscard]] bool TestExportDFAndCurve(const Geometry::ScalarGrid2D& df, const std::vector<pmp::Point2>& pts, const std::string& absFileName)
+#if EXPORT_FIELDS_AND_SOURCES
+
+#include <filesystem>
+// set up root directory
+const std::filesystem::path fsRootPath = DROOT_DIR;
+const auto fsDataDirPath = fsRootPath / "data\\";
+const auto fsDataOutPath = fsRootPath / "output\\";
+const std::string dataDirPath = fsDataDirPath.string();
+const std::string dataOutPath = fsDataOutPath.string();
+
+static void TestExportDFAndPointCloud(const Geometry::ScalarGrid2D& df, const std::vector<pmp::Point2>& pts, const std::string& absFileName)
 {
     ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
     constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
@@ -37,7 +39,57 @@ constexpr size_t HASH_squarePts_SDF{ 12327925769871880303 };
         Geometry::BilinearInterpolateScalarValue,
         //Geometry::GetNearestNeighborScalarValue2D,
         10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+    if (!Export2DPointCloudToPLY(pts, absFileName + ".ply"))
+        std::cerr << "TestExportDFAndPointCloud: failed Export2DPointCloudToPLY!\n";
 }
+
+#define EXPORT_FIELD_AND_PT_CLOUD(df, pts, name) \
+    do { \
+        const auto fileName = dataOutPath + "/sdf_tests/" + (name); \
+        TestExportDFAndPointCloud(df, pts, fileName); \
+    } while (0)
+
+static void TestExportDFAndCurve(const Geometry::ScalarGrid2D& df, const pmp::ManifoldCurve2D& curve, const std::string& absFileName)
+{
+    ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
+    constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+    ExportScalarGrid2DToPNG(absFileName + ".png", df,
+        Geometry::BilinearInterpolateScalarValue,
+        //Geometry::GetNearestNeighborScalarValue2D,
+        10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+    if (!ExportManifoldCurve2DToPLY(curve, absFileName + ".ply"))
+        std::cerr << "TestExportDFAndCurve: failed ExportManifoldCurve2DToPLY!\n";
+}
+
+#define EXPORT_FIELD_AND_CURVE(df, curve, name) \
+    do { \
+        const auto fileName = dataOutPath + "/sdf_tests/" + (name); \
+        TestExportDFAndCurve(df, curve, fileName); \
+    } while (0)
+
+static void TestExportDFAndBaseCurve(const Geometry::ScalarGrid2D& df, const Geometry::BaseCurveGeometryData& curve, const std::string& absFileName)
+{
+    ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
+    constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+    ExportScalarGrid2DToPNG(absFileName + ".png", df,
+        Geometry::BilinearInterpolateScalarValue,
+        //Geometry::GetNearestNeighborScalarValue2D,
+        10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+    if (!ExportBaseCurveGeometryDataToPLY(curve, absFileName + ".ply"))
+        std::cerr << "TestExportDFAndBaseCurve: failed ExportBaseCurveGeometryDataToPLY!\n";
+}
+
+#define EXPORT_FIELD_AND_BASE_CURVE(df, curve, name) \
+    do { \
+        const auto fileName = dataOutPath + "/sdf_tests/" + (name); \
+        TestExportDFAndBaseCurve(df, curve, fileName); \
+    } while (0)
+
+#else
+#define EXPORT_FIELD_AND_PT_CLOUD(df, pts, name) do {} while (0)
+#define EXPORT_FIELD_AND_CURVE(df, curve, name) do {} while (0)
+#define EXPORT_FIELD_AND_BASE_CURVE(df, curve, name) do {} while (0)
+#endif
 
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 {
@@ -64,6 +116,7 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 
     // Act
     const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_BASE_CURVE(sdf, curveAdapter.Get(), "SimpleClosedBaseCurve");
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
@@ -110,6 +163,7 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
 
     // Act
     const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_BASE_CURVE(sdf, curveAdapter.Get(), "SimpleOpenBaseCurve");
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
@@ -156,6 +210,7 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
 
     // Act
     const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_CURVE(sdf, curveAdapter.Get(), "SimpleClosedManifoldCurve");
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
@@ -203,6 +258,7 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
 
     // Act
     const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_CURVE(sdf, curveAdapter.Get(), "SimpleOpenManifoldCurve");
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());
@@ -240,6 +296,7 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
 
     // Act
     const auto sdf = PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings);
+    EXPORT_FIELD_AND_PT_CLOUD(sdf, points, "SimplePointCloud");
 
     // Assert
     ASSERT_TRUE(sdf.IsValid());

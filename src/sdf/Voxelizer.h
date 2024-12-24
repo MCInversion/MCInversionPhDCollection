@@ -1,8 +1,6 @@
 #pragma once
 
-#include "pmp/Types.h"
 #include "geometry/CollisionKdTree.h"
-
 #include "pmp/BoundingBox.h"
 
 namespace SDF

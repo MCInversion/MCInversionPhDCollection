@@ -1,11 +1,13 @@
 #include "PointCloudMeshingStrategies.h"
 
-#include <iostream>
-
 #include "EvolverUtilsCommon.h"
 #include "SurfaceEvolver.h"
+
 #include "geometry/GeometryConversionUtils.h"
+
 #include "sdf/SDF.h"
+
+#include <iostream>
 
 namespace IMB
 {

@@ -1,9 +1,9 @@
+#include "GridUtil.h"
 
 #include "pmp/SurfaceMesh.h"
+
 #include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/TriangleKdTree.h"
-
-#include "GridUtil.h"
 
 namespace
 {

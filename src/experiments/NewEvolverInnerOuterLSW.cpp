@@ -17,7 +17,6 @@
  */
  // --------------------------------------------------------------------------------
 
-#include "pmp/Types.h"
 #include "pmp/algorithms/CurveFactory.h"
 #include "pmp/algorithms/Normals.h"
 
@@ -4684,7 +4683,7 @@ void MedialAxisTests()
 		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('q');
 		if (medialAxis.has_value())
 		{
-			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeQ.ply"))
+			if (!ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeQ.ply"))
 				std::cerr << "Error writing sawhneyShapeQ.ply!\n";
 		}
 	}
@@ -4693,7 +4692,7 @@ void MedialAxisTests()
 		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('w');
 		if (medialAxis.has_value())
 		{
-			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeW.ply"))
+			if (!ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeW.ply"))
 				std::cerr << "Error writing sawhneyShapeW.ply!\n";
 		}
 	}
@@ -4702,7 +4701,7 @@ void MedialAxisTests()
 		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('e');
 		if (medialAxis.has_value())
 		{
-			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeE.ply"))
+			if (!ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeE.ply"))
 				std::cerr << "Error writing sawhneyShapeE.ply!\n";
 		}
 	}
@@ -4711,7 +4710,7 @@ void MedialAxisTests()
 		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('r');
 		if (medialAxis.has_value())
 		{
-			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeR.ply"))
+			if (!ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeR.ply"))
 				std::cerr << "Error writing sawhneyShapeR.ply!\n";
 		}
 	}
@@ -4720,7 +4719,7 @@ void MedialAxisTests()
 		const auto medialAxis = Geometry::GetMedialAxisOfSawhneysStupidMATAlgorithm('t');
 		if (medialAxis.has_value())
 		{
-			if (!Geometry::ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeT.ply"))
+			if (!ExportBaseCurveGeometryDataToPLY(*medialAxis, dataOutPath + "sawhneyShapeT.ply"))
 				std::cerr << "Error writing sawhneyShapeT.ply!\n";
 		}
 	}

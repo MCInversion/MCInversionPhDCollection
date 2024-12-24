@@ -102,7 +102,8 @@ if(WIN32)
 endif()
 
 if(MSVC)
-  add_compile_options(/MP)
+  add_compile_options(/MP)     # parallel compilation
+  add_compile_options(/bigobj) # big object file
   add_compile_options(/wd4267) # conversion from size_t
   add_compile_options(/wd4244) # conversion from double to float
   add_compile_options(/wd4305) # truncation from double to float

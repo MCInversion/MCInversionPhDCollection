@@ -13,8 +13,6 @@
 #include <queue>
 #include <thread>
 
-#include "pmp/Types.h"
-
 /// \brief A function to call when enough points are counted.
 using MeshUpdateCallback = std::function<void(const std::vector<pmp::Point>&)>;
 

@@ -2082,58 +2082,6 @@ namespace Geometry
 		return medialAxisData;
 	}
 
-	bool ExportBaseCurveGeometryDataToPLY(const BaseCurveGeometryData& geomData, const std::string& absFileName)
-	{
-		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
-		if (extension != "ply")
-		{
-			std::cerr << "Geometry::ExportBaseCurveGeometryDataToPLY:" << absFileName << " has invalid extension!" << std::endl;
-			return false;
-		}
-
-		if (geomData.Vertices.empty())
-		{
-			std::cerr << "Geometry::ExportBaseCurveGeometryDataToPLY: No vertices to write!\n";
-			return false;
-		}
-
-		// Write to a .ply file
-		std::ofstream outFile(absFileName);
-		if (!outFile.is_open())
-		{
-			std::cerr << "Geometry::ExportBaseCurveGeometryDataToPLY: Unable to open file: " << absFileName << std::endl;
-			return false;
-		}
-
-		// Write the PLY header
-		outFile << "ply\n";
-		outFile << "format ascii 1.0\n";
-		outFile << "element vertex " << geomData.Vertices.size() << "\n";
-		outFile << "property float x\n";
-		outFile << "property float y\n";
-		outFile << "property float z\n";
-		outFile << "element edge " << geomData.EdgeIndices.size() << "\n";
-		outFile << "property int vertex1\n";
-		outFile << "property int vertex2\n";
-		outFile << "end_header\n";
-
-		// Write the vertex data
-		for (const auto& vertex : geomData.Vertices)
-		{
-			outFile << vertex[0] << " " << vertex[1] << " 0.0\n"; // Since it's 2D, z is set to 0
-		}
-
-		// Write the edge data
-		for (const auto& edge : geomData.EdgeIndices)
-		{
-			outFile << edge.first << " " << edge.second << "\n";
-		}
-
-		// Close the file
-		outFile.close();
-		return true;
-	}
-
 	std::optional<BaseCurveGeometryData> GetMedialAxisOfSawhneysStupidMATAlgorithm(unsigned char shape)
 	{
 		MAT::BoundaryGenerator boundaryGen;

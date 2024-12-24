@@ -1,7 +1,5 @@
 #pragma once
 
-#include "pmp/Types.h"
-
 #include "geometry/Grid.h"
 #include "geometry/GeometryConversionUtils.h"
 

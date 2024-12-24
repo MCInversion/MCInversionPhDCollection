@@ -1,8 +1,6 @@
 
 #include "gtest/gtest.h"
 
-#include "pmp/Types.h"
-
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
 

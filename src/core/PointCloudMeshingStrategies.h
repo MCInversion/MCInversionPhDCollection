@@ -1,9 +1,11 @@
 #pragma once
 
+#include "pmp/Types.h"
+
 #include <vector>
 #include <memory>
+#include <string>
 
-#include "pmp/Types.h"
 
 namespace IMB
 {

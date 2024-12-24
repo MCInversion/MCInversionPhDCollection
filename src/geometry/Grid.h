@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pmp/Types.h"
 #include "pmp/BoundingBox.h"
 
 #include <vector>

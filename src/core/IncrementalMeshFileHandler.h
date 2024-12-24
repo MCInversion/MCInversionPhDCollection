@@ -2,7 +2,9 @@
 
 #include "pmp/Types.h"
 
+#include <string>
 #include <vector>
+#include <memory>
 
 namespace IMB
 {

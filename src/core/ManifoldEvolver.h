@@ -3,7 +3,6 @@
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/ArcLengthCalculator.h"
-#include "pmp/Types.h"
 
 #include "geometry/Grid.h"
 #include "geometry/GridUtil.h"
