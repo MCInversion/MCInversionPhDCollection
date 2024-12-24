@@ -9,9 +9,9 @@ namespace pmp {
 
     /// \brief Vertices of an equilateral triangle with side 1 with barycenter at (0, 0).
     const std::vector BASE_EQUILATERAL_TRIANGLE_VERTS{ 
-        Point2{-0.5, -sqrtf(3.0) / 6.0}, 
-        Point2{0.5, -sqrtf(3.0) / 6.0}, 
-        Point2{0.0, sqrtf(3.0) / 3.0} };
+        Point2{-0.5, -static_cast<Scalar>(sqrtf(3.0)) / static_cast<Scalar>(6.0)},
+        Point2{0.5, -static_cast<Scalar>(sqrtf(3.0)) / static_cast<Scalar>(6.0)},
+        Point2{0.0, static_cast<Scalar>(sqrtf(3.0)) / static_cast<Scalar>(3.0)} };
 
     //! \addtogroup algorithms
     //! @{

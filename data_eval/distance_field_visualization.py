@@ -225,7 +225,9 @@ directory = "../output/sdf_tests"
 #base_filename = "SimpleClosedBaseCurveUnsigned"
 #base_filename = "MoreComplexPolygonalManifoldCurve"
 #base_filename = "MoreComplexPointCloud"
-base_filename = "SimpleClosedBaseCurveUnsignedInFirstQuadrant"
+#base_filename = "SimpleClosedBaseCurveUnsignedInFirstQuadrant"
 #base_filename = "SimpleClosedManifoldCurveUnsignedInFirstQuadrant"
+base_filename = "ManifoldCircleCurve"
+#base_filename = "CirclePointCloud"
 
 visualize_field_and_curve(directory, base_filename)

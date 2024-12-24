@@ -103,7 +103,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		ComputeVariableDistanceFields();
 	}
 
-	if (GetSettings().UseStabilizationViaScaling)
+	//if (GetSettings().UseStabilizationViaScaling)
 	{
 		const auto [minLength, maxLength] = CalculateCoVolumeRange();
 
@@ -1076,10 +1076,6 @@ void ManifoldCurveEvolutionStrategy::ComputeControlFunctionsLowerBounds()
 	{
 		maxDistance = *std::ranges::max_element(m_InnerCurvesDistanceFields.front()->Values());
 	}
-	else
-	{
-		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::ComputeControlFunctionsLowerBounds: undefined configuration. No distance field available!\n");
-	}
 
 	// normalize the max distance to expansion factor
 	const auto expFactor = GetSettings().FieldSettings.FieldExpansionFactor;
@@ -1175,10 +1171,14 @@ std::pair<pmp::Scalar, pmp::Scalar> CustomManifoldCurveEvolutionStrategy::Calcul
 
 void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(pmp::Scalar minLength, pmp::Scalar maxLength, pmp::Scalar stabilizationFactor)
 {
-	const pmp::Scalar expectedMeanCoVolLength = (1.0 - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
-	const pmp::Scalar scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
-	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
-	GetScalingFactor() = scalingFactor;
+	pmp::Scalar scalingFactor{ 1.0 };
+	if (GetSettings().UseStabilizationViaScaling)
+	{
+		const pmp::Scalar expectedMeanCoVolLength = (1.0 - stabilizationFactor) * minLength + stabilizationFactor * maxLength;
+		scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * 1.0, SCALE_FACTOR_POWER_1D);
+		std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
+	}
+	GetScalingFactor() = scalingFactor;		
 
 	// -----------------------------------------------------------------------------------------------
 	// All geometric quantities need to be scaled by the scalingFactor to ensure numerical stability.
@@ -1369,7 +1369,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		ComputeVariableDistanceFields();
 	}
 
-	if (GetSettings().UseStabilizationViaScaling)
+	//if (GetSettings().UseStabilizationViaScaling)
 	{
 		const auto [minArea, maxArea] = CalculateCoVolumeRange();
 		std::cout << "Before stabilization: { minArea: " << minArea << ", maxArea: " << maxArea << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
@@ -2234,10 +2234,6 @@ void ManifoldSurfaceEvolutionStrategy::ComputeControlFunctionsLowerBounds()
 	{
 		maxDistance = *std::ranges::max_element(m_InnerSurfacesDistanceFields.front()->Values());
 	}
-	else
-	{
-		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::ComputeControlFunctionsLowerBounds: undefined configuration. No distance field available!\n");
-	}
 
 	// normalize the max distance to expansion factor
 	const auto expFactor = GetSettings().FieldSettings.FieldExpansionFactor;
@@ -2330,10 +2326,14 @@ std::pair<pmp::Scalar, pmp::Scalar> CustomManifoldSurfaceEvolutionStrategy::Calc
 
 void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(pmp::Scalar minArea, pmp::Scalar maxArea, pmp::Scalar stabilizationFactor)
 {
-	const pmp::Scalar expectedMeanCoVolLength = (1.0 - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
-	const pmp::Scalar scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
-	std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
-	GetScalingFactor() = scalingFactor;
+	pmp::Scalar scalingFactor{ 1.0 };
+	if (GetSettings().UseStabilizationViaScaling)
+	{
+		const pmp::Scalar expectedMeanCoVolLength = (1.0 - stabilizationFactor) * minArea + stabilizationFactor * maxArea;
+		scalingFactor = pow(static_cast<pmp::Scalar>(GetSettings().TimeStep) / expectedMeanCoVolLength * INV_SHRINK_FACTOR_2D, SCALE_FACTOR_POWER_2D);
+		std::cout << "StabilizeCustomGeometries: Calculated scaling factor: " << scalingFactor << "\n";
+	}
+	GetScalingFactor() = scalingFactor;		
 
 	// -----------------------------------------------------------------------------------------------
 	// All geometric quantities need to be scaled by the scalingFactor to ensure numerical stability.

@@ -10,7 +10,7 @@
 // --------------------------------------------------------------
 
 // Scalar type configuration
-#define PMP_SCALAR_TYPE_64 true
+#define PMP_SCALAR_TYPE_64 false
 // Index type configuration
 #define PMP_INDEX_TYPE_64 false
 

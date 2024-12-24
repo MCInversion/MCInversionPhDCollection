@@ -32,7 +32,7 @@ const auto fsDataOutPath = fsRootPath / "output\\";
 const std::string dataDirPath = fsDataDirPath.string();
 const std::string dataOutPath = fsDataOutPath.string();
 
-static void TestExportDFAndPointCloud(const Geometry::ScalarGrid2D& df, const std::vector<pmp::Point2>& pts, const std::string& absFileName)
+static void TestExportDFAndPointCloud(const Geometry::ScalarGrid2D& df, const std::vector<Point2>& pts, const std::string& absFileName)
 {
     ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
     constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
@@ -50,7 +50,7 @@ static void TestExportDFAndPointCloud(const Geometry::ScalarGrid2D& df, const st
         TestExportDFAndPointCloud(df, pts, fileName); \
     } while (0)
 
-static void TestExportDFAndCurve(const Geometry::ScalarGrid2D& df, const pmp::ManifoldCurve2D& curve, const std::string& absFileName)
+static void TestExportDFAndCurve(const Geometry::ScalarGrid2D& df, const ManifoldCurve2D& curve, const std::string& absFileName)
 {
     ExportScalarGridDimInfo2D(absFileName + ".gdim2d", df);
     constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
@@ -103,8 +103,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurve)
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -150,8 +150,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurveUns
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -203,8 +203,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedBaseCurveUns
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -241,8 +241,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -272,8 +272,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenBaseCurve)
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -319,8 +319,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleClosedManifoldCurv
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -367,8 +367,8 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_SimpleOpenManifoldCurve)
 
     const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const pmp::Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
@@ -408,8 +408,8 @@ TEST(DistanceField2DTests, PlanarPointCloudDistanceFieldGenerator_SimplePointClo
     const std::vector points = { Point2(0, 0), Point2(1, 0), Point2(1, 1), Point2(0, 1) };
     const auto pointBBox = BoundingBox2(points);
     const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
-    const pmp::Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
-    const pmp::Scalar cellSize = minSize / 10.0;
+    const Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
 
     const PointCloudDistanceField2DSettings sdfSettings{
         cellSize,
@@ -491,6 +491,56 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_MoreComplexPointCloud)
     ASSERT_TRUE(sdf.IsValid());
 }
 
+TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_ManifoldCircleCurve)
+{
+    // Arrange
+    //const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(CurveFactory::circle(Point2{ 53.669357, 34.419353 }, 13.217741, 10)));
+    const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(CurveFactory::circle(Point2{ 0, 0 }, 13.217741, 10)));
+	const auto curveBBox = curveAdapter.GetBounds();
+    const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
+    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
+
+    const DistanceField2DSettings sdfSettings{
+        cellSize,
+        1.0,
+        DBL_MAX,
+        KDTreeSplitType::Center,
+        SignComputation2D::None,
+        PreprocessingType2D::Quadtree
+    };
+
+    // Act
+    const auto sdf = PlanarDistanceFieldGenerator::Generate(curveAdapter, sdfSettings);
+    EXPORT_FIELD_AND_CURVE(sdf, curveAdapter.Get(), "ManifoldCircleCurve");
+
+    // Assert
+    ASSERT_TRUE(sdf.IsValid());
+}
+
+TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_CirclePointCloud)
+{
+    // Arrange
+    const auto sampledCurve = CurveFactory::circle(Point2{ 0, 0 }, 13.217741, 10);
+    const auto points = sampledCurve.positions();
+    const auto pointBBox = BoundingBox2(points);
+    const auto pointBBoxSize = pointBBox.max() - pointBBox.min();
+    const Scalar minSize = std::min(pointBBoxSize[0], pointBBoxSize[1]);
+    const Scalar cellSize = minSize / 10.0;
+
+    const PointCloudDistanceField2DSettings sdfSettings{
+        cellSize,
+        1.0,
+        DBL_MAX
+    };
+
+    // Act
+    const auto sdf = PlanarPointCloudDistanceFieldGenerator::Generate(points, sdfSettings);
+    EXPORT_FIELD_AND_PT_CLOUD(sdf, points, "CirclePointCloud");
+
+    // Assert
+    ASSERT_TRUE(sdf.IsValid());
+}
 TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_MoreComplexPolygonalManifoldCurve)
 {
     // Arrange

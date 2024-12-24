@@ -12,12 +12,12 @@ namespace Geometry
 	 */
 	[[nodiscard]] pmp::vec3 ComputeMobiusNormal(const pmp::Scalar& u, const pmp::Scalar& v, const pmp::Scalar& r, const pmp::Scalar& l)
 	{
-		const pmp::Scalar norm = sqrt(l * l * (8 * r * r + 3 * l * 2 * v * 2 + l * v * (8 * r * cos(u) + l * v * cos(2 * u))));
-		constexpr pmp::Scalar sqrt2 = static_cast<pmp::Scalar>(M_SQRT2);
+		const auto norm = static_cast<pmp::Scalar>(sqrt(l * l * (8 * r * r + 3 * l * 2 * v * 2 + l * v * (8 * r * cos(u) + l * v * cos(2 * u)))));
+		constexpr auto sqrt2 = static_cast<pmp::Scalar>(M_SQRT2);
 		return pmp::vec3{
-			(sqrt2 * l * sin(u) * (2 * r * cos(u) - l * v * pow(sin(u), 2.0))) / norm,
-			(sqrt2 * l * (l * v * pow(cos(u), 3.0) + 2 * (r + l * v * cos(u)) * pow(sin(u), 2.0))) / norm,
-			-1.0 * (l * sqrt2 * cos(u) * (2 * r + l * v * cos(u))) / norm
+			static_cast<pmp::Scalar>(sqrt2 * l * sin(u) * (2 * r * cos(u) - l * v * pow(sin(u), 2.0))) / norm,
+			static_cast<pmp::Scalar>(sqrt2 * l * (l * v * pow(cos(u), 3.0) + 2 * (r + l * v * cos(u)) * pow(sin(u), 2.0))) / norm,
+			-1.0 * static_cast<pmp::Scalar>(l * sqrt2 * cos(u) * (2 * r + l * v * cos(u))) / norm
 		} * (-1.0);
 	}
 

@@ -2465,9 +2465,9 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
-	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
 	//strategySettings.FieldSettings.FieldIsoLevel = 2.0;
-	strategySettings.UseLinearGridInterpolation = false;
+	strategySettings.UseLinearGridInterpolation = true;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
