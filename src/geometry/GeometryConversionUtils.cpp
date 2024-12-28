@@ -1673,7 +1673,7 @@ namespace Geometry
 			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloudAdapter>, PointCloudAdapter, 3 /* dim */>;
 		PointCloudKDTreeIndexAdapter indexAdapter(3 /*dim*/, nfPoints, { 10 /* max leaf */ });
 
-		auto do_knn_search = [&indexAdapter, &nNeighbors](const pmp::Point& p) {
+		auto do_knn_search = [&indexAdapter, &nNeighbors](const pmp::Point& p) -> pmp::Scalar {
 			// do a knn search
 			const pmp::Scalar query_pt[3] = { p[0], p[1], p[2] };
 			std::vector<uint32_t> ret_index(nNeighbors);
@@ -1686,7 +1686,7 @@ namespace Geometry
 			pmp::Scalar totalDistSq{ 0.0 };
 			for (size_t i = 0; i < num_results; ++i)
 				totalDistSq += out_dist_sqr[i];
-			return sqrt(totalDistSq / (static_cast<pmp::Scalar>(num_results) - pmp::Scalar(1.0)));
+			return sqrt(totalDistSq / (static_cast<pmp::Scalar>(num_results - 1.0)));
 		};
 
 		pmp::Scalar totalDistance = 0.0;

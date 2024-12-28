@@ -909,7 +909,7 @@ namespace SDF
 			//ix = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
 			//iy = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 			
-			const double param = 0.75;
+			const double param = 0.5;
 			ix = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[0] + param * boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
 			iy = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[1] + param * boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
 

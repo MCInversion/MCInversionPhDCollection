@@ -62,12 +62,14 @@ namespace SDF
 	#define SET_BOX_MIN_COORD(b, B, i, j, k, size)							        \
 			b.min()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i) / 2.0) * (size);		\
 			b.min()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j) / 2.0) * (size);		\
-			b.min()[2] = B.min()[2] + (static_cast<pmp::Scalar>(k) / 2.0) * (size)
+			b.min()[2] = B.min()[2] + (static_cast<pmp::Scalar>(k) / 2.0) * (size); \
+			 do {} while (0)
 
 	#define SET_BOX_MAX_COORD(b, B, i, j, k, size)							        \
 			b.max()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i + 1) / 2.0) * (size);	\
 			b.max()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j + 1) / 2.0) * (size);	\
-			b.max()[2] = B.min()[2] + (static_cast<pmp::Scalar>(k + 1) / 2.0) * (size)
+			b.max()[2] = B.min()[2] + (static_cast<pmp::Scalar>(k + 1) / 2.0) * (size); \
+			 do {} while (0)
 
 	void OctreeVoxelizer::BuildRecurse(Node* node, const pmp::BoundingBox& box, unsigned int remainingDepth)
 	{
@@ -217,11 +219,13 @@ namespace SDF
 
 #define SET_BOX_MIN_COORD_2D(b, B, i, j, size)							            \
 			b.min()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i) / 2.0) * (size);		\
-			b.min()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j) / 2.0) * (size);
+			b.min()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j) / 2.0) * (size); \
+			do {} while (0)
 
 #define SET_BOX_MAX_COORD_2D(b, B, i, j, size)							            \
 			b.max()[0] = B.min()[0] + (static_cast<pmp::Scalar>(i + 1) / 2.0) * (size);	\
-			b.max()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j + 1) / 2.0) * (size);
+			b.max()[1] = B.min()[1] + (static_cast<pmp::Scalar>(j + 1) / 2.0) * (size); \
+			do {} while (0)
 
 	void QuadtreeVoxelizer::BuildRecurse(Node* node, const pmp::BoundingBox2& box, unsigned int remainingDepth)
 	{
@@ -243,20 +247,20 @@ namespace SDF
 			const auto& vertexPositions = m_KdTree.VertexPositions();
 			const auto& edges = m_KdTree.EdgeVertexIds();
 
-			double distToTriSq = DBL_MAX;
+			double distToEdgeSq = DBL_MAX;
 			std::vector line{ pmp::vec2(), pmp::vec2() };
-			for (const auto& triId : pixelEdgeIds)
+			for (const auto& edgeId : pixelEdgeIds)
 			{
-				line[0] = vertexPositions[edges[triId].v0Id];
-				line[1] = vertexPositions[edges[triId].v1Id];
+				line[0] = vertexPositions[edges[edgeId].v0Id];
+				line[1] = vertexPositions[edges[edgeId].v1Id];
 
-				const double currentTriDistSq = Geometry::GetDistanceToLine2DSq(line, center);
+				const double currentEdgeDistSq = Geometry::GetDistanceToLine2DSq(line, center);
 
-				if (currentTriDistSq < distToTriSq)
-					distToTriSq = currentTriDistSq;
+				if (currentEdgeDistSq < distToEdgeSq)
+					distToEdgeSq = currentEdgeDistSq;
 			}
-			assert(distToTriSq < DBL_MAX);
-			node->distanceVal = sqrt(distToTriSq);
+			assert(distToEdgeSq < DBL_MAX);
+			node->distanceVal = sqrt(distToEdgeSq);
 			return;
 		}
 

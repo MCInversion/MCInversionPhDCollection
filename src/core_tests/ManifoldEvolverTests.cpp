@@ -562,7 +562,7 @@ namespace
         // Calculate the center and the scale factor for normalization
         const auto center = bbox.center();
         const auto boxSize = bbox.max() - bbox.min();
-        const auto scale = 6.0 / std::max(boxSize[0], boxSize[1]); // Scale to fit [-3, 3] range
+        const pmp::Scalar scale = 6.0 / std::max(boxSize[0], boxSize[1]); // Scale to fit [-3, 3] range
 
         // Transform, center, and normalize the point cloud in one step
         std::vector<pmp::Point2> planarPtCloud;

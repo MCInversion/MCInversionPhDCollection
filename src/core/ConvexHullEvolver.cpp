@@ -60,9 +60,9 @@ void ConvexHullEvolver::Evolve()
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength is: " << (remeshedLengthMin / (m_EvolSettings.MaxDim * m_ScalingFactor)) * 100 << " % of MaxDim.\n";
 #endif
-	auto minEdgeLength = 4.0 * remeshedLengthMin;
-	auto maxEdgeLength = 8.0 * minEdgeLength;
-	auto approxError = 0.5 * minEdgeLength;
+	pmp::Scalar minEdgeLength = 4.0 * remeshedLengthMin;
+	pmp::Scalar maxEdgeLength = 8.0 * minEdgeLength;
+	pmp::Scalar approxError = 0.5 * minEdgeLength;
 
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
@@ -404,8 +404,10 @@ void ConvexHullEvolver::Preprocess()
 	std::cout << "ConvexHullEvolver::Preprocess: {lengthMin: " << lengthMin << ", lengthMean: " << lengthMean << ", lengthMax: " << lengthMax << "},\n";
 	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
 	m_Remesher->convex_hull_adaptive_remeshing({
-	4.0 * lengthMin, 8.0 * lengthMin, 0.5 * lengthMin,
-	3, 5, true
+		static_cast<pmp::Scalar>(4.0) * lengthMin, 
+		static_cast<pmp::Scalar>(8.0) * lengthMin, 
+		static_cast<pmp::Scalar>(0.5) * lengthMin,
+		3, 5, true
 	});
 #if REPORT_EVOL_STEPS
 	std::cout << "... done.\n";

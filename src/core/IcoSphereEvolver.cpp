@@ -278,9 +278,9 @@ void IcoSphereEvolver::Evolve()
 	constexpr pmp::Scalar baseIcoHalfAngle = 2.0 * M_PI / 10.0;
 	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
 
-	auto minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 4.0 * minEdgeLength;
-	auto approxError = 0.25 * (minEdgeLength + maxEdgeLength);
+	pmp::Scalar minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
+	pmp::Scalar maxEdgeLength = 4.0 * minEdgeLength;
+	pmp::Scalar approxError = 0.25 * (minEdgeLength + maxEdgeLength);
 	m_Remesher = std::make_shared<pmp::Remeshing>(*m_EvolvingSurface);
 
 #if REPORT_EVOL_STEPS

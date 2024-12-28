@@ -311,8 +311,8 @@ void BrainSurfaceEvolver::Evolve()
 	const auto subdiv = static_cast<pmp::Scalar>(m_EvolSettings.IcoSphereSubdivisionLevel);
 	const pmp::Scalar r = m_StartingSurfaceRadius * m_ScalingFactor;
 	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
-	auto minEdgeLength = minEdgeMultiplier * (2.0 * r / (sqrt(phi * sqrt(5.0)) * subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 4.0 * minEdgeLength;
+	pmp::Scalar minEdgeLength = minEdgeMultiplier * (2.0 * r / (sqrt(phi * sqrt(5.0)) * subdiv)); // from icosahedron edge length
+	pmp::Scalar maxEdgeLength = 4.0 * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif
@@ -469,7 +469,7 @@ void BrainSurfaceEvolver::Evolve()
 			}
 			pmp::Remeshing remeshing(*m_EvolvingSurface);
 			remeshing.adaptive_remeshing({
-				minEdgeLength, maxEdgeLength, 2.0 * minEdgeLength,
+				minEdgeLength, maxEdgeLength, static_cast<pmp::Scalar>(2.0) * minEdgeLength,
 				m_EvolSettings.TopoParams.NRemeshingIters,
 				m_EvolSettings.TopoParams.NTanSmoothingIters,
 				m_EvolSettings.TopoParams.UseBackProjection });

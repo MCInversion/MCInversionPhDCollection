@@ -930,7 +930,7 @@ constexpr pmp::Scalar INV_SHRINK_FACTOR_1D = 20.0; // TODO: seems like an overki
 
 void ManifoldCurveEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabilizationFactor)
 {
-	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0 - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
+	const pmp::Scalar radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0 - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
 	if (radius <= 0.0)
 	{
 		throw std::invalid_argument("ManifoldCurveEvolutionStrategy::StabilizeGeometries: m_InitialSphereSettings empty!\n");
@@ -949,8 +949,8 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabilizati
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
-		scalingFactor, 0.0, 0.0,
-		0.0, scalingFactor, 0.0,
+		(pmp::Scalar)scalingFactor, 0.0, 0.0,
+		0.0, (pmp::Scalar)scalingFactor, 0.0,
 		0.0, 0.0, 1.0
 	};
 	const pmp::Point2 origin = m_OuterCurve ? m_InitialSphereSettings[m_OuterCurve.get()].Center :
@@ -1220,7 +1220,7 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(pmp::Scalar
 			{
 				const auto innerBounds = innerCurve->bounds();
 				const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
-				radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * 0.8, radius);
+				radius = std::max(std::max(innerBoundsSize[0], innerBoundsSize[1]) * (pmp::Scalar)0.8, radius);
 				origin += innerBounds.center();
 			}
 			// mean bounds center position for all initial curves
@@ -2105,7 +2105,7 @@ constexpr pmp::Scalar INV_SHRINK_FACTOR_2D = 5.0;
 
 void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabilizationFactor)
 {
-	const auto radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0 - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
+	const pmp::Scalar radius = stabilizationFactor * m_InitialSphereSettings.MinRadius() + (1.0 - stabilizationFactor) * m_InitialSphereSettings.MaxRadius();
 	if (radius <= 0.0)
 	{
 		throw std::invalid_argument("ManifoldSurfaceEvolutionStrategy::StabilizeGeometries: m_InitialSphereSettings empty!\n");
@@ -2366,7 +2366,7 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(pmp::Scal
 		{
 			const auto innerBounds = innerSurface->bounds();
 			const auto innerBoundsSize = innerBounds.max() - innerBounds.min();
-			radius = std::max(std::max({ innerBoundsSize[0], innerBoundsSize[1], innerBoundsSize[2] }) * 0.5, radius);
+			radius = std::max(std::max({ innerBoundsSize[0], innerBoundsSize[1], innerBoundsSize[2] }) * (pmp::Scalar)0.5, radius);
 			origin += innerBounds.center();
 		}
 		// mean bounds center position for all initial curves

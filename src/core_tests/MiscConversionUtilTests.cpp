@@ -73,9 +73,9 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyHyperboloidDistanceFieldFromMesh1Ring
     constexpr Scalar CURVATURE_EPSILON{ 1e-6 };
     QuadricParams params{
         fieldCenter,
-        0.5 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
-        0.5 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
-        0.5 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
+        (pmp::Scalar)0.5 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        (pmp::Scalar)0.5 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        (pmp::Scalar)0.5 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
         vec3{1, 1, 1} * (roiHalfDim / 2.5),
         DistanceUnion
     };
@@ -138,9 +138,9 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingCo
     constexpr Scalar CURVATURE_EPSILON{ 1e-6 };
     QuadricParams params{
         fieldCenter,
-        1.0 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
-        1.0 / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
-        1.0 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        (pmp::Scalar)1.0 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
+        (pmp::Scalar)1.0 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
+        (pmp::Scalar)1.0 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
         vec3{1, 1, 1} *(roiHalfDim / 2.5),
         DistanceUnion
     };
@@ -204,9 +204,9 @@ TEST(ApproximateMeshPatchWithQuadric, ApplyEllipsoidDistanceFieldFromMesh1RingCo
     constexpr Scalar CURVATURE_EPSILON{ 1e-6 };
     QuadricParams params{
         fieldCenter,
-        1.0 / std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
-        1.0 / std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
-        1.0 / std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
+        (pmp::Scalar)1.0 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.min), CURVATURE_EPSILON)),
+        (pmp::Scalar)1.0 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.mean), CURVATURE_EPSILON)),
+        (pmp::Scalar)1.0 / (pmp::Scalar)std::sqrt(std::max(std::fabs(curvature.max), CURVATURE_EPSILON)),
         vec3{1, 1, 1} *(roiHalfDim / 2.5),
         DistanceUnion
     };

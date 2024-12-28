@@ -1999,13 +1999,13 @@ void AdvectionDrivenInnerCircleTests()
 			pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
 			pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 		{ "chamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
+			pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 		{ "incompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+			pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
@@ -2386,9 +2386,9 @@ void EquilibriumPairedManifoldTests()
 		pmp::Point2{-50.0, 50.0} + center
 	};
 	const std::vector<pmp::Point2> triangleVerticesLarge = {
-		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} * (2.0 * outerRadius) + center,
-		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} * (2.0 * outerRadius) + center,
-		pmp::Point2{0.0, sqrtf(3.0) / 3.0} * (2.0 * outerRadius) + center
+		pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * (2.0 * outerRadius) + center,
+		pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * (2.0 * outerRadius) + center,
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * (2.0 * outerRadius) + center
 	};
 	const std::vector<pmp::Point2> squareVerticesSmall = {
 		pmp::Point2{-20.0, -20.0} + center,
@@ -2397,9 +2397,9 @@ void EquilibriumPairedManifoldTests()
 		pmp::Point2{-20.0, 20.0} + center
 	};
 	const std::vector<pmp::Point2> triangleVerticesSmall = {
-		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} * innerRadius + center,
-		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} * innerRadius + center,
-		pmp::Point2{0.0, sqrtf(3.0) / 3.0} * innerRadius + center
+		pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * innerRadius + center,
+		pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * innerRadius + center,
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * innerRadius + center
 	};
 	const unsigned int segments = 40;
 
@@ -2524,8 +2524,8 @@ void EquilibriumPairedManifoldTests()
 		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
 		
 		// DEBUG translation
-		const auto smallXYShift = strategySettings.FieldSettings.FieldIsoLevel * 0.1;
-		const auto smallTranslation = translation_matrix(pmp::vec2{ smallXYShift , -0.66 * smallXYShift });
+		const pmp::Scalar smallXYShift = strategySettings.FieldSettings.FieldIsoLevel * 0.1;
+		const auto smallTranslation = translation_matrix(pmp::vec2{ smallXYShift , (pmp::Scalar)-0.66 * smallXYShift });
 		pmp::ManifoldCurve2D outerCurveCopy{ outerCurve };
 		outerCurveCopy *= smallTranslation;
 
@@ -3250,13 +3250,13 @@ void AdvectionDrivenInnerOuterCircleTests()
 			pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
 			pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 		{ "ChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
+			pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 		{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+			pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -3386,13 +3386,13 @@ void OuterOnlySimpleShapeTests()
 		pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
 		pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 	{ "ChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
+		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 	{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.0, sqrtf(3.0) / 3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -5532,9 +5532,9 @@ void TestCurve2DRotation()
 	const auto center = pmp::Point2(200, 400);
 	const pmp::Scalar innerRadius = 40.0;
 	const std::vector<pmp::Point2> triangleVerticesSmall = {
-		pmp::Point2{-0.5, -sqrtf(3.0) / 6.0} *innerRadius + center,
-		pmp::Point2{0.5, -sqrtf(3.0) / 6.0} *innerRadius + center,
-		pmp::Point2{0.0, sqrtf(3.0) / 3.0} *innerRadius + center
+		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *innerRadius + center,
+		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *innerRadius + center,
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *innerRadius + center
 	};
 	const unsigned int segments = 30;
 

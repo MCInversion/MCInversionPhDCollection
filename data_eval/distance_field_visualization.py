@@ -199,7 +199,9 @@ def visualize_field_and_curve(directory, base_filename):
         draw_grid_lines(ax, bbox_min, bbox_max, nx, ny, cell_size)
 
     # Add legend and labels
-    ax.legend()
+    handles, labels = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(loc='upper right')  # Set legend position to upper right
     ax.set_title(f"Distance Field and Curve: {base_filename}")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")

@@ -220,9 +220,9 @@ void SurfaceEvolver::Evolve()
 	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	//const float phi = (1.0 + sqrt(5.0)) / 2.0; /// golden ratio.
 	//auto minEdgeLength = minEdgeMultiplier * (2.0 * r / (sqrt(phi * sqrt(5.0)) * subdiv)); // from icosahedron edge length
-	auto minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 4.0 * minEdgeLength;
-	auto approxError = 0.25 * (minEdgeLength + maxEdgeLength);
+	pmp::Scalar minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
+	pmp::Scalar maxEdgeLength = 4.0 * minEdgeLength;
+	pmp::Scalar approxError = 0.25 * (minEdgeLength + maxEdgeLength);
 	//auto approxError = 2.0 * minEdgeLength;
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";

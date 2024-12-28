@@ -1007,7 +1007,9 @@ void ConvexHullRemeshingTests()
 		const auto [lengthMin, lengthMean, lengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(convexHull);
 		pmp::Remeshing remeshing(convexHull);
 		remeshing.convex_hull_adaptive_remeshing({
-			2.0 * lengthMin, 8.0 * lengthMin, 0.5 * lengthMin,
+			static_cast<pmp::Scalar>(2.0) * lengthMin, 
+			static_cast<pmp::Scalar>(8.0) * lengthMin, 
+			static_cast<pmp::Scalar>(0.5) * lengthMin,
 			3, 10, true
 			});
 		const auto [newLengthMin, newLengthMean, newLengthMax] = Geometry::ComputeEdgeLengthMinAverageAndMax(convexHull);

@@ -612,9 +612,9 @@ namespace Geometry
 	{
 		const auto center = box.center();
 		const pmp::vec3 halfSize{
-			0.5 * (box.max()[0] - box.min()[0]),
-			0.5 * (box.max()[1] - box.min()[1]),
-			0.5 * (box.max()[2] - box.min()[2])
+			(pmp::Scalar)0.5 * (box.max()[0] - box.min()[0]),
+			(pmp::Scalar)0.5 * (box.max()[1] - box.min()[1]),
+			(pmp::Scalar)0.5 * (box.max()[2] - box.min()[2])
 		};
 		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		std::stack<Node*> nodeStack{};
@@ -665,9 +665,9 @@ namespace Geometry
 	{
 		const auto center = box.center();
 		const pmp::vec3 halfSize{
-			0.5 * (box.max()[0] - box.min()[0]),
-			0.5 * (box.max()[1] - box.min()[1]),
-			0.5 * (box.max()[2] - box.min()[2])
+			(pmp::Scalar)0.5 * (box.max()[0] - box.min()[0]),
+			(pmp::Scalar)0.5 * (box.max()[1] - box.min()[1]),
+			(pmp::Scalar)0.5 * (box.max()[2] - box.min()[2])
 		};
 		std::vector triVerts{ pmp::vec3(), pmp::vec3(), pmp::vec3() };
 		const size_t expectedStackHeight = GetAverageStackHeight(m_NodeCount);
@@ -1001,8 +1001,8 @@ namespace Geometry
 	{
 		const auto center = box.center();
 		const pmp::vec2 halfSize{
-			0.5 * (box.max()[0] - box.min()[0]),
-			0.5 * (box.max()[1] - box.min()[1])
+			(pmp::Scalar)0.5 * (box.max()[0] - box.min()[0]),
+			(pmp::Scalar)0.5 * (box.max()[1] - box.min()[1])
 		};
 		std::vector eVerts{ pmp::vec2(), pmp::vec2() };
 		std::stack<Node*> nodeStack{};

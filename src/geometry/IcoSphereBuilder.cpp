@@ -17,12 +17,12 @@ namespace IcoSphere
 
 	/// \brief vertices of an icosahedron.
 	inline const VertexList ICOSAHEDRON_BASE_VERTICES{
-		/* v0 */ pmp::vec3{-1.0 / norm, phi / norm, 0.0},  /* v1 */ pmp::vec3{1.0 / norm, phi / norm, 0.0},
-		/* v2 */ pmp::vec3{-1.0 / norm, -phi / norm, 0.0}, /* v3 */ pmp::vec3{1.0 / norm, -phi / norm, 0.0},
-		/* v4 */ pmp::vec3{0.0, -1.0 / norm, phi / norm},  /* v5 */ pmp::vec3{0.0, 1.0 / norm, phi / norm},
-		/* v6 */ pmp::vec3{0.0, -1.0 / norm, -phi / norm}, /* v7 */ pmp::vec3{0.0, 1.0 / norm, -phi / norm},
-		/* v8 */ pmp::vec3{phi / norm, 0.0, -1.0 / norm},  /* v9 */ pmp::vec3{phi / norm, 0.0, 1.0 / norm},
-		/* v10 */pmp::vec3{-phi / norm, 0.0, -1.0 / norm},/* v11 */ pmp::vec3{-phi / norm, 0.0, 1.0 / norm}
+		/* v0 */ pmp::vec3{(pmp::Scalar)-1.0 / norm, phi / norm, 0.0},  /* v1 */ pmp::vec3{(pmp::Scalar)1.0 / norm, phi / norm, 0.0},
+		/* v2 */ pmp::vec3{(pmp::Scalar)-1.0 / norm, -phi / norm, 0.0}, /* v3 */ pmp::vec3{(pmp::Scalar)1.0 / norm, -phi / norm, 0.0},
+		/* v4 */ pmp::vec3{0.0, (pmp::Scalar)-1.0 / norm, phi / norm},  /* v5 */ pmp::vec3{0.0, (pmp::Scalar)1.0 / norm, phi / norm},
+		/* v6 */ pmp::vec3{0.0, (pmp::Scalar)-1.0 / norm, -phi / norm}, /* v7 */ pmp::vec3{0.0, (pmp::Scalar)1.0 / norm, -phi / norm},
+		/* v8 */ pmp::vec3{phi / norm, 0.0, (pmp::Scalar)-1.0 / norm},  /* v9 */ pmp::vec3{phi / norm, 0.0, (pmp::Scalar)1.0 / norm},
+		/* v10 */pmp::vec3{-phi / norm, 0.0, (pmp::Scalar)-1.0 / norm},/* v11 */ pmp::vec3{-phi / norm, 0.0, (pmp::Scalar)1.0 / norm}
 	};
 
 	/// \brief vertex index triples for icosahedron triangle faces.

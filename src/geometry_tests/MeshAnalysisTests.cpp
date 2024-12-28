@@ -151,7 +151,7 @@ TEST(IsPointInsidePMPSurfaceMeshTests, IcoSphere_SamplePtRaysPassingThroughFace)
     icoBuilder.BuildBaseData();
     icoBuilder.BuildPMPSurfaceMesh();
     SurfaceMesh icoSphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
-    const auto rotMatrix = rotation_matrix(vec3{ 0.0, 0.0, 1.0 }, 0.1 * static_cast<pmp::Scalar>(M_PI));
+    const auto rotMatrix = rotation_matrix(vec3{ 0.0, 0.0, 1.0 }, static_cast<pmp::Scalar>(0.1 * M_PI));
     icoSphereMesh *= rotMatrix;
 
     const PMPSurfaceMeshAdapter icoSphereAdapter(std::make_shared<SurfaceMesh>(icoSphereMesh));
@@ -215,7 +215,7 @@ TEST(IsPointInsidePMPSurfaceMeshTests, IcoSphere_SamplePtRaysPassingThroughShare
     icoBuilder.BuildBaseData();
     icoBuilder.BuildPMPSurfaceMesh();
     SurfaceMesh icoSphereMesh = icoBuilder.GetPMPSurfaceMeshResult();
-    const auto rotMatrix = rotation_matrix(vec3{ 0.0, 1.0, 0.0 }, 0.1 * static_cast<pmp::Scalar>(M_PI));
+    const auto rotMatrix = rotation_matrix(vec3{ 0.0, 1.0, 0.0 }, static_cast<pmp::Scalar>(0.1 * M_PI));
     icoSphereMesh *= rotMatrix;
 
     const PMPSurfaceMeshAdapter icoSphereAdapter(std::make_shared<SurfaceMesh>(icoSphereMesh));

@@ -65,9 +65,9 @@ void SphereTest::Evolve(const unsigned int& iter, const double& tStep)
 	constexpr pmp::Scalar baseIcoHalfAngle = 2.0 * M_PI / 10.0;
 	const pmp::Scalar minEdgeMultiplier = m_EvolSettings.TopoParams.MinEdgeMultiplier;
 	//auto minEdgeLength = minEdgeMultiplier * (r / (pow(2.0, subdiv - 1) * sqrt(phi * sqrt(5.0)))); // from icosahedron edge length
-	auto minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
-	auto maxEdgeLength = 1.5 * minEdgeLength;
-	auto approxError = 0.25 * (minEdgeLength + maxEdgeLength);
+	const pmp::Scalar minEdgeLength = minEdgeMultiplier * 2.0 * r * sin(baseIcoHalfAngle * pow(2.0, -subdiv)); // from icosahedron edge length
+	const pmp::Scalar maxEdgeLength = 1.5 * minEdgeLength;
+	const pmp::Scalar approxError = 0.25 * (minEdgeLength + maxEdgeLength);
 #if REPORT_EVOL_STEPS
 	std::cout << "minEdgeLength for remeshing: " << minEdgeLength << "\n";
 #endif

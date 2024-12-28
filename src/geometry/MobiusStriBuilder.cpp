@@ -17,7 +17,7 @@ namespace Geometry
 		return pmp::vec3{
 			static_cast<pmp::Scalar>(sqrt2 * l * sin(u) * (2 * r * cos(u) - l * v * pow(sin(u), 2.0))) / norm,
 			static_cast<pmp::Scalar>(sqrt2 * l * (l * v * pow(cos(u), 3.0) + 2 * (r + l * v * cos(u)) * pow(sin(u), 2.0))) / norm,
-			-1.0 * static_cast<pmp::Scalar>(l * sqrt2 * cos(u) * (2 * r + l * v * cos(u))) / norm
+			(pmp::Scalar)-1.0 * static_cast<pmp::Scalar>(l * sqrt2 * cos(u) * (2 * r + l * v * cos(u))) / norm
 		} * (-1.0);
 	}
 
@@ -51,7 +51,7 @@ namespace Geometry
 				m_BaseResult->Vertices.emplace_back(pmp::vec3{
 					rad * cos(ringParam),
 					rad * sin(ringParam),
-					0.5 * sLineLength * lineParam * sin(ringParam)
+					(pmp::Scalar)0.5 * sLineLength * lineParam * sin(ringParam)
 				});
 
 				if (i > 0 && j > 0)

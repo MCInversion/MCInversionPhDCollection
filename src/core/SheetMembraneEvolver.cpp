@@ -126,7 +126,7 @@ void SheetMembraneEvolver::Preprocess()
 		0.0, 0.0, scalingFactor, 0.0,
 		0.0, 0.0, 0.0, 1.0
 	};
-	const auto planeCenter = pmp::vec3{ fieldOrig[0] + 0.5 * fieldSize[0], fieldOrig[1] + 0.5 * fieldSize[1], planeOrig[2] };
+	const auto planeCenter = pmp::vec3{ fieldOrig[0] + (pmp::Scalar)0.5 * fieldSize[0], fieldOrig[1] + (pmp::Scalar)0.5 * fieldSize[1], planeOrig[2] };
 	const pmp::mat4 transfMatrixGeomMove{
 		1.0, 0.0, 0.0, -planeCenter[0],
 		0.0, 1.0, 0.0, -planeCenter[1],
