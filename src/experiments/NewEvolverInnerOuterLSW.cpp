@@ -2467,7 +2467,7 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
 	//strategySettings.FieldSettings.FieldIsoLevel = 2.0;
-	strategySettings.UseLinearGridInterpolation = true;
+	strategySettings.UseLinearGridInterpolation = false;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;

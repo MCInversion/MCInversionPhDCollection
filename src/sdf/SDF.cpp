@@ -10,6 +10,9 @@
 #include <stack>
 #include <nmmintrin.h>
 
+// TODO: remove
+#include <fstream>
+
 namespace SDF
 {
 	void DistanceFieldGenerator::PreprocessGridNoOctree(Geometry::ScalarGrid& grid)
@@ -903,12 +906,19 @@ namespace SDF
 		const auto Nx = static_cast<unsigned int>(dims.Nx);
 		unsigned int ix, iy, gridPos;
 
+		//std::ofstream file("C:\\Users\\Martin\\source\\repos\\MCInversionPhDCollection\\output\\sdf_tests\\boxCoords.txt");
+		//file << "outlinePts = [\n";
+
 		for (size_t i = 0; i < nOutlinePixels; i++)
 		{
 			// transform from real space to grid index space
 			//ix = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
 			//iy = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
-			
+
+			//const auto outlinePt = boxBuffer[i]->min();
+			//const auto outlinePt = boxBuffer[i]->center();
+			//file << "\t[" << outlinePt[0] << ", " << outlinePt[1] << "],\n";
+
 			const double param = 0.5;
 			ix = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[0] + param * boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
 			iy = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[1] + param * boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
@@ -917,6 +927,9 @@ namespace SDF
 			gridVals[gridPos] = valueBuffer[i];
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
+
+		//file << "]";
+		//file.close();
 	}
 
 	void PlanarDistanceFieldGenerator::ComputeSignUsingFloodFill(Geometry::ScalarGrid2D& grid)
@@ -998,6 +1011,10 @@ namespace SDF
 			const pmp::Scalar expansion = settings.AreaExpansionFactor * minSize;
 			dfBBox.expand(expansion, expansion);
 		}
+
+		// shift by half-pixel
+		dfBBox.min() += pmp::vec2{ settings.CellSize, settings.CellSize } * (pmp::Scalar)0.5;
+		dfBBox.max() += pmp::vec2{ settings.CellSize, settings.CellSize } * (pmp::Scalar)0.5;
 
 		// percentage of the minimum half-size of the mesh's bounding box.
 		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * static_cast<double>(minSize) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);

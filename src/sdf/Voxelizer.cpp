@@ -189,8 +189,8 @@ namespace SDF
 
 		const auto startBoxCenter = startBox.center();
 		const pmp::vec2 squareBoxCenter{
-			std::round(startBoxCenter[0] / targetLeafSize) * targetLeafSize,
-			std::round(startBoxCenter[1] / targetLeafSize) * targetLeafSize
+			(std::round(startBoxCenter[0] / targetLeafSize) - (pmp::Scalar)0.5) * targetLeafSize,
+			(std::round(startBoxCenter[1] / targetLeafSize) - (pmp::Scalar)0.5) * targetLeafSize
 		};
 
 		const pmp::vec2 squareBoxMin{
@@ -241,6 +241,7 @@ namespace SDF
 			std::vector<unsigned int> pixelEdgeIds{};
 			m_KdTree.GetEdgesInABox(box, pixelEdgeIds);
 			const auto center = box.center();
+			//const auto boxMin = box.min();
 
 			assert(!pixelEdgeIds.empty());
 
@@ -254,7 +255,7 @@ namespace SDF
 				line[0] = vertexPositions[edges[edgeId].v0Id];
 				line[1] = vertexPositions[edges[edgeId].v1Id];
 
-				const double currentEdgeDistSq = Geometry::GetDistanceToLine2DSq(line, center);
+				const double currentEdgeDistSq = Geometry::GetDistanceToLine2DSq(line, /*boxMin*/ center);
 
 				if (currentEdgeDistSq < distToEdgeSq)
 					distToEdgeSq = currentEdgeDistSq;

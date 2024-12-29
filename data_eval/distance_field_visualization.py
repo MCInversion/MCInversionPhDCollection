@@ -144,6 +144,27 @@ def draw_grid_lines(ax, bbox_min, bbox_max, nx, ny, cell_size):
         y = bbox_min[1] + i * cell_size
         ax.plot([bbox_min[0], bbox_max[0]], [y, y], color=grid_color, linewidth=0.5, alpha=0.5)
 
+# DEBUG DATA
+
+outlinePts = [
+	[5, 2.5],
+	[5, 0],
+	[2.5, 5],
+	[0, 5],
+	[2.5, 2.5],
+	[5, -2.5],
+	[2.5, -2.5],
+	[2.5, -5],
+	[0, -5],
+	[-2.5, 5],
+	[-2.5, 2.5],
+	[-5, 2.5],
+	[-5, 0],
+	[-2.5, -2.5],
+	[-2.5, -5],
+	[-5, -2.5],
+]
+    
 # Main visualization function
 def visualize_field_and_curve(directory, base_filename):
     """Visualize the distance field and its corresponding curve."""
@@ -190,6 +211,10 @@ def visualize_field_and_curve(directory, base_filename):
         ax.plot(curve_data[:, 0], curve_data[:, 1], color='black', linewidth=2, label='Curve')
     else:
         ax.scatter(curve_data[:, 0], curve_data[:, 1], color='black', s=10, label='Point Cloud')
+
+    # Draw outlinePts
+    outlinePts_array = np.array(outlinePts)
+    ax.scatter(outlinePts_array[:, 0], outlinePts_array[:, 1], color='blue', s=10, label='outlinePts')
 
     ax.set_xlim([bbox_min[0], bbox_max[0]])
     ax.set_ylim([bbox_min[1], bbox_max[1]])

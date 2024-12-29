@@ -495,11 +495,11 @@ TEST(DistanceField2DTests, PlanarDistanceFieldGenerator_ManifoldCircleCurve)
 {
     // Arrange
     //const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(CurveFactory::circle(Point2{ 53.669357, 34.419353 }, 13.217741, 10)));
-    const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(CurveFactory::circle(Point2{ 0, 0 }, 13.217741, 10)));
+    const ManifoldCurve2DAdapter curveAdapter(std::make_shared<ManifoldCurve2D>(CurveFactory::circle(Point2{ 0, 0 }, 5., 10)));
 	const auto curveBBox = curveAdapter.GetBounds();
     const auto curveBBoxSize = curveBBox.max() - curveBBox.min();
-    const Scalar minSize = std::min(curveBBoxSize[0], curveBBoxSize[1]);
-    const Scalar cellSize = minSize / 10.0;
+    const Scalar maxSize = std::max(curveBBoxSize[0], curveBBoxSize[1]);
+    const Scalar cellSize = maxSize / 4.0;
 
     const DistanceField2DSettings sdfSettings{
         cellSize,
