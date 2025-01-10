@@ -27,6 +27,7 @@
 #include "sdf/SDF.h"
 
 #include "utils/TimingUtils.h"
+#include "utils/NumericalUtils.h"
 
 #include "core/ConversionUtils.h"
 #include "core/EvolverUtilsCommon.h"
@@ -5546,4 +5547,138 @@ void TestCurve2DRotation()
 	curve = GetCurveRotatedAboutCenterPoint(curve, angle);
 	if (!pmp::write_to_ply(curve, dataOutPath + "curve_AfterRot.ply"))
 		std::cerr << "Error writing curve_AfterRot.ply!\n";
+}
+
+void TestSmoothingAdvectionEquilibrium()
+{
+	// Define the inner and outer circle pairs directly
+	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
+		{Circle2D{pmp::Point2{-3.0, 52.0}, 100.0}, Circle2D{pmp::Point2{-3.0, 52.0}, 121.558}},
+		//{Circle2D{pmp::Point2{-25.0, 8.0}, 0.055}, Circle2D{pmp::Point2{-25.0, 8.0}, 0.142831}},
+		//{Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Circle2D{pmp::Point2{8.0, 85.0}, 292.263}},
+		//{Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Circle2D{pmp::Point2{-20.0, 90.0}, 441.436}}
+	};
+
+	constexpr unsigned int nVoxelsPerMinDimension = 40;
+	constexpr double defaultTimeStep = 0.05;
+	constexpr double defaultOffsetFactor = 0.25; // 1.5;
+	constexpr unsigned int NTimeSteps = 1800;
+
+	constexpr double innerEpsilonStart = 0.01;
+	constexpr double innerEpsilonEnd = 0.001;
+	//constexpr double innerEpsilonExpFactor = 0.5;
+	constexpr double innerEpsilonStep = -0.001;
+
+	for (unsigned int curveId = 0; const auto & circlePair : circlePairs)
+	{
+		std::cout << " ====================================================== \n";
+		std::cout << "Circles " << std::to_string(curveId) << ": \n";
+		std::cout << " ------------------------------------------------------ \n";
+
+		// Retrieve the inner and outer circles from the pair
+		const auto& innerCircle = circlePair.first;
+		const auto& outerCircle = circlePair.second;
+
+		const pmp::BoundingBox2 bbox{
+			pmp::Point2{
+				std::min(innerCircle.Center[0] - innerCircle.Radius, outerCircle.Center[0] - outerCircle.Radius),
+				std::min(innerCircle.Center[1] - innerCircle.Radius, outerCircle.Center[1] - outerCircle.Radius)
+			},
+			pmp::Point2{
+				std::max(innerCircle.Center[0] + innerCircle.Radius, outerCircle.Center[0] + outerCircle.Radius),
+				std::max(innerCircle.Center[1] + innerCircle.Radius, outerCircle.Center[1] + outerCircle.Radius)
+			}
+		};
+		const auto bboxSize = bbox.max() - bbox.min();
+		const pmp::Scalar minSize = std::min(bboxSize[0], bboxSize[1]);
+		const pmp::Scalar cellSize = minSize / nVoxelsPerMinDimension;
+
+		//for (unsigned int epsilonId = 0; double epsConstantValue : Utils::GetExponentialValueRange(innerEpsilonStart, innerEpsilonEnd, innerEpsilonExpFactor))
+		for (unsigned int epsilonId = 0; double epsConstantValue : Utils::GetLinearValueRange(innerEpsilonStart, innerEpsilonEnd, innerEpsilonStep))
+		{
+			const double isoLvlOffsetFactor = defaultOffsetFactor;
+			const double fieldIsoLevel = isoLvlOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
+
+			std::cout << "Setting up ManifoldEvolutionSettings.\n";
+
+			ManifoldEvolutionSettings strategySettings;
+			strategySettings.UseInnerManifolds = true;
+			strategySettings.AdvectionInteractWithOtherManifolds = true;
+			strategySettings.OuterManifoldEpsilon = [](double distance)
+			{
+				//return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+				return 0.0;
+			};
+			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+				return 0.0;
+			};
+			strategySettings.InnerManifoldEpsilon = [&epsConstantValue](double distance)
+			{
+				return epsConstantValue * TRIVIAL_EPSILON(distance);
+			};
+			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
+			{
+				return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+			strategySettings.TimeStep = defaultTimeStep;
+			strategySettings.LevelOfDetail = 3;
+			strategySettings.TangentialVelocityWeight = 0.05;
+
+			strategySettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
+			strategySettings.RemeshingSettings.UseBackProjection = false;
+
+			strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+			strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = 1.0 * static_cast<pmp::Scalar>(M_PI_2);
+
+			strategySettings.FieldSettings.NVoxelsPerMinDimension = nVoxelsPerMinDimension;
+			strategySettings.FieldSettings.FieldIsoLevel = fieldIsoLevel;
+
+			strategySettings.ExportVariableScalarFieldsDimInfo = true;
+			strategySettings.ExportVariableVectorFieldsDimInfo = true;
+
+			//std::cout << "Setting up GlobalManifoldEvolutionSettings.\n";
+
+			GlobalManifoldEvolutionSettings globalSettings;
+			globalSettings.NSteps = NTimeSteps;
+			globalSettings.DoRemeshing = true;
+			globalSettings.DetectFeatures = false;
+			globalSettings.ExportPerTimeStep = true;
+			globalSettings.ExportTargetDistanceFieldAsImage = true;
+			globalSettings.ProcedureName = "concentricCircles" + std::to_string(curveId) + "_eps" + std::to_string(epsilonId);
+
+			std::cout << globalSettings.ProcedureName << " with epsilon: " << epsConstantValue << "\n";
+
+			globalSettings.OutputPath = dataOutPath;
+			globalSettings.ExportResult = false;
+
+			globalSettings.RemeshingResizeFactor = 0.7;
+			globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+			const auto nSegments = static_cast<unsigned int>(pow(2, strategySettings.LevelOfDetail - 1)) * N_CIRCLE_VERTS_0;
+			auto outerCurve = pmp::CurveFactory::circle(outerCircle.Center, outerCircle.Radius, nSegments);
+
+			const auto nInnerSegments = static_cast<unsigned int>(static_cast<pmp::Scalar>(nSegments) * innerCircle.Radius / outerCircle.Radius * 2);
+			auto innerCurve = pmp::CurveFactory::circle(innerCircle.Center, innerCircle.Radius, nInnerSegments);
+			//innerCurve.negate_orientation();
+			std::vector innerCurves{ innerCurve };
+
+			auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+				strategySettings, outerCurve, innerCurves, nullptr);
+
+			std::cout << "Setting up ManifoldEvolver.\n";
+
+
+			ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+			std::cout << "ManifoldEvolver::Evolve ... ";
+
+			evolver.Evolve();
+
+			epsilonId++;
+		}
+
+		curveId++;
+	}
 }

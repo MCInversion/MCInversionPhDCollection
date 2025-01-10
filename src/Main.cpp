@@ -109,7 +109,7 @@ int main()
         // "AdvectionDrivenInnerCircleTests",
         //   "ConcentricCirclesTests",
         //   "NonConcentricCirclesTest",
-        "EquilibriumPairedManifoldTests",
+        // "EquilibriumPairedManifoldTests",
         //"EquilibriumPairedConcaveManifoldTests",
         // "VisualizeMCF",
         // "VisualizeMultipleInnerCurves",
@@ -128,6 +128,7 @@ int main()
         // "TestDFDivergence2D",
         //"TestArcLengthCalculation",
         //"TestCurve2DRotation",
+        "TestSmoothingAdvectionEquilibrium",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

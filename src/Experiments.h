@@ -218,6 +218,7 @@ void TestProblematicMedialAxisPtClouds();
 void TestDFDivergence2D();
 void TestArcLengthCalculation();
 void TestCurve2DRotation();
+void TestSmoothingAdvectionEquilibrium();
 
 //
 // =================================================================================
@@ -341,6 +342,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestDFDivergence2D", TestDFDivergence2D },
     {"TestArcLengthCalculation", TestArcLengthCalculation },
     {"TestCurve2DRotation", TestCurve2DRotation },
+    {"TestSmoothingAdvectionEquilibrium", TestSmoothingAdvectionEquilibrium },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here
