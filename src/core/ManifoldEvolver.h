@@ -317,7 +317,16 @@ protected:
     virtual [[nodiscard]] bool NeedsFieldsCalculation() = 0;
 
     /// \brief Checks the diagnostic flags in m_Settings.
-    [[nodiscard]] bool LogManifoldValues();
+    [[nodiscard]] bool LogOuterManifoldValues() const;
+
+    /// \brief Checks the diagnostic flags in m_Settings.
+    [[nodiscard]] bool LogInnerManifoldValues() const;
+
+    /// \brief Checks the diagnostic flags in m_Settings.
+    [[nodiscard]] bool LogManifoldValues() const
+    {
+        return LogOuterManifoldValues() || LogInnerManifoldValues();
+    }
 
     /// \brief Computes lower bounds for control functions from maximum available distance range after scaling by m_ScalingFactor.
     virtual void ComputeControlFunctionsLowerBounds() = 0;

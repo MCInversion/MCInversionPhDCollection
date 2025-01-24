@@ -163,5 +163,23 @@ const std::string svgPathPair121 = R"svg(
        sodipodi:nodetypes="ccccccccccccccccccc" />
 )svg";
 
+/// \brief Outer F outline for pair 16
+const std::string svgPathPair160 = R"svg(
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.935438;stroke-linecap:square;stroke-linejoin:round;stroke-opacity:1"
+       d="m 58.523369,23.447792 4.59688,-5.431163 11.047009,-4.182941 6.711603,6.046062 0.375758,4.106362 9.00908,8.449474 15.354491,-0.5716 11.09387,4.644115 5.71628,14.192127 -1.13073,17.833121 -4.92614,9.076575 -16.689457,0.476126 -5.582645,5.694954 -0.890733,17.412056 -5.526499,7.57003 -9.137616,-0.98112 -5.28828,-6.84141 L 67.00915,89.656269 57.231955,87.89175 46.919211,87.436062 41.35982,79.389917 v -21.83957 l 3.859623,-8.191019 8.561857,-2.847793 6.457758,-7.079477 z"
+       id="path288"
+       sodipodi:nodetypes="cccccccccccccccccccccccccc" />
+)svg";
+
+/// \brief Inner G outline for pair 16
+const std::string svgPathPair161 = R"svg(
+    <path
+       style="fill:none;stroke:#601fb8;stroke-width:0.940893;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1.88179, 0.940893;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 80.91692,54.334316 7.754203,0.218476 3.912064,6.02259 -1.853962,3.634412 1.733323,4.150095 6.797338,0.857937 4.628854,-4.712442 1.48074,-8.326073 -3.72025,-5.851141 -5.122035,-5.026524 -7.962978,-0.737882 -5.938798,1.579251 -3.159573,6.030842 z"
+       id="path491"
+       sodipodi:nodetypes="cccccccccccccc" />
+)svg";
+
 /// \brief An svg path parsing utility
 [[nodiscard]] std::vector<pmp::Point2> ParsePolygonalSVGPath(const std::string& svgPath);

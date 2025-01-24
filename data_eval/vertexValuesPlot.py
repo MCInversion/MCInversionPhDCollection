@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 # Configuration
-#procedure_name = "equilibriumConcavePair19"
+procedure_name = "equilibriumConcavePair19"
 #procedure_name = "equilibriumPair0"
 #procedure_name = "equilibriumPair1"
 #procedure_name = "equilibriumPair2"
-procedure_name = "equilibriumPair3"
-
+#procedure_name = "equilibriumPair3"
+#
 directory = "../output"  # Adjust this path accordingly
 json_file = f"{directory}/{procedure_name}_log.json"
 
@@ -270,7 +270,7 @@ def visualize_opacity_interpolation(min_opacity=0.2):
 
     # Add legend on the final frame
     if frame_idx == n_steps:
-        ax.legend(loc="upper right")
+        ax.legend(loc="upper center")
 
     # Save and show the plot
     output_png_path = f"{directory}/{procedure_name}_ValueListsOpacity.png"

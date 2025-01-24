@@ -19,22 +19,23 @@ namespace Utils
         }
 
         return std::ranges::views::iota(0)
-            | std::ranges::views::transform([=](int i) { return start * std::pow(factor, i); })
-            | std::ranges::views::take_while([=](T value) { return value > end; });
+            | std::ranges::views::transform([&start, &factor](int i) { return start * std::pow(factor, i); })
+            | std::ranges::views::take_while([&end](T value) { return value > end; });
     }
 
     /// \brief A utility for generating a linear range of values
     template <typename T>
-    [[nodiscard]] auto GetLinearValueRange(const T& start, const T& end, const T& step) {
-        if (step == 0 || (start < end && step < 0) || (start > end && step > 0)) {
+    [[nodiscard]] auto GetLinearValueRange(const T& start, const T& end, const T& step)
+	{
+        if (step == 0 || (start < end && step < 0) || (start > end && step > 0)) 
+        {
             throw std::invalid_argument("Invalid range parameters");
         }
 
         return std::ranges::views::iota(0)
-            | std::ranges::views::transform([=](int i) { return start + i * step; })
-            | std::ranges::views::take_while([=](T value) {
-            return (step > 0) ? value < end : value > end;
-                });
+            | std::ranges::views::transform([&start, &step](int i) { return start + i * step; })
+            | std::ranges::views::take_while([&end, &step](T value) {
+            return (step > 0) ? value < end : value > end; });
     }
 
 

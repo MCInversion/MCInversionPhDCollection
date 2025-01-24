@@ -320,7 +320,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
 
 		std::vector<pmp::Scalar> arcLengths;
-		if (LogManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()])
+		if (LogOuterManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()])
 		{
 			arcLengths = m_ArcLengthCalculators[m_OuterCurve.get()]->CalculateArcLengths();
 		}
@@ -375,7 +375,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				((m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
 				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
 
-			if (LogManifoldValues())
+			if (LogOuterManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
 					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -430,21 +430,24 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		{
 			const auto newPos = x.row(i);
 
-			if (GetSettings().DiagSettings.LogOuterManifoldErrors)
+			if (LogOuterManifoldValues())
 			{
-				const pmp::vec2 remainderVec{
-					Utils::Get32BitRemainder(newPos[0]),
-					Utils::Get32BitRemainder(newPos[1])
-				};
-				m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderMagnitude", i, norm(remainderVec));
-			}
-			else if (GetSettings().DiagSettings.LogOuterManifoldXErrors)
-			{
-				m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderX", i, Utils::Get32BitRemainder(newPos[0]));
-			}
-			else if (GetSettings().DiagSettings.LogOuterManifoldYErrors)
-			{
-				m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderY", i, Utils::Get32BitRemainder(newPos[1]));
+				if (GetSettings().DiagSettings.LogOuterManifoldErrors)
+				{
+					const pmp::vec2 remainderVec{
+						Utils::Get32BitRemainder(newPos[0]),
+						Utils::Get32BitRemainder(newPos[1])
+					};
+					m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderMagnitude", i, norm(remainderVec));
+				}
+				else if (GetSettings().DiagSettings.LogOuterManifoldXErrors)
+				{
+					m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderX", i, Utils::Get32BitRemainder(newPos[0]));
+				}
+				else if (GetSettings().DiagSettings.LogOuterManifoldYErrors)
+				{
+					m_Logger.LogValue(m_OuterCurve.get(), "outerCurve32RemainderY", i, Utils::Get32BitRemainder(newPos[1]));
+				}				
 			}
 
 			if (!m_EvolBox.Contains(newPos))
@@ -478,7 +481,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);  // Assuming 2 entries per vertex for curves
 
 		std::vector<pmp::Scalar> arcLengths;
-		if (LogManifoldValues() && m_ArcLengthCalculators[innerCurve.get()])
+		if (LogInnerManifoldValues() && m_ArcLengthCalculators[innerCurve.get()])
 		{
 			arcLengths = m_ArcLengthCalculators[innerCurve.get()]->CalculateArcLengths();
 		}
@@ -527,7 +530,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				((m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
 
-			if (LogManifoldValues())
+			if (LogInnerManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogInnerManifoldsEpsilon)
 					m_Logger.LogValue(innerCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -591,21 +594,24 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		{
 			const auto newPos = x.row(i);
 
-			if (GetSettings().DiagSettings.LogInnerManifoldsErrors)
+			if (LogInnerManifoldValues())
 			{
-				const pmp::vec2 remainderVec{
-					Utils::Get32BitRemainder(newPos[0]),
-					Utils::Get32BitRemainder(newPos[1])
-				};
-				m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderMagnitude", i, norm(remainderVec));
-			}
-			else if (GetSettings().DiagSettings.LogInnerManifoldsXErrors)
-			{
-				m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderX", i, Utils::Get32BitRemainder(newPos[0]));
-			}
-			else if (GetSettings().DiagSettings.LogInnerManifoldsYErrors)
-			{
-				m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderY", i, Utils::Get32BitRemainder(newPos[1]));
+				if (GetSettings().DiagSettings.LogInnerManifoldsErrors)
+				{
+					const pmp::vec2 remainderVec{
+						Utils::Get32BitRemainder(newPos[0]),
+						Utils::Get32BitRemainder(newPos[1])
+					};
+					m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderMagnitude", i, norm(remainderVec));
+				}
+				else if (GetSettings().DiagSettings.LogInnerManifoldsXErrors)
+				{
+					m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderX", i, Utils::Get32BitRemainder(newPos[0]));
+				}
+				else if (GetSettings().DiagSettings.LogInnerManifoldsYErrors)
+				{
+					m_Logger.LogValue(innerCurve.get(), "innerCurve32RemainderY", i, Utils::Get32BitRemainder(newPos[1]));
+				}				
 			}
 
 			if (!m_EvolBox.Contains(newPos))
@@ -690,7 +696,7 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 			const double etaCtrlWeight =
 				(m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
-			if (LogManifoldValues())
+			if (LogOuterManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
 					m_Logger.LogValue(m_OuterCurve.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -1610,7 +1616,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const double etaCtrlWeight =
 				(m_DistanceField || !m_InnerSurfacesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
-			if (LogManifoldValues())
+			if (LogOuterManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
 					m_Logger.LogValue(m_OuterSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -1731,7 +1737,7 @@ void ManifoldSurfaceEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int 
 			const double etaCtrlWeight =
 				(m_DistanceField || m_OuterSurfaceDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
-			if (LogManifoldValues())
+			if (LogInnerManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogInnerManifoldsEpsilon)
 					m_Logger.LogValue(innerSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -1848,7 +1854,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const double etaCtrlWeight =
 				(m_DistanceField || !m_InnerSurfacesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
-			if (LogManifoldValues())
+			if (LogOuterManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogOuterManifoldEpsilon)
 					m_Logger.LogValue(m_OuterSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -1932,7 +1938,7 @@ void ManifoldSurfaceEvolutionStrategy::ExplicitIntegrationStep(unsigned int step
 			const double etaCtrlWeight =
 				(m_DistanceField || m_OuterSurfaceDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0;
 
-			if (LogManifoldValues())
+			if (LogInnerManifoldValues())
 			{
 				if (GetSettings().DiagSettings.LogInnerManifoldsEpsilon)
 					m_Logger.LogValue(innerSurface.get(), "epsilonCtrlWeight", v.idx(), epsilonCtrlWeight);
@@ -2431,13 +2437,22 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(pmp::Scal
 
 // ================================================
 
-bool ManifoldEvolutionStrategy::LogManifoldValues()
+bool ManifoldEvolutionStrategy::LogOuterManifoldValues() const
 {
-	return m_Settings.DiagSettings.LogOuterManifoldEpsilon || m_Settings.DiagSettings.LogInnerManifoldsEpsilon ||
-		m_Settings.DiagSettings.LogOuterManifoldEta || m_Settings.DiagSettings.LogInnerManifoldsEta ||
-		m_Settings.DiagSettings.LogOuterManifoldErrors || m_Settings.DiagSettings.LogInnerManifoldsErrors ||
-		m_Settings.DiagSettings.LogOuterManifoldXErrors || m_Settings.DiagSettings.LogOuterManifoldYErrors ||
-		m_Settings.DiagSettings.LogInnerManifoldsXErrors || m_Settings.DiagSettings.LogInnerManifoldsYErrors;
+	return m_Settings.DiagSettings.LogOuterManifoldEpsilon ||
+		m_Settings.DiagSettings.LogOuterManifoldEta ||
+		m_Settings.DiagSettings.LogOuterManifoldErrors ||
+		m_Settings.DiagSettings.LogOuterManifoldXErrors ||
+		m_Settings.DiagSettings.LogInnerManifoldsXErrors;
+}
+
+bool ManifoldEvolutionStrategy::LogInnerManifoldValues() const
+{
+	return m_Settings.DiagSettings.LogInnerManifoldsEpsilon ||
+		m_Settings.DiagSettings.LogInnerManifoldsEta ||
+		m_Settings.DiagSettings.LogInnerManifoldsErrors ||
+		m_Settings.DiagSettings.LogOuterManifoldYErrors ||
+		m_Settings.DiagSettings.LogInnerManifoldsYErrors;
 }
 
 // ================================================
