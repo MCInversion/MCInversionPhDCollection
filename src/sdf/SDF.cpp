@@ -2,6 +2,7 @@
 
 #include "geometry/GeometryUtil.h"
 #include "geometry/GridUtil.h"
+#include "geometry/GeometryIOUtils.h"
 
 #include "FastSweep.h"
 #include "Voxelizer.h"
@@ -1084,6 +1085,37 @@ namespace SDF
 			gridVals[gridPos] = norm(gridPt - p);
 			gridFrozenVals[gridPos] = true; // freeze initial condition for FastSweep
 		}
+	}
+
+	Geometry::ScalarGrid2D ImageDistanceFieldGenerator::Generate(const std::string& absFileName, const ImageDistanceField2DSettings& settings)
+	{
+		assert(settings.CellSize > 0.0);
+		assert(settings.AreaExpansionFactor >= 0.0);
+		assert(settings.TruncationFactor > 0);
+		auto imgGrid = ImportPNGImageGrayscale(absFileName, std::pair{ 0.0, 1.0 });
+		if (!imgGrid.has_value())
+		{
+			throw std::invalid_argument("ImageDistanceFieldGenerator::Generate: file " + absFileName + " couldn't be opened!\n");
+		}
+
+		// preprocess
+		ApplyNarrowGaussianBlur2D(*imgGrid);
+		ApplyNarrowBidirectionalSobelFilter2D(*imgGrid);
+		NormalizeScalarGridValues<Geometry::ScalarGrid2D>(*imgGrid, std::pair{ 0.0, 1.0 });
+		PrepareGridValuesForFastSweep(*imgGrid, 1.0, 1e+3, 0.4);
+
+		Geometry::ScalarGrid2D resultGrid(*imgGrid);
+
+#if REPORT_SDF_STEPS
+		std::cout << "FastSweep ... ";
+#endif
+		constexpr SweepSolver2DSettings fsSettings{};
+		FastSweep2D(resultGrid, fsSettings);
+#if REPORT_SDF_STEPS
+		std::cout << "done\n";
+#endif
+
+		return resultGrid;
 	}
 
 } // namespace SDF

@@ -93,6 +93,28 @@ namespace Geometry
 	void ApplyWideGaussianBlur2D(ScalarGrid2D& grid);
 
 	/**
+	 * \brief Apply a 3x3 Sobel kernel twice onto a given grid, and write the norm of the results.
+	 * \param grid        input grid.
+	 */
+	void ApplyNarrowBidirectionalSobelFilter2D(ScalarGrid2D& grid);
+
+	/**
+	 * \brief Apply a 5x5 Sobel kernel twice onto a given grid, and write the norm of the results.
+	 * \param grid    input grid.
+	 */
+	void ApplyWideBidirectionalSobelFilter2D(ScalarGrid2D& grid);
+
+	/**
+	 * \brief Locates all values with a given value, sets them to zero, freezes them, and applies infVal to the rest,
+	 *        so that the grid is ready for the fast-sweeping algorithm.
+	 * \param grid          input grid.
+	 * \param zeroVal       zero value for the generating set pixels.
+	 * \param infVal        infinity value for the remaining pixels.
+	 * \param valTolerance  tolerance for the zero value.
+	 */
+	void PrepareGridValuesForFastSweep(ScalarGrid2D& grid, const double& zeroVal = 0.0, const double& infVal = DEFAULT_SCALAR_GRID_INIT_VAL, const double& valTolerance = 1e-4);
+
+	/**
 	 * \brief Looks for nans and infinities in the grid, if the cell neighbors have valid values, averaged value is written for an invalid cell. Otherwise the cell value is set to default init value.
 	 * \param grid    input grid.
 	 */
@@ -105,10 +127,27 @@ namespace Geometry
 	void RepairScalarGrid2D(ScalarGrid2D& grid, bool verbose = false);
 
 	/**
-	 * \brief Normalizes the values of the scalar grid to interval [-1, 1]
+	 * \brief Normalizes the values of the scalar grid to interval [-1, 1] or targetInterval if defined
 	 * \param grid    input grid.
 	 */
-	void NormalizeScalarGridValues(ScalarGrid& grid);
+	template <typename Grid>
+	void NormalizeScalarGridValues(Grid& grid, const std::optional<std::pair<double, double>>& targetInterval = std::nullopt)
+	{
+		const auto minMax = std::minmax_element(grid.Values().begin(), grid.Values().end());
+		if (minMax.first == grid.Values().end() || minMax.second == grid.Values().end())
+		{
+			std::cerr << "NormalizeScalarGridValues: minMax not found!\n";
+			return;
+		}
+
+		const double minVal = *minMax.first;
+		const double maxVal = *minMax.second;
+		const double valRange = maxVal - minVal;
+		const double targetLowerBound = targetInterval ? targetInterval->first : -1.0;
+		const double targetUpperBound = targetInterval ? targetInterval->second : 1.0;
+		const double targetValRange = targetUpperBound - targetLowerBound;
+		std::ranges::for_each(grid.Values(), [&](auto& val) { val = (val - minVal) / valRange * targetValRange + targetLowerBound; });
+	}
 
 	/**
 	 * \brief Computes a gradient from a given scalar grid.

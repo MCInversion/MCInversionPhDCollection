@@ -5697,3 +5697,17 @@ void TestSmoothingAdvectionEquilibrium()
 		curveId++;
 	}
 }
+
+void TestImageSegmentation()
+{
+	const std::string imgName = "room";
+	auto imgDf = SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", { (pmp::Scalar)1.0 });
+
+	ExportScalarGridDimInfo2D(dataOutPath + imgName + ".gdim2d", imgDf);
+	constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+	ExportScalarGrid2DToPNG(dataOutPath + imgName + "_df.png", imgDf,
+		Geometry::BilinearInterpolateScalarValue,
+		//Geometry::GetNearestNeighborScalarValue2D,
+		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+
+}

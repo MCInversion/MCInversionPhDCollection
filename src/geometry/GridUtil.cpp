@@ -234,7 +234,72 @@ namespace Geometry
 		return { std::vector(size, cellWeight), radius };
 	}
 
+	/**
+	 * \brief Computes the 2D Sobel kernel for an arbitrary odd size.
+	 *
+	 * The kernel is computed as an outer product of a 1D smoothing kernel and a 1D derivative kernel.
+	 * For a kernel of size \( n = 2\times\mathtt{radius}+1 \):
+	 *   - The smoothing kernel S is given by the binomial coefficients:
+	 *       S[i] = binom(n-1, i)  for i = 0 ... n-1.
+	 *   - The derivative kernel D is given by:
+	 *       D[i] = i - radius.
+	 *
+	 * For the x–direction, the kernel is given by:
+	 *     K_x(i,j) = S[i] * D[j]
+	 * and for the y–direction:
+	 *     K_y(i,j) = D[i] * S[j]
+	 *
+	 * \param radius       Half–width of the kernel (e.g. 1 gives 3x3, 2 gives 5x5, etc.)
+	 * \param xDirection   If true, generate the kernel for the x–direction; otherwise for y–direction.
+	 * \return A sobel kernel with kernel valuse in row-major order.
+	 */
+	[[nodiscard]] BlurKernel GetSobelKernel2D(unsigned int radius, bool xDirection)
+	{
+		const unsigned int n = 2 * radius + 1;
+		std::vector smoothing(n, 0.0);
+		std::vector derivative(n, 0.0);
 
+		// Compute the smoothing kernel using binomial coefficients.
+		// Use an iterative formula: S[0] = 1, then S[i] = S[i-1] * ((n-1) - (i-1)) / i.
+		smoothing[0] = 1.0;
+		for (unsigned int i = 1; i < n; ++i)
+		{
+			smoothing[i] = smoothing[i - 1] * static_cast<double>((n - 1) - (i - 1)) / static_cast<double>(i);
+		}
+		// Compute the derivative kernel: simply D[i] = i - radius.
+		for (unsigned int i = 0; i < n; ++i)
+		{
+			derivative[i] = static_cast<double>(i) - static_cast<double>(radius);
+		}
+
+		// Allocate the 2D kernel (n x n) in row-major order.
+		BlurKernel kernel;
+		kernel.KernelValues = std::vector(n * n, 0.0);
+		kernel.Radius = radius;
+		if (xDirection)
+		{
+			// For the x–direction, each element: kernel(i,j) = S[i] * D[j].
+			for (unsigned int i = 0; i < n; ++i)
+			{
+				for (unsigned int j = 0; j < n; ++j)
+				{
+					kernel.KernelValues[i * n + j] = smoothing[i] * derivative[j];
+				}
+			}
+		}
+		else
+		{
+			// For the y–direction, each element: kernel(i,j) = D[i] * S[j].
+			for (unsigned int i = 0; i < n; ++i)
+			{
+				for (unsigned int j = 0; j < n; ++j)
+				{
+					kernel.KernelValues[i * n + j] = derivative[i] * smoothing[j];
+				}
+			}
+		}
+		return kernel;
+	}
 
 	/**
 	 * \brief Universal internal procedure for applying a blur kernel onto a ScalarGrid.
@@ -387,6 +452,39 @@ namespace Geometry
 		}
 
 		grid.Values() = resultFieldValues;
+	}
+
+	/**
+	 * \brief Applies a bidirectional Sobel filter to a grid using a given kernel radius.
+	 *
+	 * This function makes a copy of the input grid so that it can convolve one
+	 * copy with the x–direction Sobel kernel and the other with the y–direction Sobel kernel.
+	 * Finally, it replaces each grid cell with the gradient magnitude:
+	 * \(\sqrt{(G_x)^2 + (G_y)^2}\).
+	 *
+	 * \param grid    The input grid whose values are replaced by the gradient magnitude.
+	 * \param radius  The kernel radius (e.g. 1 for 3×3, 2 for 5×5).
+	 */
+	static void ApplyBidirectionalSobelFilter2D(ScalarGrid2D& grid, unsigned int radius)
+	{
+		// Make a copy of the grid for the second convolution.
+		ScalarGrid2D gridCopy = grid;
+		const auto sobelX = GetSobelKernel2D(radius, true);
+		const auto sobelY = GetSobelKernel2D(radius, false);
+
+		// Convolve the original grid with the x–direction kernel.
+		ApplyBlurKernelInternal(grid, sobelX);
+		// Convolve the copy with the y–direction kernel.
+		ApplyBlurKernelInternal(gridCopy, sobelY);
+
+		// Combine the results by computing the gradient magnitude.
+		auto& valuesX = grid.Values();
+		const auto& valuesY = gridCopy.Values();
+		const size_t n = valuesX.size();
+		for (size_t i = 0; i < n; ++i)
+		{
+			valuesX[i] = std::sqrt(valuesX[i] * valuesX[i] + valuesY[i] * valuesY[i]);
+		}
 	}
 
 	// ---------------------------------------------------
@@ -549,6 +647,20 @@ namespace Geometry
 		ApplyBlurKernelInternal(grid, kernel);
 	}
 
+	// --------------------------------------------------------
+
+	void ApplyNarrowBidirectionalSobelFilter2D(ScalarGrid2D& grid)
+	{
+		constexpr int rad = static_cast<int>(NARROW_KERNEL_RADIUS);
+		ApplyBidirectionalSobelFilter2D(grid, rad);
+	}
+
+	void ApplyWideBidirectionalSobelFilter2D(ScalarGrid2D& grid)
+	{
+		constexpr int rad = static_cast<int>(WIDE_KERNEL_RADIUS);
+		ApplyBidirectionalSobelFilter2D(grid, rad);
+	}
+
 	//
 	// ============================================================================
 	//
@@ -582,6 +694,32 @@ namespace Geometry
 					const unsigned int gridPos = dims.Nx * dims.Ny * iz + dims.Nx * iy + ix;
 					values[gridPos] *= -1.0;
 				}
+			}
+		}
+	}
+
+	void PrepareGridValuesForFastSweep(ScalarGrid2D& grid, const double& zeroVal, const double& infVal, const double& valTolerance)
+	{
+		auto& values = grid.Values();
+		auto& frozen = grid.FrozenValues();
+		const auto& [Nx, Ny] = grid.Dimensions();
+
+		for (unsigned int iy = 0; iy < Ny; iy++)
+		{
+			for (unsigned int ix = 0; ix < Nx; ix++)
+			{
+				const unsigned int gridPos = Nx * iy + ix;
+
+				if (std::abs(values[gridPos] - zeroVal) < valTolerance)
+				{
+					// zero value found
+					values[gridPos] = 0.0;
+					frozen[gridPos] = true;
+					continue;
+				}
+
+				values[gridPos] = infVal;
+				frozen[gridPos] = false;
 			}
 		}
 	}
@@ -728,27 +866,6 @@ namespace Geometry
 
 			std::cout << "RepairScalarGrid: All grid values are valid.\n";
 			std::cout << "----------------------------------------------------------\n";
-		}
-	}
-
-	void NormalizeScalarGridValues(ScalarGrid& grid)
-	{
-		// find max absolute value
-		double maxAbsVal = 0;
-		for (const auto& val : grid.Values())
-		{
-			if (std::abs(val) > maxAbsVal) maxAbsVal = std::abs(val);
-		}
-		if (maxAbsVal < DBL_EPSILON)
-		{
-			std::cerr << "NormalizeScalarGridValues: maxAbsVal < DBL_EPSILON!\n";
-			return;
-		}
-
-		// normalize
-		for (auto& val : grid.Values())
-		{
-			val = val / maxAbsVal; // Normalize to [-1, 1]
 		}
 	}
 

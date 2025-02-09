@@ -125,10 +125,11 @@ int main()
 		// "StandardMeshesExportWithNormals",
         // "ExportBallPivotingBoundaryEdges",
     	//"TestProblematicMedialAxisPtClouds",
-          "TestDFDivergence2D",
+        //  "TestDFDivergence2D",
         //"TestArcLengthCalculation",
         //"TestCurve2DRotation",
         //"TestSmoothingAdvectionEquilibrium",
+        "TestImageSegmentation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

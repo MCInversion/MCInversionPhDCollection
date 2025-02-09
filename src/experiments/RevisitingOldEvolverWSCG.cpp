@@ -35,6 +35,7 @@
 
 #include "geometry/GeometryConversionUtils.h"
 #include "geometry/GeometryUtil.h"
+#include "geometry/GridUtil.h"
 
 #include "sdf/SDF.h"
 
@@ -191,7 +192,7 @@ void PDanielPtCloudComparisonTest()
 		auto sdf = SDF::PointCloudDistanceFieldGenerator::Generate(ptCloud, dfSettings);
 		const auto endSDF = std::chrono::high_resolution_clock::now();
 
-		//NormalizeScalarGridValues(sdf);
+		//ormalizeScalarGridValues<Geometry::ScalarGrid>(sdf);
 
 		SDF::ReportOutput(sdf, std::cout);
 		const std::chrono::duration<double> timeDiff = endSDF - startSDF;

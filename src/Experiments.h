@@ -219,6 +219,7 @@ void TestDFDivergence2D();
 void TestArcLengthCalculation();
 void TestCurve2DRotation();
 void TestSmoothingAdvectionEquilibrium();
+void TestImageSegmentation();
 
 //
 // =================================================================================
@@ -343,6 +344,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestArcLengthCalculation", TestArcLengthCalculation },
     {"TestCurve2DRotation", TestCurve2DRotation },
     {"TestSmoothingAdvectionEquilibrium", TestSmoothingAdvectionEquilibrium },
+    {"TestImageSegmentation", TestImageSegmentation },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

@@ -5,7 +5,8 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_utils/stb_image_write.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_utils/stb_image.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_utils/stb_truetype.h"
 
@@ -737,14 +738,14 @@ void ExportPolyLinesToPLY(const std::vector<std::vector<pmp::Point2>>& polyLines
 
 	if (ext != "ply")
 	{
-		std::cerr << "ExportPolyLinesToPLY: Invalid file extension. Expected '.ply'!" << std::endl;
+		std::cerr << "ExportPolyLinesToPLY [ERROR]: Invalid file extension. Expected '.ply'!" << std::endl;
 		return;
 	}
 
 	std::ofstream file(fileName);
 	if (!file.is_open())
 	{
-		std::cerr << "ExportPolyLinesToPLY: Failed to open file for writing: " << fileName << std::endl;
+		std::cerr << "ExportPolyLinesToPLY [ERROR]: Failed to open file for writing: " << fileName << std::endl;
 		return;
 	}
 
@@ -796,4 +797,86 @@ void ExportPolyLinesToPLY(const std::vector<std::vector<pmp::Point2>>& polyLines
 	}
 
 	// File closes automatically when going out of scope (RAII)
+}
+
+std::optional<Geometry::ScalarGrid2D> ImportPNGImageGrayscale(const std::string& absFileName, const std::optional<std::pair<pmp::Scalar, pmp::Scalar>>& normalizationRange)
+{
+	// Ensure the file has the correct extension
+	const size_t lastSlash = absFileName.find_last_of("/\\");
+	const size_t dot = absFileName.rfind('.');
+
+	if (dot == std::string::npos || (lastSlash != std::string::npos && dot < lastSlash))
+	{
+		std::cerr << "ImportPNGImageGrayscale [ERROR]: Invalid file extension or path!\n";
+		return {};
+	}
+
+	std::string ext = absFileName.substr(dot + 1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+	if (ext != "png")
+	{
+		std::cerr << "ImportPNGImageGrayscale [ERROR]: Invalid file extension. Expected '.png'!" << std::endl;
+		return {};
+	}
+
+	// Try to load the image as a single-channel (grayscale) image.
+	// stbi_load() will convert the image to 8-bit grayscale if needed.
+	int width = 0, height = 0, origChannels = 0;
+	// The last parameter (1) tells stbi_load to force a single channel.
+	unsigned char* data = stbi_load(absFileName.c_str(), &width, &height, &origChannels, 1);
+	if (!data)
+	{
+		// Could not load image – return failure.
+		std::cerr << "ImportPNGImageGrayscale [ERROR]: Could not load image!\n";
+		return {};
+	}
+
+	// --- Create the grid ---
+	// For this example we choose:
+	//   - cell size = 1.0 (each pixel is one grid cell)
+	//   - bounding box from (0,0) to (width, height)
+	constexpr pmp::Scalar cellSize = 1.0;
+	pmp::Point2 minPoint;
+	minPoint[0] = 0.0;
+	minPoint[1] = 0.0;
+
+	pmp::Point2 maxPoint;
+	maxPoint[0] = static_cast<pmp::Scalar>(width - 1) * cellSize;
+	maxPoint[1] = static_cast<pmp::Scalar>(height - 1) * cellSize;
+
+	const pmp::BoundingBox2 bbox(minPoint, maxPoint);
+	Geometry::ScalarGrid2D grid(cellSize, bbox, 0.0);
+	const auto& [Nx, Ny] = grid.Dimensions();
+
+	// --- Fill in the grid values ---
+	// The grid is assumed to store values in a 1D vector in row-major order,
+	// with j = 0 corresponding to the bottom row.
+	// STB image data is arranged in row-major order with row 0 at the top.
+	// Therefore, we flip the rows when writing into the grid.
+	for (int j = 0; j < height; ++j)
+	{
+		for (int i = 0; i < width; ++i)
+		{
+			const int gridIndex = i + j * Nx;
+
+			// Retrieve the pixel value and normalize it from [0, 255] to [0, 1].
+			const uint8_t pixelValue = data[gridIndex];
+			pmp::Scalar normalized = static_cast<pmp::Scalar>(pixelValue) / static_cast<pmp::Scalar>(255.0);
+
+			// If a normalization range is provided, map the normalized value accordingly.
+			if (normalizationRange.has_value())
+			{
+				const auto [normMin, normMax] = normalizationRange.value();
+				normalized = normMin + normalized * (normMax - normMin);
+			}
+
+			grid.Values()[gridIndex] = normalized;
+		}
+	}
+
+	// Clean up the image memory allocated by STB.
+	stbi_image_free(data);
+
+	return grid;
 }

@@ -76,3 +76,10 @@ void ExportColorScaleToPNG(const std::string& filename,
 
 /// \brief Exports polylines to ply
 void ExportPolyLinesToPLY(const std::vector<std::vector<pmp::Point2>>& polyLines, const std::string& fileName);
+
+/// \brief Imports a png image
+///	\param[in] absFileName           absolute filename of the image to be opened.
+///	\param[in] normalizationRange    optional range for normalizing the [0, 255] values of the grayscale image.
+///	\return optional imageGrid if successful.
+[[nodiscard]] std::optional<Geometry::ScalarGrid2D> ImportPNGImageGrayscale(const std::string& absFileName,
+	const std::optional<std::pair<pmp::Scalar, pmp::Scalar>>& normalizationRange = std::nullopt);

@@ -299,4 +299,29 @@ namespace SDF
 		inline static std::vector<pmp::Point2> m_Points{}; //>! the input point cloud
 	};
 
+	/// \brief A wrapper for input settings for computing distance field.
+	struct ImageDistanceField2DSettings
+	{
+		pmp::Scalar CellSize{ 1.0 }; //>! size of a single distance voxel.
+	};
+
+	/// \brief A singleton object for computing distance fields to a chosen zero level of the input image.
+	class ImageDistanceFieldGenerator
+	{
+	public:
+		/// \brief a deleted default constructor because m_KdTree is not default-constructable.
+		ImageDistanceFieldGenerator() = delete;
+
+		/**
+		 * \brief Compute the signed distance field of given input point cloud.
+		 * \param absFileName             image filename.
+		 * \param settings                settings for the distance field.
+		 * \return the computed distance field's ScalarGrid.
+		 * \throw std::invalid_argument if absFileName couldn't be processed
+		 */
+		static [[nodiscard]] Geometry::ScalarGrid2D Generate(const std::string& absFileName, const ImageDistanceField2DSettings& settings);
+
+	private:
+	};
+
 } // namespace SDF
