@@ -1090,19 +1090,39 @@ namespace SDF
 	Geometry::ScalarGrid2D ImageDistanceFieldGenerator::Generate(const std::string& absFileName, const ImageDistanceField2DSettings& settings)
 	{
 		assert(settings.CellSize > 0.0);
-		assert(settings.AreaExpansionFactor >= 0.0);
-		assert(settings.TruncationFactor > 0);
+		assert(settings.ImageScaleFactor > 0.0);
 		auto imgGrid = ImportPNGImageGrayscale(absFileName, std::pair{ 0.0, 1.0 });
 		if (!imgGrid.has_value())
 		{
 			throw std::invalid_argument("ImageDistanceFieldGenerator::Generate: file " + absFileName + " couldn't be opened!\n");
 		}
 
+		if (settings.ImageScaleFactor != 1.0)
+		{
+			// scale & resample
+			const pmp::mat3 transfMatrixGeomScale{
+				settings.ImageScaleFactor, 0.0, 0.0,
+				0.0, settings.ImageScaleFactor, 0.0,
+				0.0, 0.0, 1.0
+			};
+			*imgGrid *= transfMatrixGeomScale;
+			*imgGrid = ExtractReSampledGrid2D(settings.CellSize, *imgGrid);
+		}
+
 		// preprocess
-		ApplyNarrowGaussianBlur2D(*imgGrid);
-		ApplyNarrowBidirectionalSobelFilter2D(*imgGrid);
+		if (settings.EdgeDetect == EdgeDetection::Narrow)
+		{
+			ApplyNarrowGaussianBlur2D(*imgGrid);
+			ApplyNarrowBidirectionalSobelFilter2D(*imgGrid);
+		}
+		else if (settings.EdgeDetect == EdgeDetection::Wide)
+		{
+			ApplyWideGaussianBlur2D(*imgGrid);
+			ApplyWideBidirectionalSobelFilter2D(*imgGrid);
+		}
+		const double zeroLevel = settings.EdgeDetect == EdgeDetection::None ? 0.0 : 1.0;
 		NormalizeScalarGridValues<Geometry::ScalarGrid2D>(*imgGrid, std::pair{ 0.0, 1.0 });
-		PrepareGridValuesForFastSweep(*imgGrid, 1.0, 1e+3, 0.4);
+		PrepareGridValuesForFastSweep(*imgGrid, zeroLevel, 1e+3, 0.4);
 
 		Geometry::ScalarGrid2D resultGrid(*imgGrid);
 

@@ -580,6 +580,15 @@ namespace Geometry
 	[[nodiscard]] ScalarGrid ExtractReSampledGrid(const pmp::Scalar& newCellSize, const ScalarGrid& origGrid);
 
 	/**
+	 * \brief Re-samples grid data to a new grid with the same bounds and different cell size.
+	 * \param newCellSize     cell size of the re-sampled grid.
+	 * \param origGrid            original grid
+	 * \return re-sampled grid.
+	 * NOTE: Using bilinear interpolation because the new cells don't need to align with the original grid's cells.
+	 */
+	[[nodiscard]] ScalarGrid2D ExtractReSampledGrid2D(const pmp::Scalar& newCellSize, const ScalarGrid2D& origGrid);
+
+	/**
 	 * \brief Searches the cell (ix, iy) and its neighbors at given radius for a local maximum of a 2D quadratic polynomial.
 	 * \return true if the maximum is found between the 9 cells.
 	 */

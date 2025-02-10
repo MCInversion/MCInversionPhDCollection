@@ -299,10 +299,20 @@ namespace SDF
 		inline static std::vector<pmp::Point2> m_Points{}; //>! the input point cloud
 	};
 
+	/// \brief enumerator for edge detection type for ImageDistanceFieldGenerator.
+	enum class [[nodiscard]] EdgeDetection
+	{
+		None = 0, //>! the zero-level will be chosen directly from the image without applying the Sobel filter.
+		Narrow = 1, //>! the zero-level will be chosen from a level set of the image after applying a 3x3 bidirectional Sobel filter.
+		Wide = 2 //>! the zero-level will be chosen from a level set of the image after applying a 5x5 bidirectional Sobel filter.
+	};
+
 	/// \brief A wrapper for input settings for computing distance field.
 	struct ImageDistanceField2DSettings
 	{
 		pmp::Scalar CellSize{ 1.0 }; //>! size of a single distance voxel.
+		pmp::Scalar ImageScaleFactor{ 1.0 }; //>! scale factor for the image grid to apply the desired size in the Euclidean coordinates.
+		EdgeDetection EdgeDetect{ EdgeDetection::None }; //>! edge detection type for the zero-level.
 	};
 
 	/// \brief A singleton object for computing distance fields to a chosen zero level of the input image.

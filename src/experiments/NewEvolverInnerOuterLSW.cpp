@@ -5701,7 +5701,10 @@ void TestSmoothingAdvectionEquilibrium()
 void TestImageSegmentation()
 {
 	const std::string imgName = "room";
-	auto imgDf = SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", { (pmp::Scalar)1.0 });
+	SDF::ImageDistanceField2DSettings dfSettings;
+	dfSettings.CellSize = (pmp::Scalar)1.0;
+	dfSettings.ImageScaleFactor = (pmp::Scalar)2.0;
+	auto imgDf = SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", dfSettings);
 
 	ExportScalarGridDimInfo2D(dataOutPath + imgName + ".gdim2d", imgDf);
 	constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail

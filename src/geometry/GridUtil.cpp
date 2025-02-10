@@ -2559,6 +2559,37 @@ namespace Geometry
 	}
 
 
+	ScalarGrid2D ExtractReSampledGrid2D(const pmp::Scalar& newCellSize, const ScalarGrid2D& origGrid)
+	{
+		if (std::abs(newCellSize - origGrid.CellSize()) < FLT_EPSILON)
+			return origGrid;
+
+		ScalarGrid2D result(newCellSize, origGrid.Box());
+		auto& values = result.Values();
+
+		const auto& dim = result.Dimensions();
+		const auto& newOrigin = result.Box().min();
+
+		const auto Nx = static_cast<unsigned int>(dim.Nx);
+		const auto Ny = static_cast<unsigned int>(dim.Ny);
+
+		for (unsigned int iy = 0; iy < Ny; iy++)
+		{
+			for (unsigned int ix = 0; ix < Nx; ix++)
+			{
+				const auto newGridPt = pmp::Point2{
+					newOrigin[0] + static_cast<pmp::Scalar>(ix) * newCellSize,
+					newOrigin[1] + static_cast<pmp::Scalar>(iy) * newCellSize,
+				};
+
+				const unsigned int newGridPos = Nx * iy + ix;
+				values[newGridPos] = BilinearInterpolateScalarValue(newGridPt, origGrid);
+			}
+		}
+
+		return result;
+	}
+
 	bool ContainsLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius)
 	{
 		using namespace Eigen;

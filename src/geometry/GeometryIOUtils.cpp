@@ -799,7 +799,9 @@ void ExportPolyLinesToPLY(const std::vector<std::vector<pmp::Point2>>& polyLines
 	// File closes automatically when going out of scope (RAII)
 }
 
-std::optional<Geometry::ScalarGrid2D> ImportPNGImageGrayscale(const std::string& absFileName, const std::optional<std::pair<pmp::Scalar, pmp::Scalar>>& normalizationRange)
+std::optional<Geometry::ScalarGrid2D> ImportPNGImageGrayscale(
+	const std::string& absFileName,
+	const std::optional<std::pair<pmp::Scalar, pmp::Scalar>>& normalizationRange)
 {
 	// Ensure the file has the correct extension
 	const size_t lastSlash = absFileName.find_last_of("/\\");
