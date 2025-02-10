@@ -636,4 +636,7 @@ namespace Geometry
 		unsigned int ix1, unsigned int iy1, unsigned int iz1
 	);
 
+	/// \brief Calculates zero-level bbox of the distance field.
+	[[nodiscard]] std::optional<pmp::BoundingBox2> CalculateZeroLevelBBox(const ScalarGrid2D& distField, const pmp::Scalar& tolerance = FLT_EPSILON);
+
 } // namespace Geometry

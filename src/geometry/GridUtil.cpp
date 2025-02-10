@@ -1,9 +1,11 @@
-#include "GridUtil.h"
 
 #include "pmp/SurfaceMesh.h"
 
 #include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/TriangleKdTree.h"
+
+#include "Grid.h"
+#include "GridUtil.h"
 
 namespace
 {
@@ -114,13 +116,13 @@ namespace
 	/// \brief a validation helper for scalar grid values. Also increments nanCount and infCount if encountering nan or inf.
 	[[nodiscard]] bool IsGridValueValid(const double& val, size_t& nanCount, size_t& infCount)
 	{
-		if (std::isnan(val) || !std::isnormal(val))
+		if (std::isnan(val))
 		{
 			nanCount++;
 			return false;
 		}
 
-		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
+		if (std::isinf(val) || std::abs<double>(val) >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
 		{
 			infCount++;
 			return false;
@@ -132,12 +134,12 @@ namespace
 	/// \brief a basic validation helper for scalar grid values.
 	[[nodiscard]] bool IsGridValueValidBasic(const double& val)
 	{
-		if (std::isnan(val) || !std::isnormal(val))
+		if (std::isnan(val))
 		{
 			return false;
 		}
 
-		if (std::isinf(val) || std::abs<double>(val) >= DBL_MAX)
+		if (std::isinf(val) || std::abs<double>(val) >= Geometry::DEFAULT_SCALAR_GRID_INIT_VAL)
 		{
 			return false;
 		}
@@ -3282,6 +3284,39 @@ namespace Geometry
 		}
 
 		return subGrid;
+	}
+
+	std::optional<pmp::BoundingBox2> CalculateZeroLevelBBox(const ScalarGrid2D& distField, const pmp::Scalar& tolerance)
+	{
+		pmp::BoundingBox2 result;
+		const auto cellSize = distField.CellSize();
+		auto& values = distField.Values();
+		auto& frozen = distField.FrozenValues();
+		const auto& [Nx, Ny] = distField.Dimensions();
+		const auto& origin = distField.Box().min();
+
+		bool hasPoints = false;
+		for (unsigned int iy = 0; iy < Ny; iy++)
+		{
+			for (unsigned int ix = 0; ix < Nx; ix++)
+			{
+				const unsigned int gridPos = ix + Nx * iy;
+				if (std::abs(values[gridPos]) > tolerance && !frozen[gridPos])
+					continue;
+				
+				const auto gridPt = pmp::Point2{
+					origin[0] + static_cast<pmp::Scalar>(ix) * cellSize,
+					origin[1] + static_cast<pmp::Scalar>(iy) * cellSize,
+				};
+				result += gridPt;
+				hasPoints = true;
+			}
+		}
+
+		if (!hasPoints)
+			return {}; // no points found
+
+		return result;
 	}
 
 } // namespace Geometry

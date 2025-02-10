@@ -1122,7 +1122,7 @@ namespace SDF
 		}
 		const double zeroLevel = settings.EdgeDetect == EdgeDetection::None ? 0.0 : 1.0;
 		NormalizeScalarGridValues<Geometry::ScalarGrid2D>(*imgGrid, std::pair{ 0.0, 1.0 });
-		PrepareGridValuesForFastSweep(*imgGrid, zeroLevel, 1e+3, 0.4);
+		PrepareGridValuesForFastSweep(*imgGrid, zeroLevel, Geometry::DEFAULT_SCALAR_GRID_INIT_VAL, 0.4);
 
 		Geometry::ScalarGrid2D resultGrid(*imgGrid);
 

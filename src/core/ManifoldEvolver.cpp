@@ -92,11 +92,11 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 
 	if (NeedsFieldsCalculation())
 	{
+		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+
 		GetEvolBox() = GetOuterCurve() ? GetOuterCurve()->bounds() : GetInnerCurves()[0]->bounds();
 		const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
 		GetEvolBox().expand(sizeVec[0], sizeVec[1]);
-
-		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 		const auto minTargetSize = std::min(sizeVec[0], sizeVec[1]);
 		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);
@@ -329,6 +329,15 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		{
 			const auto vPosToUpdate = m_OuterCurve->position(v);
 
+			//if (step == 500 && v.idx() == 92)
+			//{
+			//	//const auto vPosInOrigScale = affine_transform(m_TransformToOriginal, vPosToUpdate);
+			//	//if (std::abs(vPosInOrigScale[0] - 60.0) < 2.0 && vPosInOrigScale[1] < 85.0 && vPosInOrigScale[1] > 60.0)
+			//	{
+			//		std::cout << "Check advection distance!\n";
+			//	}
+			//}
+
 			InteractionDistanceInfo<pmp::dvec2> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
@@ -371,9 +380,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				(GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget), vNormal), -1.0, 1.0);
 			const double advectionDistance = 
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
-			const double etaCtrlWeight = 
-				((m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
-				GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
+			const double etaCtrlWeight =
+					((m_DistanceField || !m_InnerCurvesDistanceFields.empty()) ? GetSettings().OuterManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
+					GetSettings().OuterManifoldRepulsion(static_cast<double>(vMinDistanceToInner));
 
 			if (LogOuterManifoldValues())
 			{
@@ -526,7 +535,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.NegGradient : vNegGradDistanceToTarget, vNormal), -1.0, 1.0);
 			const double advectionDistance = 
 				GetSettings().AdvectionInteractWithOtherManifolds ? interaction.Distance : vDistanceToTarget;
-			const double etaCtrlWeight = 
+			const double etaCtrlWeight =
 				((m_DistanceField || m_OuterCurveDistanceField) ? GetSettings().InnerManifoldEta(advectionDistance, negGradDotNormal) : 0.0) +
 				GetSettings().InnerManifoldRepulsion(static_cast<double>(outerDfAtVPos));
 
@@ -813,6 +822,36 @@ void ManifoldCurveEvolutionStrategy::ExplicitIntegrationStep(unsigned int step)
 
 std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point2> ManifoldCurveEvolutionStrategy::ComputeAmbientFields()
 {
+	if (m_DistanceField)
+	{
+		// distance field is already available
+		const auto targetBBoxOpt = CalculateZeroLevelBBox(*m_DistanceField, GetSettings().FieldSettings.FieldIsoLevel);
+		if (!targetBBoxOpt.has_value())
+		{
+			// not a valid distance field
+			m_DistanceField = nullptr;
+		}
+		else
+		{
+			RepairScalarGrid2D(*m_DistanceField);
+			const pmp::BoundingBox2 fullFieldBBox = m_DistanceField->Box();
+			const pmp::BoundingBox2 targetBBox = *targetBBoxOpt;
+			const auto fullFieldBBoxSize = fullFieldBBox.max() - fullFieldBBox.min();
+			const auto targetBBoxSize = targetBBox.max() - targetBBox.min();
+			const pmp::Scalar maxFullSize = std::max(fullFieldBBoxSize[0], fullFieldBBoxSize[1]);
+			const pmp::Scalar minTargetSize = std::min(targetBBoxSize[0], targetBBoxSize[1]);
+			const pmp::Scalar maxTargetSize = std::max(targetBBoxSize[0], targetBBoxSize[1]);
+
+			// adjusting settings for image-based distance field in case they're used further down the pipeline.
+			// TODO: fix this design smell.
+			GetSettings().FieldSettings.FieldExpansionFactor = (maxFullSize - maxTargetSize) / maxFullSize * 0.5;
+			GetSettings().FieldSettings.NVoxelsPerMinDimension = static_cast<unsigned int>(minTargetSize / m_DistanceField->CellSize());
+
+			m_DFNegNormalizedGradient = std::make_shared<Geometry::VectorGrid2D>(ComputeNormalizedNegativeGradient(*m_DistanceField));
+			return { minTargetSize, maxTargetSize, targetBBox.center() };
+		}
+	}
+
 	if (!m_TargetPointCloud)
 	{
 		std::cerr << "ManifoldCurveEvolutionStrategy::ComputeAmbientFields: No m_TargetPointCloud found! Initializing empty fields: m_DistanceField and m_DFNegNormalizedGradient.\n";
@@ -1063,7 +1102,7 @@ bool ManifoldCurveEvolutionStrategy::NeedsVariableFieldsCalculation()
 
 bool ManifoldCurveEvolutionStrategy::NeedsFieldsCalculation()
 {
-	return NeedsVariableFieldsCalculation() || m_TargetPointCloud;
+	return NeedsVariableFieldsCalculation() || m_TargetPointCloud || m_DistanceField;
 }
 
 void ManifoldCurveEvolutionStrategy::ComputeControlFunctionsLowerBounds()
@@ -1364,11 +1403,11 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 
 	if (NeedsFieldsCalculation())
 	{
+		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
+
 		GetEvolBox() = GetOuterSurface()->bounds();
 		const auto sizeVec = (GetEvolBox().max() - GetEvolBox().min()) * GetSettings().FieldSettings.FieldExpansionFactor;
 		GetEvolBox().expand(sizeVec[0], sizeVec[1], sizeVec[2]);
-
-		std::tie(std::ignore, std::ignore, std::ignore) = ComputeAmbientFields();
 
 		const auto minTargetSize = std::min({ sizeVec[0], sizeVec[1], sizeVec[2] });
 		GetFieldCellSize() = GetDistanceField() ? GetDistanceField()->CellSize() : minTargetSize / static_cast<pmp::Scalar>(GetSettings().FieldSettings.NVoxelsPerMinDimension);

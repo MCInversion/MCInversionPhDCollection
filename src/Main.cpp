@@ -129,6 +129,7 @@ int main()
         //"TestArcLengthCalculation",
         //"TestCurve2DRotation",
         //"TestSmoothingAdvectionEquilibrium",
+        //"TestImageToDistanceField",
         "TestImageSegmentation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------

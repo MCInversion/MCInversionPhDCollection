@@ -349,13 +349,16 @@ class ManifoldCurveEvolutionStrategy : public ManifoldEvolutionStrategy
 public:
 	/**
 	 * \brief A base constructor for curve evolution strategy.
-	 * \param settings           evolution strategy settings.
-	 * \param targetPointCloud   target point cloud data.
+	 * \param settings               evolution strategy settings.
+	 * \param targetPointCloud       target point cloud data (optional).
+     * \param targetDistanceField    precomputed target distance field (optional).
 	 */
 	explicit ManifoldCurveEvolutionStrategy(ManifoldEvolutionSettings settings, 
-	                                        std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
+	                                        std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr,
+                                            std::shared_ptr<Geometry::ScalarGrid2D> targetDistanceField = nullptr)
 	    : ManifoldEvolutionStrategy(settings),
-        m_TargetPointCloud(std::move(targetPointCloud))
+        m_TargetPointCloud(std::move(targetPointCloud)),
+        m_DistanceField(std::move(targetDistanceField))
     {
         if (GetSettings().UseSemiImplicit)
         {
@@ -629,17 +632,19 @@ class CustomManifoldCurveEvolutionStrategy : public ManifoldCurveEvolutionStrate
 public:
     /**
      * \brief Constructor that accepts custom outer and inner curves.
-     * \param settings            evolution strategy settings.
-     * \param outerCurve          Custom outer curve (optional).
-     * \param innerCurves         Vector of custom inner curves.
-     * \param targetPointCloud    target point cloud.
+     * \param settings               evolution strategy settings.
+     * \param outerCurve             Custom outer curve (optional).
+     * \param innerCurves            Vector of custom inner curves.
+     * \param targetPointCloud       target point cloud (optional).
+     * \param targetDistanceField    precomputed target distance field (optional).
      */
     explicit CustomManifoldCurveEvolutionStrategy(
         ManifoldEvolutionSettings settings,
         std::optional<pmp::ManifoldCurve2D> outerCurve,
         std::vector<pmp::ManifoldCurve2D>& innerCurves,
-        std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr)
-        : ManifoldCurveEvolutionStrategy(settings, std::move(targetPointCloud))
+        std::shared_ptr<std::vector<pmp::Point2>> targetPointCloud = nullptr,
+        std::shared_ptr<Geometry::ScalarGrid2D> targetDistanceField = nullptr)
+        : ManifoldCurveEvolutionStrategy(settings, std::move(targetPointCloud), std::move(targetDistanceField))
     {
         GetOuterCurve() = outerCurve.has_value() ? std::make_shared<pmp::ManifoldCurve2D>(*outerCurve) : nullptr;
         for (auto& c : innerCurves)

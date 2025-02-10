@@ -5698,7 +5698,7 @@ void TestSmoothingAdvectionEquilibrium()
 	}
 }
 
-void TestImageSegmentation()
+void TestImageToDistanceField()
 {
 	const std::string imgName = "room";
 	SDF::ImageDistanceField2DSettings dfSettings;
@@ -5712,5 +5712,134 @@ void TestImageSegmentation()
 		Geometry::BilinearInterpolateScalarValue,
 		//Geometry::GetNearestNeighborScalarValue2D,
 		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+}
 
+void TestImageSegmentation()
+{
+	const std::vector<std::string> imageNames{
+		"room",
+		//"U64",
+	};
+
+	const double minDistancePercentageEpsilon = 0.002;
+	const double minDistancePercentageEta = 0.02;
+
+	// Prepare the settings for the evolver
+	ManifoldEvolutionSettings strategySettings;
+	strategySettings.UseInnerManifolds = true;
+
+	strategySettings.AdvectionInteractWithOtherManifolds = true;
+	// use PreComputeAdvectionDiffusionParams?
+	strategySettings.OuterManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
+	{
+		//return 0.0;
+
+		return 0.1 * (1.0 - exp(-distance * distance / 1.0));
+	});
+	strategySettings.OuterManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
+	{
+		//return 0.0;
+
+		return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+
+		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	});
+	strategySettings.InnerManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
+	{
+		//return 0.0;
+
+		return 0.001 * TRIVIAL_EPSILON(distance);
+	});
+	strategySettings.InnerManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
+	{
+		//return 0.0;
+
+		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		// return 1.0 * distance * (std::fabs(-negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return 1.0 * distance * (std::fabs(negGradDotNormal) - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	});
+	strategySettings.LevelOfDetail = 4;
+
+	strategySettings.TimeStep = 0.05;
+	strategySettings.TangentialVelocityWeight = 0.05;
+	strategySettings.RemeshingSettings.MinEdgeMultiplier = 1.0;
+	strategySettings.RemeshingSettings.UseBackProjection = true;
+	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
+	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
+
+	strategySettings.ExportVariableScalarFieldsDimInfo = true;
+	strategySettings.ExportVariableVectorFieldsDimInfo = true;
+
+	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
+	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
+	//strategySettings.DiagSettings.LogOuterManifoldEta = true;
+	//strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+
+	// Global settings
+	GlobalManifoldEvolutionSettings globalSettings;
+	globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 1000;
+	//globalSettings.NSteps = 500;
+	//globalSettings.NSteps = 20;
+	globalSettings.DoRemeshing = true;
+	globalSettings.DetectFeatures = false;
+	globalSettings.ExportPerTimeStep = true;
+	globalSettings.ExportTargetDistanceFieldAsImage = true;
+	globalSettings.OutputPath = dataOutPath;
+	globalSettings.ExportResult = false;
+
+	globalSettings.RemeshingResizeFactor = 0.7;
+	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
+
+	constexpr size_t nCurvePts = 50;
+
+	for (const auto& imgName : imageNames)
+	{
+		std::cout << "==================================================================\n";
+		std::cout << "Image: " << imgName << ".png\n";
+		std::cout << "------------------------------------------------------------------\n";
+
+		globalSettings.ProcedureName = imgName + "Segment";
+
+		SDF::ImageDistanceField2DSettings dfSettings;
+		dfSettings.CellSize = (pmp::Scalar)1.0;
+		dfSettings.ImageScaleFactor = (pmp::Scalar)2.0;
+		auto imgDf = SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", dfSettings);
+
+		//ExportScalarGridDimInfo2D(dataOutPath + imgName + ".gdim2d", imgDf);
+		//constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+		//ExportScalarGrid2DToPNG(dataOutPath + imgName + "_df.png", imgDf,
+		//	Geometry::BilinearInterpolateScalarValue,
+		//	//Geometry::GetNearestNeighborScalarValue2D,
+		//	10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+
+		const auto& dfBBox = imgDf.Box();
+		const auto dfBBoxSize = dfBBox.max() - dfBBox.min();
+		const auto dfBBoxMinSize = std::min(dfBBoxSize[0], dfBBoxSize[1]);
+		const pmp::Scalar circlesCenterX = dfBBoxSize[0] * 0.49 + dfBBox.min()[0];
+		const pmp::Scalar circlesCenterY = dfBBoxSize[1] * 0.5 + dfBBox.min()[1];
+		const pmp::Scalar outerRadius = 1.6 * dfBBoxMinSize / 4.0;
+		const pmp::Scalar innerRadius = 0.25 * dfBBoxMinSize / 4.0;
+
+		auto outerCurve = pmp::CurveFactory::circle(pmp::Point2{ circlesCenterX, circlesCenterY }, outerRadius, nCurvePts);
+		RemeshWithDefaultSettings(outerCurve, nullptr, 1.0);
+		auto innerCurve = pmp::CurveFactory::circle(pmp::Point2{ circlesCenterX, circlesCenterY }, innerRadius, nCurvePts);
+		RemeshWithDefaultSettings(innerCurve, nullptr, 1.0);
+		std::vector innerCurves{ innerCurve };
+
+		strategySettings.FieldSettings.FieldIsoLevel = imgDf.CellSize() * 0.05;
+
+		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
+			strategySettings, outerCurve, innerCurves, nullptr, std::make_shared<Geometry::ScalarGrid2D>(imgDf));
+
+		ManifoldEvolver evolver(globalSettings, std::move(curveStrategy));
+
+		evolver.Evolve();
+
+	}
 }

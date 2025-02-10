@@ -86,7 +86,9 @@ import matplotlib.patches as patches
 #procedure_name = "equilibriumConcavePair18"
 #procedure_name = "equilibriumConcavePair19"
 
-procedure_name = "GVFsnake"
+#procedure_name = "GVFsnake"
+
+procedure_name = "roomSegment"
 
 #procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
@@ -202,12 +204,12 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 224]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 107]
-#multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
+multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
 #multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1126]
-#multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 1800]
-#multi_png_time_steps = [4, 400]
+#multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 1800, 1867]
+#multi_png_time_steps = [500]
 #multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
-multi_png_time_steps = [0, 2, 5, 8, 11, 15, 17, 25, 30, 35, 45, 65, 70, 80, 100]
+#multi_png_time_steps = [0, 2, 5, 8, 11, 15, 17, 25, 30, 35, 45, 65, 70, 80, 100]
 #multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2468]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 527]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2244]
