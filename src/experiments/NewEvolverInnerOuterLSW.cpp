@@ -5700,10 +5700,11 @@ void TestSmoothingAdvectionEquilibrium()
 
 void TestImageToDistanceField()
 {
-	const std::string imgName = "room";
+	// const std::string imgName = "room";
+	const std::string imgName = "shape";
 	SDF::ImageDistanceField2DSettings dfSettings;
 	dfSettings.CellSize = (pmp::Scalar)1.0;
-	dfSettings.ImageScaleFactor = (pmp::Scalar)2.0;
+	dfSettings.ImageScaleFactor = (pmp::Scalar)4.0;
 	auto imgDf = SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", dfSettings);
 
 	ExportScalarGridDimInfo2D(dataOutPath + imgName + ".gdim2d", imgDf);
@@ -5712,6 +5713,31 @@ void TestImageToDistanceField()
 		Geometry::BilinearInterpolateScalarValue,
 		//Geometry::GetNearestNeighborScalarValue2D,
 		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+
+	auto blurredDf = imgDf;
+	ApplyWideGaussianBlur2D(blurredDf);
+	const unsigned int nPx = 2;
+	const auto gradDF = ComputeNormalizedGradient(blurredDf);
+	const auto divNegGradDF = ComputeDivergenceField(gradDF);
+	const auto [dMin, dMax] = std::ranges::minmax_element(divNegGradDF.Values());
+	std::cout << "divNegGradDF value range: [" << *dMin << ", " << *dMax << "]\n";
+	const auto colorMap = AdjustColorMapForZeroMidpoint(SIGN_TEMP_MAP, *dMin, *dMax);
+	const double rangeVal = std::min(std::abs(*dMin), *dMax);
+	ExportScalarGridDimInfo2D(dataOutPath + imgName + "_divGradDF.gdim2d", divNegGradDF);
+	ExportScalarGrid2DToPNG(dataOutPath + imgName + "_divGradDF.png", divNegGradDF,
+		Geometry::BilinearInterpolateScalarValue,
+		//Geometry::GetNearestNeighborScalarValue2D,
+		nPx, nPx, colorMap);
+	constexpr bool verticalLegend = true;
+	constexpr unsigned int resolutionFactor = 4;
+	constexpr unsigned int legendPxHeight = (verticalLegend ? 400 : 100) * resolutionFactor;
+	constexpr unsigned int legendPxWidth = (verticalLegend ? 100 : 600) * resolutionFactor;
+	ExportColorScaleToPNG(
+		dataOutPath + imgName + "_divGradDF_Scale.png",
+		-rangeVal,
+		rangeVal,
+		colorMap,
+		legendPxHeight, legendPxWidth);
 }
 
 void TestImageSegmentation()
@@ -5721,8 +5747,20 @@ void TestImageSegmentation()
 		//"U64",
 	};
 
+	constexpr size_t nCurvePts = 50;
+	constexpr pmp::Scalar imageScale = 2.0;
+	constexpr size_t nPixels = 64 * imageScale;
+	std::map<std::string, std::pair<pmp::ManifoldCurve2D, pmp::ManifoldCurve2D>> circles{
+		{"room", 
+		{pmp::CurveFactory::circle(pmp::Point2{ nPixels * 0.49, nPixels * 0.5 }, 1.7 * nPixels / 4.0, nCurvePts),
+		 pmp::CurveFactory::circle(pmp::Point2{ nPixels * 0.49, nPixels * 0.47 }, 0.15 * nPixels / 4.0, nCurvePts)}},
+		 {"U64",
+		{pmp::CurveFactory::circle(pmp::Point2{ nPixels * 0.49, nPixels * 0.5 }, 1.8 * nPixels / 4.0, nCurvePts),
+		 pmp::CurveFactory::circle(pmp::Point2{ nPixels * 0.49, nPixels * 0.63 }, 0.2 * nPixels / 4.0, nCurvePts)}}
+	};
+
 	const double minDistancePercentageEpsilon = 0.002;
-	const double minDistancePercentageEta = 0.02;
+	const double minDistancePercentageEta = 0.01;
 
 	// Prepare the settings for the evolver
 	ManifoldEvolutionSettings strategySettings;
@@ -5734,13 +5772,13 @@ void TestImageSegmentation()
 	{
 		//return 0.0;
 
-		return 0.1 * (1.0 - exp(-distance * distance / 1.0));
+		return 0.2 * (1.0 - exp(-distance * distance / 1.0));
 	});
 	strategySettings.OuterManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
 	{
 		//return 0.0;
 
-		return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -0.8 * distance * (std::abs(negGradDotNormal) + 0.9 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
@@ -5755,7 +5793,7 @@ void TestImageSegmentation()
 	{
 		//return 0.0;
 
-		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return 0.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (std::fabs(-negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
@@ -5793,10 +5831,8 @@ void TestImageSegmentation()
 	globalSettings.OutputPath = dataOutPath;
 	globalSettings.ExportResult = false;
 
-	globalSettings.RemeshingResizeFactor = 0.7;
-	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
-
-	constexpr size_t nCurvePts = 50;
+	//globalSettings.RemeshingResizeFactor = 0.7;
+	globalSettings.RemeshingResizeTimeIds = {}; //GetRemeshingAdjustmentTimeIndices();
 
 	for (const auto& imgName : imageNames)
 	{
@@ -5808,7 +5844,7 @@ void TestImageSegmentation()
 
 		SDF::ImageDistanceField2DSettings dfSettings;
 		dfSettings.CellSize = (pmp::Scalar)1.0;
-		dfSettings.ImageScaleFactor = (pmp::Scalar)2.0;
+		dfSettings.ImageScaleFactor = imageScale;
 		auto imgDf = SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", dfSettings);
 
 		//ExportScalarGridDimInfo2D(dataOutPath + imgName + ".gdim2d", imgDf);
@@ -5818,21 +5854,15 @@ void TestImageSegmentation()
 		//	//Geometry::GetNearestNeighborScalarValue2D,
 		//	10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
 
-		const auto& dfBBox = imgDf.Box();
-		const auto dfBBoxSize = dfBBox.max() - dfBBox.min();
-		const auto dfBBoxMinSize = std::min(dfBBoxSize[0], dfBBoxSize[1]);
-		const pmp::Scalar circlesCenterX = dfBBoxSize[0] * 0.49 + dfBBox.min()[0];
-		const pmp::Scalar circlesCenterY = dfBBoxSize[1] * 0.5 + dfBBox.min()[1];
-		const pmp::Scalar outerRadius = 1.6 * dfBBoxMinSize / 4.0;
-		const pmp::Scalar innerRadius = 0.25 * dfBBoxMinSize / 4.0;
+		if (!circles.contains(imgName))
+			continue;
 
-		auto outerCurve = pmp::CurveFactory::circle(pmp::Point2{ circlesCenterX, circlesCenterY }, outerRadius, nCurvePts);
-		RemeshWithDefaultSettings(outerCurve, nullptr, 1.0);
-		auto innerCurve = pmp::CurveFactory::circle(pmp::Point2{ circlesCenterX, circlesCenterY }, innerRadius, nCurvePts);
-		RemeshWithDefaultSettings(innerCurve, nullptr, 1.0);
+		auto [outerCurve, innerCurve] = circles.at(imgName);
+		RemeshWithDefaultSettings(outerCurve, nullptr, 0.4);
+		RemeshWithDefaultSettings(innerCurve, nullptr, 0.4);
 		std::vector innerCurves{ innerCurve };
 
-		strategySettings.FieldSettings.FieldIsoLevel = imgDf.CellSize() * 0.05;
+		strategySettings.FieldSettings.FieldIsoLevel = imgDf.CellSize() * imageScale * 0.6;
 
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 			strategySettings, outerCurve, innerCurves, nullptr, std::make_shared<Geometry::ScalarGrid2D>(imgDf));

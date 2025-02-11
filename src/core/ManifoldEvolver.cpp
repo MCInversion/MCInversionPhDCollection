@@ -341,7 +341,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			InteractionDistanceInfo<pmp::dvec2> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
-			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
+			//vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 
 			interaction << InteractionDistanceInfo<pmp::dvec2>{vDistanceToTarget, vNegGradDistanceToTarget};
@@ -502,7 +502,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			InteractionDistanceInfo<pmp::dvec2> interaction{};
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
-			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
+			//vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 
 			interaction << InteractionDistanceInfo<pmp::dvec2>{vDistanceToTarget, vNegGradDistanceToTarget};

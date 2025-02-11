@@ -89,6 +89,7 @@ import matplotlib.patches as patches
 #procedure_name = "GVFsnake"
 
 procedure_name = "roomSegment"
+#procedure_name = "U64Segment"
 
 #procedure_name = "concentricCircles0_Repulsionless"
 #procedure_name = "concentricCircles1_Repulsionless"
@@ -204,7 +205,8 @@ svg_time_steps = [] # a specified time step container for svg export. If empty, 
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 250, 500, 750, 1000, 1250, 1500]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 224]
 #multi_png_time_steps = [0, 2, 8, 20, 50, 100, 107]
-multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
+#multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]
+multi_png_time_steps = [1, 8, 20, 50, 100]
 #multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1126]
 #multi_png_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 1800, 1867]
 #multi_png_time_steps = [500]
@@ -384,15 +386,16 @@ background_image_path = os.path.join(directory, f"{procedure_name}_TargetDF.png"
 legend_image_path = os.path.join(directory, f"{procedure_name}_TargetDF_Scale.png")
 gdim2d_path = os.path.join(directory, f"{procedure_name}_TargetDF.gdim2d")
 
+show_background_image = True
 background_img = None
 legend_img = None
 
 if os.path.exists(background_image_path) and os.path.exists(gdim2d_path):
     bbox_min, bbox_max, nx, ny, cell_size = read_gdim2d_file(gdim2d_path)
-    background_img = imageio.imread(background_image_path)
+    background_img = imageio.imread(background_image_path) if show_background_image else None
     extent = [bbox_min[0], bbox_max[0], bbox_max[1], bbox_min[1]]
 
-if os.path.exists(legend_image_path):
+if os.path.exists(legend_image_path) and show_background_image:
     legend_img = imageio.imread(legend_image_path)
     bbox_size = np.array(bbox_max) - np.array(bbox_min)
     clip_factor = 0.05

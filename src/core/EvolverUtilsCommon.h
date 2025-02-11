@@ -543,6 +543,15 @@ private:
 	std::map<ManifoldType*, SphereType> m_ManifoldSettings{};
 };
 
+/**
+ * \brief An enumerator for the type of selection used when the difference in distances is below critical interaction distance.
+ * \enum FeatureDetectionType
+ */
+enum class [[nodiscard]] DistanceSelectionType
+{
+	PlainMinimum = 0, //>! plain minimum, produces a C^1 discontinuity in the interaction distance and a C^0 jummp in gradient.
+	QuadricBlend = 1, //>! within a given critical radius, produces a C^2 discontinuity in the interaction distance and a C^1 jump in gradient.
+};
 
 /**
  * \brief Gathers interaction distance info between interacting evolving manifolds and target point cloud.
