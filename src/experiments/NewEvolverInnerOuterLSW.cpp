@@ -5873,3 +5873,32 @@ void TestImageSegmentation()
 
 	}
 }
+
+void TestPointCloudGaps()
+{
+	const std::map<std::string, pmp::ManifoldCurve2D> targetCurves{
+	{ "IncompleteCircle", pmp::CurveFactory::circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, M_PI_2, 2.0 * M_PI)},
+	{ "SineDeformedIncompleteCircle", pmp::CurveFactory::sine_deformed_circle(pmp::Point2{-3.0, 52.0}, 35.0, 25, 7.0, 4.0, M_PI_2, 2.0 * M_PI)},
+	{ "IncompleteChamferedRectangle", pmp::CurveFactory::sampled_polygon({
+		pmp::Point2{-30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{30.0, -35.0} + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
+	{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
+		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+	};
+
+	for (const auto& [ptCloudName, curve] : targetCurves)
+	{
+		std::cout << "========================================================\n";
+		std::cout << "   Point cloud gap detection 2D for: " << ptCloudName << " ... \n";
+		std::cout << " ------------------------------------------------------ \n";
+
+		const auto& pts2D = curve.positions();
+		const pmp::BoundingBox2 bbox{ pts2D };
+
+		const auto bdPtIds = Geometry::GetBoundaryPointsOfPointCloudGaps2D(pts2D);
+	}
+}

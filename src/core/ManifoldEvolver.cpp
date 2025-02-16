@@ -327,7 +327,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		for (const auto v : m_OuterCurve->vertices())
 		{
-			const auto vPosToUpdate = m_OuterCurve->position(v);
+			const auto& vPosToUpdate = m_OuterCurve->position(v);
 
 			//if (step == 500 && v.idx() == 92)
 			//{
@@ -497,7 +497,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 		for (const auto v : innerCurve->vertices())
 		{
-			const auto vPosToUpdate = innerCurve->position(v);
+			const auto& vPosToUpdate = innerCurve->position(v);
 
 			InteractionDistanceInfo<pmp::dvec2> interaction{};
 

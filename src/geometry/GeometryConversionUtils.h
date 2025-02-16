@@ -177,6 +177,21 @@ namespace Geometry
 	 */
 	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeConvexHullFromPoints(const std::vector<pmp::Point>& points);
 
+	/**
+	 * \brief Computes the convex hull of an input planar point cloud.
+	 * \param points           input point cloud.
+	 * \return optional resulting pmp::SurfaceMesh if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
+
+	/**
+	 * \brief Computes the convex hull of an input planar point cloud.
+	 * \param points           input point cloud.
+	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
+
+
 	/// \brief Returns a bounding sphere with a center and a radius combined in a pair.
 	///	\throw std::invalid_argument if the mesh is empty.
 	[[nodiscard]] std::pair<pmp::Point, pmp::Scalar> ComputeMeshBoundingSphere(const pmp::SurfaceMesh& mesh);
@@ -291,4 +306,7 @@ namespace Geometry
 	[[nodiscard]] std::optional<BaseCurveGeometryData> CalculateApproxMedialAxisFromCurve(const pmp::ManifoldCurve2D& curve);
 
 	[[nodiscard]] std::optional<BaseCurveGeometryData> GetMedialAxisOfSawhneysStupidMATAlgorithm(unsigned char shape);
+
+	/// \brief Finds the indices of boundary points of a given point cloud.
+	[[nodiscard]] std::vector<std::pair<unsigned int, unsigned int>> GetBoundaryPointsOfPointCloudGaps2D(const std::vector<pmp::Point2>& points);
 } // namespace Geometry

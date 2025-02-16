@@ -1290,6 +1290,32 @@ namespace Geometry
 		return onSegment1 && onSegment2;
 	}
 
+	bool IsPointLeftOfLine2D(const pmp::Point2& point, const std::pair<pmp::Point2, pmp::Point2>& line)
+	{
+		return ((line.second[0] - line.first[0]) * (point[1] - line.first[1])) >
+			((line.second[1] - line.first[1]) * (point[0] - line.first[0]));
+	}
+
+	static [[nodiscard]] pmp::Scalar Sign2D(const pmp::Point2& p1, const pmp::Point2& p2, const pmp::Point2& p3)
+	{
+		return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1]);
+	}
+
+	bool IsPointInTriangle2D(const pmp::Point2& point, const std::vector<pmp::Point2>& triPts)
+	{
+		if (triPts.size() < 3)
+		{
+			std::cerr << "Geometry::IsPointInTriangle2D: riPts.size() < 3!\n";
+			return false;
+		}
+
+		const bool b1 = Sign2D(point, triPts[0], triPts[1]);
+		const bool b2 = Sign2D(point, triPts[1], triPts[2]);
+		const bool b3 = Sign2D(point, triPts[2], triPts[0]);
+
+		return ((b1 == b2) && (b2 == b3));
+	}
+
 	namespace
 	{
 

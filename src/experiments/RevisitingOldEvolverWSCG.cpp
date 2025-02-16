@@ -957,6 +957,15 @@ void ConvexHullTests()
 		//"CaesarBustPts_3"
 	};
 
+	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
+		{"bunnyPts_3", pmp::Point{-0.01684039831161499, 0.11015420407056808, 0.0012007840834242693} },
+	};
+
+	const std::map<std::string, pmp::vec3> slicingPlaneNormals{
+		{"bunnyPts_3", pmp::vec3{0.0, 0.0, 1.0} },
+	};
+
+
 	for (const auto& ptCloudName : importedPtCloudNames)
 	{
 		const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
@@ -977,6 +986,24 @@ void ConvexHullTests()
 		const auto& convexHull = convexHullMeshOpt.value();
 
 		convexHull.write(dataOutPath + ptCloudName + "_convexHull.obj");
+
+		const pmp::BoundingBox ptCloudBBox(ptCloud);
+		const auto center = ptCloudBBox.center();
+		const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+		const pmp::Scalar minSize = std::min({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		//const pmp::Scalar maxSize = std::max({ ptCloudBBoxSize[0], ptCloudBBoxSize[1], ptCloudBBoxSize[2] });
+		const pmp::Scalar distTolerance = 0.01 * minSize;
+
+		const auto planeRefPt = (slicingPlaneRefPts.contains(ptCloudName) ? slicingPlaneRefPts.at(ptCloudName) : center);
+		const auto planeNormal = (slicingPlaneNormals.contains(ptCloudName) ? slicingPlaneNormals.at(ptCloudName) : pmp::vec3{ -1.0, 0.0, 0.0 });
+		const auto pts2D = Geometry::GetSliceOfThePointCloud(ptCloud, planeRefPt, planeNormal, distTolerance);
+		if (pts2D.empty())
+		{
+			std::cerr << "GetSliceOfThePointCloud sampled no 2D points during slicing for point cloud " << ptCloudName << "!\n";
+			continue;
+		}
+
+
 	}
 }
 

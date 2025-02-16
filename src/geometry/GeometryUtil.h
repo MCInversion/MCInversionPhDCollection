@@ -69,6 +69,22 @@ namespace Geometry
 	[[nodiscard]] bool Line2DIntersectsLine2D(const std::vector<pmp::Point2>& vertices0, const std::vector<pmp::Point2>& vertices1);
 
 	/**
+	 * \brief A test for determining the position of the given point (on which side).
+	 * \param point        evaluated point.
+	 * \param line         line segment points.
+	 * \return true if the point lies to the left of the line.
+	 */
+	[[nodiscard]] bool IsPointLeftOfLine2D(const pmp::Point2& point, const std::pair<pmp::Point2, pmp::Point2>& line);
+
+	/**
+	 * \brief A test for determining the inclusion of the given point in a given planar triangle.
+	 * \param point        evaluated point.
+	 * \param triPts       triangle points.
+	 * \return true if the point lies inside the triangle.
+	 */
+	[[nodiscard]] bool IsPointInTriangle2D(const pmp::Point2& point, const std::vector<pmp::Point2>& triPts);
+
+	/**
 	 * \brief A utility that returns an intersector line between two triangles.
 	 * \param vertices0    first triangle vertices list.
 	 * \param vertices1    second triangle vertices list.

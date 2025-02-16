@@ -68,7 +68,7 @@ int main()
         // More focused LSW experiments were carried out to see whether they'll be applicable
 		// for the IncrementalMeshBuilder. The result was that they were kind of hard to work with.
 
-        // "ConvexHullTests",
+        "ConvexHullTests",
         // "ConvexHullRemeshingTests",
         // "ConvexHullEvolverTests",
         // "IcoSphereEvolverTests",
@@ -129,8 +129,9 @@ int main()
         //"TestArcLengthCalculation",
         //"TestCurve2DRotation",
         //"TestSmoothingAdvectionEquilibrium",
-        "TestImageToDistanceField",
+        //"TestImageToDistanceField",
         //"TestImageSegmentation",
+        //    "TestPointCloudGaps",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

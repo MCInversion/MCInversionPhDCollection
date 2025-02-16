@@ -1,4 +1,6 @@
 #include "GeometryConversionUtils.h"
+#include "GeometryConversionUtils.h"
+#include "GeometryConversionUtils.h"
 
 #include "utils/StringUtils.h"
 
@@ -9,16 +11,11 @@
 #include <unordered_set>
 #include <cassert>
 #include <memory>
-
-#include <vcg/complex/complex.h>
-#include <vcg/complex/algorithms/update/bounding.h>
-#include <vcg/complex/algorithms/create/ball_pivoting.h>
-
 #include <numeric>
 
 #include "pmp/algorithms/Normals.h"
 
-#include "quickhull/QuickHull.hpp"
+#include "VCGAdapter.h"
 
 #include "sawhney_mat/MedialAxisTransform.h"
 #include "sawhney_mat/BoundaryElement.h"
@@ -33,24 +30,6 @@
 // Unsupported platform
 #error "Unsupported platform"
 #endif
-
-
-// VCG mesh types
-class VCG_Vertex; class VCG_Edge; class VCG_Face;
-struct VCG_UsedTypes : public vcg::UsedTypes<vcg::Use<VCG_Vertex>   ::AsVertexType,
-	vcg::Use<VCG_Edge>     ::AsEdgeType,
-	vcg::Use<VCG_Face>     ::AsFaceType> {};
-
-class VCG_Vertex : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::Normal3f, vcg::vertex::BitFlags  > {};
-class VCG_Face : public vcg::Face<   VCG_UsedTypes, vcg::face::FFAdj, vcg::face::VertexRef, vcg::face::BitFlags > {};
-class VCG_Edge : public vcg::Edge<   VCG_UsedTypes> {};
-
-class VCG_Mesh : public vcg::tri::TriMesh< std::vector<VCG_Vertex>, std::vector<VCG_Face>, std::vector<VCG_Edge>  > {};
-
-class MyVertex0 : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::BitFlags  > {};
-class MyVertex1 : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::Normal3f, vcg::vertex::BitFlags  > {};
-class MyVertex2 : public vcg::Vertex< VCG_UsedTypes, vcg::vertex::Coord3f, vcg::vertex::Color4b, vcg::vertex::CurvatureDirf,
-	vcg::vertex::Qualityf, vcg::vertex::Normal3f, vcg::vertex::BitFlags  > {};
 
 
 namespace
@@ -1362,44 +1341,52 @@ namespace Geometry
 	{
 		if (points.size() < 4)
 		{
-			// Not enough points to form a convex hull
+			std::cerr << "Geometry::ComputeConvexHullFromPoints: Not enough points to form a convex hull!\n";
 			return {};
 		}
 
-		using namespace quickhull;
-		// convert to quickhull-compatible data
-		std::vector<Vector3<pmp::Scalar>> qhPtCloud;
-		std::ranges::transform(points, std::back_inserter(qhPtCloud),
-			[](const pmp::Point& pmpPt) { return Vector3(pmpPt[0], pmpPt[1], pmpPt[2]); });
-		QuickHull<pmp::Scalar> qh;
-		const auto hullResult = qh.getConvexHull(qhPtCloud, true, false);
-		const auto& hullVertBuffer = hullResult.getVertexBuffer();
+		BaseMeshGeometryData resultData;
 
-		if (hullVertBuffer.size() < 4)
+		VCG_Mesh ptsMesh;
+		FillVCGMeshWithPoints(points, ptsMesh);
+		VCG_Mesh result;
+		result.face.EnableFFAdjacency();
+		vcg::tri::UpdateTopology<VCG_Mesh>::FaceFace(result);
+
+		if (!vcg::tri::ConvexHull<VCG_Mesh, VCG_Mesh>::ComputeConvexHull(ptsMesh, result))
 		{
-			// The resulting hull must be at least a tetrahedron
+			std::cerr << "Geometry::ComputeConvexHullFromPoints: internal error!\n";
 			return {};
 		}
 
-		const auto& hullVertIdBuffer = hullResult.getIndexBuffer();
-		if (hullVertIdBuffer.size() % 3 != 0)
+		std::ranges::transform(result.vert, std::back_inserter(resultData.Vertices), [](const auto& vcgVert) {
+			return pmp::Point{ vcgVert.P()[0], vcgVert.P()[1], vcgVert.P()[2] }; });
+		resultData.PolyIndices = ExtractVertexIndicesFromVCGMesh(result);
+
+		return resultData;
+	}
+
+	std::optional<BaseMeshGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points)
+	{
+		if (points.size() < 4)
 		{
-			// invalid indexing
+			std::cerr << "Geometry::ComputeConvexHullFromPoints: Not enough points to form a convex hull!\n";
 			return {};
 		}
 
-		BaseMeshGeometryData baseMesh;
-		std::ranges::transform(hullVertBuffer, std::back_inserter(baseMesh.Vertices),
-			[](const auto& qhVert) { return pmp::vec3(qhVert.x, qhVert.y, qhVert.z); });
-		for (unsigned int i = 0; i < hullVertIdBuffer.size(); i += 3)
-		{
-			baseMesh.PolyIndices.push_back({
-				static_cast<unsigned int>(hullVertIdBuffer[i]),
-				static_cast<unsigned int>(hullVertIdBuffer[i + 1]),
-				static_cast<unsigned int>(hullVertIdBuffer[i + 2])
-				});
-		}
-		return baseMesh;
+		BaseMeshGeometryData resultData;
+
+
+		return resultData;
+	}
+
+	std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points)
+	{
+		const auto baseMeshOpt = ComputeConvexHullFrom2DPoints(points);
+		if (!baseMeshOpt.has_value())
+			return {};
+
+		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
 	}
 	
 	std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFromPoints(const std::vector<pmp::Point>& points)
@@ -2137,6 +2124,52 @@ namespace Geometry
 		}
 
 		return medialAxisData;
+	}
+
+	//
+	// =================================================================================================
+	//
+
+	std::vector<std::pair<unsigned int, unsigned int>> GetBoundaryPointsOfPointCloudGaps2D(const std::vector<pmp::Point2>& points)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::GetBoundaryPointsOfPointCloudGaps2D: points.empty()!\n";
+			return {};
+		}
+
+		// Build the KD-tree
+		PointCloud2D pointCloud;
+		pointCloud.points = points;
+		PointCloud2DTree kdTree(2, pointCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */));
+		kdTree.buildIndex();
+
+		// evaluate min distance
+		auto do_knn_search = [&kdTree](const pmp::Point2& p) {
+			// do a knn search
+			const pmp::Scalar query_pt[2] = { p[0], p[1] };
+			size_t num_results = 2;
+			std::vector<uint32_t> ret_index(num_results);
+			std::vector<pmp::Scalar> out_dist_sqr(num_results);
+			num_results = kdTree.knnSearch(
+				&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
+			ret_index.resize(num_results);
+			out_dist_sqr.resize(num_results);
+			return out_dist_sqr[1];
+		};
+
+		pmp::Scalar minDistance = std::numeric_limits<pmp::Scalar>::max();
+		for (const auto& point : points)
+		{
+			const auto currDistSq = do_knn_search(point);
+			if (currDistSq < minDistance) minDistance = currDistSq;
+		}
+
+		std::vector<std::pair<unsigned int, unsigned int>> result;
+
+
+
+		return result;
 	}
 
 } // namespace Geometry
