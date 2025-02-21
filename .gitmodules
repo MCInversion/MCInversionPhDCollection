@@ -13,3 +13,6 @@
 [submodule "external/vcglib"]
 	path = external/vcglib
 	url = https://github.com/cnr-isti-vclab/vcglib
+[submodule "external/tetgen"]
+	path = external/tetgen
+	url = https://github.com/ufz/tetgen.git
