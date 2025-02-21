@@ -13,3 +13,6 @@
 [submodule "external/vcglib"]
 	path = external/vcglib
 	url = https://github.com/cnr-isti-vclab/vcglib
+[submodule "external/simple_delaunay"]
+	path = external/simple_delaunay
+	url = https://github.com/JoseAntFer/SimpleDelaunay.git

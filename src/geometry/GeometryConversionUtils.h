@@ -191,6 +191,12 @@ namespace Geometry
 	 */
 	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
 
+	/**
+	 * \brief Computes Delaunay triangulation of an input planar point cloud.
+	 * \param points           input point cloud.
+	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points);
 
 	/// \brief Returns a bounding sphere with a center and a radius combined in a pair.
 	///	\throw std::invalid_argument if the mesh is empty.

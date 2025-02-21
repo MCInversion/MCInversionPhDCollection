@@ -1003,7 +1003,18 @@ void ConvexHullTests()
 			continue;
 		}
 
+		const auto delaunayMeshOpt = Geometry::ComputeDelaunayMeshFrom2DPoints(pts2D);
+		if (!delaunayMeshOpt.has_value())
+		{
+			std::cerr << "delaunayMeshOpt == nullopt!\n";
+			break;
+		}
 
+		if (ExportBaseMeshGeometryDataToOBJ(*delaunayMeshOpt, dataOutPath + ptCloudName + "_2DSliceDelaunay.obj"))
+		{
+			std::cerr << "ExportBaseMeshGeometryDataToOBJ failed!\n";
+			break;
+		}
 	}
 }
 

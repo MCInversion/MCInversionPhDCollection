@@ -36,6 +36,10 @@ include_directories(${VCG_SRC_DIR})
 # setup Spectra
 # add_subdirectory(external/spectra)
 
+# setup SimpleDelaunay
+set(SIMPLE_DELAUNAY_SRC_DIR "external/simple_delaunay")
+include_directories(${SIMPLE_DELAUNAY_SRC_DIR})
+
 include(AddFileDependencies)
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 

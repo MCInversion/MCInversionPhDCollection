@@ -22,6 +22,8 @@
 #include "sawhney_mat/BoundaryGenerator.h"
 #include "sawhney_mat/Path.h"
 
+#include <SimpleDelaunay.hpp>
+
 #ifdef _WINDOWS
 // Windows-specific headers
 #include <windows.h>
@@ -1376,6 +1378,7 @@ namespace Geometry
 
 		BaseMeshGeometryData resultData;
 
+		// TODO: finish fixing the ugly-ass QHull2D
 
 		return resultData;
 	}
@@ -1396,6 +1399,70 @@ namespace Geometry
 			return {};
 
 		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
+	}
+
+	std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: points.empty()!\n";
+			return {};
+		}
+
+		if (points.size() < 3)
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: points.size() < 3!\n";
+			return {};
+		}
+
+		std::vector<double> flattenedPts(points.size() * 2);
+		for (size_t iPt = 0; const auto& p : points)
+		{
+			flattenedPts[2 * iPt] = p[0];
+			flattenedPts[2 * iPt + 1] = p[1];
+			iPt++;
+		}
+
+		std::vector<int> outputIds;
+		try
+		{
+			outputIds = SimpleDelaunay::compute<2>(flattenedPts);
+		}
+		catch (...)
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: Internal error in SimpleDelaunay::compute!\n";
+			return {};
+		}
+
+		if (outputIds.empty())
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: outputIds.empty()!\n";
+			return {};
+		}
+		if (outputIds.size() < 3)
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: outputIds.size() < 3!\n";
+			return {};
+		}
+		if (outputIds.size() % 3 != 0)
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints:outputIds.size() % 3 != 0!\n";
+			return {};
+		}
+
+		BaseMeshGeometryData result;
+		std::ranges::transform(points, std::back_inserter(result.Vertices), [](const auto& pt2d) { return pmp::Point{ pt2d[0], pt2d[1], (pmp::Scalar)0.0 }; });
+		result.PolyIndices.reserve(outputIds.size() / 3);
+		for (size_t i = 0; i < outputIds.size(); i += 3)
+		{
+			result.PolyIndices.push_back({
+				static_cast<unsigned int>(outputIds[i]),
+				static_cast<unsigned int>(outputIds[i + 1]),
+				static_cast<unsigned int>(outputIds[i + 2])
+			});
+		}
+
+		return result;
 	}
 
 	std::pair<pmp::Point, pmp::Scalar> ComputeMeshBoundingSphere(const pmp::SurfaceMesh& mesh)
