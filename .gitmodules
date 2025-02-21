@@ -16,3 +16,6 @@
 [submodule "external/tetgen"]
 	path = external/tetgen
 	url = https://github.com/ufz/tetgen.git
+[submodule "external/triangle"]
+	path = external/triangle
+	url = https://github.com/libigl/triangle.git

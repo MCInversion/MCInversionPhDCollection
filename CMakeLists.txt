@@ -36,9 +36,14 @@ include_directories(${VCG_SRC_DIR})
 # setup Spectra
 # add_subdirectory(external/spectra)
 
-# setup SimpleDelaunay
-set(SIMPLE_DELAUNAY_SRC_DIR "external/simple_delaunay")
-include_directories(${SIMPLE_DELAUNAY_SRC_DIR})
+# setup Tetgen
+set(TETGEN_SRC_DIR "external/tetgen")
+include_directories(${TETGEN_SRC_DIR})
+
+# setup Triange (Libgl)
+set(TRIANGLE_SRC_DIR "external/triangle")
+add_subdirectory(${TRIANGLE_SRC_DIR})
+include_directories(${TRIANGLE_SRC_DIR})
 
 include(AddFileDependencies)
 include_directories(${PROJECT_SOURCE_DIR}/src/)

@@ -22,7 +22,8 @@
 #include "sawhney_mat/BoundaryGenerator.h"
 #include "sawhney_mat/Path.h"
 
-#include <SimpleDelaunay.hpp>
+//#include <tetgen.h>
+#include <triangle.h>
 
 #ifdef _WINDOWS
 // Windows-specific headers
@@ -1401,7 +1402,7 @@ namespace Geometry
 		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
 	}
 
-	std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points)
+	std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points, bool dummy)
 	{
 		if (points.empty())
 		{
@@ -1415,52 +1416,92 @@ namespace Geometry
 			return {};
 		}
 
-		std::vector<double> flattenedPts(points.size() * 2);
-		for (size_t iPt = 0; const auto& p : points)
+		// Initialize Triangle's input and output structures.
+		triangulateio in, out;
+		// Zero out all fields.
+		std::memset(&in, 0, sizeof(triangulateio));
+		std::memset(&out, 0, sizeof(triangulateio));
+
+		// Set up the input points.
+		in.numberofpoints = static_cast<int>(points.size());
+		in.numberofpointattributes = 0; // No extra attributes.
+		in.pointlist = new TRI_REAL[in.numberofpoints * 2];
+		for (size_t i = 0; i < points.size(); ++i)
 		{
-			flattenedPts[2 * iPt] = p[0];
-			flattenedPts[2 * iPt + 1] = p[1];
-			iPt++;
+			// Each point occupies two REALs: x and y.
+			in.pointlist[2 * i + 0] = static_cast<TRI_REAL>(points[i][0]);
+			in.pointlist[2 * i + 1] = static_cast<TRI_REAL>(points[i][1]);
+		}
+		in.pointmarkerlist = nullptr; // No markers.
+
+		// No segments, holes, or region constraints.
+		in.numberofsegments = 0;
+		in.numberofholes = 0;
+		in.numberofregions = 0;
+
+		// Use switches:
+		//   z : zero-based indexing,
+		//   Q : quiet operation.
+		char switches[] = "zQ";
+
+		// Call Triangle to compute the Delaunay triangulation.
+		// We don't require Voronoi output (pass NULL for vorout).
+		triangulate(switches, &in, &out, nullptr);
+
+		// Free our allocated input pointlist.
+		delete[] in.pointlist;
+
+		if (out.numberoftriangles <= 0)
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: No triangles generated!\n";
+			// Free Triangle's output arrays if allocated.
+			if (out.pointlist) trifree((int*)out.pointlist);
+			if (out.trianglelist) trifree(out.trianglelist);
+			return {};
+		}
+		if (out.numberofcorners != 3)
+		{
+			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: Expected 3 corners per triangle, got "
+				<< out.numberofcorners << "!\n";
+			if (out.pointlist) trifree((int*)out.pointlist);
+			if (out.trianglelist) trifree(out.trianglelist);
+			return {};
 		}
 
-		std::vector<int> outputIds;
-		try
-		{
-			outputIds = SimpleDelaunay::compute<2>(flattenedPts);
-		}
-		catch (...)
-		{
-			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: Internal error in SimpleDelaunay::compute!\n";
-			return {};
-		}
-
-		if (outputIds.empty())
-		{
-			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: outputIds.empty()!\n";
-			return {};
-		}
-		if (outputIds.size() < 3)
-		{
-			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints: outputIds.size() < 3!\n";
-			return {};
-		}
-		if (outputIds.size() % 3 != 0)
-		{
-			std::cerr << "Geometry::ComputeDelaunayMeshFrom2DPoints:outputIds.size() % 3 != 0!\n";
-			return {};
-		}
-
+		// Build the result.
 		BaseMeshGeometryData result;
-		std::ranges::transform(points, std::back_inserter(result.Vertices), [](const auto& pt2d) { return pmp::Point{ pt2d[0], pt2d[1], (pmp::Scalar)0.0 }; });
-		result.PolyIndices.reserve(outputIds.size() / 3);
-		for (size_t i = 0; i < outputIds.size(); i += 3)
+		result.Vertices.reserve(points.size());
+		for (const auto& pt2d : points)
 		{
-			result.PolyIndices.push_back({
-				static_cast<unsigned int>(outputIds[i]),
-				static_cast<unsigned int>(outputIds[i + 1]),
-				static_cast<unsigned int>(outputIds[i + 2])
-			});
+			// Embed each 2D point as a 3D point with z = 0.
+			result.Vertices.push_back(pmp::Point{ pt2d[0], pt2d[1], static_cast<pmp::Scalar>(0.0) });
 		}
+		result.PolyIndices.reserve(out.numberoftriangles);
+		// Triangle's output: out.trianglelist is an array of out.numberoftriangles * 3 ints.
+		for (int i = 0; i < out.numberoftriangles; ++i)
+		{
+			int idx0 = out.trianglelist[3 * i + 0];
+			int idx1 = out.trianglelist[3 * i + 1];
+			int idx2 = out.trianglelist[3 * i + 2];
+			result.PolyIndices.push_back({
+				static_cast<unsigned int>(idx0),
+				static_cast<unsigned int>(idx1),
+				static_cast<unsigned int>(idx2)
+				});
+		}
+
+		// Free Triangle's output arrays.
+		if (out.pointlist) trifree((int*)out.pointlist);
+		if (out.trianglelist) trifree(out.trianglelist);
+		if (out.triangleattributelist) trifree((int*)out.triangleattributelist);
+		if (out.neighborlist) trifree(out.neighborlist);
+		if (out.segmentlist) trifree(out.segmentlist);
+		if (out.segmentmarkerlist) trifree(out.segmentmarkerlist);
+		if (out.holelist) trifree((int*)out.holelist);
+		if (out.regionlist) trifree((int*)out.regionlist);
+		if (out.edgelist) trifree(out.edgelist);
+		if (out.edgemarkerlist) trifree(out.edgemarkerlist);
+		if (out.normlist) trifree((int*)out.normlist);
 
 		return result;
 	}

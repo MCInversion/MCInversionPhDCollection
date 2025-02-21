@@ -1010,7 +1010,7 @@ void ConvexHullTests()
 			break;
 		}
 
-		if (ExportBaseMeshGeometryDataToOBJ(*delaunayMeshOpt, dataOutPath + ptCloudName + "_2DSliceDelaunay.obj"))
+		if (!ExportBaseMeshGeometryDataToOBJ(*delaunayMeshOpt, dataOutPath + ptCloudName + "_2DSliceDelaunay.obj"))
 		{
 			std::cerr << "ExportBaseMeshGeometryDataToOBJ failed!\n";
 			break;
