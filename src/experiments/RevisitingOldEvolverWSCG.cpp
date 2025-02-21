@@ -34,6 +34,7 @@
 #include "pmp/algorithms/Remeshing.h"
 
 #include "geometry/GeometryConversionUtils.h"
+#include "geometry/GeometryIOUtils.h"
 #include "geometry/GeometryUtil.h"
 #include "geometry/GridUtil.h"
 
@@ -977,6 +978,19 @@ void ConvexHullTests()
 
 		const auto& ptCloud = ptCloudOpt.value();
 
+		const auto delaunayTetMeshOpt = Geometry::ComputeDelaunayTetrahedralMeshFromPoints(ptCloud);
+		if (!delaunayTetMeshOpt.has_value())
+		{
+			std::cerr << "delaunayTetMeshOpt == nullopt!\n";
+			break;
+		}
+
+		if (!ExportBaseTetraMeshGeometryDataToVTKPoly(*delaunayTetMeshOpt, dataOutPath + ptCloudName + "_delaunay3D.vtk"))
+		{
+			std::cerr << "ExportBaseTetraMeshGeometryDataToVTKPoly failed!\n";
+			break;
+		}
+
 		const auto convexHullMeshOpt = Geometry::ComputePMPConvexHullFromPoints(ptCloud);
 		if (!convexHullMeshOpt.has_value())
 		{
@@ -1013,6 +1027,19 @@ void ConvexHullTests()
 		if (!ExportBaseMeshGeometryDataToOBJ(*delaunayMeshOpt, dataOutPath + ptCloudName + "_2DSliceDelaunay.obj"))
 		{
 			std::cerr << "ExportBaseMeshGeometryDataToOBJ failed!\n";
+			break;
+		}
+
+		const auto convexHullCurveOpt = Geometry::ComputeConvexHullFrom2DPoints(pts2D);
+		if (!convexHullCurveOpt.has_value())
+		{
+			std::cerr << "convexHullCurveOpt == nullopt!\n";
+			break;
+		}
+
+		if (!ExportBaseCurveGeometryDataToPLY(*convexHullCurveOpt, dataOutPath + ptCloudName + "_2DSliceCHull1.ply"))
+		{
+			std::cerr << "ExportBaseCurveGeometryDataToPLY failed!\n";
 			break;
 		}
 	}

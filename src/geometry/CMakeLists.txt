@@ -12,7 +12,7 @@ add_library(${PROJECT_NAME} ${Geometry_Src})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../fade2d/include_fade2d")
 
 # Link Geometry library with other libraries, including Fade2D
-target_link_libraries(${PROJECT_NAME} PUBLIC pmp Utils fade2d poly2tri sawhney_mat triangle)
+target_link_libraries(${PROJECT_NAME} PUBLIC pmp Utils fade2d poly2tri sawhney_mat triangle tet)
 
 # Copy Fade2D DLLs to the output directory
 set(VS_VERSION "v141")

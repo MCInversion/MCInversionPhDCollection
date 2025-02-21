@@ -38,6 +38,7 @@ include_directories(${VCG_SRC_DIR})
 
 # setup Tetgen
 set(TETGEN_SRC_DIR "external/tetgen")
+add_subdirectory(${TETGEN_SRC_DIR})
 include_directories(${TETGEN_SRC_DIR})
 
 # setup Triange (Libgl)

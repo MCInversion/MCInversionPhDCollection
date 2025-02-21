@@ -22,7 +22,7 @@
 #include "sawhney_mat/BoundaryGenerator.h"
 #include "sawhney_mat/Path.h"
 
-//#include <tetgen.h>
+#include <tetgen.h>
 #include <triangle.h>
 
 #ifdef _WINDOWS
@@ -414,6 +414,58 @@ namespace Geometry
 		return geomData;
 	}
 
+	pmp::ManifoldCurve2D ConvertBufferGeomToPMPManifoldCurve2D(const BaseCurveGeometryData& geomData)
+	{
+		pmp::ManifoldCurve2D result;
+
+		for (const auto& v : geomData.Vertices)
+			result.add_vertex(v);
+
+		result.reserve(geomData.Vertices.size(), geomData.EdgeIndices.size());
+		if (!geomData.VertexNormals.empty())
+		{
+			auto vNormal = result.vertex_property<pmp::Normal2>("v:normal");
+			for (auto v : result.vertices())
+				vNormal[v] = geomData.VertexNormals[v.idx()];
+		}
+
+		for (const auto& [vertId0, vertId1] : geomData.EdgeIndices)
+		{
+			result.add_edge(pmp::Vertex(vertId0), pmp::Vertex(vertId1));
+		}
+
+		return result;
+	}
+
+	BaseCurveGeometryData ConvertPMPManifoldCurve2DToBaseCurveGeometryData(const pmp::ManifoldCurve2D& pmpCurve)
+	{
+		BaseCurveGeometryData result;
+		result.Vertices.reserve(pmpCurve.n_vertices());
+		result.EdgeIndices.reserve(pmpCurve.n_vertices());
+		for (const auto& vPos : pmpCurve.positions())
+		{
+			result.Vertices.push_back(vPos);
+		}
+
+		if (pmpCurve.has_vertex_property("v:normal"))
+		{
+			auto normals = pmpCurve.get_vertex_property<pmp::Normal2>("v:normal");
+			for (const auto v : pmpCurve.vertices())
+				result.VertexNormals.emplace_back(normals[v][0], normals[v][1]);
+		}
+		
+		for (const auto e : pmpCurve.edges())
+		{
+			const auto [v0, v1] = pmpCurve.vertices(e);
+			result.EdgeIndices.emplace_back(
+				static_cast<unsigned int>(v0.idx()), 
+				static_cast<unsigned int>(v1.idx())
+			);
+		}
+
+		return result;
+	}
+
 	pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MarchingCubes::MC_Mesh& mcMesh)
 	{
 		pmp::SurfaceMesh result;
@@ -509,10 +561,17 @@ namespace Geometry
 
 	bool ExportBaseMeshGeometryDataToVTK(const BaseMeshGeometryData& geomData, const std::string& absFileName)
 	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "vtk")
+		{
+			std::cerr << absFileName << "ExportBaseMeshGeometryDataToVTK: Invalid file extension!" << std::endl;
+			return false;
+		}
+
 		std::ofstream file(absFileName);
 		if (!file.is_open())
 		{
-			std::cerr << "Failed to open file for writing: " << absFileName << std::endl;
+			std::cerr << "ExportBaseMeshGeometryDataToVTK: Failed to open file for writing: " << absFileName << std::endl;
 			return false;
 		}
 
@@ -555,6 +614,156 @@ namespace Geometry
 			{
 				file << normal[0] << ' ' << normal[1] << ' ' << normal[2] << '\n';
 			}
+		}
+
+		file.close();
+		return true;
+	}
+
+	bool ExportBaseTetraMeshGeometryDataToVTK(const BaseTetraMeshGeometryData& geomData, const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "vtk")
+		{
+			std::cerr << absFileName << "ExportBaseTetraMeshGeometryDataToVTK: Invalid file extension!" << std::endl;
+			return false;
+		}
+
+		std::ofstream file(absFileName);
+		if (!file.is_open()) 
+		{
+			std::cerr << "ExportBaseTetraMeshGeometryDataToVTK: Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Write VTK header for an unstructured grid.
+		file << "# vtk DataFile Version 3.0\n";
+		file << "VTK output from tet mesh data\n";
+		file << "ASCII\n";
+		file << "DATASET UNSTRUCTURED_GRID\n";
+
+		// Write points.
+		file << "POINTS " << geomData.Vertices.size() << " float\n";
+		for (const auto& vertex : geomData.Vertices)
+		{
+			file << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+		}
+
+		// Write cells.
+		// Each tetrahedron is written as: 4 <pt0> <pt1> <pt2> <pt3>
+		size_t numTets = geomData.TetrahedraIndices.size();
+		size_t totalCellEntries = numTets * 5;
+		file << "CELLS " << numTets << " " << totalCellEntries << "\n";
+		for (const auto& tet : geomData.TetrahedraIndices)
+		{
+			file << "4 " << tet[0] << " " << tet[1] << " " << tet[2] << " " << tet[3] << "\n";
+		}
+
+		// Write cell types: for tetrahedra, VTK cell type is 10.
+		file << "CELL_TYPES " << numTets << "\n";
+		for (size_t i = 0; i < numTets; ++i)
+		{
+			file << "10\n";
+		}
+
+		// Optionally, add a CELL_DATA section so that volume rendering shows something.
+		// Here we simply output a dummy scalar equal to the cell's index.
+		file << "CELL_DATA " << numTets << "\n";
+		file << "SCALARS cellID int 1\n";
+		file << "LOOKUP_TABLE default\n";
+		for (size_t i = 0; i < numTets; ++i)
+		{
+			file << i << "\n";
+		}
+
+		file.close();
+		return true;
+	}
+
+	namespace
+	{
+		// A hash functor for an array of three unsigned ints.
+		struct FaceHash {
+			std::size_t operator()(const std::array<unsigned int, 3>& face) const {
+				std::size_t h1 = std::hash<unsigned int>{}(face[0]);
+				std::size_t h2 = std::hash<unsigned int>{}(face[1]);
+				std::size_t h3 = std::hash<unsigned int>{}(face[2]);
+				return ((h1 * 31 + h2) * 31) + h3;
+			}
+		};
+
+		// Equality functor for faces.
+		struct FaceEqual {
+			bool operator()(const std::array<unsigned int, 3>& a, const std::array<unsigned int, 3>& b) const {
+				return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
+			}
+		};
+	} // anonymous namespace
+
+	bool ExportBaseTetraMeshGeometryDataToVTKPoly(const BaseTetraMeshGeometryData& geomData, const std::string& absFileName)
+	{
+		const auto extension = Utils::ExtractLowercaseFileExtensionFromPath(absFileName);
+		if (extension != "vtk")
+		{
+			std::cerr << absFileName << "ExportBaseTetraMeshGeometryDataToVTKPoly: Invalid file extension!" << std::endl;
+			return false;
+		}
+
+		std::ofstream file(absFileName);
+		if (!file.is_open())
+		{
+			std::cerr << "ExportBaseTetraMeshGeometryDataToVTKPoly: Failed to open file for writing: " << absFileName << std::endl;
+			return false;
+		}
+
+		// Use an unordered_map to count faces.
+	// Each face is stored as a sorted array of three vertex indices.
+		std::unordered_map<std::array<unsigned int, 3>, int, FaceHash, FaceEqual> faceCount;
+
+		// For each tetrahedron, extract its four faces.
+		// A tetrahedron has vertices tet[0], tet[1], tet[2], tet[3]. Its faces are:
+		//   {0,1,2}, {0,1,3}, {0,2,3}, and {1,2,3}.
+		for (const auto& tet : geomData.TetrahedraIndices) {
+			std::array<std::array<unsigned int, 3>, 4> faces = { {
+				{ tet[0], tet[1], tet[2] },
+				{ tet[0], tet[1], tet[3] },
+				{ tet[0], tet[2], tet[3] },
+				{ tet[1], tet[2], tet[3] }
+			} };
+
+			// Sort each face (so that identical faces get the same ordering)
+			for (auto& face : faces) {
+				std::sort(face.begin(), face.end());
+				faceCount[face] += 1;
+			}
+		}
+
+		// We now have a collection of unique faces (both interior and boundary).
+		std::vector<std::array<unsigned int, 3>> uniqueFaces;
+		uniqueFaces.reserve(faceCount.size());
+		for (const auto& kv : faceCount) {
+			uniqueFaces.push_back(kv.first);
+		}
+
+		// Write VTK header for POLYDATA.
+		file << "# vtk DataFile Version 3.0\n";
+		file << "VTK output from tetrahedral mesh (all faces)\n";
+		file << "ASCII\n";
+		file << "DATASET POLYDATA\n";
+
+		// Write points.
+		file << "POINTS " << geomData.Vertices.size() << " float\n";
+		for (const auto& vertex : geomData.Vertices) {
+			file << vertex[0] << " " << vertex[1] << " " << vertex[2] << "\n";
+		}
+
+		// Write polygons.
+		// For each unique face (triangle), we write a line with 4 integers: "3 v0 v1 v2".
+		size_t numFaces = uniqueFaces.size();
+		size_t totalEntries = numFaces * 4; // each face: one count + 3 indices.
+		file << "POLYGONS " << numFaces << " " << totalEntries << "\n";
+		for (const auto& face : uniqueFaces) {
+			file << "3 " << face[0] << " " << face[1] << " " << face[2] << "\n";
 		}
 
 		file.close();
@@ -1369,40 +1578,91 @@ namespace Geometry
 		return resultData;
 	}
 
-	std::optional<BaseMeshGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points)
+	std::optional<BaseCurveGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points)
 	{
-		if (points.size() < 4)
+		if (points.size() < 3)
 		{
-			std::cerr << "Geometry::ComputeConvexHullFromPoints: Not enough points to form a convex hull!\n";
+			std::cerr << "Geometry::ComputeConvexHullFrom2DPoints: Not enough points to form a convex hull!\n";
 			return {};
 		}
 
-		BaseMeshGeometryData resultData;
+		const auto delaunayMesh = ComputeDelaunayMeshFrom2DPoints(points);
+		if (!delaunayMesh.has_value())
+		{
+			std::cerr << "Geometry::ComputeConvexHullFrom2DPoints: ComputeDelaunayMeshFrom2DPoints failed!\n";
+			return {};
+		}
 
-		// TODO: finish fixing the ugly-ass QHull2D
+		const auto pmpMesh = ConvertBufferGeomToPMPSurfaceMesh(*delaunayMesh);
 
-		return resultData;
+		BaseCurveGeometryData resultCurve;
+
+		std::map<pmp::Vertex, pmp::Vertex> origToNewBoundaryVertexMap;
+		for (int newVId = 0; const auto v : pmpMesh.vertices())
+		{
+			if (!pmpMesh.is_boundary(v))
+				continue;
+
+			const auto& vPos = pmpMesh.position(v);
+			resultCurve.Vertices.emplace_back(vPos[0], vPos[1]);
+			origToNewBoundaryVertexMap[v] = pmp::Vertex(newVId); // remember new index for edges
+			newVId++;
+		}
+
+		for (const auto e : pmpMesh.edges())
+		{
+			if (!pmpMesh.is_boundary(e))
+				continue;
+
+			const auto v0 = pmpMesh.vertex(e, 0);
+			const auto v1 = pmpMesh.vertex(e, 1);
+
+			resultCurve.EdgeIndices.emplace_back(
+				static_cast<unsigned int>(origToNewBoundaryVertexMap[v0].idx()),
+				static_cast<unsigned int>(origToNewBoundaryVertexMap[v1].idx())
+			);
+		}
+
+		return resultCurve;
 	}
 
-	std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points)
+	std::optional<pmp::ManifoldCurve2D> ComputePMPConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points)
 	{
-		const auto baseMeshOpt = ComputeConvexHullFrom2DPoints(points);
-		if (!baseMeshOpt.has_value())
+		const auto baseCurveOpt = ComputeConvexHullFrom2DPoints(points);
+		if (!baseCurveOpt.has_value())
 			return {};
 
-		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
+		try {
+			const auto pmpCurve = ConvertBufferGeomToPMPManifoldCurve2D(*baseCurveOpt);
+			return pmpCurve;
+		}
+		catch (...)
+		{
+			std::cerr << "Geometry::ComputePMPConvexHullFrom2DPoints: an internal error occured in ConvertBufferGeomToPMPManifoldCurve2D! Possibly non-manifold geometry!\n";
+		}
+
+		return {};
 	}
 	
 	std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFromPoints(const std::vector<pmp::Point>& points)
 	{
-		const auto baseMeshOpt = ComputeConvexHullFromPoints(points);
+		const auto baseMeshOpt = ComputeConvexHullFromPoints(points); // Uses VCG
 		if (!baseMeshOpt.has_value())
 			return {};
 
-		return ConvertBufferGeomToPMPSurfaceMesh(baseMeshOpt.value());
+		try {
+			const auto pmpMesh = ConvertBufferGeomToPMPSurfaceMesh(*baseMeshOpt);
+			return pmpMesh;
+		}
+		catch (...)
+		{
+			std::cerr << "Geometry::ComputePMPConvexHullFromPoints: an internal error occured in ConvertBufferGeomToPMPSurfaceMesh! Possibly non-manifold geometry!\n";
+		}
+
+		return {};
 	}
 
-	std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points, bool dummy)
+	std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points)
 	{
 		if (points.empty())
 		{
@@ -1504,6 +1764,100 @@ namespace Geometry
 		if (out.normlist) trifree((int*)out.normlist);
 
 		return result;
+	}
+
+	std::optional<BaseTetraMeshGeometryData> ComputeDelaunayTetrahedralMeshFromPoints(const std::vector<pmp::Point>& points)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::ComputeDelaunayTetrahedralMeshFromPoints: points.empty()!\n";
+			return {};
+		}
+
+		if (points.size() < 4)
+		{
+			std::cerr << "Geometry::ComputeDelaunayTetrahedralMeshFromPoints: points.size() < 4!\n";
+			return {};
+		}
+
+		// Prepare TetGen input and output structures.
+		tetgenio in, out;
+		// The tetgenio constructor automatically calls initialize(), which sets all pointers to NULL.
+		// We set the first number to 0 (zero-based indexing) and the mesh dimension to 3.
+		in.firstnumber = 0;
+		in.mesh_dim = 3;
+
+		// Allocate the input point list: 3 REALs per point.
+		int numPts = static_cast<int>(points.size());
+		in.numberofpoints = numPts;
+		in.pointlist = new REAL[numPts * 3];
+		for (int i = 0; i < numPts; ++i) {
+			in.pointlist[3 * i + 0] = static_cast<REAL>(points[i][0]);
+			in.pointlist[3 * i + 1] = static_cast<REAL>(points[i][1]);
+			in.pointlist[3 * i + 2] = static_cast<REAL>(points[i][2]);
+		}
+		// No additional point attributes or markers.
+		in.numberofpointattributes = 0;
+		in.pointattributelist = nullptr;
+		in.pointmarkerlist = nullptr;
+
+		// For a simple Delaunay tetrahedralization from a point set,
+		// we do not supply facets, segments, holes, or regions.
+
+		// Set up TetGen behavior.
+		tetgenbehavior behavior;
+		behavior.quiet = 1;      // Run quietly.
+		behavior.zeroindex = 1;  // Use zero-based indexing.
+
+		// Call tetrahedralize()
+		try {
+			tetrahedralize(&behavior, &in, &out, nullptr);
+		}
+		catch (...) {
+			std::cerr << "Geometry::ComputeDelaunayTetrahedralMeshFromPoints: tetrahedralize() threw an exception!\n";
+			return {};
+		}
+
+		// Check that TetGen produced tetrahedra.
+		if (out.numberoftetrahedra <= 0 || out.tetrahedronlist == nullptr) {
+			std::cerr << "Geometry::ComputeDelaunayTetrahedralMeshFromPoints: No tetrahedra produced!\n";
+			return {};
+		}
+		if (out.numberofcorners != 4) {
+			std::cerr << "Geometry::ComputeDelaunayTetrahedralMeshFromPoints: Expected tetrahedra with 4 corners, got "
+				<< out.numberofcorners << "\n";
+			return {};
+		}
+
+		BaseTetraMeshGeometryData result;
+
+		// Copy output vertices. TetGen writes its output points into out.pointlist
+		// (which may include Steiner points). Use out.numberofpoints.
+		int outNumPts = out.numberofpoints;
+		result.Vertices.resize(outNumPts);
+		for (int i = 0; i < outNumPts; ++i) {
+			result.Vertices[i] = pmp::Point(out.pointlist[3 * i + 0],
+				out.pointlist[3 * i + 1],
+				out.pointlist[3 * i + 2]);
+		}
+
+		// Extract tetrahedra connectivity.
+		int numTets = out.numberoftetrahedra;
+		result.TetrahedraIndices.reserve(numTets);
+		for (int i = 0; i < numTets; ++i) {
+			unsigned int a = static_cast<unsigned int>(out.tetrahedronlist[4 * i + 0]);
+			unsigned int b = static_cast<unsigned int>(out.tetrahedronlist[4 * i + 1]);
+			unsigned int c = static_cast<unsigned int>(out.tetrahedronlist[4 * i + 2]);
+			unsigned int d = static_cast<unsigned int>(out.tetrahedronlist[4 * i + 3]);
+			result.TetrahedraIndices.push_back({ a, b, c, d });
+		}
+
+		// If needed, additional error checking can be done here (e.g., verifying nonzero tetrahedron volumes).
+
+		// When 'in' and 'out' go out of scope, their destructors call deinitialize(),
+		// which frees all memory allocated by TetGen.
+		return result;
+
 	}
 
 	std::pair<pmp::Point, pmp::Scalar> ComputeMeshBoundingSphere(const pmp::SurfaceMesh& mesh)

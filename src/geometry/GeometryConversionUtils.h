@@ -33,6 +33,16 @@ namespace Geometry
 	};
 
 	/**
+	 * \brief A simple data structure for tetrahedral mesh geometry containing only vertices and quadruples of vertex indices.
+	 * \struct BaseTetraMeshGeometryData
+	*/
+	struct BaseTetraMeshGeometryData
+	{
+		std::vector<pmp::Point> Vertices{};
+		std::vector<std::array<unsigned int, 4>> TetrahedraIndices{};
+	};
+
+	/**
 	 * \brief Converts given BaseMeshGeometryData to pmp::SurfaceMesh.
 	 * \param geomData     input base mesh geometry data.
 	 * \return pmp::SurfaceMesh result.
@@ -45,6 +55,20 @@ namespace Geometry
 	 * \return BaseMeshGeometryData result.
 	 */
 	[[nodiscard]] BaseMeshGeometryData ConvertPMPSurfaceMeshToBaseMeshGeometryData(const pmp::SurfaceMesh& pmpMesh);
+
+	/**
+	* \brief Converts given BaseCurveGeometryData to pmp::ManifoldCurve2D.
+	* \param geomData     input base curve geometry data.
+	* \return pmp::ManifoldCurve2D result.
+	*/
+	[[nodiscard]] pmp::ManifoldCurve2D ConvertBufferGeomToPMPManifoldCurve2D(const BaseCurveGeometryData& geomData);
+
+	/**
+	 * \brief Converts given pmp::ManifoldCurve2D to BaseCurveGeometryData.
+	 * \param pmpCurve     input pmp::ManifoldCurve2D
+	 * \return BaseCurveGeometryData result.
+	 */
+	[[nodiscard]] BaseCurveGeometryData ConvertPMPManifoldCurve2DToBaseCurveGeometryData(const pmp::ManifoldCurve2D& pmpCurve);
 
 	/**
 	 * \brief Converts given MC_Mesh to pmp::SurfaceMesh.
@@ -68,6 +92,22 @@ namespace Geometry
 	 * \return if true, the export was successful.
 	 */
 	[[nodiscard]] bool ExportBaseMeshGeometryDataToVTK(const BaseMeshGeometryData& geomData, const std::string& absFileName);
+
+	/**
+	 * \brief For testing out the BaseTetraMeshGeometryData by exporting it to VTK volumetric file (more lightweight).
+	 * \param geomData       input geom data.
+	 * \param absFileName    absolute file path for the created file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportBaseTetraMeshGeometryDataToVTK(const BaseTetraMeshGeometryData& geomData, const std::string& absFileName);
+
+	/**
+	 * \brief For testing out the BaseTetraMeshGeometryData by exporting it to VTK polydata file (with all tetra triangles).
+	 * \param geomData       input geom data.
+	 * \param absFileName    absolute file path for the created file.
+	 * \return if true, the export was successful.
+	 */
+	[[nodiscard]] bool ExportBaseTetraMeshGeometryDataToVTKPoly(const BaseTetraMeshGeometryData& geomData, const std::string& absFileName);
 
 	/**
 	 * \brief For importing very large OBJ mesh files with option for parallel.
@@ -180,23 +220,30 @@ namespace Geometry
 	/**
 	 * \brief Computes the convex hull of an input planar point cloud.
 	 * \param points           input point cloud.
-	 * \return optional resulting pmp::SurfaceMesh if the computation is successful.
+	 * \return optional resulting pmp::ManifoldCurve2D if the computation is successful.
 	 */
-	[[nodiscard]] std::optional<pmp::SurfaceMesh> ComputePMPConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
+	[[nodiscard]] std::optional<pmp::ManifoldCurve2D> ComputePMPConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
 
 	/**
 	 * \brief Computes the convex hull of an input planar point cloud.
 	 * \param points           input point cloud.
-	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
+	 * \return optional resulting BaseCurveGeometryData if the computation is successful.
 	 */
-	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
+	[[nodiscard]] std::optional<BaseCurveGeometryData> ComputeConvexHullFrom2DPoints(const std::vector<pmp::Point2>& points);
 
 	/**
 	 * \brief Computes Delaunay triangulation of an input planar point cloud.
 	 * \param points           input point cloud.
 	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
 	 */
-	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points, bool dummy = false);
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputeDelaunayMeshFrom2DPoints(const std::vector<pmp::Point2>& points);
+
+	/**
+	 * \brief Computes Delaunay triangulation of an input 3d point cloud.
+	 * \param points           input point cloud.
+	 * \return optional resulting BaseTetraMeshGeometryData if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<BaseTetraMeshGeometryData> ComputeDelaunayTetrahedralMeshFromPoints(const std::vector<pmp::Point>& points);
 
 	/// \brief Returns a bounding sphere with a center and a radius combined in a pair.
 	///	\throw std::invalid_argument if the mesh is empty.
