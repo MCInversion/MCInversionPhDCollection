@@ -639,4 +639,17 @@ namespace Geometry
 	/// \brief Calculates zero-level bbox of the distance field.
 	[[nodiscard]] std::optional<pmp::BoundingBox2> CalculateZeroLevelBBox(const ScalarGrid2D& distField, const pmp::Scalar& tolerance = FLT_EPSILON);
 
+	//
+	// ------------------------------------------------------------------------
+	//
+
+	/**
+	 * \brief Re-samples grid data to a new grid with the same bounds and different cell size.
+	 * \param distField       input distance field
+	 * \param distGrad        input distance gradient.
+	 * \param negGrad         if true we consider distGrad to be negated and look for divergent cells, otherwise we look for convergent cells.
+	 * \return the averaged distance values at divergent/convergent cells
+	 */
+	[[nodiscard]] pmp::Scalar ComputeMeanDistanceToShockRegion2D(const ScalarGrid2D& distField, const VectorGrid2D& distGrad, bool negGrad = true);
+
 } // namespace Geometry

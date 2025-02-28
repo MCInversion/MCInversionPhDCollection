@@ -129,6 +129,9 @@ struct ManifoldEvolutionSettings
 
     bool UseLinearGridInterpolation{ true }; //>! whether to use d-linear interpolation for scalar and vector fields where d is the grid dimension.
 
+    DistanceSelectionType DistanceSelection{ DistanceSelectionType::PlainMinimum }; //>! The type of selection function when evaluating multiple interaction distances.
+    double DistanceBlendingRadius{ 0.0 }; //>! the radius for blending interaction distances.
+
 	CurvatureCtrlFunction OuterManifoldEpsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the outer manifold.
     AdvectionCtrlFunction OuterManifoldEta{ TRIVIAL_ETA }; //>! control function for the advection term of the outer manifold.
     RepulsionFunction     OuterManifoldRepulsion{ TRIVIAL_REPULSION }; //>! repulsion control function for the outer manifold.
@@ -612,6 +615,8 @@ private:
     ScalarGridInterpolationFunction2D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
     VectorGridInterpolationFunction2D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
 
+    std::shared_ptr<BaseDistanceBlendingStrategy<pmp::dvec2>> m_DistBlendStrategy = std::make_shared<PlainMinimumStrategy<pmp::dvec2>>(); //>! blending strategy for interaction distance.
+
     pmp::BoundingBox2 m_EvolBox{}; //>! the test box for numerical validity of the evolution.
 
     ManifoldsToRemeshTracker<pmp::ManifoldCurve2D> m_RemeshTracker{}; //>! a utility which logs curves that need remeshing.
@@ -956,6 +961,8 @@ private:
 
     ScalarGridInterpolationFunction3D m_ScalarInterpolate{}; //>! a parametrizeable function for interpolating values within Geometry::ScalarGrid2D.
     VectorGridInterpolationFunction3D m_VectorInterpolate{};  //>! a parametrizeable function for interpolating vector values within Geometry::VectorGrid2D.
+
+    std::shared_ptr<BaseDistanceBlendingStrategy<pmp::dvec3>> m_DistBlendStrategy = std::make_shared<PlainMinimumStrategy<pmp::dvec3>>(); //>! blending strategy for interaction distance.
 
     std::function<pmp::ImplicitLaplaceInfo(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ImplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.
     std::function<pmp::Point(const pmp::SurfaceMesh& /* mesh */, pmp::Vertex /* v */)> m_ExplicitLaplacianFunction{}; //>! a Laplacian function chosen from parameter laplacianType.

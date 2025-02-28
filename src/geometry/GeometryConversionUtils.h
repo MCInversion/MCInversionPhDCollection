@@ -345,6 +345,9 @@ namespace Geometry
 
 	[[nodiscard]] std::optional<pmp::Scalar> GetDistanceToClosestPoint3DSquared(const PointCloud3DTree& kdTree, const pmp::Point& sampledPoint);
 
+	/// \brief Computes the average distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeNearestNeighborMeanInterVertexDistance2D(const std::vector<pmp::Point2>& points, const size_t& nNeighbors = 6);
+
 	/**
 	 * \brief Obtains a 2D slice of a given 3D point cloud from given slicing plane and distance tolerance.
 	 * \param points              Processed point cloud.
@@ -362,4 +365,5 @@ namespace Geometry
 
 	/// \brief Finds the indices of boundary points of a given point cloud.
 	[[nodiscard]] std::vector<std::pair<unsigned int, unsigned int>> GetBoundaryPointsOfPointCloudGaps2D(const std::vector<pmp::Point2>& points);
+
 } // namespace Geometry

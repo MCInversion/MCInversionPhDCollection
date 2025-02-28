@@ -3319,4 +3319,44 @@ namespace Geometry
 		return result;
 	}
 
+	pmp::Scalar ComputeMeanDistanceToShockRegion2D(const ScalarGrid2D& distField, const VectorGrid2D& distGrad, bool negGrad)
+	{
+		const auto divNegGradDF = ComputeDivergenceField(distGrad);
+		const auto& divNegGradDFVals = divNegGradDF.Values();
+		const auto [dMin, dMax] = std::ranges::minmax_element(divNegGradDFVals);
+		const double rangeVal = std::min(std::abs(*dMin), *dMax);
+
+		const auto& [Nx, Ny] = distField.Dimensions();
+		const auto& dValues = distField.Values();
+		const auto& [nx, ny] = divNegGradDF.Dimensions();
+
+		pmp::Scalar sum = 0.0;
+		unsigned int count = 0;
+		for (unsigned int iy = 0; iy < ny; iy++)
+		{
+			for (unsigned int ix = 0; ix < nx; ix++)
+			{
+				const unsigned int divGridPos = ix + nx * iy;
+
+				if (negGrad && divNegGradDFVals[divGridPos] > 0.1 * rangeVal)
+				{
+					const unsigned int dGridPos = ix + 1 + Nx * (iy + 1);
+					sum += dValues[dGridPos];
+					count++;
+				}
+				else if (!negGrad && divNegGradDFVals[divGridPos] < -0.1 * rangeVal)
+				{
+					const unsigned int dGridPos = ix + 1 + Nx * (iy + 1);
+					sum += dValues[dGridPos];
+					count++;
+				}
+			}
+		}
+
+		if (count == 0)
+			return 0.0;
+
+		return sum / count;
+	}
+
 } // namespace Geometry

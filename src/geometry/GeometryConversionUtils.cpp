@@ -2364,6 +2364,51 @@ namespace Geometry
 		return out_dist_sqr;
 	}
 
+	pmp::Scalar ComputeNearestNeighborMeanInterVertexDistance2D(const std::vector<pmp::Point2>& points, const size_t& nNeighbors)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::ComputeNearestNeighborMeanInterVertexDistance2D: points.empty()!\n";
+			return -1.0;
+		}
+
+		// convert points to a compatible dataset
+		PointCloud<pmp::Scalar> nfPoints;
+		nfPoints.pts.reserve(points.size());
+		for (const auto& p : points)
+			nfPoints.pts.push_back({ p[0], p[1] });
+		using PointCloudAdapter = PointCloudAdaptor<PointCloud<pmp::Scalar>>;
+
+		// construct a kd-tree index:
+		using PointCloudKDTreeIndexAdapter = nanoflann::KDTreeSingleIndexAdaptor<
+			nanoflann::L2_Simple_Adaptor<pmp::Scalar, PointCloudAdapter>, PointCloudAdapter, 2 /* dim */>;
+		PointCloudKDTreeIndexAdapter indexAdapter(2 /*dim*/, nfPoints, { 10 /* max leaf */ });
+
+		auto do_knn_search = [&indexAdapter, &nNeighbors](const pmp::Point2& p) -> pmp::Scalar {
+			// do a knn search
+			const pmp::Scalar query_pt[2] = { p[0], p[1] };
+			std::vector<uint32_t> ret_index(nNeighbors);
+			std::vector<pmp::Scalar> out_dist_sqr(nNeighbors);
+			const size_t num_results = indexAdapter.knnSearch(
+				&query_pt[0], nNeighbors, &ret_index[0], &out_dist_sqr[0]);
+			ret_index.resize(num_results);
+			out_dist_sqr.resize(num_results);
+			if (num_results == 0) return 0.0;
+			pmp::Scalar totalDistSq{ 0.0 };
+			for (size_t i = 0; i < num_results; ++i)
+				totalDistSq += out_dist_sqr[i];
+			return sqrt(totalDistSq / (static_cast<pmp::Scalar>(num_results - 1.0)));
+		};
+
+		pmp::Scalar totalDistance = 0.0;
+		for (const auto& point : points)
+		{
+			totalDistance += do_knn_search(point);
+		}
+
+		return totalDistance / static_cast<pmp::Scalar>(points.size());
+	}
+
 	//
 	// =======================================================================================================================
 	//

@@ -553,29 +553,176 @@ enum class [[nodiscard]] DistanceSelectionType
 	QuadricBlend = 1, //>! within a given critical radius, produces a C^2 discontinuity in the interaction distance and a C^1 jump in gradient.
 };
 
+/// ---------------------------------------------------------------
+/// \brief Base strategy for interaction distance blending.
+/// \struct BaseDistanceBlendingStrategy
+// ---------------------------------------------------------------
+template <typename VectorType>
+struct BaseDistanceBlendingStrategy
+{
+	virtual ~BaseDistanceBlendingStrategy() = default;
+
+	// -------------------------------------------------------------------
+	/// \brief Blend two candidate (distance, gradient) pairs.
+	/// \param currentDistance       The current (accumulated) distance.
+	/// \param currentGradient       The current gradient.
+	/// \param newDistance           The new candidate distance.
+	/// \param newGradient           The new candidate gradient.
+	/// \return pair { blended distance, blended gradient }.
+	// -------------------------------------------------------------------
+	virtual [[nodiscard]] std::pair<double, VectorType> Blend(
+		double currentDistance, const VectorType& currentGradient,
+		double newDistance, const VectorType& newGradient) const = 0;
+};
+
+// ---------------------------------------------------------------
+/// \brief Strategy for using the plain minimum blending (with discontinuity)
+/// \struct PlainMinimumStrategy
+// ---------------------------------------------------------------
+template <typename VectorType>
+struct PlainMinimumStrategy : public BaseDistanceBlendingStrategy<VectorType>
+{
+	[[nodiscard]] std::pair<double, VectorType> Blend(
+		double currentDistance, const VectorType& currentGradient,
+		double newDistance, const VectorType& newGradient) const override
+	{
+		if (newDistance < currentDistance)
+			return { newDistance, newGradient };
+		return { currentDistance, currentGradient };
+	}
+};
+
+// ---------------------------------------------------------------
+/// \brief The quadratic blending function f(x,a,R) defined as:
+///          x,                  for x <= a - R,
+///          -R*(x-R)^2 + (x-R)+R, for a-R < x < a+R,
+///          1,                  for x >= a+R.
+// ---------------------------------------------------------------
+inline [[nodiscard]] double QuadBlendF(double x, double a, double R)
+{
+	if (x <= a - R)
+		return x;
+	if (x >= a + R)
+		return 1.0;
+	return -R * (x - R) * (x - R) + (x - R) + R;
+}
+
+// ---------------------------------------------------------------
+/// \brief Check if a candidate is in the transition (blending) region.
+/// \param x candidate distance.
+/// \param a blend parameter (provided externally)
+/// \param R blending radius.
+/// \return true if x is in the transition region.
+// ---------------------------------------------------------------
+inline [[nodiscard]] bool IsInTransitionRegion(double x, double a, double R)
+{
+	return (x > a - R && x < a + R);
+}
+
+// ---------------------------------------------------------------
+/// \brief Strategy for using the quadratic blending (C^1 transition)
+/// \struct QuadricBlendStrategy
+// ---------------------------------------------------------------
+template <typename VectorType>
+struct QuadricBlendStrategy : public BaseDistanceBlendingStrategy<VectorType>
+{
+	/// \brief Construct with a given blending radius.
+	explicit QuadricBlendStrategy(double blendingRadius)
+		: m_R(blendingRadius)
+	{}
+
+	/// \brief Without a blending radius, we can't use this blending strategy object.
+	QuadricBlendStrategy() = delete;
+
+	[[nodiscard]] std::pair<double, VectorType> Blend(
+		double currentDistance, const VectorType& currentGradient,
+		double newDistance, const VectorType& newGradient) const override
+	{
+		// If the new candidate is in the transition region (relative to a),
+		// blend the values.
+		if (IsInTransitionRegion(newDistance, currentDistance, m_R))
+		{
+			// Compute an interpolation factor based on the difference.
+			const double t = std::clamp((currentDistance - newDistance) / (2 * m_R), 0.0, 1.0);
+			const double blendedDistance = (1 - t) * currentDistance + t * newDistance;
+			const VectorType blendedGradient = (currentGradient * (1 - t)) + (newGradient * t);
+			return { blendedDistance, blendedGradient };
+		}
+
+		// Otherwise, compare the quadratic function values.
+		const double fCurrent = QuadBlendF(currentDistance, currentDistance, m_R);
+		const double fNew = QuadBlendF(newDistance, currentDistance, m_R);
+		if (fNew < fCurrent)
+			return { newDistance, newGradient };
+		return { currentDistance, currentGradient };
+	}
+
+private:
+	double m_R{ 0.0 }; //>! The blending radius.
+};
+
 /**
- * \brief Gathers interaction distance info between interacting evolving manifolds and target point cloud.
- * \class InteractionDistanceInfo
+ * \brief Creates a correct instance of BaseDistanceBlendingStrategy.
+ * \tparam VectorType   either pmp::dvec2 or pmp::dvec3.
+ */
+template <typename VectorType>
+[[nodiscard]] std::shared_ptr<BaseDistanceBlendingStrategy<VectorType>> GetDistanceBlendStrategy(const DistanceSelectionType& type, const double& blendRadius = 0.0)
+{
+	if (type == DistanceSelectionType::PlainMinimum)
+		return std::make_shared<PlainMinimumStrategy<VectorType>>();
+
+	return std::make_shared<QuadricBlendStrategy<VectorType>>(blendRadius);
+}
+
+/**
+ * \brief Represents a single entry of distance and its negative gradient at a given point.
+ * \class InteractionDistanceRhs
  * \tparam VectorType   either pmp::dvec2 or pmp::dvec3.
  */
 template<typename VectorType>
-class InteractionDistanceInfo
+struct InteractionDistanceRhs
+{
+	double Distance{ DBL_MAX }; //>! interaction distance
+	VectorType NegGradient{};   //>! interaction vector
+};
+
+/**
+ * \brief Gathers interaction distance collector between interacting evolving manifolds and target point cloud.
+ * \class InteractionDistanceCollector
+ * \tparam VectorType   either pmp::dvec2 or pmp::dvec3.
+ */
+template<typename VectorType>
+class InteractionDistanceCollector
 {
 public:
 	double Distance{ DBL_MAX };   //>! interaction distance
-	VectorType NegGradient{}; //>! interaction vector
+	VectorType NegGradient{};     //>! interaction vector
 
-	/// \brief Stream operator for updating the interaction info
-	InteractionDistanceInfo& operator<<(const InteractionDistanceInfo& newInfo)
+	/// \brief Stream operator for updating the interaction distance params.
+	InteractionDistanceCollector& operator<<(const InteractionDistanceRhs<VectorType>& rhs)
 	{
-		if (newInfo.Distance < this->Distance)
-		{
-			// update both distance and gradient
-			this->Distance = newInfo.Distance;
-			this->NegGradient = newInfo.NegGradient;
-		}
+		// update both distance and gradient
+		const auto [blendedDistance, blendedGradient] = m_BlendingStrategy.Blend(
+			this->Distance, this->NegGradient,
+			rhs.Distance, rhs.NegGradient
+		);
+		this->Distance = blendedDistance;
+		this->NegGradient = blendedGradient;
 		return *this;
 	}
+
+	/// \brief Construct from blending strategy instance.
+	explicit InteractionDistanceCollector(const BaseDistanceBlendingStrategy<VectorType>& bStrategy)
+		: m_BlendingStrategy(bStrategy)
+	{
+	}
+
+	/// \brief Without a preexisting blending strategy, we can't use this collector object.
+	InteractionDistanceCollector() = delete;
+
+private:
+
+	const BaseDistanceBlendingStrategy<VectorType>& m_BlendingStrategy; //>! the specific blending strategy for the steam operator <<.
 };
 
 ///**
