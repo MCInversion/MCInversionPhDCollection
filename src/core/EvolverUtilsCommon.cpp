@@ -5,7 +5,6 @@
 
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
-#include "pmp/algorithms/Remeshing.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
 #include "geometry/IcoSphereBuilder.h"
 

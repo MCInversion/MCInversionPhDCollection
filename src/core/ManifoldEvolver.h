@@ -566,6 +566,12 @@ protected:
         return m_InnerCurvesDFNegNormalizedGradients;
     }
 
+    /// \brief A getter for the distance blending strategy.
+    std::shared_ptr<BaseDistanceBlendingStrategy<pmp::dvec2>>& GetDistBlendStrategy()
+    {
+        return m_DistBlendStrategy;
+    }
+
     /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.
     void AssignRemeshingSettingsToEvolvingManifolds() override;
 
@@ -912,6 +918,12 @@ protected:
     std::vector<std::shared_ptr<Geometry::VectorGrid>>& GetInnerSurfacesDFNegNormalizedGradients()
     {
         return m_InnerSurfacesDFNegNormalizedGradients;
+    }
+
+    /// \brief A getter for the distance blending strategy.
+    std::shared_ptr<BaseDistanceBlendingStrategy<pmp::dvec3>>& GetDistBlendStrategy()
+    {
+        return m_DistBlendStrategy;
     }
 
     /// \brief Calculates and assigns remeshing settings to the strategy wrapper for remeshing settings.

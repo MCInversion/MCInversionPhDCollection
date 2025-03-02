@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pmp/ManifoldCurve2D.h"
+#include "pmp/algorithms/Remeshing.h"
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>

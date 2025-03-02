@@ -5810,20 +5810,21 @@ void TestImageSegmentation()
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 
-	strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
-	strategySettings.DistanceBlendingRadius = 15.0;
+	/*strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
+	strategySettings.DistanceBlendingRadius = 5.0;*/
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
 
 	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
 	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
-	//strategySettings.DiagSettings.LogOuterManifoldEta = true;
-	//strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+	strategySettings.DiagSettings.LogOuterManifoldEta = true;
+	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 2500;
+	globalSettings.NSteps = 218;
 	//globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
 	//globalSettings.NSteps = 20;

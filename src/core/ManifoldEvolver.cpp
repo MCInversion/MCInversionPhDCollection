@@ -57,6 +57,7 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 	{
 		StabilizeGeometries();
 	}
+	m_DistBlendStrategy = GetDistanceBlendStrategy<pmp::dvec2>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
 	ComputeControlFunctionsLowerBounds();
 
 	AssignRemeshingSettingsToEvolvingManifolds();
@@ -114,6 +115,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 		const auto [minLengthAfter, maxLengthAfter] = CalculateCoVolumeRange();
 		std::cout << "After stabilization: { minLengthAfter: " << minLengthAfter << ", maxLengthAfter: " << maxLengthAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
+	GetDistBlendStrategy() = GetDistanceBlendStrategy<pmp::dvec2>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
 	ComputeControlFunctionsLowerBounds();
 
 	AssignRemeshingSettingsToEvolvingManifolds();
@@ -341,7 +343,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			InteractionDistanceCollector<pmp::dvec2> interaction{ *m_DistBlendStrategy };
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
-			//vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
+			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 
 			interaction << InteractionDistanceRhs<pmp::dvec2>{vDistanceToTarget, vNegGradDistanceToTarget};
@@ -502,7 +504,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			InteractionDistanceCollector<pmp::dvec2> interaction{ *m_DistBlendStrategy };
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
-			//vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
+			vDistanceToTarget -= GetSettings().FieldSettings.FieldIsoLevel;
 			const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec2(0, 0);
 
 			interaction << InteractionDistanceRhs<pmp::dvec2>{vDistanceToTarget, vNegGradDistanceToTarget};
@@ -859,7 +861,6 @@ std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point2> ManifoldCurveEvolutionStrategy
 					GetSettings().DistanceBlendingRadius = meanDist;
 			}
 
-			m_DistBlendStrategy = GetDistanceBlendStrategy<pmp::dvec2>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
 			return { minTargetSize, maxTargetSize, targetBBox.center() };
 		}
 	}
@@ -874,8 +875,6 @@ std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point2> ManifoldCurveEvolutionStrategy
 		if (nnMeanDist > 0.0)
 			GetSettings().DistanceBlendingRadius = nnMeanDist * 0.5;
 	}
-
-	m_DistBlendStrategy = GetDistanceBlendStrategy<pmp::dvec2>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
 
 	if (!m_TargetPointCloud)
 	{
@@ -908,8 +907,6 @@ std::tuple<pmp::Scalar, pmp::Scalar, pmp::Point2> ManifoldCurveEvolutionStrategy
 			GetSettings().DistanceBlendingRadius = meanDist;
 	}	
 
-	m_DistBlendStrategy = GetDistanceBlendStrategy<pmp::dvec2>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
-	
 	return { minSize, maxSize, ptCloudBBox.center() };
 }
 
@@ -1411,6 +1408,7 @@ void ManifoldSurfaceEvolutionStrategy::Preprocess()
 	{
 		StabilizeGeometries();
 	}
+	m_DistBlendStrategy = GetDistanceBlendStrategy<pmp::dvec3>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
 	ComputeControlFunctionsLowerBounds();
 
 	AssignRemeshingSettingsToEvolvingManifolds();
@@ -1463,6 +1461,7 @@ void CustomManifoldSurfaceEvolutionStrategy::Preprocess()
 		const auto [minAreaAfter, maxAreaAfter] = CalculateCoVolumeRange();
 		std::cout << "After stabilization: { minAreaAfter: " << minAreaAfter << ", maxAreaAfter: " << maxAreaAfter << "} ... vs ... timeStep: " << GetSettings().TimeStep << "\n";
 	}
+	GetDistBlendStrategy() = GetDistanceBlendStrategy<pmp::dvec3>(GetSettings().DistanceSelection, GetSettings().DistanceBlendingRadius);
 	ComputeControlFunctionsLowerBounds();
 
 	AssignRemeshingSettingsToEvolvingManifolds();
