@@ -556,11 +556,12 @@ enum class [[nodiscard]] DistanceSelectionType
 
 /// ---------------------------------------------------------------
 /// \brief Base strategy for interaction distance blending.
-/// \struct BaseDistanceBlendingStrategy
+/// \class BaseDistanceBlendingStrategy
 // ---------------------------------------------------------------
 template <typename VectorType>
-struct BaseDistanceBlendingStrategy
+class BaseDistanceBlendingStrategy
 {
+public:
 	virtual ~BaseDistanceBlendingStrategy() = default;
 
 	// -------------------------------------------------------------------
@@ -578,11 +579,12 @@ struct BaseDistanceBlendingStrategy
 
 // ---------------------------------------------------------------
 /// \brief Strategy for using the plain minimum blending (with discontinuity)
-/// \struct PlainMinimumStrategy
+/// \class PlainMinimumStrategy
 // ---------------------------------------------------------------
 template <typename VectorType>
-struct PlainMinimumStrategy : public BaseDistanceBlendingStrategy<VectorType>
+class PlainMinimumStrategy : public BaseDistanceBlendingStrategy<VectorType>
 {
+public:
 	[[nodiscard]] std::pair<double, VectorType> Blend(
 		double currentDistance, const VectorType& currentGradient,
 		double newDistance, const VectorType& newGradient) const override
@@ -596,7 +598,7 @@ struct PlainMinimumStrategy : public BaseDistanceBlendingStrategy<VectorType>
 // ---------------------------------------------------------------
 /// \brief The quadratic blending function f(x,a,R) defined as:
 ///          x,                  for x <= a - R,
-///          -R*(x-R)^2 + (x-R)+R, for a-R < x < a+R,
+///          -0.5*R*(x-R)^2 + (x-R)+R, for a-R < x < a+R,
 ///          1,                  for x >= a+R.
 // ---------------------------------------------------------------
 inline [[nodiscard]] double QuadBlendF(double x, double a, double R)
@@ -605,7 +607,13 @@ inline [[nodiscard]] double QuadBlendF(double x, double a, double R)
 		return x;
 	if (x >= a + R)
 		return 1.0;
-	return -R * (x - R) * (x - R) + (x - R) + R;
+	return -0.5 * R * (x - R) * (x - R) + (x - R) + R;
+}
+
+template <typename VectorType>
+inline [[nodiscard]] VectorType QuadBlendVecF(const VectorType& a, const VectorType& b, double param)
+{
+	// TODO: quad param interpolation
 }
 
 // ---------------------------------------------------------------
@@ -622,11 +630,12 @@ inline [[nodiscard]] bool IsInTransitionRegion(double x, double a, double R)
 
 // ---------------------------------------------------------------
 /// \brief Strategy for using the quadratic blending (C^1 transition)
-/// \struct QuadricBlendStrategy
+/// \class QuadricBlendStrategy
 // ---------------------------------------------------------------
 template <typename VectorType>
-struct QuadricBlendStrategy : public BaseDistanceBlendingStrategy<VectorType>
+class QuadricBlendStrategy : public BaseDistanceBlendingStrategy<VectorType>
 {
+public:
 	/// \brief Construct with a given blending radius.
 	explicit QuadricBlendStrategy(double blendingRadius)
 		: m_R(blendingRadius)
@@ -644,17 +653,17 @@ struct QuadricBlendStrategy : public BaseDistanceBlendingStrategy<VectorType>
 		if (IsInTransitionRegion(newDistance, currentDistance, m_R))
 		{
 			// Compute an interpolation factor based on the difference.
-			const double t = std::clamp((currentDistance - newDistance) / (2 * m_R), 0.0, 1.0);
+			const double t = std::clamp((currentDistance - (newDistance - m_R)) / (2 * m_R), 0.0, 1.0);
 			const double blendedDistance = (1 - t) * currentDistance + t * newDistance;
 			const VectorType blendedGradient = (currentGradient * (1 - t)) + (newGradient * t);
 			return { blendedDistance, blendedGradient };
 		}
 
 		// Otherwise, compare the quadratic function values.
-		const double fCurrent = QuadBlendF(currentDistance, currentDistance, m_R);
+		//const double fCurrent = QuadBlendF(currentDistance, currentDistance, m_R);
 		const double fNew = QuadBlendF(newDistance, currentDistance, m_R);
-		if (fNew < fCurrent)
-			return { newDistance, newGradient };
+		if (fNew < currentDistance)
+			return { fNew, newGradient };
 		return { currentDistance, currentGradient };
 	}
 

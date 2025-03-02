@@ -5810,8 +5810,8 @@ void TestImageSegmentation()
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 
-	/*strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
-	strategySettings.DistanceBlendingRadius = 5.0;*/
+	strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
+	strategySettings.DistanceBlendingRadius = 5.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
