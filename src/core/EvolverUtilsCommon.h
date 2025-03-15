@@ -550,7 +550,7 @@ private:
  */
 enum class [[nodiscard]] DistanceSelectionType
 {
-	PlainMinimum = 0, //>! plain minimum, produces a C^1 discontinuity in the interaction distance and a C^0 jummp in gradient.
+	PlainMinimum = 0, //>! plain minimum, produces a C^1 discontinuity in the interaction distance and a C^0 jump in gradient.
 	QuadricBlend = 1, //>! within a given critical radius, produces a C^2 discontinuity in the interaction distance and a C^1 jump in gradient.
 };
 
@@ -572,7 +572,7 @@ public:
 	/// \param newGradient           The new candidate gradient.
 	/// \return pair { blended distance, blended gradient }.
 	// -------------------------------------------------------------------
-	virtual [[nodiscard]] std::pair<double, VectorType> Blend(
+	[[nodiscard]] virtual std::pair<double, VectorType> Blend(
 		double currentDistance, const VectorType& currentGradient,
 		double newDistance, const VectorType& newGradient) const = 0;
 };

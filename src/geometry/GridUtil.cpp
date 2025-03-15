@@ -1,5 +1,6 @@
 
 #include "pmp/SurfaceMesh.h"
+#include "pmp/ManifoldCurve2D.h"
 
 #include "pmp/algorithms/BarycentricCoordinates.h"
 #include "pmp/algorithms/TriangleKdTree.h"
@@ -2735,6 +2736,80 @@ namespace Geometry
 		return false;
 	}
 
+	bool ContainsShockRegionNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius)
+	{
+		using namespace Eigen;
+
+		const auto& values = grid.Values();
+		const auto Nx = static_cast<unsigned int>(grid.Dimensions().Nx);
+		const auto Ny = static_cast<unsigned int>(grid.Dimensions().Ny);
+		assert(ix < Nx);
+		assert(iy < Ny);
+
+		// Collect the values in the 3x3 neighborhood
+		std::array<pmp::Scalar, 9> neighborhood_values;
+		int idx = 0;
+		const auto r = static_cast<int>(radius);
+		for (int di = -r; di <= r; di += r)
+		{
+			for (int dj = -r; dj <= r; dj += r)
+			{
+				const int adjusted_ix = std::clamp(static_cast<int>(ix) + di, 0, static_cast<int>(Nx) - 1);
+				const int adjusted_iy = std::clamp(static_cast<int>(iy) + dj, 0, static_cast<int>(Ny) - 1);
+
+				neighborhood_values[idx++] = values[Nx * adjusted_iy + adjusted_ix];
+			}
+		}
+
+		// Fit a quadratic function f(x, y) = a00 + a10*x + a01*y + a20*x^2 + a11*x*y + a02*y^2
+		Matrix<pmp::Scalar, 9, 6> A;
+		Vector<pmp::Scalar, 9> b;
+
+		// normalized cell coordinates
+		A << 1, -1, -1, 1, 1, 1,
+			1, 0, -1, 0, 0, 1,
+			1, 1, -1, 1, -1, 1,
+			1, -1, 0, 1, 0, 0,
+			1, 0, 0, 0, 0, 0,
+			1, 1, 0, 1, 0, 0,
+			1, -1, 1, 1, -1, 1,
+			1, 0, 1, 0, 0, 1,
+			1, 1, 1, 1, 1, 1;
+
+		for (int i = 0; i < 9; ++i)
+		{
+			b[i] = neighborhood_values[i];
+		}
+
+		const auto coeffs = A.colPivHouseholderQr().solve(b);
+		const pmp::Scalar a10 = coeffs[1];
+		const pmp::Scalar a01 = coeffs[2];
+		const pmp::Scalar a20 = coeffs[3];
+		const pmp::Scalar a11 = coeffs[4];
+		const pmp::Scalar a02 = coeffs[5];
+
+		// Solve for the critical point
+		Matrix2f H;
+		H << 2 * a20, a11, a11, 2 * a02;
+		Vector2f grad;
+		grad << a10, a01;
+
+		SelfAdjointEigenSolver<Matrix2f> solver(H);
+		if (std::abs(std::abs(solver.eigenvalues()(0)) - std::abs(solver.eigenvalues()(1))) > FLT_EPSILON)
+		{
+			return false; // one eigendirection is dominant
+		}
+
+		Vector2f critical_point = -H.inverse() * grad;
+
+		if (critical_point[0] < -1 || critical_point[0] > 1 || critical_point[1] < -1 || critical_point[1] > 1)
+		{
+			return false; // Critical point outside the 9 grid cells
+		}
+
+		return true;
+	}
+
 	std::optional<pmp::Point2> FindLocalMaximumNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius)
 	{
 		using namespace Eigen;
@@ -3358,5 +3433,72 @@ namespace Geometry
 
 		return sum / count;
 	}
+
+	pmp::VertexProperty<bool> GetVerticesWithinDistance(pmp::ManifoldCurve2D& curve, const ScalarGrid2D& distanceField, const double& distThreshold, const std::string& propertyName, const ScalarGridInterpolationFunction2D& interpolationFn)
+	{
+		auto vMarked = !curve.has_vertex_property(propertyName) ? 
+			curve.vertex_property<bool>(propertyName, false) : curve.get_vertex_property<bool>(propertyName);
+
+		for (const auto v : curve.vertices())
+		{
+			const auto& vPos = curve.position(v);
+			const auto distAtPosition = interpolationFn(vPos, distanceField);
+			if (distAtPosition < distThreshold)
+				vMarked[v] = true;
+		}
+
+		return vMarked;
+	}
+
+	pmp::VertexProperty<bool> GetVerticesWithinMinDistance(pmp::ManifoldCurve2D& curve, const std::vector<std::shared_ptr<ScalarGrid2D>>& distanceFields, const double& distThreshold, const std::string& propertyName, const ScalarGridInterpolationFunction2D& interpolationFn)
+	{
+		auto vMarked = !curve.has_vertex_property(propertyName) ?
+			curve.vertex_property<bool>(propertyName, false) : curve.get_vertex_property<bool>(propertyName);
+
+		for (const auto v : curve.vertices())
+		{
+			const auto& vPos = curve.position(v);
+			double minDistAtPosition = DBL_MAX;
+			for (const auto& df : distanceFields)
+			{
+				const auto currDfVal = interpolationFn(vPos, *df);
+				if (currDfVal < minDistAtPosition)
+					minDistAtPosition = currDfVal;
+			}
+
+			if (minDistAtPosition < distThreshold)
+				vMarked[v] = true;
+		}
+
+		return vMarked;
+	}
+
+	void MarkVerticesWithinDistance(pmp::ManifoldCurve2D& curve, const ScalarGrid2D& distanceField, const double& distThreshold, const std::string& propertyName, const ScalarGridInterpolationFunction2D& interpolationFn)
+	{
+		if (distThreshold < FLT_EPSILON)
+			return;
+
+		GetVerticesWithinDistance(curve, distanceField, distThreshold, propertyName, interpolationFn);
+	}
+
+	void MarkVerticesWithinMinDistance(pmp::ManifoldCurve2D& curve, const std::vector<std::shared_ptr<ScalarGrid2D>>& distanceFields, const double& distThreshold, const std::string& propertyName, const ScalarGridInterpolationFunction2D& interpolationFn)
+	{
+		if (distThreshold < FLT_EPSILON)
+			return;
+
+		GetVerticesWithinMinDistance(curve, distanceFields, distThreshold, propertyName, interpolationFn);
+	}
+
+	bool IsGapBoundaryVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v)
+	{
+		auto vMarked = curve.get_vertex_property<bool>("v:pre_activated");
+		const auto [v0, v1] = curve.vertices(v);
+		const bool v0IsMarked = (v0.is_valid() && curve.is_valid(v0)) ? vMarked[v0] : false;
+		const bool v1IsMarked = (v1.is_valid() && curve.is_valid(v1)) ? vMarked[v1] : false;
+
+		return (v0IsMarked && !v1IsMarked) || (!v0IsMarked && v1IsMarked);
+	}
+
+
 
 } // namespace Geometry

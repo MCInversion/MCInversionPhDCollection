@@ -5759,8 +5759,8 @@ void TestImageSegmentation()
 		 pmp::CurveFactory::circle(pmp::Point2{ nPixels * 0.49, nPixels * 0.63 }, 0.2 * nPixels / 4.0, nCurvePts)}}
 	};
 
-	const double minDistancePercentageEpsilon = 0.002;
-	const double minDistancePercentageEta = 0.01;
+	constexpr double minDistancePercentageEpsilon = 0.01;
+	constexpr double minDistancePercentageEta = 0.01;
 
 	// Prepare the settings for the evolver
 	ManifoldEvolutionSettings strategySettings;
@@ -5778,7 +5778,7 @@ void TestImageSegmentation()
 	{
 		//return 0.0;
 
-		return -0.8 * distance * (std::abs(negGradDotNormal) + 0.9 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
@@ -5793,7 +5793,7 @@ void TestImageSegmentation()
 	{
 		//return 0.0;
 
-		return 0.5 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		return 0.8 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (std::fabs(-negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		// return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
@@ -5810,8 +5810,11 @@ void TestImageSegmentation()
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
 	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
 
-	strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
-	strategySettings.DistanceBlendingRadius = 5.0;
+	//strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
+	//strategySettings.DistanceBlendingRadius = 5.0;
+	strategySettings.NormalActivation.On = true;
+	strategySettings.NormalActivation.TargetDFCriticalRadius = 5.0;
+	strategySettings.NormalActivation.ManifoldCriticalRadius = 6.0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
@@ -5823,8 +5826,8 @@ void TestImageSegmentation()
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
-	//globalSettings.NSteps = 2500;
-	globalSettings.NSteps = 218;
+	globalSettings.NSteps = 2500;
+	//globalSettings.NSteps = 218;
 	//globalSettings.NSteps = 1000;
 	//globalSettings.NSteps = 500;
 	//globalSettings.NSteps = 20;
@@ -5835,8 +5838,8 @@ void TestImageSegmentation()
 	globalSettings.OutputPath = dataOutPath;
 	globalSettings.ExportResult = false;
 
-	//globalSettings.RemeshingResizeFactor = 0.7;
-	globalSettings.RemeshingResizeTimeIds = {}; //GetRemeshingAdjustmentTimeIndices();
+	globalSettings.RemeshingResizeFactor = 0.7;
+	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
 	for (const auto& imgName : imageNames)
 	{
@@ -5862,11 +5865,11 @@ void TestImageSegmentation()
 			continue;
 
 		auto [outerCurve, innerCurve] = circles.at(imgName);
-		RemeshWithDefaultSettings(outerCurve, nullptr, 0.4);
-		RemeshWithDefaultSettings(innerCurve, nullptr, 0.4);
+		RemeshWithDefaultSettings(outerCurve, nullptr, 1.0);
+		RemeshWithDefaultSettings(innerCurve, nullptr, 1.0);
 		std::vector innerCurves{ innerCurve };
 
-		strategySettings.FieldSettings.FieldIsoLevel = imgDf.CellSize() * imageScale * 0.6;
+		strategySettings.FieldSettings.FieldIsoLevel = imgDf.CellSize() * imageScale * 0.1;
 
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
 			strategySettings, outerCurve, innerCurves, nullptr, std::make_shared<Geometry::ScalarGrid2D>(imgDf));

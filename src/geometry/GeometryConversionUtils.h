@@ -8,6 +8,7 @@
 #include <optional>
 #include <nanoflann.hpp>
 
+
 namespace Geometry
 {
 	/**

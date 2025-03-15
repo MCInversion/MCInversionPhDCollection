@@ -1,5 +1,7 @@
 # pragma once
 
+#include "pmp/Types.h"
+
 #include "Grid.h"
 
 #include <functional>
@@ -9,7 +11,17 @@
 namespace pmp
 {
 	class SurfaceMesh;
+	class ManifoldCurve2D;
 }
+
+/// \brief Functions for interpolating 2D scalar grids
+using ScalarGridInterpolationFunction2D = std::function<double(const pmp::Point2& /* pos */, const Geometry::ScalarGrid2D& /* grid */)>;
+/// \brief Functions for interpolating 3D scalar grids
+using ScalarGridInterpolationFunction3D = std::function<double(const pmp::Point& /* pos */, const Geometry::ScalarGrid& /* grid */)>;
+/// \brief Functions for interpolating 2D vector grids
+using VectorGridInterpolationFunction2D = std::function<pmp::dvec2(const pmp::Point2& /* pos */, const Geometry::VectorGrid2D& /* vecGrid */)>;
+/// \brief Functions for interpolating 3D vector grids
+using VectorGridInterpolationFunction3D = std::function<pmp::dvec3(const pmp::Point& /* pos */, const Geometry::VectorGrid& /* vecGrid */)>;
 
 namespace Geometry
 {
@@ -601,6 +613,12 @@ namespace Geometry
 	[[nodiscard]] bool ContainsLocalExtremesNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
 
 	/**
+	 * \brief Searches the cell (ix, iy) and its neighbors at given radius for field gradient to abruptly change in some direction.
+	 * \return true if the shock point is found between the 9 cells.
+	 */
+	[[nodiscard]] bool ContainsShockRegionNearScalarGridCell(const ScalarGrid2D& grid, unsigned int ix, unsigned int iy, unsigned int radius = 1);
+
+	/**
 	 * \brief Searches the cell (ix, iy) and its neighbors for a local maximum of a 2D quadratic polynomial.
 	 * \return optional point of local maximum. std::nullopt if the maximum isn't found between the neighboring cells.
 	 */
@@ -644,12 +662,84 @@ namespace Geometry
 	//
 
 	/**
-	 * \brief Re-samples grid data to a new grid with the same bounds and different cell size.
+	 * \brief Evaluates mean distance from regions with significant divergence of the distance gradient (shock regions)
 	 * \param distField       input distance field
 	 * \param distGrad        input distance gradient.
 	 * \param negGrad         if true we consider distGrad to be negated and look for divergent cells, otherwise we look for convergent cells.
 	 * \return the averaged distance values at divergent/convergent cells
 	 */
 	[[nodiscard]] pmp::Scalar ComputeMeanDistanceToShockRegion2D(const ScalarGrid2D& distField, const VectorGrid2D& distGrad, bool negGrad = true);
+
+	//
+	// -------------------------------------------------------------------------
+	//
+
+	/**
+	 * \brief Marks curve vertices within distThreshold inside targetDistanceField.
+	 * \param curve                   curve to evaluate.
+	 * \param targetDistanceField     input (target) distance field.
+	 * \param distThreshold           threshold value.
+	 * \param propertyName            name of the vertex property.
+	 * \param interpolationFn         interpolation type (nearest-neighbor or bilinear).
+	 * \return the resulting VertexProperty.
+	 */
+	pmp::VertexProperty<bool> GetVerticesWithinDistance(
+		pmp::ManifoldCurve2D& curve, 
+		const ScalarGrid2D& targetDistanceField, 
+		const double& distThreshold,
+		const std::string& propertyName,
+		const ScalarGridInterpolationFunction2D& interpolationFn = BilinearInterpolateScalarValue);
+
+	/**
+	 * \brief Marks curve vertices within distThreshold inside the minimum among distanceFields.
+	 * \param curve                   curve to evaluate.
+	 * \param distanceFields          input distance fields.
+	 * \param distThreshold           threshold value.
+	 * \param propertyName            name of the vertex property.
+	 * \param interpolationFn         interpolation type (nearest-neighbor or bilinear).
+	 * \return the resulting VertexProperty.
+	 */
+	pmp::VertexProperty<bool> GetVerticesWithinMinDistance(
+		pmp::ManifoldCurve2D& curve,
+		const std::vector<std::shared_ptr<ScalarGrid2D>>& distanceFields,
+		const double& distThreshold,
+		const std::string& propertyName,
+		const ScalarGridInterpolationFunction2D& interpolationFn = BilinearInterpolateScalarValue);
+
+	/**
+	 * \brief Marks curve vertices within distThreshold inside distanceField.
+	 * \param curve                   curve to evaluate.
+	 * \param distanceField           input distance field.
+	 * \param distThreshold           threshold value.
+	 * \param propertyName            name of the vertex property.
+	 * \param interpolationFn         interpolation type (nearest-neighbor or bilinear).
+	 */
+	void MarkVerticesWithinDistance(pmp::ManifoldCurve2D& curve,
+		const ScalarGrid2D& distanceField,
+		const double& distThreshold,
+		const std::string& propertyName,
+		const ScalarGridInterpolationFunction2D& interpolationFn = BilinearInterpolateScalarValue);
+
+	/**
+	 * \brief Marks curve vertices within distThreshold inside the minimum among distanceFields.
+	 * \param curve                   curve to evaluate.
+	 * \param distanceFields          input distance fields.
+	 * \param distThreshold           threshold value.
+	 * \param propertyName            name of the vertex property.
+	 * \param interpolationFn         interpolation type (nearest-neighbor or bilinear).
+	 */
+	void MarkVerticesWithinMinDistance(pmp::ManifoldCurve2D& curve,
+	                                   const std::vector<std::shared_ptr<ScalarGrid2D>>& distanceFields,
+	                                   const double& distThreshold,
+	                                   const std::string& propertyName,
+	                                   const ScalarGridInterpolationFunction2D& interpolationFn = BilinearInterpolateScalarValue);
+
+	/**
+	 * \brief Evaluates whether a given vertex has exactly one neighbor which is marked by MarkVerticesWithinDistanceToTarget.
+	 * \param curve   curve with proper vertex marks (bool vertex property)
+	 * \param v       vertex handle.
+	 * \return whether the vertex is or isn't neighboring with exactly one marked neighbor
+	 */
+	[[nodiscard]] bool IsGapBoundaryVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v);
 
 } // namespace Geometry

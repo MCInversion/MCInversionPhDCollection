@@ -1,6 +1,4 @@
 #include "GeometryConversionUtils.h"
-#include "GeometryConversionUtils.h"
-#include "GeometryConversionUtils.h"
 
 #include "utils/StringUtils.h"
 

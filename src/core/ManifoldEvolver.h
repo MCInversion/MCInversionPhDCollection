@@ -39,15 +39,6 @@ const RepulsionFunction TRIVIAL_REPULSION = [](double /* distance */) { return 0
 /// \brief Numerical integration function specific to the scheme and dimension.
 using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
 
-/// \brief Functions for interpolating 2D scalar grids
-using ScalarGridInterpolationFunction2D = std::function<double(const pmp::Point2& /* pos */, const Geometry::ScalarGrid2D& /* grid */)>;
-/// \brief Functions for interpolating 3D scalar grids
-using ScalarGridInterpolationFunction3D = std::function<double(const pmp::Point& /* pos */, const Geometry::ScalarGrid& /* grid */)>;
-/// \brief Functions for interpolating 2D vector grids
-using VectorGridInterpolationFunction2D = std::function<pmp::dvec2(const pmp::Point2& /* pos */, const Geometry::VectorGrid2D& /* vecGrid */)>;
-/// \brief Functions for interpolating 3D vector grids
-using VectorGridInterpolationFunction3D = std::function<pmp::dvec3(const pmp::Point& /* pos */, const Geometry::VectorGrid& /* vecGrid */)>;
-
 /// \brief the smallest allowed number of vertices in a manifold curve.
 constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
 
@@ -113,6 +104,18 @@ struct DiagnosticSettings
 };
 
 /**
+ * \brief A wrapper for the functionality of "normal activation" during IO-LSW evolution
+ * \struct NormalActivationSettings
+ */
+struct NormalActivationSettings
+{
+    bool On{ false }; //>! whether this subroutine is turned on.
+    double TargetDFCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around target set within which evolving pts become pre-activated.
+    double ManifoldCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around the other manifold within which evolving pts become gap-deactivated, spreading towards the nearest pre-activated pts.
+    unsigned int NPointsFromCriticalBound{ 1 }; //>! the number of point steps from the boundary of the pre-activated region which give the proper target orientation normals.
+};
+
+/**
  * \brief A wrapper for manifold evolution settings.
  * \struct ManifoldEvolutionSettings
  */
@@ -131,6 +134,9 @@ struct ManifoldEvolutionSettings
 
     DistanceSelectionType DistanceSelection{ DistanceSelectionType::PlainMinimum }; //>! The type of selection function when evaluating multiple interaction distances.
     double DistanceBlendingRadius{ 0.0 }; //>! the radius for blending interaction distances.
+    double InteractionDistanceRatio{ 1.0 }; //>! the ratio between actual interaction distances (other manifold : target) to make them more-or-less equal.
+
+    NormalActivationSettings NormalActivation; //>! settings for the normal activation procedure.
 
 	CurvatureCtrlFunction OuterManifoldEpsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the outer manifold.
     AdvectionCtrlFunction OuterManifoldEta{ TRIVIAL_ETA }; //>! control function for the advection term of the outer manifold.

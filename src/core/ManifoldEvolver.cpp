@@ -317,6 +317,14 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
 		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
 
+		if (GetSettings().NormalActivation.On && m_DistanceField && !m_InnerCurvesDistanceFields.empty())
+		{
+			MarkVerticesWithinDistance(*m_OuterCurve, *m_DistanceField,
+				GetSettings().NormalActivation.TargetDFCriticalRadius, "v:pre_activated", m_ScalarInterpolate);
+			MarkVerticesWithinMinDistance(*m_OuterCurve, m_InnerCurvesDistanceFields,
+				GetSettings().NormalActivation.ManifoldCriticalRadius, "v:gap_activated", m_ScalarInterpolate);
+		}
+
 		// prepare matrix & rhs for m_OuterCurve:
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
@@ -330,15 +338,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			const auto& vPosToUpdate = m_OuterCurve->position(v);
-
-			//if (step == 500 && v.idx() == 92)
-			//{
-			//	//const auto vPosInOrigScale = affine_transform(m_TransformToOriginal, vPosToUpdate);
-			//	//if (std::abs(vPosInOrigScale[0] - 60.0) < 2.0 && vPosInOrigScale[1] < 85.0 && vPosInOrigScale[1] > 60.0)
-			//	{
-			//		std::cout << "Check advection distance!\n";
-			//	}
-			//}
 
 			InteractionDistanceCollector<pmp::dvec2> interaction{ *m_DistBlendStrategy };
 
@@ -354,7 +353,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				if (!m_InnerCurvesDistanceFields[i] || !m_InnerCurvesDFNegNormalizedGradients[i])
 					continue;
 
-				auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerCurvesDistanceFields[i]);
+				auto innerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_InnerCurvesDistanceFields[i]) * GetSettings().InteractionDistanceRatio;
 				innerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToInner = m_VectorInterpolate(vPosToUpdate, *m_InnerCurvesDFNegNormalizedGradients[i]);
 
@@ -487,6 +486,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		pmp::Normals2::compute_vertex_normals(*innerCurve);
 		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
 
+		if (GetSettings().NormalActivation.On && m_DistanceField)
+		{
+			MarkVerticesWithinDistance(*innerCurve, *m_DistanceField,
+				GetSettings().NormalActivation.TargetDFCriticalRadius, "v:pre_activated", m_ScalarInterpolate);
+		}
+
 		// prepare matrix & rhs for m_OuterCurve:
 		std::vector<Eigen::Triplet<double>> tripletList;
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);  // Assuming 2 entries per vertex for curves
@@ -512,7 +517,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			double outerDfAtVPos = DBL_MAX;
 			if (m_OuterCurveDistanceField && m_OuterCurveDFNegNormalizedGradient)
 			{
-				outerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField);
+				outerDfAtVPos = m_ScalarInterpolate(vPosToUpdate, *m_OuterCurveDistanceField) * GetSettings().InteractionDistanceRatio;
 				outerDfAtVPos -= GetSettings().FieldSettings.FieldIsoLevel;
 				const auto vNegGradDistanceToOuter = m_VectorInterpolate(vPosToUpdate, *m_OuterCurveDFNegNormalizedGradient);
 
@@ -1027,6 +1032,8 @@ void ManifoldCurveEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabilizati
 	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 	GetSettings().DistanceBlendingRadius *= scalingFactor;
+	GetSettings().NormalActivation.TargetDFCriticalRadius *= scalingFactor;
+	GetSettings().NormalActivation.ManifoldCriticalRadius *= scalingFactor;
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
@@ -1268,6 +1275,8 @@ void CustomManifoldCurveEvolutionStrategy::StabilizeCustomGeometries(pmp::Scalar
 	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 	GetSettings().DistanceBlendingRadius *= scalingFactor;
+	GetSettings().NormalActivation.TargetDFCriticalRadius *= scalingFactor;
+	GetSettings().NormalActivation.ManifoldCriticalRadius *= scalingFactor;
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat3 transfMatrixGeomScale{
@@ -2206,6 +2215,8 @@ void ManifoldSurfaceEvolutionStrategy::StabilizeGeometries(pmp::Scalar stabiliza
 	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 	GetSettings().DistanceBlendingRadius *= scalingFactor;
+	GetSettings().NormalActivation.TargetDFCriticalRadius *= scalingFactor;
+	GetSettings().NormalActivation.ManifoldCriticalRadius *= scalingFactor;
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
@@ -2427,6 +2438,8 @@ void CustomManifoldSurfaceEvolutionStrategy::StabilizeCustomGeometries(pmp::Scal
 	// -----------------------------------------------------------------------------------------------
 	GetSettings().FieldSettings.FieldIsoLevel *= scalingFactor;
 	GetSettings().DistanceBlendingRadius *= scalingFactor;
+	GetSettings().NormalActivation.TargetDFCriticalRadius *= scalingFactor;
+	GetSettings().NormalActivation.ManifoldCriticalRadius *= scalingFactor;
 	GetFieldCellSize() *= scalingFactor;
 
 	const pmp::mat4 transfMatrixGeomScale{
