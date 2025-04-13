@@ -5935,4 +5935,83 @@ void TestNormalActivation()
 	RemeshWithDefaultSettings(pathNormalActivationOuter0Curve);
 	if (!pmp::write_to_ply(pathNormalActivationOuter0Curve, dataOutPath + "pathNormalActivationOuter0Curve.ply"))
 		std::cerr << "Error writing pathNormalActivationOuter0Curve.ply!\n";
+
+	std::vector<pmp::Point2> targetPtCloud;
+	targetPtCloud.reserve(pathNormalActivationTarget00Curve.n_vertices() + pathNormalActivationTarget01Curve.n_vertices());
+	const auto& pts0 = pathNormalActivationTarget00Curve.positions();
+	const auto& pts1 = pathNormalActivationTarget01Curve.positions();
+	targetPtCloud.insert(targetPtCloud.end(), pts0.begin(), pts0.end());
+	targetPtCloud.insert(targetPtCloud.end(), pts1.begin(), pts1.end());
+
+	constexpr unsigned int nVoxelsPerMinDimension = 40;
+
+	const pmp::BoundingBox2 ptCloudBBox(targetPtCloud);
+	const auto ptCloudBBoxSize = ptCloudBBox.max() - ptCloudBBox.min();
+	const pmp::Scalar minSize = std::min(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const pmp::Scalar maxSize = std::max(ptCloudBBoxSize[0], ptCloudBBoxSize[1]);
+	const pmp::Scalar cellSize = minSize / static_cast<pmp::Scalar>(nVoxelsPerMinDimension);
+	const SDF::PointCloudDistanceField2DSettings dfSettings{
+		cellSize,
+		0.6,
+		DBL_MAX
+	};
+	const auto targetDf = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(targetPtCloud, dfSettings);
+
+	const SDF::DistanceField2DSettings curveDFSettings{
+		cellSize,
+		0.6,
+		DBL_MAX,
+		SDF::KDTreeSplitType::Center,
+		SDF::SignComputation2D::None,
+		SDF::PreprocessingType2D::Quadtree
+	};
+
+	NormalActivationSettings naSettings;
+	naSettings.On = true;
+	naSettings.TargetDFCriticalRadius = 15.0;
+	naSettings.ManifoldCriticalRadius = 20.0;
+	naSettings.NPointsFromCriticalBound = 4;
+
+	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationOuter0Curve));
+	const auto outerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));
+
+	const Geometry::ManifoldCurve2DAdapter innerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationInner0Curve));
+	const auto innerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings, outerCurveDf->Box()));
+
+	const auto [outerNextBoundary, outerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationOuter0Curve, targetDf,
+		{ innerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+	if (!outerNextBoundary || !outerPrevBoundary)
+		return;
+
+	const auto [innerNextBoundary, innerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationInner0Curve, targetDf,
+		{ outerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+	if (!innerNextBoundary || !innerPrevBoundary)
+		return;
+
+	std::vector<pmp::Point2> outerCurveGapActivated;
+	for (const auto v : pathNormalActivationOuter0Curve.vertices())
+	{
+		if (!(*outerNextBoundary)[v].is_valid() || !(*outerPrevBoundary)[v].is_valid())
+			continue;
+
+		outerCurveGapActivated.push_back(pathNormalActivationOuter0Curve.position(v));
+	}
+	std::vector<pmp::Point2> innerCurveGapActivated;
+	for (const auto v : pathNormalActivationInner0Curve.vertices())
+	{
+		if (!(*innerNextBoundary)[v].is_valid() || !(*innerPrevBoundary)[v].is_valid())
+			continue;
+
+		innerCurveGapActivated.push_back(pathNormalActivationInner0Curve.position(v));
+	}
+
+	if (!Export2DPointCloudToPLY(outerCurveGapActivated, dataOutPath + "outerCurveGapActivated.ply"))
+	{
+		std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+	}
+
+	if (!Export2DPointCloudToPLY(innerCurveGapActivated, dataOutPath + "innerCurveGapActivated.ply"))
+	{
+		std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+	}
 }

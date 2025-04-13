@@ -483,18 +483,21 @@ std::pair<
 	std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
 	std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
 
-	auto vTarget = Geometry::GetVerticesWithinDistance(curve, targetDistanceField,
-		settings.TargetDFCriticalRadius, "v:target_activated", interpFunc);
-	auto vManifold = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
-		settings.ManifoldCriticalRadius, "v:manifold_activated", interpFunc);
+	//auto vTarget = Geometry::GetVerticesWithinDistance(curve, targetDistanceField,
+	//	settings.TargetDFCriticalRadius, "v:target_activated", interpFunc);
+	//auto vManifold = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
+	//	settings.ManifoldCriticalRadius, "v:manifold_activated", interpFunc);
 
-	auto vGap = Geometry::GetExclusivityMaskForVertexProperties(curve, "v:target_activated", "v:manifold_activated", "v:gap_activated");
+	auto vGap = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
+		settings.ManifoldCriticalRadius, "v:gap_activated", interpFunc);
+
+	//auto vGap = Geometry::GetExclusivityMaskForVertexProperties(curve, "v:target_activated", "v:manifold_activated", "v:gap_activated");
 
 	std::tie(vForwardGapBoundary, vBackwardGapBoundary) = Geometry::MarkNearestBoundaryVertexHandles(curve,
 		"v:gap_activated", "v:next_gap_boundary", "v:prev_gap_boundary", settings.NPointsFromCriticalBound);
 
-	curve.remove_vertex_property(vTarget);
-	curve.remove_vertex_property(vManifold);
+	//curve.remove_vertex_property(vTarget);
+	//curve.remove_vertex_property(vManifold);
 	curve.remove_vertex_property(vGap);
 
 	return { vForwardGapBoundary, vBackwardGapBoundary };

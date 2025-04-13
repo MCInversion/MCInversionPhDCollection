@@ -156,4 +156,46 @@ namespace Geometry
 	/// \brief A utility for calculating the minimum and maximum dimensions of planar curve.
 	[[nodiscard]] std::pair<pmp::Scalar, pmp::Scalar> GetCurveBoundsMinMaxDimensions(const pmp::ManifoldCurve2D& curve);
 
+	// ===============================================================================
+
+		/**
+	 * \brief Gets curve vertices with only property2 satisfied
+	 * \param curve                   curve to evaluate.
+	 * \param property1               first property to be excluded
+	 * \param property2               second property to be satisfied
+	 * \param resultProperty          result property satisfying (!property1 & property2)
+	 * \return result vertex property
+	 */
+	pmp::VertexProperty<bool> GetExclusivityMaskForVertexProperties(
+		pmp::ManifoldCurve2D& curve,
+		const std::string& property1,
+		const std::string& property2,
+		const std::string& resultProperty
+	);
+
+	/**
+	 * \brief Marks curve vertices with only property2 satisfied
+	 * \param curve                   curve to evaluate.
+	 * \param property1               first property to be excluded
+	 * \param property2               second property to be satisfied
+	 * \param resultProperty          result property satisfying (!property1 & property2)
+	 */
+	void ApplyExclusivityMaskForVertexProperties(
+		pmp::ManifoldCurve2D& curve,
+		const std::string& property1,
+		const std::string& property2,
+		const std::string& resultProperty);
+
+	/// \brief Creates/updates two index vertex properties referring to the nearest previous and next boundary vertex handles for each vertex satisfying queriedProperty
+	std::pair<
+		std::optional<pmp::VertexProperty<pmp::Vertex>>,
+		std::optional<pmp::VertexProperty<pmp::Vertex>>
+	>
+		MarkNearestBoundaryVertexHandles(
+			pmp::ManifoldCurve2D& curve,
+			const std::string& queriedProperty,
+			const std::string& resultPropertyForward,
+			const std::string& resultPropertyBackwards,
+			const unsigned int& nPointsFromCriticalBound);
+
 } // namespace Geometry
