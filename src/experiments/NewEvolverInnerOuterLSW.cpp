@@ -5909,3 +5909,18 @@ void TestPointCloudGaps()
 		const auto bdPtIds = Geometry::GetBoundaryPointsOfPointCloudGaps2D(pts2D);
 	}
 }
+
+void TestNormalActivation()
+{
+	const auto path00Vertices = ParsePolygonalSVGPath(svgPathPair00);
+	auto path00Curve = pmp::CurveFactory::sampled_polygon(path00Vertices, 100, false);
+	RemeshWithDefaultSettings(path00Curve);
+	if (!pmp::write_to_ply(path00Curve, dataOutPath + "path00Curve.ply"))
+		std::cerr << "Error writing path00Curve.ply!\n";
+
+	const auto path01Vertices = ParsePolygonalSVGPath(svgPathPair01);
+	auto path01Curve = pmp::CurveFactory::sampled_polygon(path01Vertices, 100, false);
+	RemeshWithDefaultSettings(path01Curve);
+	if (!pmp::write_to_ply(path01Curve, dataOutPath + "path01Curve.ply"))
+		std::cerr << "Error writing path01Curve.ply!\n";
+}

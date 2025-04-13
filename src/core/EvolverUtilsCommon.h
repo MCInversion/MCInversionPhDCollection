@@ -7,6 +7,7 @@
 #include <Eigen/Sparse>
 
 #include "geometry/MeshAnalysis.h"
+#include "geometry/GridUtil.h"
 
 #include "utils/nlohmann/json.hpp"
 
@@ -1005,3 +1006,30 @@ private:
 	std::function<double(double /*dist*/, Args...)> m_Lambda;
 	double m_LowerDistanceLimit{ 0.0 };
 };
+
+//
+// ---------------------------------------------------------------------------------
+//
+
+/**
+ * \brief A wrapper for the functionality of "normal activation" during IO-LSW evolution
+ */
+struct NormalActivationSettings
+{
+	bool On{ false }; //>! whether this subroutine is turned on.
+	double TargetDFCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around target set within which evolving pts become pre-activated.
+	double ManifoldCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around the other manifold within which evolving pts become gap-deactivated, spreading towards the nearest pre-activated pts.
+	unsigned int NPointsFromCriticalBound{ 1 }; //>! the number of point steps from the boundary of the pre-activated region which give the proper target orientation normals.
+};
+
+/// \brief A utility for computing the indices of nearest forward/backward critical points for IO-LSW evolution for target sets with gaps.
+std::pair<
+	std::optional<pmp::VertexProperty<pmp::Vertex>>,
+	std::optional<pmp::VertexProperty<pmp::Vertex>>
+> GetNearestGapBoundaryVertices(
+	pmp::ManifoldCurve2D& curve,
+	const Geometry::ScalarGrid2D& targetDistanceField,
+	const std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& manifoldDistanceFields,
+	const ScalarGridInterpolationFunction2D& interpFunc,
+	const NormalActivationSettings& settings
+);

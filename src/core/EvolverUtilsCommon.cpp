@@ -6,13 +6,13 @@
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
+
 #include "geometry/IcoSphereBuilder.h"
 
 //#include <Spectra/SymEigsSolver.h>
 //#include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Eigen/SparseCore>
 
-#include "geometry/MeshAnalysis.h"
 
 
 CoVolumeStats AnalyzeMeshCoVolumes(pmp::SurfaceMesh& mesh, const AreaFunction& areaFunction)
@@ -463,4 +463,39 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shar
 	settings.UseProjection = true;
 
 	return settings;
+}
+
+//
+// ----------------------------------------------------------------------------------------
+//
+
+std::pair<
+	std::optional<pmp::VertexProperty<pmp::Vertex>>,
+	std::optional<pmp::VertexProperty<pmp::Vertex>>
+> GetNearestGapBoundaryVertices(
+	pmp::ManifoldCurve2D& curve,
+	const Geometry::ScalarGrid2D& targetDistanceField,
+	const std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& manifoldDistanceFields,
+	const ScalarGridInterpolationFunction2D& interpFunc,
+	const NormalActivationSettings& settings
+)
+{
+	std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
+	std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
+
+	auto vTarget = Geometry::GetVerticesWithinDistance(curve, targetDistanceField,
+		settings.TargetDFCriticalRadius, "v:target_activated", interpFunc);
+	auto vManifold = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
+		settings.ManifoldCriticalRadius, "v:manifold_activated", interpFunc);
+
+	auto vGap = Geometry::GetExclusivityMaskForVertexProperties(curve, "v:target_activated", "v:manifold_activated", "v:gap_activated");
+
+	std::tie(vForwardGapBoundary, vBackwardGapBoundary) = Geometry::MarkNearestBoundaryVertexHandles(curve,
+		"v:gap_activated", "v:next_gap_boundary", "v:prev_gap_boundary", settings.NPointsFromCriticalBound);
+
+	curve.remove_vertex_property(vTarget);
+	curve.remove_vertex_property(vManifold);
+	curve.remove_vertex_property(vGap);
+
+	return { vForwardGapBoundary, vBackwardGapBoundary };
 }

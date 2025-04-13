@@ -1,6 +1,7 @@
 # pragma once
 
 #include "pmp/Types.h"
+#include "pmp/ManifoldCurve2D.h"
 
 #include "Grid.h"
 
@@ -735,11 +736,43 @@ namespace Geometry
 	                                   const ScalarGridInterpolationFunction2D& interpolationFn = BilinearInterpolateScalarValue);
 
 	/**
-	 * \brief Evaluates whether a given vertex has exactly one neighbor which is marked by MarkVerticesWithinDistanceToTarget.
-	 * \param curve   curve with proper vertex marks (bool vertex property)
-	 * \param v       vertex handle.
-	 * \return whether the vertex is or isn't neighboring with exactly one marked neighbor
+	 * \brief Gets curve vertices with only property2 satisfied
+	 * \param curve                   curve to evaluate.
+	 * \param property1               first property to be excluded
+	 * \param property2               second property to be satisfied
+	 * \param resultProperty          result property satisfying (!property1 & property2)
+	 * \return result vertex property
 	 */
-	[[nodiscard]] bool IsGapBoundaryVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v);
+	pmp::VertexProperty<bool> GetExclusivityMaskForVertexProperties(
+		pmp::ManifoldCurve2D& curve,
+		const std::string& property1,
+		const std::string& property2,
+		const std::string& resultProperty
+	);
+
+	/**
+	 * \brief Marks curve vertices with only property2 satisfied
+	 * \param curve                   curve to evaluate.
+	 * \param property1               first property to be excluded
+	 * \param property2               second property to be satisfied
+	 * \param resultProperty          result property satisfying (!property1 & property2)
+	 */
+	void ApplyExclusivityMaskForVertexProperties(
+		pmp::ManifoldCurve2D& curve, 
+		const std::string& property1, 
+		const std::string& property2, 
+		const std::string& resultProperty);
+
+	/// \brief Creates/updates two index vertex properties referring to the nearest previous and next boundary vertex handles for each vertex satisfying queriedProperty
+	std::pair<
+		std::optional<pmp::VertexProperty<pmp::Vertex>>, 
+		std::optional<pmp::VertexProperty<pmp::Vertex>>
+	>
+		MarkNearestBoundaryVertexHandles(
+		pmp::ManifoldCurve2D& curve,
+		const std::string& queriedProperty,
+		const std::string& resultPropertyForward,
+		const std::string& resultPropertyBackwards,
+		const unsigned int& nPointsFromCriticalBound);
 
 } // namespace Geometry

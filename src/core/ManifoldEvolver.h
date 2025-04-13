@@ -104,18 +104,6 @@ struct DiagnosticSettings
 };
 
 /**
- * \brief A wrapper for the functionality of "normal activation" during IO-LSW evolution
- * \struct NormalActivationSettings
- */
-struct NormalActivationSettings
-{
-    bool On{ false }; //>! whether this subroutine is turned on.
-    double TargetDFCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around target set within which evolving pts become pre-activated.
-    double ManifoldCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around the other manifold within which evolving pts become gap-deactivated, spreading towards the nearest pre-activated pts.
-    unsigned int NPointsFromCriticalBound{ 1 }; //>! the number of point steps from the boundary of the pre-activated region which give the proper target orientation normals.
-};
-
-/**
  * \brief A wrapper for manifold evolution settings.
  * \struct ManifoldEvolutionSettings
  */

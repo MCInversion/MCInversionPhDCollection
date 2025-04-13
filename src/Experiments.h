@@ -222,6 +222,7 @@ void TestSmoothingAdvectionEquilibrium();
 void TestImageToDistanceField();
 void TestImageSegmentation();
 void TestPointCloudGaps();
+void TestNormalActivation();
 
 //
 // =================================================================================
@@ -349,6 +350,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestImageToDistanceField", TestImageToDistanceField },
     {"TestImageSegmentation", TestImageSegmentation },
     {"TestPointCloudGaps", TestPointCloudGaps },
+    {"TestNormalActivation", TestNormalActivation }
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

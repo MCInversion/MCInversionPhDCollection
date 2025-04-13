@@ -317,12 +317,15 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		pmp::Normals2::compute_vertex_normals(*m_OuterCurve);
 		auto vNormalsProp = m_OuterCurve->get_vertex_property<pmp::vec2>("v:normal");
 
+		std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
+		std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
+
 		if (GetSettings().NormalActivation.On && m_DistanceField && !m_InnerCurvesDistanceFields.empty())
 		{
-			MarkVerticesWithinDistance(*m_OuterCurve, *m_DistanceField,
-				GetSettings().NormalActivation.TargetDFCriticalRadius, "v:pre_activated", m_ScalarInterpolate);
-			MarkVerticesWithinMinDistance(*m_OuterCurve, m_InnerCurvesDistanceFields,
-				GetSettings().NormalActivation.ManifoldCriticalRadius, "v:gap_activated", m_ScalarInterpolate);
+			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
+				*m_OuterCurve,
+				*m_DistanceField, m_InnerCurvesDistanceFields, 
+				m_ScalarInterpolate, GetSettings().NormalActivation);			
 		}
 
 		// prepare matrix & rhs for m_OuterCurve:
@@ -486,10 +489,15 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		pmp::Normals2::compute_vertex_normals(*innerCurve);
 		auto vNormalsProp = innerCurve->get_vertex_property<pmp::vec2>("v:normal");
 
-		if (GetSettings().NormalActivation.On && m_DistanceField)
+		std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
+		std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
+
+		if (GetSettings().NormalActivation.On && m_DistanceField && m_OuterCurveDistanceField)
 		{
-			MarkVerticesWithinDistance(*innerCurve, *m_DistanceField,
-				GetSettings().NormalActivation.TargetDFCriticalRadius, "v:pre_activated", m_ScalarInterpolate);
+			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
+				*m_OuterCurve,
+				*m_DistanceField, { m_OuterCurveDistanceField },
+				m_ScalarInterpolate, GetSettings().NormalActivation);
 		}
 
 		// prepare matrix & rhs for m_OuterCurve:
