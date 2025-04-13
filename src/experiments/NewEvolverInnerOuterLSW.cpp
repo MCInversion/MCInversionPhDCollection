@@ -5968,8 +5968,8 @@ void TestNormalActivation()
 
 	NormalActivationSettings naSettings;
 	naSettings.On = true;
-	naSettings.TargetDFCriticalRadius = 15.0;
-	naSettings.ManifoldCriticalRadius = 20.0;
+	naSettings.TargetDFCriticalRadius = 20.0;
+	naSettings.ManifoldCriticalRadius = 25.0;
 	naSettings.NPointsFromCriticalBound = 4;
 
 	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationOuter0Curve));

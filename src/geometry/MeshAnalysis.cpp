@@ -1297,7 +1297,7 @@ namespace Geometry
 		[[nodiscard]] std::vector<pmp::Vertex> GetOrderedVertices(const pmp::ManifoldCurve2D& curve)
 		{
 			std::vector<pmp::Vertex> ordered;
-			if (!curve.is_empty())
+			if (curve.is_empty())
 				return ordered;
 
 			const auto& allVertices = curve.vertices();
