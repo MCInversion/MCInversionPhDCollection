@@ -395,14 +395,14 @@ namespace pmp
         //! \return whether \p v is a boundary vertex
         [[nodiscard]] bool is_boundary(Vertex v) const
         {
-            return (!vconn_[v].from_.is_valid() && vconn_[v].to_.is_valid()) ||
-                (!vconn_[v].to_.is_valid() && vconn_[v].from_.is_valid());
+            return (!is_valid(vconn_[v].from_) && is_valid(vconn_[v].to_)) ||
+                (!is_valid(vconn_[v].to_) && is_valid(vconn_[v].from_));
         }
 
         //! \return whether \p v is isolated, i.e., not incident to any edge
         [[nodiscard]] bool is_isolated(Vertex v) const
         {
-	        return !vconn_[v].from_.is_valid() && !vconn_[v].to_.is_valid();
+	        return !is_valid(vconn_[v].from_) && !is_valid(vconn_[v].to_);
         }
 
         //! sets the start vertex the edge \p e to \p v
@@ -475,10 +475,10 @@ namespace pmp
         [[nodiscard]] bool is_deleted(Edge e) const { return edeleted_[e]; }
 
         //! \return whether vertex \p v is valid.
-        [[nodiscard]] bool is_valid(Vertex v) const { return v.idx() < vertices_size(); }
+        [[nodiscard]] bool is_valid(Vertex v) const { return v.is_valid() && v.idx() < vertices_size(); }
 
         //! \return whether edge \p e is valid.
-        [[nodiscard]] bool is_valid(Edge e) const { return e.idx() < edges_size(); }
+        [[nodiscard]] bool is_valid(Edge e) const { return e.is_valid() && e.idx() < edges_size(); }
 
         //! deletes the vertex \p v from the curve. If \p reconnect is true, the adjacent edges of v won't be discarded.
         void delete_vertex(Vertex v, bool reconnect = true);

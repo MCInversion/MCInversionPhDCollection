@@ -1322,66 +1322,68 @@ void CurveRemeshing::tangential_smoothing(unsigned int iterations)
     {
         for (const auto v : curve_.vertices())
         {
+            if (curve_.is_boundary(v) || curve_.is_isolated(v))
+                continue;
+
+            if (vlocked_[v])
+                continue;
+
             std::tie(v_prev, v_next) = curve_.vertices(v);
-
-            if (!curve_.is_boundary(v) && !vlocked_[v])
+            if (vfeature_[v])
             {
-                if (vfeature_[v])
+                u = Point2(0.0);
+                t = Point2(0.0);
+                int c = 0;
+
+                if (curve_.is_valid(v_prev) && vfeature_[v_prev])
                 {
-                    u = Point2(0.0);
-                    t = Point2(0.0);
-                    int c = 0;
+                    b = (curve_.position(v) + curve_.position(v_prev)) * 0.5;
 
-                    if (curve_.is_valid(v_prev) && vfeature_[v_prev])
+                    u += b;
+
+                    if (c == 0)
                     {
-                        b = (curve_.position(v) + curve_.position(v_prev)) * 0.5;
-
-                        u += b;
-
-                        if (c == 0)
-                        {
-                            t = normalize(curve_.position(v_prev) - curve_.position(v));
-                            ++c;
-                        }
-                        else
-                        {
-                            t -= normalize(curve_.position(v_prev) - curve_.position(v));
-                        }
+                        t = normalize(curve_.position(v_prev) - curve_.position(v));
+                        ++c;
                     }
-
-                    if (curve_.is_valid(v_next) && vfeature_[v_next])
+                    else
                     {
-                        b = (curve_.position(v) + curve_.position(v_next)) * 0.5;
-
-                        u += b;
-
-                        if (c == 0)
-                        {
-                            t = normalize(curve_.position(v_next) - curve_.position(v));
-                            ++c;
-                        }
-                        else
-                        {
-                            t -= normalize(curve_.position(v_next) - curve_.position(v));
-                        }
+                        t -= normalize(curve_.position(v_prev) - curve_.position(v));
                     }
-
-                    assert(c == 2);
-
-                    u *= 0.5; // average of the two midpoints
-                    u -= curve_.position(v);
-                    u = t * dot(u, t);
-
-                    update[v] = u;
                 }
-                else
+
+                if (curve_.is_valid(v_next) && vfeature_[v_next])
                 {
-                    u = (curve_.position(v_prev) + curve_.position(v_next)) * 0.5 - curve_.position(v);
-                    t = normalize(curve_.position(v_next) - curve_.position(v_prev));
-                    u = t * dot(u, t);
+                    b = (curve_.position(v) + curve_.position(v_next)) * 0.5;
 
-                    update[v] = u;
+                    u += b;
+
+                    if (c == 0)
+                    {
+                        t = normalize(curve_.position(v_next) - curve_.position(v));
+                        ++c;
+                    }
+                    else
+                    {
+                        t -= normalize(curve_.position(v_next) - curve_.position(v));
+                    }
                 }
+
+                assert(c == 2);
+
+                u *= 0.5; // average of the two midpoints
+                u -= curve_.position(v);
+                u = t * dot(u, t);
+
+                update[v] = u;
+            }
+            else
+            {
+                u = (curve_.position(v_prev) + curve_.position(v_next)) * 0.5 - curve_.position(v);
+                t = normalize(curve_.position(v_next) - curve_.position(v_prev));
+                u = t * dot(u, t);
+
+                update[v] = u;
             }
         }
 

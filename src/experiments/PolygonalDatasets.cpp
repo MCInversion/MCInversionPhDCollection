@@ -137,6 +137,41 @@ namespace
                 }
                 break;
             }
+            case 'C': { // Cubic Bézier curve (absolute)
+                // Note: Each 'C' segment has three coordinate pairs: (x1, y1, x2, y2, x, y)
+                // For polyline approximation, we only use the endpoint (x, y)
+                while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
+                    // Skip control points
+                    pmp::Scalar x1 = std::stof(tokens[i++]); // control point 1
+                    pmp::Scalar y1 = std::stof(tokens[i++]); // control point 1
+                    pmp::Scalar x2 = std::stof(tokens[i++]); // control point 2
+                    pmp::Scalar y2 = std::stof(tokens[i++]); // control point 2
+                    pmp::Scalar x = std::stof(tokens[i++]);  // endpoint
+                    pmp::Scalar y = std::stof(tokens[i++]);  // endpoint
+
+                    currentX = x;
+                    currentY = y;
+                    points.emplace_back(currentX, currentY);
+                }
+                break;
+            }
+            case 'c': { // Cubic Bézier curve (relative)
+                // For relative curves, each segment: (dx1, dy1, dx2, dy2, dx, dy)
+                while (i < tokens.size() && !std::isalpha(tokens[i][0])) {
+                    // Skip control point offsets
+                    pmp::Scalar dx1 = std::stof(tokens[i++]); // control point 1 offset
+                    pmp::Scalar dy1 = std::stof(tokens[i++]); // control point 1 offset
+                    pmp::Scalar dx2 = std::stof(tokens[i++]); // control point 2 offset
+                    pmp::Scalar dy2 = std::stof(tokens[i++]); // control point 2 offset
+                    pmp::Scalar dx = std::stof(tokens[i++]);  // endpoint offset
+                    pmp::Scalar dy = std::stof(tokens[i++]);  // endpoint offset
+
+                    currentX += dx;
+                    currentY += dy;
+                    points.emplace_back(currentX, currentY);
+                }
+                break;
+            }
             case 'Z': // Close path (absolute)
             case 'z': // Close path (relative)
                 points.emplace_back(startX, startY);

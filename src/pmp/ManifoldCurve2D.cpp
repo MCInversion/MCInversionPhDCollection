@@ -111,11 +111,11 @@ namespace pmp
 
             auto eTo = edge_to(v);
             auto eFrom = edge_from(v);
-            if (eTo.is_valid())
+            if (is_valid(eTo))
             {
 	            set_edge_to(v, emap[eTo]);
             }
-            if (eFrom.is_valid())
+            if (is_valid(eFrom))
             {
 	            set_edge_from(v, emap[eFrom]);
             }
@@ -241,7 +241,7 @@ namespace pmp
     Vertex ManifoldCurve2D::add_vertex(const Point2& p)
     {
         Vertex v = new_vertex();
-        if (v.is_valid())
+        if (is_valid(v))
             vpoint_[v] = p;
         return v;
     }
@@ -284,12 +284,12 @@ namespace pmp
                 // the first edge eT before v will remain connected to vertices vPrev and vNext
                 const Vertex vNext = econn_[eFrom].end_;
                 const Vertex vPrev = econn_[eTo].start_;
-            	if (vNext.is_valid() && vPrev.is_valid())
+            	if (is_valid(vNext) && is_valid(vPrev))
 	            {
 	                vconn_[vNext].to_ = eTo;
                     vconn_[vPrev].from_ = eTo;
 	            }
-                if (eTo.is_valid())
+                if (is_valid(eTo))
                 {
                     econn_[eTo].end_ = vNext;
                 }
@@ -531,11 +531,11 @@ namespace pmp
             econn_[e].end_ = start;
 
             // Update vertex connectivity
-            if (start.is_valid())
+            if (is_valid(start))
             {
                 vconn_[start].to_ = e;
             }
-            if (end.is_valid())
+            if (is_valid(end))
             {
                 vconn_[end].from_ = e;
             }

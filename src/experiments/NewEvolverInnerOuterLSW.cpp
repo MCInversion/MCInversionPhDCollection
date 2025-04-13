@@ -5912,15 +5912,27 @@ void TestPointCloudGaps()
 
 void TestNormalActivation()
 {
-	const auto path00Vertices = ParsePolygonalSVGPath(svgPathPair00);
-	auto path00Curve = pmp::CurveFactory::sampled_polygon(path00Vertices, 100, false);
-	RemeshWithDefaultSettings(path00Curve);
-	if (!pmp::write_to_ply(path00Curve, dataOutPath + "path00Curve.ply"))
-		std::cerr << "Error writing path00Curve.ply!\n";
+	const auto pathNormalActivationTarget00Vertices = ParsePolygonalSVGPath(svgPathNormalActivationTarget00);
+	auto pathNormalActivationTarget00Curve = pmp::CurveFactory::sampled_polygon(pathNormalActivationTarget00Vertices, 50, false, false);
+	RemeshWithDefaultSettings(pathNormalActivationTarget00Curve);
+	if (!pmp::write_to_ply(pathNormalActivationTarget00Curve, dataOutPath + "pathNormalActivationTarget00Curve.ply"))
+		std::cerr << "Error writing pathNormalActivationTarget00Curve.ply!\n";
 
-	const auto path01Vertices = ParsePolygonalSVGPath(svgPathPair01);
-	auto path01Curve = pmp::CurveFactory::sampled_polygon(path01Vertices, 100, false);
-	RemeshWithDefaultSettings(path01Curve);
-	if (!pmp::write_to_ply(path01Curve, dataOutPath + "path01Curve.ply"))
-		std::cerr << "Error writing path01Curve.ply!\n";
+	const auto pathNormalActivationTarget01Vertices = ParsePolygonalSVGPath(svgPathNormalActivationTarget01);
+	auto pathNormalActivationTarget01Curve = pmp::CurveFactory::sampled_polygon(pathNormalActivationTarget01Vertices, 50, false, false);
+	RemeshWithDefaultSettings(pathNormalActivationTarget01Curve);
+	if (!pmp::write_to_ply(pathNormalActivationTarget01Curve, dataOutPath + "pathNormalActivationTarget01Curve.ply"))
+		std::cerr << "Error writing pathNormalActivationTarget01Curve.ply!\n";
+
+	const auto pathNormalActivationInner0Vertices = ParsePolygonalSVGPath(svgPathNormalActivationInner0);
+	auto pathNormalActivationInner0Curve = pmp::CurveFactory::sampled_polygon(pathNormalActivationInner0Vertices, 60, false);
+	RemeshWithDefaultSettings(pathNormalActivationInner0Curve);
+	if (!pmp::write_to_ply(pathNormalActivationInner0Curve, dataOutPath + "pathNormalActivationInner0Curve.ply"))
+		std::cerr << "Error writing pathNormalActivationInner0Curve.ply!\n";
+
+	const auto pathNormalActivationOuter0Vertices = ParsePolygonalSVGPath(svgPathNormalActivationOuter0);
+	auto pathNormalActivationOuter0Curve = pmp::CurveFactory::sampled_polygon(pathNormalActivationOuter0Vertices, 100, false);
+	RemeshWithDefaultSettings(pathNormalActivationOuter0Curve);
+	if (!pmp::write_to_ply(pathNormalActivationOuter0Curve, dataOutPath + "pathNormalActivationOuter0Curve.ply"))
+		std::cerr << "Error writing pathNormalActivationOuter0Curve.ply!\n";
 }

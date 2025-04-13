@@ -130,8 +130,9 @@ int main()
         //"TestCurve2DRotation",
         //"TestSmoothingAdvectionEquilibrium",
         //"TestImageToDistanceField",
-        "TestImageSegmentation",
-        //    "TestPointCloudGaps",
+        //"TestImageSegmentation",
+        // "TestPointCloudGaps",
+        "TestNormalActivation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here
