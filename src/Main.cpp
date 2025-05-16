@@ -77,7 +77,7 @@ int main()
 // Spring of 2024. CESCG 2024 doctoral colloquium.
 // ..................................................................................
         // "BPATest",
-        // "IncrementalMeshBuilderTests",
+        //"IncrementalMeshBuilderTests",
         // "2GBApollonMeshBuilderTest",
         // "NanoflannDistanceTests",
         // "ApollonLSWSaliencyEval",
@@ -132,7 +132,13 @@ int main()
         //"TestImageToDistanceField",
         //"TestImageSegmentation",
         // "TestPointCloudGaps",
-        "TestNormalActivation",
+        //"TestNormalActivation",
+
+// ------------------------- IncrementalMeshBuilderTUWien ---------------------------
+// Late Spring / Summer of 2025. TU Wien June 6th Talk.
+// ..................................................................................
+
+        "TestIMBShrinkWrapperNormalEstimation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

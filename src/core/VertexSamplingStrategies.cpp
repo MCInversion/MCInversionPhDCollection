@@ -104,7 +104,7 @@ namespace IMB
 
 	constexpr unsigned int FREQUENCY_UPDATE_MULTIPLIER = 2;
 
-	constexpr double MIN_VERTEX_FRACTION = 0.005;
+	constexpr double MIN_VERTEX_FRACTION = 0.001;
 
 	VertexSamplingStrategy::VertexSamplingStrategy(const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{

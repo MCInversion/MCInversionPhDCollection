@@ -119,6 +119,7 @@ void IncrementalMeshBuilderTests()
 	{
 		constexpr size_t nUpdates = 10;
 		unsigned int lodIndex = 0;
+
 		//const IMB::MeshRenderFunction exportToOBJ = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
 		//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".obj";
 		//	if (!Geometry::ExportBaseMeshGeometryDataToOBJ(meshData, outputFileName))
@@ -139,9 +140,10 @@ void IncrementalMeshBuilderTests()
 		//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 		//	++lodIndex;
 		//};
-		//std::vector timeTicks = { std::chrono::high_resolution_clock::now() };
-		const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName/*, &timeTicks*/](const Geometry::BaseMeshGeometryData& meshData) {
-			//timeTicks.push_back(std::chrono::high_resolution_clock::now());
+		
+		std::vector timeTicks = { std::chrono::high_resolution_clock::now() };
+		const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &timeTicks](const Geometry::BaseMeshGeometryData& meshData) {
+			timeTicks.push_back(std::chrono::high_resolution_clock::now());
 			const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
 			if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
 			{
@@ -149,17 +151,17 @@ void IncrementalMeshBuilderTests()
 				return;
 			}
 			std::cout << "Mesh data with " << meshData.Vertices.size() << " vertices exported successfully to " << outputFileName << "\n";
-			//if (lodIndex > 9)
-			//	if (!ExportTimeVectorInSeconds(timeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_Timings.txt"))
-			//		throw std::logic_error("File not exported!");
+
+			if (!ExportTimeVectorInSeconds(timeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_Timings.txt"))
+				throw std::logic_error("File not exported!");
 			++lodIndex;
 		};
 		auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 		meshBuilder.Init(
 			dataDirPath + meshName + ".ply",
 			nUpdates,
-			//IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
-			IMB::ReconstructionFunctionType::BallPivoting,
+			IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
+			//IMB::ReconstructionFunctionType::BallPivoting,
 			//IMB::ReconstructionFunctionType::None,
 			IMB::VertexSelectionType::UniformRandom,
 			//IMB::VertexSelectionType::Sequential,
@@ -169,7 +171,7 @@ void IncrementalMeshBuilderTests()
 			40000
 		);
 		constexpr unsigned int seed = 4999;
-		constexpr unsigned int nThreads = 1;
+		constexpr unsigned int nThreads = 4;
 		meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 	}
 }
@@ -317,7 +319,7 @@ void IncrementalMeshBuilderHausdorffEval()
 	const std::vector<std::string> imbMeshNames{
 		"armadillo",
 		"bunny",
-		//"CaesarBust",
+		"CaesarBust",
 		//"maxPlanck",
 		"nefertiti",
 		//"Apollon_ArtecEva"
