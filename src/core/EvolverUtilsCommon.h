@@ -269,6 +269,37 @@ struct MeshTopologySettings
 	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 
+//
+// =======================================================================================================
+//                                  New evolver shared setting groups
+// -------------------------------------------------------------------------------------------------------
+//
+
+/**
+ * \brief Input settings for constructing and using distance fields for advection forces in manifold flow.
+ * \struct AmbientFieldSettings
+ */
+struct AmbientFieldSettings
+{
+	pmp::Scalar FieldExpansionFactor{ 1.0 }; //>! the factor by which target bounds are expanded (multiplying original bounds min dimension).
+	unsigned int NVoxelsPerMinDimension{ 20 }; //>! the number of voxels per smallest dimension of the resulting scalar grid.
+	pmp::Scalar FieldIsoLevel{ 0.0 }; //>! target level of the scalar field (e.g. zero distance to target manifold).
+};
+
+/**
+ * \brief Settings for evaluating quality of triangle faces for evolving manifold mesh surfaces (type pmp::SurfaceMesh).
+ * \struct FaceQualitySettings
+ */
+struct FaceQualitySettings
+{
+	Geometry::FaceQualityFunction FaceQualityFunc{ Geometry::GetConditionNumberOfEquilateralTriangleJacobian }; //>! function used to evaluate face quality for determining whether remeshing is necessary.
+	Geometry::FaceQualityRange Range{ Geometry::JACOBIAN_COND_MIN, Geometry::JACOBIAN_COND_MAX }; //>! the range of PREFERRED values for the FaceQualityFunc.
+};
+
+//
+// =======================================================================================================
+//
+
 /**
  * \brief Precomputes parameters for advection-diffusion model within (Iso)SurfaceEvolver.
  * \param distanceMax             maximum effective distance from target (affects diffusion term weight).

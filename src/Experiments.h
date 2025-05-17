@@ -246,6 +246,7 @@ void TestNormalActivation();
 */
 // --------------------------------------------------------------------------------
 
+void TestPoissonMeshingStrategy();
 void TestIMBShrinkWrapperNormalEstimation();
 
 //

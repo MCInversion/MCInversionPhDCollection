@@ -28,6 +28,30 @@
 
 #include "../Experiments.h"
 
+void TestPoissonMeshingStrategy()
+{
+	const auto ptCloudName = "bunnyPts_3";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	const auto meshingStrategy = IMB::GetReconstructionStrategy(IMB::ReconstructionFunctionType::Poisson);
+	Geometry::BaseMeshGeometryData mesh;
+	mesh.Vertices = pts;
+	meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
+
+	const std::string outputFileName = dataOutPath + ptCloudName + "_PoissonRecon.vtk";
+	if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
+	{
+		std::cout << "Failed to export mesh data." << "\n";
+		return;
+	}
+}
+
 void TestIMBShrinkWrapperNormalEstimation()
 {
 	const auto ptCloudName = "bunnyPts_3";
