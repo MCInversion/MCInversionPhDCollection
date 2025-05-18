@@ -1091,7 +1091,7 @@ namespace SDF
 	{
 		assert(settings.CellSize > 0.0);
 		assert(settings.ImageScaleFactor > 0.0);
-		auto imgGrid = ImportPNGImageGrayscale(absFileName, std::pair{ 0.0, 1.0 });
+		auto imgGrid = Geometry::ImportPNGImageGrayscale(absFileName, std::pair{ 0.0, 1.0 });
 		if (!imgGrid.has_value())
 		{
 			throw std::invalid_argument("ImageDistanceFieldGenerator::Generate: file " + absFileName + " couldn't be opened!\n");

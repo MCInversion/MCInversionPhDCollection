@@ -1,4 +1,4 @@
-#include "GeometryConversionUtils.h"
+﻿#include "GeometryConversionUtils.h"
 
 #include "utils/StringUtils.h"
 
@@ -2675,6 +2675,197 @@ namespace Geometry
 
 
 		return result;
+	}
+
+	std::vector<std::vector<pmp::Point>> GetPointClusters(const std::vector<pmp::Point>& points, const pmp::Scalar& criticalRadius)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::GetPointClusters: points.empty()!\n";
+			return { points };
+		}
+
+		const uint32_t N = points.size();
+		std::vector<std::vector<pmp::Point>> clusters;
+		if (N == 0)
+			return clusters;
+
+		// 1) Fill the PointCloud3D
+		PointCloud3D cloud;
+		cloud.points = points;  // copy
+
+		// 2) Build the KD-tree index
+		PointCloud3DTree index(/*dim=*/3, cloud, nanoflann::KDTreeSingleIndexAdaptorParams(/*max leaf=*/10));
+		index.buildIndex();
+
+		// 3) Prepare visit flags and search params
+		std::vector<bool> visited(N, false);
+		const pmp::Scalar radius2 = criticalRadius * criticalRadius;
+		std::vector<nanoflann::ResultItem<uint32_t, pmp::Scalar>> results;
+		nanoflann::SearchParameters searchParams;
+
+		// 4) Flood‐fill over epsilon‐neighborhoods
+		for (uint32_t seed = 0; seed < N; ++seed)
+		{
+			if (visited[seed])
+				continue;
+
+			std::vector<pmp::Point> cluster;
+			std::queue<uint32_t> q;
+			visited[seed] = true;
+			q.push(seed);
+
+			while (!q.empty()) 
+			{
+				uint32_t idx = q.front();
+				q.pop();
+				cluster.push_back(points[idx]);
+
+				// query neighbors within criticalRadius
+				pmp::Scalar query_pt[3] = {
+					points[idx][0],
+					points[idx][1],
+					points[idx][2]
+				};
+				results.clear();
+				const uint32_t nMatches = index.radiusSearch(&query_pt[0], radius2, results, searchParams);
+
+				for (uint32_t i = 0; i < nMatches; ++i)
+				{
+					uint32_t nbr = results[i].first;
+					if (visited[nbr])
+						continue;
+
+					visited[nbr] = true;
+					q.push(nbr);
+				}
+			}
+
+			if (cluster.empty())
+				continue; // no point found
+
+			clusters.push_back(std::move(cluster));
+		}
+
+		return clusters;
+	}
+
+	void Get3DPointSearchIndex(
+		const std::vector<pmp::Point>& points,
+		PointCloud3D& outCloud,
+		std::unique_ptr<PointCloud3DTree>& outTree)
+	{
+		outCloud.points = points;   // copy data into the cloud
+		// construct the tree on the heap so we can hold a unique_ptr to it
+		outTree = std::make_unique<PointCloud3DTree>(
+			/*dim=*/3, outCloud,
+			nanoflann::KDTreeSingleIndexAdaptorParams(/*max leaf=*/10)
+			);
+		outTree->buildIndex();
+	}
+
+	std::unique_ptr<PointSearchIndex3D> Get3DPointSearchIndex(const std::vector<pmp::Point>& points)
+	{
+		return std::make_unique<PointSearchIndex3D>(points);
+	}
+
+	pmp::Scalar ComputeNearestNeighborMeanInterVertexDistance(const PointCloud3D& cloud, PointCloud3DTree& tree, const size_t& nNeighbors)
+	{
+		if (cloud.points.empty())
+		{
+			std::cerr << "Geometry::ComputeNearestNeighborMeanInterVertexDistance: cloud.points.empty()!\n";
+			return -1.0;
+		}
+
+		std::vector<uint32_t> ret_idx(nNeighbors);
+		std::vector<pmp::Scalar> out_dist2(nNeighbors);
+		pmp::Scalar sumMeanDists{ 0 };
+
+		const size_t N = cloud.points.size();
+		for (size_t i = 0; i < N; ++i) {
+			// form query
+			pmp::Scalar q[3] = {
+				cloud.points[i][0],
+				cloud.points[i][1],
+				cloud.points[i][2]
+			};
+			// kNN search (self + neighbors)
+			const size_t found = tree.knnSearch(&q[0], nNeighbors,
+				ret_idx.data(),
+				out_dist2.data());
+			if (found > 1) 
+			{
+				// skip the zero‐distance to itself
+				pmp::Scalar accSq = 0;
+				for (size_t k = 1; k < found; ++k)
+					accSq += out_dist2[k];
+				sumMeanDists += std::sqrt(accSq / (found - 1));
+			}
+		}
+		return sumMeanDists / static_cast<pmp::Scalar>(N);
+	}
+
+	std::vector<std::vector<pmp::Point>> GetPointClusters(const PointCloud3D& cloud, PointCloud3DTree& tree, const pmp::Scalar& criticalRadius)
+	{
+		if (cloud.points.empty())
+		{
+			std::cerr << "Geometry::GetPointClusters: cloud.points.empty()!\n";
+			return { cloud.points };
+		}
+
+		std::vector<std::vector<pmp::Point>> clusters;
+
+		// Prepare visit flags and search params
+		const uint32_t N = static_cast<uint32_t>(cloud.points.size());
+		std::vector<bool> visited(N, false);
+		const pmp::Scalar radius2 = criticalRadius * criticalRadius;
+		std::vector<nanoflann::ResultItem<uint32_t, pmp::Scalar>> results;
+		nanoflann::SearchParameters searchParams;
+
+		// Flood‐fill over epsilon‐neighborhoods
+		for (uint32_t seed = 0; seed < N; ++seed)
+		{
+			if (visited[seed])
+				continue;
+
+			std::vector<pmp::Point> cluster;
+			std::queue<uint32_t> q;
+			visited[seed] = true;
+			q.push(seed);
+
+			while (!q.empty())
+			{
+				uint32_t idx = q.front();
+				q.pop();
+				cluster.push_back(cloud.points[idx]);
+
+				// query neighbors within criticalRadius
+				pmp::Scalar query_pt[3] = {
+					cloud.points[idx][0],
+					cloud.points[idx][1],
+					cloud.points[idx][2]
+				};
+				results.clear();
+				const uint32_t nMatches = tree.radiusSearch(&query_pt[0], radius2, results, searchParams);
+
+				for (uint32_t i = 0; i < nMatches; ++i)
+				{
+					uint32_t nbr = results[i].first;
+					if (visited[nbr])
+						continue;
+
+					visited[nbr] = true;
+					q.push(nbr);
+				}
+			}
+
+			if (cluster.empty())
+				continue; // no point found
+
+			clusters.push_back(std::move(cluster));
+		}
+
+		return clusters;
 	}
 
 } // namespace Geometry

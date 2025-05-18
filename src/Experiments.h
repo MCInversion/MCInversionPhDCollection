@@ -246,6 +246,8 @@ void TestNormalActivation();
 */
 // --------------------------------------------------------------------------------
 
+void PointCloudClustering();
+void PointCloudClusteringPipeline();
 void TestPoissonMeshingStrategy();
 void TestIMBShrinkWrapperNormalEstimation();
 
@@ -381,6 +383,9 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
 // Late Spring / Summer of 2025. TU Wien June 6th Talk.
 // ..................................................................................
 
+    {"PointCloudClustering", PointCloudClustering },
+    {"PointCloudClusteringPipeline", PointCloudClusteringPipeline },
+    {"TestPoissonMeshingStrategy", TestPoissonMeshingStrategy },
     {"TestIMBShrinkWrapperNormalEstimation", TestIMBShrinkWrapperNormalEstimation },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------

@@ -138,7 +138,10 @@ int main()
 // Late Spring / Summer of 2025. TU Wien June 6th Talk.
 // ..................................................................................
 
-        "TestIMBShrinkWrapperNormalEstimation",
+        //"PointCloudClustering",
+        "PointCloudClusteringPipeline",
+        //"TestPoissonMeshingStrategy",
+        //"TestIMBShrinkWrapperNormalEstimation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

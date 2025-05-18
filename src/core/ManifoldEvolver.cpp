@@ -201,6 +201,7 @@ void ManifoldCurveEvolutionStrategy::ExportFinalResult(const std::string& baseOu
 
 void ManifoldCurveEvolutionStrategy::ExportTargetDistanceFieldAsImage(const std::string& baseOutputFilename)
 {
+	using namespace Geometry;
 	constexpr double colorMapPlotScaleFactor = 0.5; // scale the distance field color map down to show more detail
 
 	// ----------------------------------------------------------------

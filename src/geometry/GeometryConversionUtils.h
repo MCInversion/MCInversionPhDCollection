@@ -367,4 +367,40 @@ namespace Geometry
 	/// \brief Finds the indices of boundary points of a given point cloud.
 	[[nodiscard]] std::vector<std::pair<unsigned int, unsigned int>> GetBoundaryPointsOfPointCloudGaps2D(const std::vector<pmp::Point2>& points);
 
+	// ===============================
+
+	/// \brief Partitions an input point cloud into clusters with members being no farther apart than criticalRadius.
+	[[nodiscard]] std::vector<std::vector<pmp::Point>> GetPointClusters(const std::vector<pmp::Point>& points, const pmp::Scalar& criticalRadius);
+
+	/// \brief Fills the kdtree with points.
+	void Get3DPointSearchIndex(const std::vector<pmp::Point>& points, PointCloud3D& outCloud, std::unique_ptr<PointCloud3DTree>& outTree);
+
+	/// \brief A wrapper for PointCloud3DTree and the PointCloud3D
+	struct PointSearchIndex3D
+	{
+		PointCloud3D cloud;
+		PointCloud3DTree tree;
+
+		PointSearchIndex3D() = delete;
+
+		/// \brief Constructor. No copy or move needed, because we only ever allocate on the heap
+		explicit PointSearchIndex3D(const std::vector<pmp::Point>& points)
+			: cloud{ PointCloud3D{points} },
+			  tree{/*dim=*/3, cloud, nanoflann::KDTreeSingleIndexAdaptorParams(/*max leaf=*/10) }
+		{
+			tree.buildIndex();
+		}
+	};
+
+	/// \brief Creates an instance of a PointSearchIndex3D.
+	[[nodiscard]] std::unique_ptr<PointSearchIndex3D> Get3DPointSearchIndex(const std::vector<pmp::Point>& points);
+	
+	/// \brief Computes the average distance between points in the input point cloud.
+	[[nodiscard]] pmp::Scalar ComputeNearestNeighborMeanInterVertexDistance(const PointCloud3D& cloud, PointCloud3DTree& tree, const size_t& nNeighbors = 6);
+
+	/// \brief Partitions an input point cloud into clusters with members being no farther apart than criticalRadius.
+	[[nodiscard]] std::vector<std::vector<pmp::Point>> GetPointClusters(const PointCloud3D& cloud, PointCloud3DTree& tree, const pmp::Scalar& criticalRadius);
+
+	//[[nodiscard]] std::vector<pmp::Normal> EstimatePointCloudNormalsVCG(const std::vector<pmp::Point>& points)
+
 } // namespace Geometry

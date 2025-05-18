@@ -28,10 +28,78 @@
 
 #include "../Experiments.h"
 
+void PointCloudClustering()
+{
+	const auto ptCloudName = "spheres";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "PointCloudClustering: ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	const pmp::Scalar criticalRadius = Geometry::ComputeNearestNeighborMeanInterVertexDistance(pts, 10) * 2.5;
+	std::cout << "PointCloudClustering: criticalRadius evaluated to: " << criticalRadius << ".\n";
+	const auto ptClusters = Geometry::GetPointClusters(pts, criticalRadius);
+	constexpr size_t nExpected = 4;
+	std::cout << "PointCloudClustering: Found " << ptClusters.size() << (ptClusters.size() == nExpected ? " == " : " != ") << std::to_string(nExpected) << " clusters in " << pts.size() << " points.\n";
+
+	for (int i = 0; i < ptClusters.size(); ++i)
+	{
+		std::cout << "PointCloudClustering: cluster " << std::to_string(i) << ": " << ptClusters[i].size() << " pts.\n";
+		const std::string outputFileName = dataOutPath + ptCloudName + "_Cluster" + std::to_string(i) + ".ply";
+		if (!Geometry::Export3DPointCloudToPLY(ptClusters[i], outputFileName))
+		{
+			std::cerr << "PointCloudClustering: Failed to export point cloud." << "\n";
+			return;
+		}
+	}
+}
+
+void PointCloudClusteringPipeline()
+{
+	const auto ptCloudName = "spheres";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "PointCloudClusteringPipeline: ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	const auto pt3DIndex = Geometry::Get3DPointSearchIndex(pts);
+	if (!pt3DIndex)
+	{
+		std::cerr << "PointCloudClusteringPipeline: pt3DIndex == nullptr!\n";
+		return;
+	}
+
+	const auto& ptCloud = pt3DIndex->cloud;
+	auto& kdTree = pt3DIndex->tree;
+
+	const pmp::Scalar criticalRadius = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ptCloud, kdTree, 10) * 2.5;
+	std::cout << "PointCloudClusteringPipeline: criticalRadius evaluated to: " << criticalRadius << ".\n";
+	const auto ptClusters = Geometry::GetPointClusters(ptCloud, kdTree, criticalRadius);
+	constexpr size_t nExpected = 4;
+	std::cout << "PointCloudClusteringPipeline: Found " << ptClusters.size() << (ptClusters.size() == nExpected ? " == " : " != ") << std::to_string(nExpected) << " clusters in " << pts.size() << " points.\n";
+
+	for (int i = 0; i < ptClusters.size(); ++i)
+	{
+		std::cout << "PointCloudClusteringPipeline: cluster " << std::to_string(i) << ": " << ptClusters[i].size() << " pts.\n";
+		const std::string outputFileName = dataOutPath + ptCloudName + "_Cluster" + std::to_string(i) + ".ply";
+		if (!Geometry::Export3DPointCloudToPLY(ptClusters[i], outputFileName))
+		{
+			std::cerr << "PointCloudClusteringPipeline: Failed to export point cloud." << "\n";
+			return;
+		}
+	}
+}
+
 void TestPoissonMeshingStrategy()
 {
 	const auto ptCloudName = "bunnyPts_3";
-	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 	if (!ptCloudOpt.has_value())
 	{
 		std::cerr << "ptCloudOpt == nullopt!\n";
@@ -47,7 +115,7 @@ void TestPoissonMeshingStrategy()
 	const std::string outputFileName = dataOutPath + ptCloudName + "_PoissonRecon.vtk";
 	if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
 	{
-		std::cout << "Failed to export mesh data." << "\n";
+		std::cerr << "Failed to export mesh data." << "\n";
 		return;
 	}
 }
@@ -55,7 +123,7 @@ void TestPoissonMeshingStrategy()
 void TestIMBShrinkWrapperNormalEstimation()
 {
 	const auto ptCloudName = "bunnyPts_3";
-	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataOutPath + ptCloudName + ".ply", true);
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
 	if (!ptCloudOpt.has_value())
 	{
 		std::cerr << "ptCloudOpt == nullopt!\n";
@@ -71,7 +139,7 @@ void TestIMBShrinkWrapperNormalEstimation()
 	const std::string outputFileName = dataOutPath + ptCloudName + "_LSWRecon.vtk";
 	if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
 	{
-		std::cout << "Failed to export mesh data." << "\n";
+		std::cerr << "Failed to export mesh data." << "\n";
 		return;
 	}
 }

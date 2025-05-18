@@ -238,14 +238,14 @@ void ManifoldCurve2DTests()
 {
 	const auto closedArc = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 32);
 
-	if (!ExportManifoldCurve2DToPLY(closedArc, dataOutPath + "closedArc.ply"))
+	if (!Geometry::ExportManifoldCurve2DToPLY(closedArc, dataOutPath + "closedArc.ply"))
 	{
 		std::cerr << "ExportManifoldCurve2DToPLY: internal error!\n";
 	}
 
 	const auto openArc = pmp::CurveFactory::circle(pmp::Point2(0, 0), 1.0, 16, 0, M_PI);
 
-	if (!ExportManifoldCurve2DToPLY(openArc, dataOutPath + "openArc.ply"))
+	if (!Geometry::ExportManifoldCurve2DToPLY(openArc, dataOutPath + "openArc.ply"))
 	{
 		std::cerr << "ExportManifoldCurve2DToPLY: internal error!\n";
 	}
@@ -325,7 +325,7 @@ void PointCloud2DSliceTests()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -944,7 +944,7 @@ void OldVsNewLSWTests()
 			Circle2D{pmp::Point2{0.03, 0.04}, 0.015 } };
 		DeletePointsContainedInCircles(pts2D, cutCircles);
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -1296,7 +1296,7 @@ void PairedLSWTests()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -1622,7 +1622,7 @@ void PairedLSWRepulsionTests()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -3089,7 +3089,7 @@ void VisualizeMultipleInnerCurves()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -3646,7 +3646,7 @@ void SimpleMeshesIOLSWTests()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -4251,7 +4251,7 @@ void StandardMeshesIOLSWTests()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -4983,7 +4983,7 @@ void JunkCan2DTests()
 			continue;
 		}
 
-		if (!Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
+		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
 		{
 			std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 			continue;
@@ -5097,6 +5097,7 @@ void JunkCan2DTests()
 
 void InscribedCircleCalculatorVisualization()
 {
+	using namespace Geometry;
 	// Data (incomplete circle)
 	pmp::ManifoldCurve2D targetCurve = pmp::CurveFactory::circle(pmp::Point2(0.0, 0.0), 0.75, 16);
 	auto targetPts = targetCurve.positions();
@@ -5399,6 +5400,7 @@ void TestProblematicMedialAxisPtClouds()
 
 void TestDFDivergence2D()
 {
+	using namespace Geometry;
 	//const std::vector unevenCrossPolyPts{
 	//	pmp::Point2{39.507142, 14.544772},
 	//	pmp::Point2{46.104261, 5.542495},
@@ -5700,6 +5702,7 @@ void TestSmoothingAdvectionEquilibrium()
 
 void TestImageToDistanceField()
 {
+	using namespace Geometry;
 	// const std::string imgName = "room";
 	const std::string imgName = "shape";
 	SDF::ImageDistanceField2DSettings dfSettings;
@@ -6005,12 +6008,12 @@ void TestNormalActivation()
 		innerCurveGapActivated.push_back(pathNormalActivationInner0Curve.position(v));
 	}
 
-	if (!Export2DPointCloudToPLY(outerCurveGapActivated, dataOutPath + "outerCurveGapActivated.ply"))
+	if (!Geometry::Export2DPointCloudToPLY(outerCurveGapActivated, dataOutPath + "outerCurveGapActivated.ply"))
 	{
 		std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 	}
 
-	if (!Export2DPointCloudToPLY(innerCurveGapActivated, dataOutPath + "innerCurveGapActivated.ply"))
+	if (!Geometry::Export2DPointCloudToPLY(innerCurveGapActivated, dataOutPath + "innerCurveGapActivated.ply"))
 	{
 		std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 	}
