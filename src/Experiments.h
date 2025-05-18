@@ -248,6 +248,7 @@ void TestNormalActivation();
 
 void PointCloudClustering();
 void PointCloudClusteringPipeline();
+void PointCloudNormalsVCG();
 void TestPoissonMeshingStrategy();
 void TestIMBShrinkWrapperNormalEstimation();
 
@@ -385,6 +386,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
 
     {"PointCloudClustering", PointCloudClustering },
     {"PointCloudClusteringPipeline", PointCloudClusteringPipeline },
+    {"PointCloudNormalsVCG", PointCloudNormalsVCG },
     {"TestPoissonMeshingStrategy", TestPoissonMeshingStrategy },
     {"TestIMBShrinkWrapperNormalEstimation", TestIMBShrinkWrapperNormalEstimation },
 

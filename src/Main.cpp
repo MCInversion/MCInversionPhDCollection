@@ -139,7 +139,8 @@ int main()
 // ..................................................................................
 
         //"PointCloudClustering",
-        "PointCloudClusteringPipeline",
+        //"PointCloudClusteringPipeline",
+        "PointCloudNormalsVCG",
         //"TestPoissonMeshingStrategy",
         //"TestIMBShrinkWrapperNormalEstimation",
 

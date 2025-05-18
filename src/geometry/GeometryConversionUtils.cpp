@@ -53,18 +53,29 @@ namespace
 	{
 		std::vector<std::vector<unsigned int>> indices;
 		indices.reserve(vcgMesh.face.size());
-		for (const auto& f : vcgMesh.face) {
+		for (const auto& f : vcgMesh.face) 
+		{
 			std::vector<unsigned int> faceIndices;
 			faceIndices.reserve(f.VN()); // Assuming VN() is the number of vertices per face, typically 3 for a triangular mesh
 
-			for (int i = 0; i < f.VN(); ++i) {
-				if (f.cV(i)) { // Check if the vertex pointer is not null
+			for (int i = 0; i < f.VN(); ++i) 
+			{
+				if (f.cV(i)) 
+				{ // Check if the vertex pointer is not null
 					faceIndices.push_back(vcg::tri::Index(vcgMesh, f.cV(i))); // Get the index of the vertex in the mesh
 				}
 			}
 			indices.push_back(faceIndices);
 		}
 		return indices;
+	}
+
+	[[nodiscard]] std::vector<pmp::Normal> ExtractVertexNormalsFromVCGMesh(const VCG_Mesh& vcgMesh, const pmp::Scalar& orient = 1.0)
+	{
+		std::vector<pmp::Normal> normals;
+		std::ranges::transform(vcgMesh.vert, std::back_inserter(normals), [&orient](const auto& vcgVert) {
+			return pmp::Point{ orient * vcgVert.cN()[0], orient *vcgVert.cN()[1], orient * vcgVert.cN()[2] }; });
+		return normals;
 	}
 
 
@@ -2866,6 +2877,31 @@ namespace Geometry
 		}
 
 		return clusters;
+	}
+
+	std::vector<pmp::Normal> EstimatePointCloudNormalsVCG(const std::vector<pmp::Point>& points, const size_t& fittingAdjNum, const size_t& nSmoothingIters, const pmp::Point& viewPoint, const bool& useViewPoint)
+	{
+		if (points.empty())
+		{
+			std::cerr << "Geometry::EstimatePointCloudNormalsVCG: No points to triangulate.\n";
+			return {};
+		}
+
+		// prepare data
+		BaseMeshGeometryData resultData;
+		resultData.Vertices = points;
+		VCG_Mesh ptsMesh;
+		FillVCGMeshWithPoints(points, ptsMesh);
+
+		vcg::tri::PointCloudNormal<VCG_Mesh>::Param p;
+		p.fittingAdjNum = fittingAdjNum;
+		p.smoothingIterNum = nSmoothingIters;
+		p.viewPoint = vcg::Point3f(viewPoint[0], viewPoint[1], viewPoint[2]);
+		p.useViewPoint = useViewPoint;
+		vcg::tri::PointCloudNormal<VCG_Mesh>::Compute(ptsMesh, p);
+
+		resultData.VertexNormals = ExtractVertexNormalsFromVCGMesh(ptsMesh, -1.0 /* for some reason they're flipped */);
+		return resultData.VertexNormals;
 	}
 
 } // namespace Geometry

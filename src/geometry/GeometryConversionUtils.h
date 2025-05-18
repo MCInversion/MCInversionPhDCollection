@@ -268,6 +268,8 @@ namespace Geometry
 		const pmp::Scalar& clusteringPercentageOfBallRadius = 20, 
 		const pmp::Scalar& angleThreshold = 90.0);
 
+	//[[nodiscard]] std::optional<BaseMeshGeometryData> ComputePoissonMeshFromOrientedPoints(const std::vector<pmp::Point>& points, );
+
 	/// \brief Computes the minimum distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistance(const std::vector<pmp::Point>& points);
 
@@ -401,6 +403,7 @@ namespace Geometry
 	/// \brief Partitions an input point cloud into clusters with members being no farther apart than criticalRadius.
 	[[nodiscard]] std::vector<std::vector<pmp::Point>> GetPointClusters(const PointCloud3D& cloud, PointCloud3DTree& tree, const pmp::Scalar& criticalRadius);
 
-	//[[nodiscard]] std::vector<pmp::Normal> EstimatePointCloudNormalsVCG(const std::vector<pmp::Point>& points)
+	/// \brief The VCG version of unoriented point cloud normal estimation.
+	[[nodiscard]] std::vector<pmp::Normal> EstimatePointCloudNormalsVCG(const std::vector<pmp::Point>& points, const size_t& fittingAdjNum, const size_t& nSmoothingIters, const pmp::Point& viewPoint, const bool& useViewPoint);
 
 } // namespace Geometry

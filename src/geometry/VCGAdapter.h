@@ -5,6 +5,7 @@
 #include <vcg/complex/algorithms/update/bounding.h>
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
 #include <vcg/complex/algorithms/convex_hull.h>
+#include <vcg/complex/algorithms/pointcloud_normal.h>
 
 #include "pmp/Types.h"
 

@@ -96,6 +96,35 @@ void PointCloudClusteringPipeline()
 	}
 }
 
+void PointCloudNormalsVCG()
+{
+	const auto ptCloudName = "bunnyPts_3";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "PointCloudNormalsVCG: ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	constexpr size_t nNeighbors = 10;
+	constexpr size_t smoothingIters = 1;
+	const pmp::Point viewPoint{ 0, 0, 0 };
+	constexpr bool useViewPoint = false;
+	const auto normals = Geometry::EstimatePointCloudNormalsVCG(pts, nNeighbors, smoothingIters, viewPoint, useViewPoint);
+
+	Geometry::BaseMeshGeometryData orientedPts;
+	orientedPts.Vertices = pts;
+	orientedPts.VertexNormals = normals;
+
+	const std::string outputFileName = dataOutPath + ptCloudName + "_WithVCGNormals.ply";
+	if (!Geometry::ExportPointsToPLY(orientedPts, outputFileName))
+	{
+		std::cerr << "PointCloudNormalsVCG: Failed to export point cloud." << "\n";
+		return;
+	}
+}
+
 void TestPoissonMeshingStrategy()
 {
 	const auto ptCloudName = "bunnyPts_3";
