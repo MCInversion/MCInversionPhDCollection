@@ -268,7 +268,7 @@ namespace Geometry
 		const pmp::Scalar& clusteringPercentageOfBallRadius = 20, 
 		const pmp::Scalar& angleThreshold = 90.0);
 
-	//[[nodiscard]] std::optional<BaseMeshGeometryData> ComputePoissonMeshFromOrientedPoints(const std::vector<pmp::Point>& points, );
+	//[[nodiscard]] std::optional<BaseMeshGeometryData> ComputePoissonMeshFromOrientedPoints(const std::vector<pmp::Point>& points, const std::vector<pmp::Normal>& normals /*, Poisson params, perhaps in a struct wrapper */);
 
 	/// \brief Computes the minimum distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistance(const std::vector<pmp::Point>& points);

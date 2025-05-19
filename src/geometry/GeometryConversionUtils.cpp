@@ -78,7 +78,6 @@ namespace
 		return normals;
 	}
 
-
 	// TODO: different representations, e.g.: ProgressiveMeshData which would then be exported into a disk file
 	/**
 	 * \brief a thread-specific wrapper for mesh data.

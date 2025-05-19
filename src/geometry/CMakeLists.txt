@@ -1,15 +1,43 @@
-cmake_minimum_required(VERSION 3.14)
+﻿cmake_minimum_required(VERSION 3.14)
 Project(Geometry)
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 #add_compile_options(/bigobj) # for some Eigen solvers
 
-file(GLOB Geometry_Src CONFIGURE_DEPENDS "*.h" "*.cpp")
-add_library(${PROJECT_NAME} ${Geometry_Src})
+# collect only the top-level Geometry files
+file(GLOB Geometry_Src
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+)
+file(GLOB Geometry_Includes
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+)
 
-# Ensure that the Fade2D include directories are accessible
-target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../fade2d/include_fade2d")
+# collect only the Poisson folder files
+file(GLOB Poisson_Files
+    "${CMAKE_CURRENT_SOURCE_DIR}/Poisson/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Poisson/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Poisson/*.inl"
+)
+
+# build the library from both sets
+add_library(${PROJECT_NAME}
+    ${Geometry_Src}
+    ${Geometry_Includes}
+    ${Poisson_Files}
+)
+
+# Create VS filters
+if (MSVC)
+  source_group("Poisson" FILES ${Poisson_Files})
+endif()
+
+# Includes (so #include "Poisson/Octree.h" works)
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    "${CMAKE_CURRENT_SOURCE_DIR}/../fade2d/include_fade2d"
+)
 
 # Link Geometry library with other libraries, including Fade2D
 target_link_libraries(${PROJECT_NAME} PUBLIC pmp Utils fade2d poly2tri sawhney_mat triangle tet)
