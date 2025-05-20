@@ -89,7 +89,7 @@ namespace IMB
 				continue;
 			}
 
-			// Append and reindex
+			// Reindex and append
 			auto polyIds = poissonMesh->PolyIndices;
 			if (clusterCounter > 0)
 			{
