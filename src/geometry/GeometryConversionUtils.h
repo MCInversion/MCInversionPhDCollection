@@ -76,7 +76,7 @@ namespace Geometry
 	 * \param mcMesh       Marching cubes mesh to be converted.
 	 * \return pmp::SurfaceMesh result.
 	 */
-	[[nodiscard]] pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MarchingCubes::MC_Mesh& mcMesh);
+	[[nodiscard]] pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const IlatsikMC::MC_Mesh& mcMesh);
 
 	/**
 	 * \brief For testing out the BaseMeshGeometryData by exporting it to a Wavefront OBJ file.
@@ -268,7 +268,36 @@ namespace Geometry
 		const pmp::Scalar& clusteringPercentageOfBallRadius = 20, 
 		const pmp::Scalar& angleThreshold = 90.0);
 
-	//[[nodiscard]] std::optional<BaseMeshGeometryData> ComputePoissonMeshFromOrientedPoints(const std::vector<pmp::Point>& points, const std::vector<pmp::Normal>& normals /*, Poisson params, perhaps in a struct wrapper */);
+	// ----------------------------------------------------------------
+	/// \brief A wrapper for Poisson reconstruction parameters.
+	/// \struct PoissonReconstructionParams
+	// ----------------------------------------------------------------
+	struct PoissonReconstructionParams
+	{
+		int    depth{ 8 };            //>! maximum octree depth (upper bound on reconstruction resolution; grid size <= 2^depth per axis)
+		int    fullDepth{ 5 };        //>! depth below which the octree remains 'full' (no adaptivity) to aid multigrid convergence
+		int    cgDepth{ 0 };          //>! depth up to which a conjugate-gradient solver is used; beyond that, Gauss-Seidel relaxation is applied
+		int    threads{ 1 };          //>! number of parallel threads for octree construction, solver, and mesh extraction
+		float  scale{ 1.1f };         //>! expansion factor of the input bounding cube to avoid boundary artifacts
+		float  samplesPerNode{ 1.5f }; //>! minimum samples per octree leaf for density estimation (controls smoothing; typically 1-5 for clean data, 15-20 for noisy data)
+		float  pointWeight{ 4.0f };   //>! screening weight (lambda) for point-value constraints; lambda=0 yields the classical (unscreened) Poisson formulation
+		int    iters{ 8 };            //>! number of Gauss-Seidel relaxations performed at each multigrid level
+		bool   confidence{ false };   //>! use per-vertex quality as confidence (scales normals by their quality instead of normalizing them)
+		bool   preClean{ false };     //>! perform a pre-clean pass removing unreferenced vertices or those with zero normals
+	};
+
+	/**
+	 * \brief Computes a mesh from the given oriented point cloud using the Screened Poisson reconstruction algorithm.
+	 *        Kazhdan, M., Bolitho, M., & Hoppe, H. (2006, June). Poisson surface reconstruction. In Proceedings of the fourth Eurographics symposium on Geometry processing (Vol. 7, No. 4).
+	 * \param points       input point cloud.
+	 * \param normals      unit normal vectors for the input point cloud.
+	 * \param params       input reconstruction params.
+	 * \return optional resulting BaseMeshGeometryData if the computation is successful.
+	 */
+	[[nodiscard]] std::optional<BaseMeshGeometryData> ComputePoissonMeshFromOrientedPoints(
+		const std::vector<pmp::Point>& points, 
+		const std::vector<pmp::Normal>& normals, 
+		const PoissonReconstructionParams& params);
 
 	/// \brief Computes the minimum distance between points in the input point cloud.
 	[[nodiscard]] pmp::Scalar ComputeMinInterVertexDistance(const std::vector<pmp::Point>& points);

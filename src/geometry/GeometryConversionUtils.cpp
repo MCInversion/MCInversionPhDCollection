@@ -13,15 +13,16 @@
 
 #include "pmp/algorithms/Normals.h"
 
+#include <tetgen.h>
+#include <triangle.h>
+
 #include "VCGAdapter.h"
+#include "PoissonAdapter.h"
 
 #include "sawhney_mat/MedialAxisTransform.h"
 #include "sawhney_mat/BoundaryElement.h"
 #include "sawhney_mat/BoundaryGenerator.h"
 #include "sawhney_mat/Path.h"
-
-#include <tetgen.h>
-#include <triangle.h>
 
 #ifdef _WINDOWS
 // Windows-specific headers
@@ -35,18 +36,37 @@
 
 namespace
 {
-	void FillVCGMeshWithPoints(const std::vector<pmp::Point>& points, VCG_Mesh& vcgMesh)
+	void FillVCGMeshWithPoints(VCG_Mesh& vcgMesh, 
+		const std::vector<pmp::Point>& points, const std::optional<std::vector<pmp::Normal>>& normals = std::nullopt)
 	{
+		if (normals && normals->size() != points.size())
+		{
+			std::cerr << "FillVCGMeshWithPoints: normals && normals->size() != points.size()!\n";
+			return;
+		}
+
 		vcgMesh.Clear();  // Clear existing mesh data
+		vcgMesh.vert.reserve(points.size());
 
 		// Add vertices to the VCG_Mesh
 		for (const auto& point : points) {
 			VCG_Vertex v;
-			v.P() = vcg::Point3f(point[0], point[1], point[2]);  // Set the vertex coordinates
-			vcgMesh.vert.push_back(v);  // Add the vertex to the mesh
+			v.P() = vcg::Point3f(point[0], point[1], point[2]);
+			vcgMesh.vert.push_back(v);
 		}
 		vcgMesh.vn = vcgMesh.vert.size();  // Update the vertex count
 		vcg::tri::UpdateBounding<VCG_Mesh>::Box(vcgMesh);
+
+		if (normals.has_value())
+		{
+			// Add vertex normals to each vertex
+			unsigned int i = 0;
+			for (VCG_Mesh::VertexIterator vi = vcgMesh.vert.begin(); vi != vcgMesh.vert.end(); ++vi)
+			{
+				vi->N() = vcg::Point3f((*normals)[i][0], (*normals)[i][1], (*normals)[i][2]);
+				++i;
+			}
+		}
 	}
 
 	[[nodiscard]] std::vector<std::vector<unsigned int>> ExtractVertexIndicesFromVCGMesh(const VCG_Mesh& vcgMesh)
@@ -474,7 +494,7 @@ namespace Geometry
 		return result;
 	}
 
-	pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const MarchingCubes::MC_Mesh& mcMesh)
+	pmp::SurfaceMesh ConvertMCMeshToPMPSurfaceMesh(const IlatsikMC::MC_Mesh& mcMesh)
 	{
 		pmp::SurfaceMesh result;
 
@@ -1568,7 +1588,7 @@ namespace Geometry
 		BaseMeshGeometryData resultData;
 
 		VCG_Mesh ptsMesh;
-		FillVCGMeshWithPoints(points, ptsMesh);
+		FillVCGMeshWithPoints(ptsMesh, points);
 		VCG_Mesh result;
 		result.face.EnableFFAdjacency();
 		vcg::tri::UpdateTopology<VCG_Mesh>::FaceFace(result);
@@ -1972,7 +1992,7 @@ namespace Geometry
 		const auto angleRad = angleThreshold / 180.0 * M_PI;
 
 		VCG_Mesh ptsMesh;
-		FillVCGMeshWithPoints(points, ptsMesh);
+		FillVCGMeshWithPoints(ptsMesh, points);
 		vcg::tri::BallPivoting bpa(ptsMesh, ballRadius, clustering, angleRad);
 		bpa.BuildMesh();
 
@@ -2067,6 +2087,54 @@ namespace Geometry
 		}
 
 	};  // end of PointCloudAdaptor
+
+	std::optional<BaseMeshGeometryData> ComputePoissonMeshFromOrientedPoints(
+		const std::vector<pmp::Point>& points, 
+		const std::vector<pmp::Normal>& normals, 
+		const PoissonReconstructionParams& params)
+	{
+		if (points.empty() || normals.empty())
+		{
+			std::cerr << "Geometry::ComputePoissonMeshFromOrientedPoints: points.empty() || normals.empty()!\n";
+			return {};
+		}
+
+		if (points.size() != normals.size())
+		{
+			std::cerr << "Geometry::ComputePoissonMeshFromOrientedPoints: points.size() != normals.size()!\n";
+			return {};
+		}
+
+		PoissonParam<Scalarm> pp;
+		pp.MaxDepthVal = params.depth;
+		pp.FullDepthVal = params.fullDepth;
+		pp.CGDepthVal = params.cgDepth;
+		pp.ScaleVal = params.scale;
+		pp.SamplesPerNodeVal = params.samplesPerNode;
+		pp.PointWeightVal = params.pointWeight;
+		pp.ItersVal = params.iters;
+		pp.ConfidenceFlag = params.confidence;
+		pp.DensityFlag = true;
+		pp.CleanFlag = params.preClean;
+		pp.ThreadsVal = params.threads;
+
+		VCG_Mesh ptsMesh;
+		FillVCGMeshWithPoints(ptsMesh, points, normals);
+		PoissonClean(ptsMesh, pp.ConfidenceFlag, pp.CleanFlag);
+		const bool goodNormal = HasGoodNormal(ptsMesh);
+		MeshModelPointStream<Scalarm> meshStream(ptsMesh);
+
+		VCG_Mesh poissonMesh;
+		_Execute<Scalarm, 2, BOUNDARY_NEUMANN, PlyColorAndValueVertex<Scalarm> >(&meshStream, ptsMesh.bbox, poissonMesh, pp, nullptr);
+
+		BaseMeshGeometryData resultData;
+		std::ranges::transform(poissonMesh.vert, std::back_inserter(resultData.Vertices), [](const auto& vcgVert) {
+				return pmp::Point{ vcgVert.P()[0], vcgVert.P()[1], vcgVert.P()[2] };
+		});
+		resultData.PolyIndices = ExtractVertexIndicesFromVCGMesh(poissonMesh);
+
+		return resultData;
+	}
 
 	pmp::Scalar ComputeMinInterVertexDistance(const std::vector<pmp::Point>& points)
 	{
@@ -2890,7 +2958,7 @@ namespace Geometry
 		BaseMeshGeometryData resultData;
 		resultData.Vertices = points;
 		VCG_Mesh ptsMesh;
-		FillVCGMeshWithPoints(points, ptsMesh);
+		FillVCGMeshWithPoints(ptsMesh, points);
 
 		vcg::tri::PointCloudNormal<VCG_Mesh>::Param p;
 		p.fittingAdjNum = fittingAdjNum;

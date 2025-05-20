@@ -39,7 +39,7 @@ SUCH DAMAGE.
 #include <map>
 #include <cstddef>
 
-namespace MarchingCubes
+namespace IlatsikMC
 {
 	typedef float Point[3];
 

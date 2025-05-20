@@ -98,7 +98,7 @@ void MetaballTest()
 	ExportToVTI(dataOutPath + "MetaBallVals", grid);
 
 	/*constexpr double isoLevel = 0.1;
-	const auto mcMesh = MarchingCubes::GetMarchingCubesMesh<double>(
+	const auto mcMesh = IlatsikMC::GetMarchingCubesMesh<double>(
 		grid.Values().data(),
 		grid.Dimensions().Nx, grid.Dimensions().Ny, grid.Dimensions().Nz,
 		isoLevel);

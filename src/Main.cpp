@@ -140,8 +140,8 @@ int main()
 
         //"PointCloudClustering",
         //"PointCloudClusteringPipeline",
-        "PointCloudNormalsVCG",
-        //"TestPoissonMeshingStrategy",
+        //"PointCloudNormalsVCG",
+        "TestPoissonMeshingStrategy",
         //"TestIMBShrinkWrapperNormalEstimation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------

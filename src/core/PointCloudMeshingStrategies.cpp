@@ -53,7 +53,54 @@ namespace IMB
 	{
 		std::cout << "PoissonMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 
+		// divide points into clusters
+		const auto pt3DIndex = Geometry::Get3DPointSearchIndex(ioPoints);
+		if (!pt3DIndex)
+		{
+			std::cerr << "PoissonMeshingStrategy::ProcessImpl: Get3DPointSearchIndex error!\n";
+			return;
+		}
+		const auto& ptCloud = pt3DIndex->cloud;
+		auto& kdTree = pt3DIndex->tree;
+		const pmp::Scalar criticalRadius = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ptCloud, kdTree, 10) * 2.5;
+		const auto ptClusters = Geometry::GetPointClusters(ptCloud, kdTree, criticalRadius);
 
+		resultPolyIds.clear();
+		ioPoints.clear();
+		size_t clusterCounter = 0;
+		for (const auto& pts : ptClusters)
+		{
+			// compute normals
+			constexpr size_t nNeighbors = 10;
+			constexpr size_t smoothingIters = 1;
+			const pmp::Point viewPoint{ 0, 0, 0 };
+			constexpr bool useViewPoint = false;
+			const auto normals = Geometry::EstimatePointCloudNormalsVCG(pts, nNeighbors, smoothingIters, viewPoint, useViewPoint);
+
+			// Poisson
+			Geometry::PoissonReconstructionParams poissonParams;
+			poissonParams.depth = 6;
+			poissonParams.fullDepth = 4;
+			poissonParams.threads = 1; // Consider using spare threads
+			const auto poissonMesh = Geometry::ComputePoissonMeshFromOrientedPoints(pts, normals, poissonParams);
+			if (!poissonMesh)
+			{
+				std::cerr << "PoissonMeshingStrategy::ProcessImpl: ComputePoissonMeshFromOrientedPoints error!\n";
+				continue;
+			}
+
+			// Append and reindex
+			auto polyIds = poissonMesh->PolyIndices;
+			if (clusterCounter > 0)
+			{
+				std::ranges::for_each(polyIds, [&clusterCounter](auto& polyIdTuple) {
+					std::ranges::for_each(polyIdTuple, [&clusterCounter](auto& vId) { vId += clusterCounter; });
+				});
+			}
+			clusterCounter += poissonMesh->Vertices.size();
+			ioPoints.insert(ioPoints.end(), poissonMesh->Vertices.begin(), poissonMesh->Vertices.end());
+			resultPolyIds.insert(resultPolyIds.end(), polyIds.begin(), polyIds.end());
+		}
 	}
 
 	void MarchingCubesMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)

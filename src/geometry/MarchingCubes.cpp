@@ -40,7 +40,7 @@ SUCH DAMAGE.
 #include <utility>
 #include <vector>
 
-namespace MarchingCubes
+namespace IlatsikMC
 {
 
 	const unsigned int EDGE_TABLE[256] = {
