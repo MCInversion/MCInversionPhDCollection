@@ -149,6 +149,30 @@ void TestPoissonMeshingStrategy()
 	}
 }
 
+void TestPoissonMeshingWithClustering()
+{
+	const auto ptCloudName = "spheres";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "PointCloudClusteringPipeline: ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	const auto meshingStrategy = IMB::GetReconstructionStrategy(IMB::ReconstructionFunctionType::Poisson);
+	Geometry::BaseMeshGeometryData mesh;
+	mesh.Vertices = pts;
+	meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
+
+	const std::string outputFileName = dataOutPath + ptCloudName + "_PoissonRecon.vtk";
+	if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
+	{
+		std::cerr << "Failed to export mesh data." << "\n";
+		return;
+	}
+}
+
 void TestIMBShrinkWrapperNormalEstimation()
 {
 	const auto ptCloudName = "bunnyPts_3";
