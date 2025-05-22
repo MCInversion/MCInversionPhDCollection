@@ -1,11 +1,13 @@
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <chrono>
 #include <iomanip>
 #include <ctime>
 #include <fstream>
-#include <sstream>
+
+#include <future>
+#include <thread>
 
 /**
  * \brief A simple macro for beginning of a timing session.
@@ -142,3 +144,45 @@ inline [[nodiscard]] bool ExportTimeVectorWithPointCountsInSeconds(const std::ve
     outFile.close();
     return true;
 }
+
+namespace Utils
+{
+    class DeadlinedScope
+    {
+    public:
+        using Clock = std::chrono::steady_clock;
+        using Duration = Clock::duration;
+
+        /// Runs `work()` on a background thread, waits up to `limit`,
+        /// returns true if `work()` completed in time, false otherwise.
+        template<typename F>
+        static bool Run(F&& work, Duration limit)
+        {
+            std::promise<void> promise;
+            auto               future = promise.get_future();
+
+            // fire off worker thread (note the = std::thread part)
+            std::jthread worker(
+                [p = std::move(promise),
+                w = std::forward<F>(work)]() mutable
+            {
+                w();            // run the client lambda
+                p.set_value();  // signal completion
+            }
+            );
+
+            // wait for completion or timeout
+            if (future.wait_for(limit) == std::future_status::ready)
+            {
+                worker.join();   // now join the thread
+                return true;
+            }
+            else
+            {
+                worker.detach(); // abandon it
+                return false;
+            }
+        }
+    };
+
+} // namespace Utils

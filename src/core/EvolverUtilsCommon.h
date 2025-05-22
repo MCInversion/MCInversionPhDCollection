@@ -9,6 +9,8 @@
 #include "geometry/MeshAnalysis.h"
 #include "geometry/GridUtil.h"
 
+#include "EvolverUtilsCommon.h"
+
 #include "utils/nlohmann/json.hpp"
 
 #include <ranges>

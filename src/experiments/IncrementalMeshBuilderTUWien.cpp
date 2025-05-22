@@ -23,6 +23,7 @@
 #include "geometry/GeometryIOUtils.h"
 
 #include "core/PointCloudMeshingStrategies.h"
+#include "core/IMB_ShrinkWrapper.h"
 
 #include "IOEnvironment.h"
 
@@ -168,9 +169,35 @@ void TestPoissonMeshingWithClustering()
 	const std::string outputFileName = dataOutPath + ptCloudName + "_PoissonRecon.vtk";
 	if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
 	{
-		std::cerr << "Failed to export mesh data." << "\n";
+		std::cerr << "PointCloudClusteringPipeline: Failed to export mesh data." << "\n";
 		return;
 	}
+}
+
+void TestIMBShrinkWrapper()
+{
+	const auto ptCloudName = "bunnyPts_3";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "TestIMBShrinkWrapper: ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	IMB_ShrinkWrapperSettings swSettings;
+
+	IMB_ShrinkWrapper sw{ swSettings, pts };
+
+	const auto result = sw.Perform();
+	if (!result)
+	{
+		std::cerr << "TestIMBShrinkWrapper: internal error in IMB_ShrinkWrapper!\n";
+		return;
+	}
+
+	const std::string outputFileName = dataOutPath + ptCloudName + "_IMBSW.vtk";
+	result->write(outputFileName);
 }
 
 void TestIMBShrinkWrapperNormalEstimation()
