@@ -607,9 +607,9 @@ void PropertyPerformanceTests()
 	}
 }
 
-void DeletePointsContainedInCircles(std::vector<pmp::Point2>& pointsToFilter, const std::vector<Circle2D>& cutCircles)
+void DeletePointsContainedInCircles(std::vector<pmp::Point2>& pointsToFilter, const std::vector<Geometry::Circle2D>& cutCircles)
 {
-	auto isPointInCircle = [](const pmp::Point2& point, const Circle2D& circle) {
+	auto isPointInCircle = [](const pmp::Point2& point, const Geometry::Circle2D& circle) {
 		return sqrnorm(point - circle.Center) <= (circle.Radius * circle.Radius);
 	};
 
@@ -623,9 +623,9 @@ void DeletePointsContainedInCircles(std::vector<pmp::Point2>& pointsToFilter, co
 	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnyCircle).begin(), pointsToFilter.end());
 }
 
-void DeletePointsContainedInSpheres(std::vector<pmp::Point>& pointsToFilter, const std::vector<Sphere3D>& cutSpheres)
+void DeletePointsContainedInSpheres(std::vector<pmp::Point>& pointsToFilter, const std::vector<Geometry::Sphere3D>& cutSpheres)
 {
-	auto isPointInSphere = [](const pmp::Point& point, const Sphere3D& sphere) {
+	auto isPointInSphere = [](const pmp::Point& point, const Geometry::Sphere3D& sphere) {
 		return sqrnorm(point - sphere.Center) <= (sphere.Radius * sphere.Radius);
 	};
 
@@ -639,9 +639,9 @@ void DeletePointsContainedInSpheres(std::vector<pmp::Point>& pointsToFilter, con
 	pointsToFilter.erase(std::ranges::remove_if(pointsToFilter, isInAnySphere).begin(), pointsToFilter.end());
 }
 
-void DeletePointsWithNormalsContainedInSpheres(std::vector<std::pair<pmp::Point, pmp::vec3>>& pointsToFilter, const std::vector<Sphere3D>& cutSpheres)
+void DeletePointsWithNormalsContainedInSpheres(std::vector<std::pair<pmp::Point, pmp::vec3>>& pointsToFilter, const std::vector<Geometry::Sphere3D>& cutSpheres)
 {
-	auto isPointInSphere = [](const pmp::Point& point, const Sphere3D& sphere) {
+	auto isPointInSphere = [](const pmp::Point& point, const Geometry::Sphere3D& sphere) {
 		return sqrnorm(point - sphere.Center) <= (sphere.Radius * sphere.Radius);
 	};
 
@@ -700,18 +700,18 @@ void OldVsNewLSWTests()
 		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		{"armadillo", Geometry::Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Geometry::Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Geometry::Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
 
-	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
+	const std::map<std::string, Geometry::Sphere3D> outerSpheres{
+		{"armadillo", Geometry::Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Geometry::Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Geometry::Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Geometry::Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 50;
@@ -940,8 +940,8 @@ void OldVsNewLSWTests()
 			continue;
 		}
 		const std::vector cutCircles{ 
-			Circle2D{pmp::Point2{-0.02, 0.04}, 0.015 },
-			Circle2D{pmp::Point2{0.03, 0.04}, 0.015 } };
+			Geometry::Circle2D{pmp::Point2{-0.02, 0.04}, 0.015 },
+			Geometry::Circle2D{pmp::Point2{0.03, 0.04}, 0.015 } };
 		DeletePointsContainedInCircles(pts2D, cutCircles);
 
 		if (!Geometry::Export2DPointCloudToPLY(pts2D, dataOutPath + meshName + "_Pts_2D.ply"))
@@ -1193,24 +1193,24 @@ void PairedLSWTests()
 		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		{"armadillo", Geometry::Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Geometry::Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Geometry::Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
-	const std::map<std::string, Circle2D> innerCircles{
-		{"armadillo", Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}},
-		{"bunny", Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}},
-		{"maxPlanck", Circle2D{pmp::Point2{8.0, 85.0}, 50.0}},
-		{"nefertiti", Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}}
+	const std::map<std::string, Geometry::Circle2D> innerCircles{
+		{"armadillo", Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}},
+		{"bunny", Geometry::Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}},
+		{"maxPlanck", Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0}},
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}}
 	};
 
-	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
+	const std::map<std::string, Geometry::Sphere3D> outerSpheres{
+		{"armadillo", Geometry::Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Geometry::Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Geometry::Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Geometry::Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -1512,24 +1512,24 @@ void PairedLSWRepulsionTests()
 		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		{"armadillo", Geometry::Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Geometry::Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Geometry::Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
-	const std::map<std::string, Circle2D> innerCircles{
-		{"armadillo", Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}},
-		{"bunny", Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}},
-		{"maxPlanck", Circle2D{pmp::Point2{8.0, 85.0}, 50.0}},
-		{"nefertiti", Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}}
+	const std::map<std::string, Geometry::Circle2D> innerCircles{
+		{"armadillo", Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}},
+		{"bunny", Geometry::Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}},
+		{"maxPlanck", Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0}},
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}}
 	};
 
-	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
+	const std::map<std::string, Geometry::Sphere3D> outerSpheres{
+		{"armadillo", Geometry::Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Geometry::Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Geometry::Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Geometry::Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
 	};
 
 	const std::map<std::string, double> criticalDistances{
@@ -1814,7 +1814,7 @@ void PairedLSWRepulsionTests()
 
 void OutwardEvolvingInnerCircleTest()
 {
-	const Circle2D innerTestCircle{ pmp::Point2{-3.0, 52.0}, 20.0 };
+	const Geometry::Circle2D innerTestCircle{ pmp::Point2{-3.0, 52.0}, 20.0 };
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
@@ -2000,19 +2000,19 @@ void AdvectionDrivenInnerCircleTests()
 			pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
 			pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 		{ "chamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
+			pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 		{ "incompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+			pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
 	constexpr double defaultTimeStep = 0.05;
 	constexpr double defaultOffsetFactor = 1.5;
 	constexpr unsigned int NTimeSteps = 180;
-	const auto innerTestCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 20.0 };
+	const auto innerTestCircle = Geometry::Circle2D{ pmp::Point2{ -3.0, 52.0 }, 20.0 };
 
 	for (const auto& [ptCloudName, curve] : targetCurves)
 	{
@@ -2095,11 +2095,11 @@ void AdvectionDrivenInnerCircleTests()
 void ConcentricCirclesTests()
 {
 	// Define the inner and outer circle pairs directly
-	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
-		{Circle2D{pmp::Point2{-3.0, 52.0}, 100.0}, Circle2D{pmp::Point2{-3.0, 52.0}, 121.558}},
-		{Circle2D{pmp::Point2{-25.0, 8.0}, 0.055}, Circle2D{pmp::Point2{-25.0, 8.0}, 0.142831}},
-		{Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Circle2D{pmp::Point2{8.0, 85.0}, 292.263}},
-		{Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Circle2D{pmp::Point2{-20.0, 90.0}, 441.436}}
+	const std::vector<std::pair<Geometry::Circle2D, Geometry::Circle2D>> circlePairs{
+		{Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 100.0}, Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 121.558}},
+		{Geometry::Circle2D{pmp::Point2{-25.0, 8.0}, 0.055}, Geometry::Circle2D{pmp::Point2{-25.0, 8.0}, 0.142831}},
+		{Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 292.263}},
+		{Geometry::Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Geometry::Circle2D{pmp::Point2{-20.0, 90.0}, 441.436}}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2217,11 +2217,11 @@ void ConcentricCirclesTests()
 void NonConcentricCirclesTest()
 {
 	// Define the inner and outer circle pairs directly
-	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
-		{Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}, Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558}},
-		{Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}, Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831}},
-		{Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263}},
-		{Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436}}
+	const std::vector<std::pair<Geometry::Circle2D, Geometry::Circle2D>> circlePairs{
+		{Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}, Geometry::Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558}},
+		{Geometry::Circle2D{pmp::Point2{-0.025, 0.08}, 0.025}, Geometry::Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831}},
+		{Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Geometry::Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263}},
+		{Geometry::Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Geometry::Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436}}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -2387,9 +2387,9 @@ void EquilibriumPairedManifoldTests()
 		pmp::Point2{-50.0, 50.0} + center
 	};
 	const std::vector<pmp::Point2> triangleVerticesLarge = {
-		pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * (2.0 * outerRadius) + center,
-		pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * (2.0 * outerRadius) + center,
-		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * (2.0 * outerRadius) + center
+		pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *(2.0 * outerRadius) + center,
+		pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *(2.0 * outerRadius) + center,
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *(2.0 * outerRadius) + center
 	};
 	const std::vector<pmp::Point2> squareVerticesSmall = {
 		pmp::Point2{-20.0, -20.0} + center,
@@ -2398,9 +2398,9 @@ void EquilibriumPairedManifoldTests()
 		pmp::Point2{-20.0, 20.0} + center
 	};
 	const std::vector<pmp::Point2> triangleVerticesSmall = {
-		pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * innerRadius + center,
-		pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} * innerRadius + center,
-		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * innerRadius + center
+		pmp::Point2{-0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *innerRadius + center,
+		pmp::Point2{0.5, -(pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)6.0} *innerRadius + center,
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *innerRadius + center
 	};
 	const unsigned int segments = 40;
 
@@ -2439,26 +2439,26 @@ void EquilibriumPairedManifoldTests()
 	strategySettings.AdvectionInteractWithOtherManifolds = true;
 	// use PreComputeAdvectionDiffusionParams?
 	strategySettings.OuterManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
-	{
-		//return 0.0;
-		return 0.5 * (1.0 - exp(-distance * distance / 1.0));
-	});
+		{
+			//return 0.0;
+			return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+		});
 	strategySettings.OuterManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
-	{
-		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-	});
+		{
+			return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		});
 	strategySettings.InnerManifoldEpsilon.Bind(minDistancePercentageEpsilon, [](double distance)
-	{
-		//return 0.0;
-		return 0.001 * TRIVIAL_EPSILON(distance);
-	});
+		{
+			//return 0.0;
+			return 0.001 * TRIVIAL_EPSILON(distance);
+		});
 	strategySettings.InnerManifoldEta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
-	{
-		return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-	});
+		{
+			return 1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			//return -1.0 * (1.0 - exp(-distance * distance / 0.5)) * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		});
 
 	strategySettings.TimeStep = 0.05;
 	strategySettings.TangentialVelocityWeight = 0.05;
@@ -2523,7 +2523,7 @@ void EquilibriumPairedManifoldTests()
 
 		const auto innerCurveMinDim = Geometry::GetCurveBoundsMinDimension(innerCurve);
 		strategySettings.FieldSettings.FieldIsoLevel = 4.0 * innerCurveMinDim / strategySettings.FieldSettings.NVoxelsPerMinDimension;
-		
+
 		// DEBUG translation
 		const pmp::Scalar smallXYShift = strategySettings.FieldSettings.FieldIsoLevel * 0.1;
 		const auto smallTranslation = translation_matrix(pmp::vec2{ smallXYShift , (pmp::Scalar)-0.66 * smallXYShift });
@@ -2801,7 +2801,7 @@ void EquilibriumPairedConcaveManifoldTests()
 		return 0.0;
 
 		//return -1.0 * distance * (std::abs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-		
+
 		//return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 		//return 1.0 * (1.0 - exp(-distance * distance / 0.5)) * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
 	};
@@ -2856,7 +2856,7 @@ void EquilibriumPairedConcaveManifoldTests()
 	globalSettings.RemeshingResizeFactor = 0.7;
 	globalSettings.RemeshingResizeTimeIds = GetRemeshingAdjustmentTimeIndices();
 
-	for (unsigned int pairId = 19; const auto& [outerCurve, innerCurve] : curvePairs)
+	for (unsigned int pairId = 19; const auto & [outerCurve, innerCurve] : curvePairs)
 	{
 		std::cout << "EquilibriumPairedConcaveManifoldTests for pair: " << pairId << "\n";
 
@@ -2900,7 +2900,7 @@ void VisualizeMCF()
 
 	constexpr unsigned int NTimeSteps = 30;
 
-	for (unsigned int curveId = 0; const auto& curve : curves)
+	for (unsigned int curveId = 0; const auto & curve : curves)
 	{
 		std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -2991,21 +2991,21 @@ void VisualizeMultipleInnerCurves()
 		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		//{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
-		//{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
-		//{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		//{"armadillo", Geometry::Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		//{"bunny", Geometry::Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		//{"maxPlanck", Geometry::Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
-	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		//{"armadillo", { Circle2D{pmp::Point2{-3.0, 52.0}, 20.0} }},
-		//{"bunny", { Circle2D{pmp::Point2{-0.025, 0.08}, 0.025} } },
-		//{"maxPlanck", { Circle2D{pmp::Point2{8.0, 85.0}, 50.0} }},
+	const std::map<std::string, std::vector<Geometry::Circle2D>> innerCircles{
+		//{"armadillo", { Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 20.0} }},
+		//{"bunny", { Geometry::Circle2D{pmp::Point2{-0.025, 0.08}, 0.025} } },
+		//{"maxPlanck", { Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0} }},
 
 		{"nefertiti", {
-			Circle2D{pmp::Point2{-20.0, 100.0}, 55.0},
-			//Circle2D{pmp::Point2{-75.0, -50.0}, 25.0}
-			Circle2D{pmp::Point2{-10.0, -200.0}, 35.0}
+			Geometry::Circle2D{pmp::Point2{-20.0, 100.0}, 55.0},
+			//Geometry::Circle2D{pmp::Point2{-75.0, -50.0}, 25.0}
+			Geometry::Circle2D{pmp::Point2{-10.0, -200.0}, 35.0}
 		}}
 	};
 
@@ -3265,13 +3265,13 @@ void AdvectionDrivenInnerOuterCircleTests()
 			pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
 			pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 		{ "ChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
+			pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 		{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-			pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+			pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+			pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -3279,8 +3279,8 @@ void AdvectionDrivenInnerOuterCircleTests()
 	constexpr double defaultOffsetFactor = 1.5;
 	constexpr unsigned int NTimeSteps = 180;
 
-	const auto innerCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 20.0 };
-	const auto outerCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 110.0 };
+	const auto innerCircle = Geometry::Circle2D{ pmp::Point2{ -3.0, 52.0 }, 20.0 };
+	const auto outerCircle = Geometry::Circle2D{ pmp::Point2{ -3.0, 52.0 }, 110.0 };
 
 	for (const auto& [ptCloudName, curve] : targetCurves)
 	{
@@ -3401,13 +3401,13 @@ void OuterOnlySimpleShapeTests()
 		pmp::Point2{30.0, 35.0} + pmp::Point2{-3.0, 52.0},
 		pmp::Point2{-30.0, 35.0} + pmp::Point2{-3.0, 52.0}}, 30, true, false)},
 	{ "ChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
+		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true)},
 	{ "IncompleteChamferedTriangle", pmp::CurveFactory::sampled_polygon({
-		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} * 120.0 + pmp::Point2{-3.0, 52.0},
-		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} * 120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
+		pmp::Point2{-0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.5, (pmp::Scalar)-sqrtf(3.0) / (pmp::Scalar)6.0} *120.0 + pmp::Point2{-3.0, 52.0},
+		pmp::Point2{0.0, (pmp::Scalar)sqrtf(3.0) / (pmp::Scalar)3.0} *120.0 + pmp::Point2{-3.0, 52.0}}, 30, true, false)}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;
@@ -3415,7 +3415,7 @@ void OuterOnlySimpleShapeTests()
 	constexpr double defaultOffsetFactor = 1.5;
 	constexpr unsigned int NTimeSteps = 180;
 
-	const auto outerCircle = Circle2D{ pmp::Point2{-3.0, 52.0}, 110.0 };
+	const auto outerCircle = Geometry::Circle2D{ pmp::Point2{ -3.0, 52.0 }, 110.0 };
 
 	for (const auto& [ptCloudName, curve] : targetCurves)
 	{
@@ -3523,11 +3523,11 @@ void SimpleMeshesIOLSWTests()
 		{"boxWithAHole", 1.0 }
 	};
 
-	const std::map<std::string, Sphere3D> outerSpheres{
-		{"boxWithAHole", Sphere3D{pmp::Point{0, 0, 0}, 2.0} },
+	const std::map<std::string, Geometry::Sphere3D> outerSpheres{
+		{"boxWithAHole", Geometry::Sphere3D{pmp::Point{0, 0, 0}, 2.0} },
 	};
-	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
-		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{0, 0, 0}, 0.9}} },
+	const std::map<std::string, std::vector<Geometry::Sphere3D>> innerSpheres{
+		{"boxWithAHole", std::vector{ Geometry::Sphere3D{pmp::Point{0, 0, 0}, 0.9}} },
 	};
 
 	const std::map<std::string, pmp::Point> slicingPlaneRefPts{
@@ -3538,15 +3538,15 @@ void SimpleMeshesIOLSWTests()
 		{"boxWithAHole", pmp::vec3{0.0, -1.0, 0.0}},
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		{"boxWithAHole", Circle2D{pmp::Point2{0.0, 0.0}, 2.0} },
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		{"boxWithAHole", Geometry::Circle2D{pmp::Point2{0.0, 0.0}, 2.0} },
 	};
-	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		{"boxWithAHole", std::vector{ Circle2D{pmp::Point2{0.0, 0.0}, 0.9}} }
+	const std::map<std::string, std::vector<Geometry::Circle2D>> innerCircles{
+		{"boxWithAHole", std::vector{ Geometry::Circle2D{pmp::Point2{0.0, 0.0}, 0.9}} }
 	};
 
-	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
-		{"boxWithAHole", std::vector{ Sphere3D{pmp::Point{1.0, 0.0, 0.0}, 0.6} }},
+	const std::map<std::string, std::vector<Geometry::Sphere3D>> cutSpheres{
+		{"boxWithAHole", std::vector{ Geometry::Sphere3D{pmp::Point{1.0, 0.0, 0.0}, 0.6} }},
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 30;
@@ -3661,13 +3661,13 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.UseInnerManifolds = false;
 			strategySettings.AdvectionInteractWithOtherManifolds = false;
 			strategySettings.OuterManifoldEpsilon = [](double distance)
-				{
-					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
-				};
+			{
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
-				{
-					return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-				};
+			{
+				return 1.0 * distance * (negGradDotNormal - 2.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
@@ -3745,21 +3745,21 @@ void SimpleMeshesIOLSWTests()
 			strategySettings.UseInnerManifolds = true;
 			strategySettings.AdvectionInteractWithOtherManifolds = true;
 			strategySettings.OuterManifoldEpsilon = [](double distance)
-				{
-					return 1.0 * (1.0 - exp(-distance * distance / 1.0));
-				};
+			{
+				return 1.0 * (1.0 - exp(-distance * distance / 1.0));
+			};
 			strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
-				{
-					return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-				};
+			{
+				return 1.0 * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
 			strategySettings.InnerManifoldEpsilon = [](double distance)
-				{
-					return 0.0005 * TRIVIAL_EPSILON(distance);
-				};
+			{
+				return 0.0005 * TRIVIAL_EPSILON(distance);
+			};
 			strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
-				{
-					return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-				};
+			{
+				return 0.4 * distance * (negGradDotNormal - 1.3 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
 			strategySettings.TimeStep = tau;
 			strategySettings.LevelOfDetail = 4;
 			strategySettings.TangentialVelocityWeight = 0.05;
@@ -4120,36 +4120,36 @@ void StandardMeshesIOLSWTests()
 		{"nefertiti", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		{"armadillo", Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
-		{"bunny", Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
-		{"maxPlanck", Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
-		{"nefertiti", Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		{"armadillo", Geometry::Circle2D{pmp::Point2{0.372234, 16.6515}, 121.558} },
+		{"bunny", Geometry::Circle2D{pmp::Point2{-0.0155906, 0.102261}, 0.142831} },
+		{"maxPlanck", Geometry::Circle2D{pmp::Point2{-17.82, 82.5006}, 292.263} },
+		{"nefertiti", Geometry::Circle2D{pmp::Point2{0.178497, -0.0410004}, 441.436} }
 	};
-	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		//{"armadillo", std::vector{ Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}} },
-		{"bunny", std::vector{ Circle2D{pmp::Point2{0.0, 0.08}, 0.025}} },
-		{"maxPlanck", std::vector{ Circle2D{pmp::Point2{8.0, 85.0}, 50.0}} },
-		//{"nefertiti", std::vector{ Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}} }
-	};
-
-	const std::map<std::string, Sphere3D> outerSpheres{
-		{"armadillo", Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
-		{"bunny", Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
-		{"maxPlanck", Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
-		{"nefertiti", Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
-	};
-	const std::map<std::string, std::vector<Sphere3D>> innerSpheres{
-		//{"armadillo", std::vector{ Sphere3D{pmp::Point{-3.0, 52.0}, 20.0}} },
-		{"bunny", std::vector{ Sphere3D{pmp::Point{0.0, 0.082, 0.012}, 0.03}} },
-		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0, 50.0, 100.0}, 50.0}} },
-		//{"nefertiti", std::vector{ Sphere3D{pmp::Point{-20.0, 100.0}, 55.0}} }
+	const std::map<std::string, std::vector<Geometry::Circle2D>> innerCircles{
+		//{"armadillo", std::vector{ Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 20.0}} },
+		{"bunny", std::vector{ Geometry::Circle2D{pmp::Point2{0.0, 0.08}, 0.025}} },
+		{"maxPlanck", std::vector{ Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0}} },
+		//{"nefertiti", std::vector{ Geometry::Circle2D{pmp::Point2{-20.0, 100.0}, 55.0}} }
 	};
 
-	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
+	const std::map<std::string, Geometry::Sphere3D> outerSpheres{
+		{"armadillo", Geometry::Sphere3D{pmp::Point{0.0122509, 21.4183, -0.000249863}, 136.963} },
+		{"bunny", Geometry::Sphere3D{pmp::Point{-0.0168297, 0.110217, -0.0015718}, 0.141622} },
+		{"maxPlanck", Geometry::Sphere3D{pmp::Point{30.658, -17.9765, 82.2885}, 271.982} },
+		{"nefertiti", Geometry::Sphere3D{pmp::Point{0.0144997, -0.00499725, -0.0215073}, 392.184} }
+	};
+	const std::map<std::string, std::vector<Geometry::Sphere3D>> innerSpheres{
+		//{"armadillo", std::vector{ Geometry::Sphere3D{pmp::Point{-3.0, 52.0}, 20.0}} },
+		{"bunny", std::vector{ Geometry::Sphere3D{pmp::Point{0.0, 0.082, 0.012}, 0.03}} },
+		{"maxPlanck", std::vector{ Geometry::Sphere3D{pmp::Point{8.0, 50.0, 100.0}, 50.0}} },
+		//{"nefertiti", std::vector{ Geometry::Sphere3D{pmp::Point{-20.0, 100.0}, 55.0}} }
+	};
+
+	const std::map<std::string, std::vector<Geometry::Sphere3D>> cutSpheres{
 		{"armadillo", {}},
-		{"bunny", std::vector{ Sphere3D{pmp::Point{-0.01, 0.06, 0.012}, 0.032}, Sphere3D{pmp::Point{0.01, 0.12, 0.01}, 0.025}/**/}},
-		{"maxPlanck", std::vector{ Sphere3D{pmp::Point{8.0, 85.0, 0.0}, 50.0}, Sphere3D{pmp::Point{30.0, -120.0, 160.0}, 100.0} /**/}},
+		{"bunny", std::vector{ Geometry::Sphere3D{pmp::Point{-0.01, 0.06, 0.012}, 0.032}, Geometry::Sphere3D{pmp::Point{0.01, 0.12, 0.01}, 0.025}/**/}},
+		{"maxPlanck", std::vector{ Geometry::Sphere3D{pmp::Point{8.0, 85.0, 0.0}, 50.0}, Geometry::Sphere3D{pmp::Point{30.0, -120.0, 160.0}, 100.0} /**/}},
 		{"nefertiti", {}}
 	};
 
@@ -4515,7 +4515,7 @@ void StandardMeshesIOLSWTests()
 				0.0, 0.0, 1.0, outerSphere.Center[2],
 				0.0, 0.0, 0.0, 1.0
 			};
-			outerSurface *= transfMatrixGeomMove;			
+			outerSurface *= transfMatrixGeomMove;
 			std::vector<pmp::SurfaceMesh> innerSurfaces; // no inner surfaces to evolve
 
 			auto surfaceStrategy = std::make_shared<CustomManifoldSurfaceEvolutionStrategy>(
@@ -4757,9 +4757,9 @@ void HyperellipseEllipsoidEquilibriumTests()
 	settings.NRemeshingIterations = iterations;
 	settings.NTangentialSmoothingIters = 6;
 	settings.UseProjection = true;
-	remesher.adaptive_remeshing(settings);	
+	remesher.adaptive_remeshing(settings);
 
-	const std::vector<Circle2D> testInnerCircles{
+	const std::vector<Geometry::Circle2D> testInnerCircles{
 		{ pmp::Point2{ 0.0, 0.0 }, 70.0 },
 		{ pmp::Point2{ 100.0, 0.0 }, 60.0 },
 		{ pmp::Point2{ 140.0, 0.0 }, 40.0 },
@@ -4773,7 +4773,7 @@ void HyperellipseEllipsoidEquilibriumTests()
 	constexpr unsigned int NTimeSteps = 180;
 	const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(5.0);
 
-	for (size_t hyperellipseId = 9; const auto& innerCircle : testInnerCircles)
+	for (size_t hyperellipseId = 9; const auto & innerCircle : testInnerCircles)
 	{
 		std::cout << "Setting up ManifoldEvolutionSettings.\n";
 
@@ -4781,21 +4781,21 @@ void HyperellipseEllipsoidEquilibriumTests()
 		strategySettings.UseInnerManifolds = true;
 		strategySettings.AdvectionInteractWithOtherManifolds = true;
 		strategySettings.OuterManifoldEpsilon = [](double distance)
-			{
+		{
 			return 0.00; // * (1.0 - exp(-distance * distance / 1.0));
-			};
+		};
 		strategySettings.OuterManifoldEta = [](double distance, double negGradDotNormal)
-			{
+		{
 			return 0.00; // * distance * (negGradDotNormal - 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-			};
+		};
 		strategySettings.InnerManifoldEpsilon = [](double distance)
-			{
-				return 0.0025 * TRIVIAL_EPSILON(distance);
-			};
+		{
+			return 0.0025 * TRIVIAL_EPSILON(distance);
+		};
 		strategySettings.InnerManifoldEta = [](double distance, double negGradDotNormal)
-			{
-				return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-			};
+		{
+			return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+		};
 		strategySettings.TimeStep = defaultTimeStep;
 		strategySettings.LevelOfDetail = 4;
 		strategySettings.TangentialVelocityWeight = 0.05;
@@ -4882,17 +4882,17 @@ void JunkCan2DTests()
 		{"crushedCanMissingBottom", pmp::vec3{1.0, 0.0, 0.0} }
 	};
 
-	const std::map<std::string, Circle2D> outerCircles{
-		{"canStraight", Circle2D{pmp::Point2{0.25, 0.0}, 0.9} },
-		{"canStraightMissingBottom", Circle2D{pmp::Point2{0.25, 0.0}, 0.9} },
-		{"crushedCan", Circle2D{pmp::Point2{0.0205, 0.0}, 0.07} },
-		{"crushedCanMissingBottom", Circle2D{pmp::Point2{0.0205, 0.0}, 0.07} }
+	const std::map<std::string, Geometry::Circle2D> outerCircles{
+		{"canStraight", Geometry::Circle2D{pmp::Point2{0.25, 0.0}, 0.9} },
+		{"canStraightMissingBottom", Geometry::Circle2D{pmp::Point2{0.25, 0.0}, 0.9} },
+		{"crushedCan", Geometry::Circle2D{pmp::Point2{0.0205, 0.0}, 0.07} },
+		{"crushedCanMissingBottom", Geometry::Circle2D{pmp::Point2{0.0205, 0.0}, 0.07} }
 	};
-	const std::map<std::string, std::vector<Circle2D>> innerCircles{
-		{"canStraight", std::vector{ Circle2D{pmp::Point2{0.35, -0.25}, 0.16} } },
-		{"canStraightMissingBottom", std::vector{ Circle2D{pmp::Point2{0.35, -0.25}, 0.16}, Circle2D{pmp::Point2{0.25, 0.35}, 0.16}} },
-		{"crushedCan", std::vector{ Circle2D{pmp::Point2{0.025, -0.035}, 0.02}} },
-		{"crushedCanMissingBottom", std::vector{ Circle2D{pmp::Point2{0.030, -0.035}, 0.02}, Circle2D{pmp::Point2{0.025, 0.035}, 0.02} } }
+	const std::map<std::string, std::vector<Geometry::Circle2D>> innerCircles{
+		{"canStraight", std::vector{ Geometry::Circle2D{pmp::Point2{0.35, -0.25}, 0.16} } },
+		{"canStraightMissingBottom", std::vector{ Geometry::Circle2D{pmp::Point2{0.35, -0.25}, 0.16}, Geometry::Circle2D{pmp::Point2{0.25, 0.35}, 0.16}} },
+		{"crushedCan", std::vector{ Geometry::Circle2D{pmp::Point2{0.025, -0.035}, 0.02}} },
+		{"crushedCanMissingBottom", std::vector{ Geometry::Circle2D{pmp::Point2{0.030, -0.035}, 0.02}, Geometry::Circle2D{pmp::Point2{0.025, 0.035}, 0.02} } }
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 30;
@@ -5121,7 +5121,7 @@ void InscribedCircleCalculatorVisualization()
 	ExportScalarGridDimInfo2D(dataOutPath + "incompleteCircleDF.gdim2d", *inputData.DistanceField);
 	constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
 	ExportScalarGrid2DToPNG(dataOutPath + "incompleteCircleDF.png", *inputData.DistanceField,
-		Geometry::BilinearInterpolateScalarValue, 
+		Geometry::BilinearInterpolateScalarValue,
 		//Geometry::GetNearestNeighborScalarValue2D,
 		10, 10, RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
 
@@ -5206,9 +5206,9 @@ void StandardMeshesExportWithNormals()
 		"maxPlanckWNormals",
 	};
 
-	const std::map<std::string, std::vector<Sphere3D>> cutSpheres{
-		{"bunnyWNormals", std::vector{ Sphere3D{pmp::Point{-0.01, 0.06, 0.012}, 0.032}, Sphere3D{pmp::Point{0.01, 0.12, 0.01}, 0.025}/**/}},
-		{"maxPlanckWNormals", std::vector{ Sphere3D{pmp::Point{8.0, 85.0, 0.0}, 50.0}, Sphere3D{pmp::Point{30.0, -120.0, 160.0}, 100.0} /**/}},
+	const std::map<std::string, std::vector<Geometry::Sphere3D>> cutSpheres{
+		{"bunnyWNormals", std::vector{ Geometry::Sphere3D{pmp::Point{-0.01, 0.06, 0.012}, 0.032}, Geometry::Sphere3D{pmp::Point{0.01, 0.12, 0.01}, 0.025}/**/}},
+		{"maxPlanckWNormals", std::vector{ Geometry::Sphere3D{pmp::Point{8.0, 85.0, 0.0}, 50.0}, Geometry::Sphere3D{pmp::Point{30.0, -120.0, 160.0}, 100.0} /**/}},
 	};
 
 	constexpr size_t samplingLevel = 3;
@@ -5255,11 +5255,11 @@ void StandardMeshesExportWithNormals()
 
 		std::string filename = dataOutPath + meshName + "Pts_" + std::to_string(samplingLevel) + ".ply";
 		Geometry::BaseMeshGeometryData ptData;
-        ptData.Vertices.resize(orientedPtCloud.size());
-        ptData.VertexNormals.resize(orientedPtCloud.size());
-        // Extract vertices and vertex normals from orientedPtCloud
-        std::ranges::transform(orientedPtCloud, ptData.Vertices.begin(), [](const auto& pair) { return pair.first; });
-        std::ranges::transform(orientedPtCloud, ptData.VertexNormals.begin(), [](const auto& pair) { return pair.second; });
+		ptData.Vertices.resize(orientedPtCloud.size());
+		ptData.VertexNormals.resize(orientedPtCloud.size());
+		// Extract vertices and vertex normals from orientedPtCloud
+		std::ranges::transform(orientedPtCloud, ptData.Vertices.begin(), [](const auto& pair) { return pair.first; });
+		std::ranges::transform(orientedPtCloud, ptData.VertexNormals.begin(), [](const auto& pair) { return pair.second; });
 
 		if (!ExportPointsToPLY(ptData, filename))
 		{
@@ -5281,7 +5281,7 @@ void ExportBallPivotingBoundaryEdges()
 		std::cout << "==================================================================\n";
 		std::cout << "Mesh: " << meshName << ".obj\n";
 		std::cout << "------------------------------------------------------------------\n";
-		
+
 		pmp::SurfaceMesh mesh;
 		//mesh.read(dataDirPath + meshName + ".obj");
 		// TODO: implement for BaseMeshGeometryData because this data is non-manifold
@@ -5304,7 +5304,7 @@ void TestProblematicMedialAxisPtClouds()
 
 	const auto unevenCrossPts = unevenCrossCurve.positions();
 
-	const std::vector<Circle2D> testInnerCircles{
+	const std::vector<Geometry::Circle2D> testInnerCircles{
 		//{ pmp::Point2{ 60.322582, 63.604839 }, 6.6532254 },
 		//{ pmp::Point2{ 87.733871, 55.975807 }, 9.08871 },
 		//{ pmp::Point2{ 62.3629, 61.741936 }, 19.161289 },
@@ -5383,7 +5383,7 @@ void TestProblematicMedialAxisPtClouds()
 		innerCurves[0].negate_orientation();
 
 		auto curveStrategy = std::make_shared<CustomManifoldCurveEvolutionStrategy>(
-			strategySettings, std::nullopt, innerCurves, 
+			strategySettings, std::nullopt, innerCurves,
 			std::make_shared<std::vector<pmp::Point2>>(unevenCrossPts));
 
 		std::cout << "Setting up ManifoldEvolver.\n";
@@ -5569,11 +5569,11 @@ void TestCurve2DRotation()
 void TestSmoothingAdvectionEquilibrium()
 {
 	// Define the inner and outer circle pairs directly
-	const std::vector<std::pair<Circle2D, Circle2D>> circlePairs{
-		{Circle2D{pmp::Point2{-3.0, 52.0}, 100.0}, Circle2D{pmp::Point2{-3.0, 52.0}, 121.558}},
-		//{Circle2D{pmp::Point2{-25.0, 8.0}, 0.055}, Circle2D{pmp::Point2{-25.0, 8.0}, 0.142831}},
-		//{Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Circle2D{pmp::Point2{8.0, 85.0}, 292.263}},
-		//{Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Circle2D{pmp::Point2{-20.0, 90.0}, 441.436}}
+	const std::vector<std::pair<Geometry::Circle2D, Geometry::Circle2D>> circlePairs{
+		{Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 100.0}, Geometry::Circle2D{pmp::Point2{-3.0, 52.0}, 121.558}},
+		//{Geometry::Circle2D{pmp::Point2{-25.0, 8.0}, 0.055}, Geometry::Circle2D{pmp::Point2{-25.0, 8.0}, 0.142831}},
+		//{Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 50.0}, Geometry::Circle2D{pmp::Point2{8.0, 85.0}, 292.263}},
+		//{Geometry::Circle2D{pmp::Point2{-20.0, 90.0}, 55.0}, Geometry::Circle2D{pmp::Point2{-20.0, 90.0}, 441.436}}
 	};
 
 	constexpr unsigned int nVoxelsPerMinDimension = 40;

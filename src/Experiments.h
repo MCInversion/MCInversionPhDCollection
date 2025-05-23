@@ -252,6 +252,7 @@ void PointCloudNormalsVCG();
 void TestPoissonMeshingStrategy();
 void TestPoissonMeshingWithClustering();
 void TestIMBShrinkWrapper();
+void TestDeadlinedIMBShrinkWrapper();
 void TestIMBShrinkWrapperNormalEstimation();
 
 //
@@ -392,6 +393,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestPoissonMeshingStrategy", TestPoissonMeshingStrategy },
     {"TestPoissonMeshingWithClustering", TestPoissonMeshingWithClustering },
     {"TestIMBShrinkWrapper", TestIMBShrinkWrapper },
+    {"TestDeadlinedIMBShrinkWrapper", TestDeadlinedIMBShrinkWrapper },
     {"TestIMBShrinkWrapperNormalEstimation", TestIMBShrinkWrapperNormalEstimation },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------

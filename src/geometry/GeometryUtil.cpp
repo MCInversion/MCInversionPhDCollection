@@ -1,7 +1,9 @@
 #include "GeometryUtil.h"
 #include "CollisionKdTree.h"
+#include "IcoSphereBuilder.h"
 
 #include "pmp/BoundingBox.h"
+#include "pmp/SurfaceMesh.h"
 
 namespace Geometry
 {
@@ -1415,6 +1417,20 @@ namespace Geometry
 		tMinOut = tMin;
 		tMaxOut = tMax;
 		return true;
+	}
+
+	pmp::SurfaceMesh ConstructIcoSphere(const Sphere3D& sphere, unsigned int subdiv)
+	{
+		Geometry::IcoSphereBuilder icoBuilder({ subdiv, sphere.Radius });
+		icoBuilder.BuildBaseData();
+		icoBuilder.BuildPMPSurfaceMesh();
+		if (sphere.Center == pmp::Point(0, 0, 0))
+			return icoBuilder.GetPMPSurfaceMeshResult();
+
+		auto mesh = icoBuilder.GetPMPSurfaceMeshResult();
+		const auto translationMatrix = translation_matrix(sphere.Center);
+		mesh *= translationMatrix;
+		return mesh;
 	}
 
 } // namespace Geometry

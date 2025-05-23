@@ -9,6 +9,7 @@ namespace pmp
 {
 	class BoundingBox2;
 	class BoundingBox;
+	class SurfaceMesh;
 }
 
 namespace SDF
@@ -201,5 +202,27 @@ namespace Geometry
 	 * \return              True if the ray intersects the bounding box, false otherwise.
 	 */
 	[[nodiscard]] bool RayBoxIntersection2D(const pmp::Point2& startPt, const pmp::vec2& direction, const pmp::BoundingBox2& box, pmp::Scalar& tMinOut, pmp::Scalar& tMaxOut);
+
+	/// \brief Parameters of a 2D circle.
+	struct Circle2D
+	{
+		pmp::Point2 Center{};
+		pmp::Scalar Radius{ -1.0 };
+	};
+
+	/// \brief Parameters of a 3D sphere.
+	struct Sphere3D
+	{
+		pmp::Point Center{};
+		pmp::Scalar Radius{ -1.0 };
+	};
+
+	/**
+	 * \brief Tessellates the resulting curve from the computed radius and center.
+	 * \param sphere        A parametric sphere to be reconstructed.
+	 * \param subdiv        the level of subdivision used for construction
+	 * \return The ico-sphere tessellation of the resulting Sphere.
+	 */
+	[[nodiscard]] pmp::SurfaceMesh ConstructIcoSphere(const Sphere3D& sphere, unsigned int subdiv = 2);
 
 } // namespace Geometry

@@ -980,7 +980,7 @@ void ManifoldCurveEvolutionStrategy::ConstructInitialManifolds(pmp::Scalar minTa
 		m_OuterCurve = std::make_shared<pmp::ManifoldCurve2D>(pmp::CurveFactory::circle(pmp::Point2{}, outerCircleRadius, nSegments));
 		// DISCLAIMER: Since we want to evolve manifolds centered at the origin, we will not move the outer manifold into its "true" position.
 		// The "true" position will be stored in m_InitialSphereSettings:
-		m_InitialSphereSettings[m_OuterCurve.get()] = Circle2D{ targetBoundsCenter, outerCircleRadius };
+		m_InitialSphereSettings[m_OuterCurve.get()] = Geometry::Circle2D{ targetBoundsCenter, outerCircleRadius };
 
 		if (LogManifoldValues())
 			m_Logger.AddManifold(m_OuterCurve.get());
@@ -1111,7 +1111,7 @@ void ManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds(
 {
 	if (m_OuterCurve)
 	{
-		const Circle2D& circleSettings = m_InitialSphereSettings[m_OuterCurve.get()];
+		const Geometry::Circle2D& circleSettings = m_InitialSphereSettings[m_OuterCurve.get()];
 		//m_RemeshingSettings[m_OuterCurve.get()] = CollectRemeshingSettingsFromCircleCurve(m_OuterCurve, 
 		//	circleSettings.Radius * GetScalingFactor(), 
 		//	circleSettings.Center);
@@ -1123,7 +1123,7 @@ void ManifoldCurveEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifolds(
 
 	for (const auto& innerCurve : m_InnerCurves)
 	{
-		const Circle2D& circleSettings = m_InitialSphereSettings[innerCurve.get()];
+		const Geometry::Circle2D& circleSettings = m_InitialSphereSettings[innerCurve.get()];
 		//m_RemeshingSettings[innerCurve.get()] = CollectRemeshingSettingsFromCircleCurve(innerCurve, 
 		//	circleSettings.Radius * GetScalingFactor(),
 		//	circleSettings.Center);
@@ -2156,7 +2156,7 @@ void ManifoldSurfaceEvolutionStrategy::ConstructInitialManifolds(pmp::Scalar min
 		m_OuterSurface = std::make_shared<pmp::SurfaceMesh>(icoBuilder.GetPMPSurfaceMeshResult());
 		// DISCLAIMER: Since we want to evolve manifolds centered at the origin, we will not move the outer manifold into its "true" position.
 		// The "true" position will be stored in m_InitialSphereSettings:
-		m_InitialSphereSettings[m_OuterSurface.get()] = Sphere3D{ targetBoundsCenter, outerSphereRadius };
+		m_InitialSphereSettings[m_OuterSurface.get()] = Geometry::Sphere3D{ targetBoundsCenter, outerSphereRadius };
 
 		if (LogManifoldValues())
 			m_Logger.AddManifold(m_OuterSurface.get());
@@ -2296,7 +2296,7 @@ void ManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifold
 {
 	if (m_OuterSurface)
 	{
-		const Sphere3D& sphereSettings = m_InitialSphereSettings[m_OuterSurface.get()];
+		const Geometry::Sphere3D& sphereSettings = m_InitialSphereSettings[m_OuterSurface.get()];
 		m_RemeshingSettings[m_OuterSurface.get()] = CollectRemeshingSettingsFromIcoSphere_OLD(
 			GetSettings().LevelOfDetail,
 			sphereSettings.Radius * GetScalingFactor(),
@@ -2305,7 +2305,7 @@ void ManifoldSurfaceEvolutionStrategy::AssignRemeshingSettingsToEvolvingManifold
 
 	for (const auto& innerSurface : m_InnerSurfaces)
 	{
-		const Sphere3D& sphereSettings = m_InitialSphereSettings[innerSurface.get()];
+		const Geometry::Sphere3D& sphereSettings = m_InitialSphereSettings[innerSurface.get()];
 		m_RemeshingSettings[innerSurface.get()] = CollectRemeshingSettingsFromIcoSphere_OLD(
 			GetSettings().LevelOfDetail,
 			sphereSettings.Radius * GetScalingFactor(),

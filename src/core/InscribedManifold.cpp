@@ -6,7 +6,7 @@
 
 // ---------------------------------------------------------------------------
 
-std::vector<Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
+std::vector<Geometry::Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
     pmp::BoundingBox2 bbox(data.Points);
     pmp::Point2 bboxCenter = (bbox.min() + bbox.max()) * 0.5;
@@ -22,7 +22,7 @@ std::vector<Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedC
         }
     }
 
-    Circle2D circle;
+    Geometry::Circle2D circle;
     circle.Center = bboxCenter;
     circle.Radius = minDist;
 
@@ -33,9 +33,9 @@ std::vector<Circle2D> NaiveInscribedCircleCalculator::Calculate(const InscribedC
 
 namespace
 {
-    std::vector<Circle2D> FilterOverlappingCircles(const std::vector<Circle2D>& circles)
+    std::vector<Geometry::Circle2D> FilterOverlappingCircles(const std::vector<Geometry::Circle2D>& circles)
     {
-        std::vector<Circle2D> filteredCircles;
+        std::vector<Geometry::Circle2D> filteredCircles;
         filteredCircles.reserve(circles.size());
 
         for (const auto& circle : circles)
@@ -68,9 +68,9 @@ namespace
         return filteredCircles;
     }
 
-    std::vector<Sphere3D> FilterOverlappingSpheres(const std::vector<Sphere3D>& spheres)
+    std::vector<Geometry::Sphere3D> FilterOverlappingSpheres(const std::vector<Geometry::Sphere3D>& spheres)
     {
-        std::vector<Sphere3D> filteredSpheres;
+        std::vector<Geometry::Sphere3D> filteredSpheres;
         filteredSpheres.reserve(spheres.size());
 
         for (const auto& sphere : spheres)
@@ -107,14 +107,14 @@ namespace
 
 // ...........................................................................
 
-std::vector<Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
+std::vector<Geometry::Circle2D> DistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
     if (!data.DistanceField)
     {
         throw std::invalid_argument("DistanceFieldInscribedCircleCalculator::Calculate: Distance field is not provided!");
     }
 
-    std::vector<Circle2D> circles;
+    std::vector<Geometry::Circle2D> circles;
     auto& grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
 
@@ -227,7 +227,7 @@ namespace
     }
 
     void RecursiveSearchForMaxima(
-        std::vector<Circle2D>& circles,
+        std::vector<Geometry::Circle2D>& circles,
         const Geometry::ScalarGrid2D& grid,
         const Geometry::VectorGrid2D& gridGradient,
         unsigned int minX,
@@ -309,7 +309,7 @@ namespace
 
 
     void RecursiveSearchForMaxima3D(
-        std::vector<Sphere3D>& spheres,
+        std::vector<Geometry::Sphere3D>& spheres,
         const Geometry::ScalarGrid& grid,
         const Geometry::VectorGrid& gridGradient,
         unsigned int minX,
@@ -366,14 +366,14 @@ namespace
 
 // ...........................................................................
 
-std::vector<Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
+std::vector<Geometry::Circle2D> HierarchicalDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
     if (!data.DistanceField)
     {
         throw std::invalid_argument("HierarchicalDistanceFieldInscribedCircleCalculator::Calculate: Distance field is not provided!");
     }
 
-    std::vector<Circle2D> circles;
+    std::vector<Geometry::Circle2D> circles;
     auto& grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
     const auto gridGradient = ComputeGradient(grid);
@@ -441,14 +441,14 @@ namespace
 
 // ....................................................................................
 
-std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
+std::vector<Geometry::Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calculate(const InscribedCircleInputData& data)
 {
     if (!data.DistanceField)
     {
         throw std::invalid_argument("ParticleSwarmDistanceFieldInscribedCircleCalculator::Calculate: Distance field is not provided!");
     }
 
-    std::vector<Circle2D> circles;
+    std::vector<Geometry::Circle2D> circles;
     auto& grid = *data.DistanceField;
     ApplyNarrowGaussianBlur2D(grid);
     const auto gridGradient = ComputeGradient(grid);
@@ -581,7 +581,7 @@ std::vector<Circle2D> ParticleSwarmDistanceFieldInscribedCircleCalculator::Calcu
     return FilterOverlappingCircles(circles);
 }
 
-std::vector<Sphere3D> NaiveInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
+std::vector<Geometry::Sphere3D> NaiveInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
 {
     pmp::BoundingBox bbox(data.Points);
     pmp::Point bboxCenter = (bbox.min() + bbox.max()) * 0.5;
@@ -597,21 +597,21 @@ std::vector<Sphere3D> NaiveInscribedSphereCalculator::Calculate(const InscribedS
         }
     }
 
-    Sphere3D sphere;
+    Geometry::Sphere3D sphere;
     sphere.Center = bboxCenter;
     sphere.Radius = minDist;
 
     return { sphere };
 }
 
-std::vector<Sphere3D> DistanceFieldInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
+std::vector<Geometry::Sphere3D> DistanceFieldInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
 {
     if (!data.DistanceField)
     {
         throw std::invalid_argument("DistanceFieldInscribedSphereCalculator::Calculate: Distance field is not provided!");
     }
 
-    std::vector<Sphere3D> spheres;
+    std::vector<Geometry::Sphere3D> spheres;
     auto& grid = *data.DistanceField;
     //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);
@@ -669,14 +669,14 @@ std::vector<Sphere3D> DistanceFieldInscribedSphereCalculator::Calculate(const In
     return FilterOverlappingSpheres(spheres);
 }
 
-std::vector<Sphere3D> HierarchicalDistanceFieldInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
+std::vector<Geometry::Sphere3D> HierarchicalDistanceFieldInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
 {
     if (!data.DistanceField)
     {
         throw std::invalid_argument("HierarchicalDistanceFieldInscribedSphereCalculator::Calculate: Distance field is not provided!");
     }
 
-    std::vector<Sphere3D> spheres;
+    std::vector<Geometry::Sphere3D> spheres;
     auto& grid = *data.DistanceField;
     //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);
@@ -727,14 +727,14 @@ std::vector<Sphere3D> HierarchicalDistanceFieldInscribedSphereCalculator::Calcul
     return FilterOverlappingSpheres(spheres);
 }
 
-std::vector<Sphere3D> ParticleSwarmDistanceFieldInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
+std::vector<Geometry::Sphere3D> ParticleSwarmDistanceFieldInscribedSphereCalculator::Calculate(const InscribedSphereInputData& data)
 {
     if (!data.DistanceField)
     {
         throw std::invalid_argument("ParticleSwarmDistanceFieldInscribedSphereCalculator::Calculate: Distance field is not provided!");
     }
 
-    std::vector<Sphere3D> spheres;
+    std::vector<Geometry::Sphere3D> spheres;
     auto& grid = *data.DistanceField;
     //ApplyWideGaussianBlur(grid);
     ApplyNarrowGaussianBlur(grid);

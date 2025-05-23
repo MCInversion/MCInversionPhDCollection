@@ -4,6 +4,7 @@
 #include "pmp/SurfaceMesh.h"
 #include "pmp/algorithms/CurveFactory.h"
 
+#include "geometry/GeometryUtil.h"
 #include "geometry/Grid.h"
 #include "geometry/IcoSphereBuilder.h"
 
@@ -12,13 +13,6 @@ struct InscribedCircleInputData
 {
 	std::vector<pmp::Point2> Points{}; //>! the evaluated point cloud.
 	std::shared_ptr<Geometry::ScalarGrid2D> DistanceField{ nullptr }; //>! a pointer to a pre-computed distance field to Points. 
-};
-
-/// \brief Parameters of a 2D circle.
-struct Circle2D
-{
-	pmp::Point2 Center{};
-	pmp::Scalar Radius{ -1.0 };
 };
 
 /// \brief A base utility to calculate the centers and radii of circles inscribed to a point cloud.
@@ -32,7 +26,7 @@ public:
 	 * \param data        input point cloud data.
 	 * \return a vector of circles.
 	 */
-	virtual [[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) = 0;
+	virtual [[nodiscard]] std::vector<Geometry::Circle2D> Calculate(const InscribedCircleInputData& data) = 0;
 
 	/**
 	 * \brief Sets the output stream for logging (e.g., std::cout or a file stream).
@@ -54,7 +48,7 @@ class NaiveInscribedCircleCalculator : public InscribedCircleCalculator
 {
 public:
 	/// \copydoc InscribedCircleCalculator::Calculate
-	[[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Circle2D> Calculate(const InscribedCircleInputData& data) override;
 };
 
 /// \brief Calculates the centers and radii of circles inscribed to a point cloud using the distance-field-based approach:
@@ -63,7 +57,7 @@ class DistanceFieldInscribedCircleCalculator : public InscribedCircleCalculator
 {
 public:
 	/// \copydoc InscribedCircleCalculator::Calculate
-	[[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Circle2D> Calculate(const InscribedCircleInputData& data) override;
 };
 
 /// \brief Calculates the centers and radii of circles inscribed to a point cloud using the distance-field-based approach:
@@ -73,7 +67,7 @@ class HierarchicalDistanceFieldInscribedCircleCalculator : public InscribedCircl
 {
 public:
 	/// \copydoc InscribedCircleCalculator::Calculate
-	[[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Circle2D> Calculate(const InscribedCircleInputData& data) override;
 };
 
 /// \brief Calculates the centers and radii of circles inscribed to a point cloud using the distance-field-based approach:
@@ -83,7 +77,7 @@ class ParticleSwarmDistanceFieldInscribedCircleCalculator : public InscribedCirc
 {
 public:
 	/// \copydoc InscribedCircleCalculator::Calculate
-	[[nodiscard]] std::vector<Circle2D> Calculate(const InscribedCircleInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Circle2D> Calculate(const InscribedCircleInputData& data) override;
 };
 
 /**
@@ -92,7 +86,7 @@ public:
  * \param nSegments     the number of segments to be used in the reconstruction.
  * \return The tessellation of the resulting circle (must be called after CalculateInnerCircleRadiusAndCenter).
  */
-inline [[nodiscard]] pmp::ManifoldCurve2D ConstructCircle(const Circle2D& circle, size_t nSegments = 32)
+inline [[nodiscard]] pmp::ManifoldCurve2D ConstructCircle(const Geometry::Circle2D& circle, size_t nSegments = 32)
 {
 	return pmp::CurveFactory::circle(circle.Center, circle.Radius, nSegments);
 }
@@ -108,13 +102,6 @@ struct InscribedSphereInputData
 	std::shared_ptr<Geometry::ScalarGrid> DistanceField{ nullptr }; //>! a pointer to a pre-computed distance field to Points. 
 };
 
-/// \brief Parameters of a 3D sphere.
-struct Sphere3D
-{
-	pmp::Point Center{};
-	pmp::Scalar Radius{ -1.0 };
-};
-
 /// \brief A base utility to calculate the centers and radii of spheres inscribed to a point cloud.
 class InscribedSphereCalculator
 {
@@ -126,7 +113,7 @@ public:
 	 * \param data        input point cloud data.
 	 * \return a vector of spheres.
 	 */
-	virtual [[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) = 0;
+	virtual [[nodiscard]] std::vector<Geometry::Sphere3D> Calculate(const InscribedSphereInputData& data) = 0;
 };
 
 /// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the naive approach:
@@ -135,7 +122,7 @@ class NaiveInscribedSphereCalculator : public InscribedSphereCalculator
 {
 public:
 	/// \copydoc InscribedSphereCalculator::Calculate
-	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Sphere3D> Calculate(const InscribedSphereInputData& data) override;
 };
 
 /// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the distance-field-based approach:
@@ -144,7 +131,7 @@ class DistanceFieldInscribedSphereCalculator : public InscribedSphereCalculator
 {
 public:
 	/// \copydoc InscribedSphereCalculator::Calculate
-	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Sphere3D> Calculate(const InscribedSphereInputData& data) override;
 };
 
 /// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the distance-field-based approach:
@@ -154,7 +141,7 @@ class HierarchicalDistanceFieldInscribedSphereCalculator : public InscribedSpher
 {
 public:
 	/// \copydoc InscribedSphereCalculator::Calculate
-	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Sphere3D> Calculate(const InscribedSphereInputData& data) override;
 };
 
 /// \brief Calculates the centers and radii of spheres inscribed to a point cloud using the distance-field-based approach:
@@ -164,25 +151,5 @@ class ParticleSwarmDistanceFieldInscribedSphereCalculator : public InscribedSphe
 {
 public:
 	/// \copydoc InscribedSphereCalculator::Calculate
-	[[nodiscard]] std::vector<Sphere3D> Calculate(const InscribedSphereInputData& data) override;
+	[[nodiscard]] std::vector<Geometry::Sphere3D> Calculate(const InscribedSphereInputData& data) override;
 };
-
-/**
- * \brief Tessellates the resulting curve from the computed radius and center.
- * \param sphere        A parametric sphere to be reconstructed.
- * \param subdiv        the level of subdivision used for construction
- * \return The tessellation of the resulting Sphere (must be called after CalculateInnerSphereRadiusAndCenter).
- */
-inline [[nodiscard]] pmp::SurfaceMesh ConstructSphere(const Sphere3D& sphere, unsigned int subdiv = 2)
-{
-	Geometry::IcoSphereBuilder icoBuilder({ subdiv, sphere.Radius });
-	icoBuilder.BuildBaseData();
-	icoBuilder.BuildPMPSurfaceMesh();
-	if (sphere.Center == pmp::Point(0, 0, 0))
-		return icoBuilder.GetPMPSurfaceMeshResult();
-
-	auto mesh = icoBuilder.GetPMPSurfaceMeshResult();
-	const auto translationMatrix = translation_matrix(sphere.Center);
-	mesh *= translationMatrix;
-	return mesh;
-}

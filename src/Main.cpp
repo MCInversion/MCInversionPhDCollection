@@ -144,6 +144,7 @@ int main()
         //"TestPoissonMeshingStrategy",
         //"TestPoissonMeshingWithClustering",
         "TestIMBShrinkWrapper",
+        //"TestDeadlinedIMBShrinkWrapper",
         //"TestIMBShrinkWrapperNormalEstimation",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------

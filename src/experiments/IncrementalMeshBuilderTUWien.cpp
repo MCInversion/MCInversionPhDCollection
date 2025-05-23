@@ -20,6 +20,8 @@
  */
  // --------------------------------------------------------------------------------
 
+#include "utils/TimingUtils.h"
+
 #include "geometry/GeometryIOUtils.h"
 
 #include "core/PointCloudMeshingStrategies.h"
@@ -185,14 +187,126 @@ void TestIMBShrinkWrapper()
 	}
 	const auto& pts = *ptCloudOpt;
 
+	const auto pt3DIndex = Geometry::Get3DPointSearchIndex(pts);
+	if (!pt3DIndex)
+	{
+		std::cerr << "TestIMBShrinkWrapper: pt3DIndex == nullptr!\n";
+		return;
+	}
+
+	const auto& ptCloud = pt3DIndex->cloud;
+	auto& kdTree = pt3DIndex->tree;
+
+	const pmp::Scalar criticalRadius = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ptCloud, kdTree, 10) * 2.5;
+
+	// ~~~
+	
 	IMB_ShrinkWrapperSettings swSettings;
+	swSettings.ProcedureName = ptCloudName;
+
+	swSettings.LevelOfDetail = 3;
+
+	swSettings.TimeStep = 0.05;
+
+	swSettings.TangentialVelocityWeight = 0.05;
+	swSettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
+	swSettings.RemeshingSettings.UseBackProjection = true;
+
+	swSettings.FieldSettings.NVoxelsPerMinDimension = 40;
+	swSettings.FieldSettings.FieldIsoLevel = 0.5;
+
+	swSettings.Epsilon = [](double distance)
+	{
+		return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+	};
+	swSettings.Eta = [](double distance, double negGradDotNormal)
+	{
+		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	};
+
+	swSettings.PointActivationRadius = criticalRadius * 0.95;
+	swSettings.ActivatedPointPercentageThreshold = 0.8;
 
 	IMB_ShrinkWrapper sw{ swSettings, pts };
 
-	const auto result = sw.Perform();
+	auto result = sw.Perform();
 	if (!result)
 	{
-		std::cerr << "TestIMBShrinkWrapper: internal error in IMB_ShrinkWrapper!\n";
+		std::cerr << "TestIMBShrinkWrapper: internal error!\n";
+		return;
+	}
+
+	// ~~~
+
+	const std::string outputFileName = dataOutPath + ptCloudName + "_IMBSW.vtk";
+	result->write(outputFileName);
+}
+
+void TestDeadlinedIMBShrinkWrapper()
+{
+	const auto ptCloudName = "bunnyPts_3";
+	const auto ptCloudOpt = Geometry::ImportPLYPointCloudData(dataDirPath + ptCloudName + ".ply", true);
+	if (!ptCloudOpt.has_value())
+	{
+		std::cerr << "TestDeadlinedIMBShrinkWrapper: ptCloudOpt == nullopt!\n";
+		return;
+	}
+	const auto& pts = *ptCloudOpt;
+
+	const auto pt3DIndex = Geometry::Get3DPointSearchIndex(pts);
+	if (!pt3DIndex)
+	{
+		std::cerr << "TestDeadlinedIMBShrinkWrapper: pt3DIndex == nullptr!\n";
+		return;
+	}
+
+	const auto& ptCloud = pt3DIndex->cloud;
+	auto& kdTree = pt3DIndex->tree;
+
+	const pmp::Scalar criticalRadius = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ptCloud, kdTree, 10) * 2.5;
+
+	std::optional<pmp::SurfaceMesh> result;
+	if (!Utils::DeadlinedScope::Run(
+		[&]() {
+			IMB_ShrinkWrapperSettings swSettings;
+			swSettings.ProcedureName = ptCloudName;
+
+			swSettings.LevelOfDetail = 3;
+
+			swSettings.TimeStep = 0.05;
+
+			swSettings.TangentialVelocityWeight = 0.05;
+			swSettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
+			swSettings.RemeshingSettings.UseBackProjection = true;
+
+			swSettings.FieldSettings.NVoxelsPerMinDimension = 40;
+			swSettings.FieldSettings.FieldIsoLevel = 0.5;
+
+			swSettings.Epsilon = [](double distance)
+			{
+				return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+			};
+			swSettings.Eta = [](double distance, double negGradDotNormal)
+			{
+				return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+			};
+
+			swSettings.PointActivationRadius = criticalRadius * 0.95;
+			swSettings.ActivatedPointPercentageThreshold = 0.8;
+
+			IMB_ShrinkWrapper sw{ swSettings, pts };
+
+			auto r = sw.Perform();
+			if (!r)
+			{
+				std::cerr << "TestDeadlinedIMBShrinkWrapper: internal error!\n";
+				return;
+			}
+			result = std::move(*r);
+		},
+		std::chrono::seconds(2) /* TODO: do a proper analysis of the require time limit */))
+	{
+		std::cerr << "TestDeadlinedIMBShrinkWrapper: Time for IMB_ShrinkWrapper ran out!\n";
 		return;
 	}
 

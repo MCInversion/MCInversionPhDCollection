@@ -12,41 +12,12 @@
 
 //
 // ===============================================================================================
-//                                     Evolver functions
-// -----------------------------------------------------------------------------------------------
-//
-
-/// \brief eps(d) = 1, eps(d) = C_1 * (1 - exp(-d^2/C_2)), or any other control function for the Laplacian term in the equation. 
-using CurvatureCtrlFunction = ExtendedFunction<std::function<double(double /* distance */)>>;
-
-constexpr auto TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
-constexpr auto STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
-
-/// \brief eta(d) = 0, eta(d) = D_1 * d * ((grad d . N) - D_2 * sqrt(1 - (grad d . N)^2), or any other control function for the advection term in the equation.
-using AdvectionCtrlFunction = ExtendedFunction<std::function<double(double /* distance */, double /* negGradDotNormal */)>>;
-
-constexpr auto TRIVIAL_ETA = [](double /* distance */, double /* negGradDotNormal */) { return 0.0; };
-constexpr auto STANDARD_ETA = [](double distance, double negGradDotNormal)
-{
-    return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-};
-
-/// \brief Repulsion function governing the interaction between evolving manifolds
-using RepulsionFunction = std::function<double(double /* distance */)>;
-
-const RepulsionFunction TRIVIAL_REPULSION = [](double /* distance */) { return 0.0; };
-
-/// \brief Numerical integration function specific to the scheme and dimension.
-using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
-
-/// \brief the smallest allowed number of vertices in a manifold curve.
-constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
-
-//
-// ===============================================================================================
 //                                          Settings
 // -----------------------------------------------------------------------------------------------
 //
+
+/// \brief the smallest allowed number of vertices in a manifold curve.
+constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
 
 /**
  * \brief Input parameters for curvature-based feature detection within manifold evolution strategy.
@@ -157,9 +128,6 @@ struct GlobalManifoldEvolutionSettings
 
 /// \brief Stabilization weight param from [0, 1]
 constexpr pmp::Scalar STABILIZATION_FACTOR{ 1.0 };
-
-/// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
-constexpr pmp::Scalar SPHERE_RADIUS_FACTOR = 0.8;
 
 //
 // ===============================================================================================
@@ -600,7 +568,7 @@ private:
 
     ManifoldsToRemeshTracker<pmp::ManifoldCurve2D> m_RemeshTracker{}; //>! a utility which logs curves that need remeshing.
     ManifoldRemeshingSettingsWrapper<pmp::ManifoldCurve2D> m_RemeshingSettings{}; //>! a wrapper with remeshing settings assigned to evolving manifolds
-    InitialSphereSettingsWrapper<pmp::ManifoldCurve2D, Circle2D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
+    InitialSphereSettingsWrapper<pmp::ManifoldCurve2D, Geometry::Circle2D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
 
     VertexValueLogger<pmp::ManifoldCurve2D> m_Logger{}; //>! a utility for exporting the chosen vertex values to a file for debugging purposes.
 
@@ -956,7 +924,7 @@ private:
 
     ManifoldsToRemeshTracker<pmp::SurfaceMesh> m_RemeshTracker{}; //>! a utility which logs surfaces that need remeshing.
     ManifoldRemeshingSettingsWrapper<pmp::SurfaceMesh> m_RemeshingSettings{}; //>! a wrapper with remeshing settings assigned to evolving manifolds
-    InitialSphereSettingsWrapper<pmp::SurfaceMesh, Sphere3D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
+    InitialSphereSettingsWrapper<pmp::SurfaceMesh, Geometry::Sphere3D> m_InitialSphereSettings{}; //>! a wrapper for the initial sphere settings for each manifold.
 
     VertexValueLogger<pmp::SurfaceMesh> m_Logger{}; //>! a utility for exporting the chosen vertex values to a file for debugging purposes.
 };

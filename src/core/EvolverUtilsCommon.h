@@ -27,6 +27,11 @@ namespace pmp
 	struct AdaptiveRemeshingSettings;
 }
 
+/// \brief A factor by which the radius of any constructed outer/inner sphere is shrunken.
+constexpr pmp::Scalar SPHERE_RADIUS_FACTOR = 0.8;
+
+// ============================================================================================================
+
 /// \brief a stats wrapper for co-volume measures affecting the stability of the finite volume method.
 struct CoVolumeStats
 {
@@ -1039,6 +1044,35 @@ private:
 	std::function<double(double /*dist*/, Args...)> m_Lambda;
 	double m_LowerDistanceLimit{ 0.0 };
 };
+
+//
+// ===============================================================================================
+//                                     Evolver functions
+// -----------------------------------------------------------------------------------------------
+//
+
+/// \brief eps(d) = 1, eps(d) = C_1 * (1 - exp(-d^2/C_2)), or any other control function for the Laplacian term in the equation. 
+using CurvatureCtrlFunction = ExtendedFunction<std::function<double(double /* distance */)>>;
+
+constexpr auto TRIVIAL_EPSILON = [](double /* distance */) { return 1.0; };
+constexpr auto STANDARD_EPSILON = [](double distance) { return 1.0 - exp(-distance * distance); };
+
+/// \brief eta(d) = 0, eta(d) = D_1 * d * ((grad d . N) - D_2 * sqrt(1 - (grad d . N)^2), or any other control function for the advection term in the equation.
+using AdvectionCtrlFunction = ExtendedFunction<std::function<double(double /* distance */, double /* negGradDotNormal */)>>;
+
+constexpr auto TRIVIAL_ETA = [](double /* distance */, double /* negGradDotNormal */) { return 0.0; };
+constexpr auto STANDARD_ETA = [](double distance, double negGradDotNormal)
+{
+	return distance * (negGradDotNormal - sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+};
+
+/// \brief Repulsion function governing the interaction between evolving manifolds
+using RepulsionFunction = std::function<double(double /* distance */)>;
+
+const RepulsionFunction TRIVIAL_REPULSION = [](double /* distance */) { return 0.0; };
+
+/// \brief Numerical integration function specific to the scheme and dimension.
+using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
 
 //
 // ---------------------------------------------------------------------------------
