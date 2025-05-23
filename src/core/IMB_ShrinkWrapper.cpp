@@ -247,7 +247,7 @@ double IMB_ShrinkWrapper::GetVertexCoveragePercentage() const
     unsigned int count = 0;
     for (const auto& vPos : m_Surface->positions())
     {
-        if (m_ScalarInterpolate(vPos, *m_DistanceField) > m_Settings.ActivatedPointPercentageThreshold)
+        if (m_ScalarInterpolate(vPos, *m_DistanceField) > m_Settings.PointActivationRadius)
             continue;
 
         count++;
