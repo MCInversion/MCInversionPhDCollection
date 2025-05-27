@@ -1074,6 +1074,12 @@ const RepulsionFunction TRIVIAL_REPULSION = [](double /* distance */) { return 0
 /// \brief Numerical integration function specific to the scheme and dimension.
 using NumericalStepIntegrateFunction = std::function<void(unsigned int /* step */)>;
 
+/// \brief Extracts surface in original scale.
+using SurfaceInOrigScaleFunction = std::function<std::optional<pmp::SurfaceMesh>()>;
+
+/// \brief Optional pre-steps.
+using PreStepFunction = std::function<void(unsigned int /* step */, const SurfaceInOrigScaleFunction& /* getSurface */)>;
+
 //
 // ---------------------------------------------------------------------------------
 //

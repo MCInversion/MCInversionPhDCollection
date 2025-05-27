@@ -38,6 +38,8 @@ struct IMB_ShrinkWrapperSettings
 
 	double TangentialVelocityWeight{ 0.05 }; //>! the weight of tangential velocity update vector for each time step.
 	double MaxFractionOfVerticesOutOfBounds{ 0.02 }; //>! fraction of vertices allowed to be out of bounds (because it will be decimated).
+
+	PreStepFunction PreStep; //>! optional pre-step callback.
 };
 
 // --------------------------------------------------------------------------------------------

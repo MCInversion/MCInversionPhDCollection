@@ -1,4 +1,4 @@
-
+﻿
 #include "pmp/algorithms/Normals.h"
 
 #include "geometry/IcoSphereBuilder.h"
@@ -6,7 +6,6 @@
 #include "sdf/SDF.h"
 
 #include "IMB_ShrinkWrapper.h"
-
 
 bool IMB_ShrinkWrapper::ComputeAmbientFields(pmp::Scalar& minTargetSize, pmp::Scalar& maxTargetSize, pmp::Point& targetBoundsCenter)
 {
@@ -113,7 +112,7 @@ void IMB_ShrinkWrapper::StabilizeGeometries(const pmp::Scalar& minTargetSize, co
     m_TransformToOriginal = inverse(transfMatrixFull);
 
     // transform geometries
-    (*m_Surface) *= transfMatrixGeomScale;
+    (*m_Surface) *= transfMatrixFull;
 
     // test box for geometry validation
     const pmp::Scalar evolBoxFactor = 5.0 * scalingFactor;
@@ -141,9 +140,10 @@ void IMB_ShrinkWrapper::Remesh()
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 bool IMB_ShrinkWrapper::PerformEvolutionStep(unsigned int stepId)
 {
+    m_Settings.PreStep(stepId, std::bind(&IMB_ShrinkWrapper::GetSurface, this)); // optional pre-step callback
+
     const auto NVertices = static_cast<unsigned int>(m_Surface->n_vertices());
     SparseMatrix sysMat(NVertices, NVertices);
     Eigen::MatrixXd sysRhs(NVertices, 3);
@@ -265,7 +265,9 @@ std::optional<pmp::SurfaceMesh> IMB_ShrinkWrapper::GetSurface() const
     if (!m_Surface)
         return {};
 
-    return *m_Surface;
+    auto surfaceCopy = *m_Surface;
+    surfaceCopy *= m_TransformToOriginal;
+    return surfaceCopy;
 }
 
 //
