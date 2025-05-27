@@ -170,6 +170,11 @@ public:
         return parray_->vector();
     }
 
+    [[nodiscard]] bool is_valid() const
+    {
+        return parray_ != nullptr;
+    }
+
 private:
     PropertyArray<T>& array()
     {

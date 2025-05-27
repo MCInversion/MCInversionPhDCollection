@@ -152,6 +152,7 @@ bool IMB_ShrinkWrapper::PerformEvolutionStep(unsigned int stepId)
 
     pmp::Normals::compute_vertex_normals(*m_Surface);
     auto vNormalsProp = m_Surface->get_vertex_property<pmp::vec3>("v:normal");
+    auto vFeature = m_Surface->vertex_property<bool>("v:feature");
 
     // prepare matrix & rhs for m_Surface:
     std::vector<Eigen::Triplet<double>> tripletList;
@@ -172,6 +173,10 @@ bool IMB_ShrinkWrapper::PerformEvolutionStep(unsigned int stepId)
 
         double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
         vDistanceToTarget -= m_Settings.FieldSettings.FieldIsoLevel;
+
+        //if (vFeature.is_valid() && vDistanceToTarget < m_Settings.FieldSettings.FieldIsoLevel)
+        //    vFeature[v] = true;
+
         const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 
         const double epsilonCtrlWeight = m_Settings.Epsilon(vDistanceToTarget);

@@ -212,7 +212,7 @@ void TestIMBShrinkWrapper()
 	swSettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 	swSettings.RemeshingSettings.UseBackProjection = true;
 
-	swSettings.FieldSettings.NVoxelsPerMinDimension = 40;
+	swSettings.FieldSettings.NVoxelsPerMinDimension = 30;
 	swSettings.FieldSettings.FieldIsoLevel = 1.5;
 
 	swSettings.PreStep = [&](unsigned int step, const SurfaceInOrigScaleFunction& getSurface) {
@@ -222,16 +222,19 @@ void TestIMBShrinkWrapper()
 		surface->write(dataOutPath + swSettings.ProcedureName + "_Evol_" + std::to_string(step) + ".vtk");
 	};
 
-	swSettings.Epsilon = [](double distance)
+	const double minDistancePercentageEpsilon = 0.1;
+	const double minDistancePercentageEta = 0.1;
+
+	swSettings.Epsilon.Bind(minDistancePercentageEpsilon, [](double distance)
 	{
 		return 0.5 * (1.0 - exp(-distance * distance / 1.0));
-	};
-	swSettings.Eta = [](double distance, double negGradDotNormal)
+	});
+	swSettings.Eta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
 	{
 		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-	};
+	});
 
-	swSettings.PointActivationRadius = criticalRadius * 2.0;
+	swSettings.PointActivationRadius = criticalRadius * 10.0;
 	swSettings.ActivatedPointPercentageThreshold = 0.8;
 
 	IMB_ShrinkWrapper sw{ swSettings, pts };
