@@ -28,9 +28,9 @@ namespace SDF
 
 		const auto startBoxCenter = startBox.center();
 		const pmp::vec3 cubeBoxCenter{
-			std::round(startBoxCenter[0] / targetLeafSize) * targetLeafSize,
-			std::round(startBoxCenter[1] / targetLeafSize) * targetLeafSize,
-			std::round(startBoxCenter[2] / targetLeafSize) * targetLeafSize,
+			(std::round(startBoxCenter[0] / targetLeafSize) /*- (pmp::Scalar)0.5*/) * targetLeafSize,
+			(std::round(startBoxCenter[1] / targetLeafSize) /*- (pmp::Scalar)0.5*/) * targetLeafSize,
+			(std::round(startBoxCenter[2] / targetLeafSize) /*- (pmp::Scalar)0.5*/) * targetLeafSize,
 		};
 
 		const pmp::vec3 cubeBoxMin{

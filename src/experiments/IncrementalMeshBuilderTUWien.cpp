@@ -212,30 +212,41 @@ void TestIMBShrinkWrapper()
 	swSettings.RemeshingSettings.MinEdgeMultiplier = 0.14;
 	swSettings.RemeshingSettings.UseBackProjection = true;
 
-	swSettings.FieldSettings.NVoxelsPerMinDimension = 30;
-	swSettings.FieldSettings.FieldIsoLevel = 1.5;
+	swSettings.FieldSettings.NVoxelsPerMinDimension = 20;
+	swSettings.FieldSettings.FieldIsoLevel = 1.3;
 
 	swSettings.PreStep = [&](unsigned int step, const SurfaceInOrigScaleFunction& getSurface) {
 		const auto surface = getSurface();
 		if (!surface)
 			return;
+		//std::cout << "Exporting " << swSettings.ProcedureName << ", step " << step << " ... ";
 		surface->write(dataOutPath + swSettings.ProcedureName + "_Evol_" + std::to_string(step) + ".vtk");
+		//std::cout << "done.\n";
 	};
 
-	const double minDistancePercentageEpsilon = 0.1;
-	const double minDistancePercentageEta = 0.1;
+	//const double minDistancePercentageEpsilon = 0.1;
+	//const double minDistancePercentageEta = 0.1;
+	//swSettings.Epsilon.Bind(minDistancePercentageEpsilon, [](double distance)
+	//{
+	//	return 0.5 * (1.0 - exp(-distance * distance / 1.0));
+	//});
+	//swSettings.Eta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
+	//{
+	//	return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
+	//});
 
-	swSettings.Epsilon.Bind(minDistancePercentageEpsilon, [](double distance)
+	swSettings.Epsilon = [](double distance)
 	{
 		return 0.5 * (1.0 - exp(-distance * distance / 1.0));
-	});
-	swSettings.Eta.Bind(minDistancePercentageEta, [](double distance, double negGradDotNormal)
+	};
+	swSettings.Eta = [](double distance, double negGradDotNormal)
 	{
 		return -1.0 * distance * (std::fabs(negGradDotNormal) + 1.0 * sqrt(1.0 - negGradDotNormal * negGradDotNormal));
-	});
+	};
 
-	swSettings.PointActivationRadius = criticalRadius * 10.0;
-	swSettings.ActivatedPointPercentageThreshold = 0.8;
+	swSettings.PointActivationRadius = criticalRadius * 4.0;
+	swSettings.PointActivationAlignmentAngle = M_PI_2 * 0.4;
+	swSettings.ActivatedPointPercentageThreshold = 1.0; //0.98;
 
 	IMB_ShrinkWrapper sw{ swSettings, pts };
 

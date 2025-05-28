@@ -213,14 +213,14 @@ size_t Features::detect_vertices_with_high_curvature(const Scalar& curvatureAngl
 
         if (excludeEdgesWithoutTwoFeatureVerts && (vfeature_[v0] && vfeature_[v1]))
         {
-            //efeature_[e] = true;
+            efeature_[e] = true;
             n_edges++;
             continue;
         }
 
         if (vfeature_[v0] || vfeature_[v1])
         {
-            //efeature_[e] = true;
+            efeature_[e] = true;
             n_edges++;
         }
     }

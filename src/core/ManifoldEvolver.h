@@ -20,16 +20,6 @@
 constexpr unsigned int N_CIRCLE_VERTS_0{ 5 };
 
 /**
- * \brief Input parameters for curvature-based feature detection within manifold evolution strategy.
- * \struct FeatureDetectionSettings
- */
-struct FeatureDetectionSettings
-{
-    pmp::Scalar PrincipalCurvatureFactor{ 2.0 }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
-    pmp::Scalar CriticalMeanCurvatureAngle{ 1.0 * static_cast<pmp::Scalar>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 	
-};
-
-/**
  * \brief Settings for printing out debug info into a specified log file.
  * \struct DiagnosticSettings
  */

@@ -106,9 +106,10 @@ namespace SDF
 		for (size_t i = 0; i < nOutlineVoxels; i++)
 		{
 			// transform from real space to grid index space
-			ix = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[0] + boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
-			iy = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[1] + boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
-			iz = static_cast<unsigned int>(std::floor((0.5 * (boxBuffer[i]->min()[2] + boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
+			const double param = 0.5;
+			ix = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[0] + param * boxBuffer[i]->max()[0]) - gBoxMinX) / cellSize));
+			iy = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[1] + param * boxBuffer[i]->max()[1]) - gBoxMinY) / cellSize));
+			iz = static_cast<unsigned int>(std::floor((((1.0 - param) * boxBuffer[i]->min()[2] + param * boxBuffer[i]->max()[2]) - gBoxMinZ) / cellSize));
 
 			gridPos = Nx * Ny * iz + Nx * iy + ix;
 			gridVals[gridPos] = valueBuffer[i];
@@ -625,6 +626,10 @@ namespace SDF
 			const pmp::Scalar expansion = settings.VolumeExpansionFactor * minSize;
 			dfBBox.expand(expansion, expansion, expansion);
 		}
+
+		// shift by half-voxel
+		dfBBox.min() += pmp::vec3{ settings.CellSize, settings.CellSize, settings.CellSize } *(pmp::Scalar)0.5;
+		dfBBox.max() += pmp::vec3{ settings.CellSize, settings.CellSize, settings.CellSize } *(pmp::Scalar)0.5;
 
 		// percentage of the minimum half-size of the mesh's bounding box.
 		const double truncationValue = (settings.TruncationFactor < Geometry::DEFAULT_SCALAR_GRID_INIT_VAL ? settings.TruncationFactor * static_cast<double>(minSize) : Geometry::DEFAULT_SCALAR_GRID_INIT_VAL);

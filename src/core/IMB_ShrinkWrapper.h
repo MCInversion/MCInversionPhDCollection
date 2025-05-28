@@ -31,6 +31,7 @@ struct IMB_ShrinkWrapperSettings
 	unsigned int MaxSteps{ 200 }; //>! the maximum number of allowed evolution steps.
 
 	pmp::Scalar PointActivationRadius{ 0.5 }; //>! radius within which the point becomes activated for normal estimation.
+	pmp::Scalar PointActivationAlignmentAngle{ M_PI_2 * 0.2 }; //>! the alignment angle within the gradient field.
 	double ActivatedPointPercentageThreshold{ 0.8 }; //>! the fraction of target points to be within PointActivationRadius for the evolution to terminate.
 
 	CurvatureCtrlFunction Epsilon{ TRIVIAL_EPSILON }; //>! control function for the curvature term of the shrink-wrapping surface.
@@ -120,6 +121,11 @@ private:
 	/// \brief Calculates the percentage of how many m_Points are wrapped by m_Surface within m_Settings.PointActivationRadius.
 	// -----------------------------------------------------------------------------
 	[[nodiscard]] double GetVertexCoveragePercentage() const;
+
+	// -----------------------------------------------------------------------------
+	/// \brief Calculates the percentage of how many points of m_Surface are aligned within m_Settings.PointActivationAlignmentAngle with m_DFNegNormalizedGradient.
+	// -----------------------------------------------------------------------------
+	[[nodiscard]] double GetVertexAlignmentPercentage() const;
 
 	//
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

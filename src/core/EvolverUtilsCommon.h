@@ -199,13 +199,22 @@ inline void RegularizeMatrixInPlace(SparseMatrix& matrix, double lambda)
 
 /**
  * \brief Computes tangential update velocity for a mesh vertex with a given weight.
- * \param mesh       a manifold curve to whom the vertex belongs.
+ * \param curve      a manifold curve to whom the vertex belongs.
  * \param v          vertex handle of a vertex where the tangential velocity is to be computed.
  * \param vNormal    normal to vertex with handle v.
  * \param weight     weight of the velocity vector.
  * \return tangential velocity vector.
  */
 [[nodiscard]] pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& curve, const pmp::Vertex& v, const pmp::vec2& vNormal, const pmp::Scalar& weight = 1.0);
+
+/**
+* \brief Marks vertices above critical curvature as feature vertices (immune to remeshing).
+* \param mesh                                 a manifold mesh to evaluate.
+* \param curvatureAngle                       critical angle of curvature below which the vertex must be feature.
+* \param curvatureFactor                      vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+* \param excludeEdgesWithoutBothFeaturePts    if true, edges with only one vertex detected as feature will not be marked as feature.
+*/
+void EvaluateCurvatureBasedFeatures(pmp::SurfaceMesh& mesh, const pmp::Scalar& curvatureAngle, const pmp::Scalar& curvatureFactor, const bool& excludeEdgesWithoutBothFeaturePts);
 
 // ======================================================================================================================
 
@@ -273,6 +282,17 @@ struct MeshTopologySettings
 	double MaxDihedralAngle{ 2.0 * M_PI_2 * 180.0 }; //>! critical dihedral angle for feature detection
 	pmp::Scalar PrincipalCurvatureFactor{ 2.0 }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
 	pmp::Scalar CriticalMeanCurvatureAngle{ 1.0 * static_cast<pmp::Scalar>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 
+	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
+};
+
+/**
+ * \brief Input parameters for curvature-based feature detection within manifold evolution strategy.
+ * \struct FeatureDetectionSettings
+ */
+struct FeatureDetectionSettings
+{
+	pmp::Scalar PrincipalCurvatureFactor{ 2.0 }; //>! vertices with |Kmax| > \p principalCurvatureFactor * |Kmin| are marked as feature.
+	pmp::Scalar CriticalMeanCurvatureAngle{ 1.0 * static_cast<pmp::Scalar>(M_PI_2) }; //>! vertices with curvature angles smaller than this value are feature vertices. 	
 	bool ExcludeEdgesWithoutBothFeaturePts{ false }; //>! if true, edges with only one vertex detected as feature will not be marked as feature.
 };
 

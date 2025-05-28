@@ -6,6 +6,7 @@
 #include "pmp/SurfaceMesh.h"
 #include "pmp/ManifoldCurve2D.h"
 #include "pmp/algorithms/DifferentialGeometry.h"
+#include "pmp/algorithms/Features.h"
 
 #include "geometry/IcoSphereBuilder.h"
 
@@ -97,6 +98,12 @@ pmp::vec2 ComputeTangentialUpdateVelocityAtVertex(const pmp::ManifoldCurve2D& cu
 	result += 0.5 * (e0Vec + e1Vec);
 	const auto resultDotNormal = pmp::dot(result, vNormal);
 	return (result - resultDotNormal * vNormal);
+}
+
+void EvaluateCurvatureBasedFeatures(pmp::SurfaceMesh& mesh, const pmp::Scalar& curvatureAngle, const pmp::Scalar& curvatureFactor, const bool& excludeEdgesWithoutBothFeaturePts)
+{
+	pmp::Features featuresDetector(mesh);
+	featuresDetector.detect_vertices_with_high_curvature(curvatureAngle, curvatureFactor, excludeEdgesWithoutBothFeaturePts);
 }
 
 /// \brief a unit speed of a shrink-wrapping sphere sufficiently far away from target.

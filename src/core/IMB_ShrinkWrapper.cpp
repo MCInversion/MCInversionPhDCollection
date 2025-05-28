@@ -152,7 +152,6 @@ bool IMB_ShrinkWrapper::PerformEvolutionStep(unsigned int stepId)
 
     pmp::Normals::compute_vertex_normals(*m_Surface);
     auto vNormalsProp = m_Surface->get_vertex_property<pmp::vec3>("v:normal");
-    auto vFeature = m_Surface->vertex_property<bool>("v:feature");
 
     // prepare matrix & rhs for m_Surface:
     std::vector<Eigen::Triplet<double>> tripletList;
@@ -174,17 +173,15 @@ bool IMB_ShrinkWrapper::PerformEvolutionStep(unsigned int stepId)
         double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
         vDistanceToTarget -= m_Settings.FieldSettings.FieldIsoLevel;
 
-        //if (vFeature.is_valid() && vDistanceToTarget < m_Settings.FieldSettings.FieldIsoLevel)
-        //    vFeature[v] = true;
+        const double sign = vDistanceToTarget < m_Settings.FieldSettings.FieldIsoLevel ? -1.0 : 1.0;
 
         const auto vNegGradDistanceToTarget = m_DFNegNormalizedGradient ? m_VectorInterpolate(vPosToUpdate, *m_DFNegNormalizedGradient) : pmp::dvec3(0, 0, 0);
 
-        const double epsilonCtrlWeight = m_Settings.Epsilon(vDistanceToTarget);
+        const double epsilonCtrlWeight = m_Settings.Epsilon(vDistanceToTarget) * sign;
         const auto& vNormal = static_cast<const pmp::vec3&>(vNormalsProp[v]); // vertex unit normal
 
         const auto negGradDotNormal = std::clamp(pmp::ddot(vNegGradDistanceToTarget, vNormal), -1.0, 1.0);
-        const double advectionDistance = vDistanceToTarget;
-        const double etaCtrlWeight = m_Settings.Eta(advectionDistance, negGradDotNormal);
+        const double etaCtrlWeight = m_Settings.Eta(vDistanceToTarget, negGradDotNormal) * sign;
 
         const Eigen::Vector3d vertexRhs = vPosToUpdate + tStep * etaCtrlWeight * vNormal;
         sysRhs.row(v.idx()) = vertexRhs;
@@ -252,12 +249,44 @@ double IMB_ShrinkWrapper::GetVertexCoveragePercentage() const
     unsigned int count = 0;
     for (const auto& vPos : m_Surface->positions())
     {
-        if (m_ScalarInterpolate(vPos, *m_DistanceField) > m_Settings.PointActivationRadius)
+        if (m_ScalarInterpolate(vPos, *m_DistanceField) > m_Settings.PointActivationRadius - m_Settings.FieldSettings.FieldIsoLevel)
             continue;
 
         count++;
     }
 
+    //std::cout << "Coverage percentage: " << static_cast<double>(count) / static_cast<double>(m_Surface->n_vertices()) * 100 << " %.\n";
+    return static_cast<double>(count) / static_cast<double>(m_Surface->n_vertices());
+}
+
+double IMB_ShrinkWrapper::GetVertexAlignmentPercentage() const
+{
+    if (!m_Surface || !m_DFNegNormalizedGradient)
+        return -1.0;
+
+    if (!m_Surface->has_vertex_property("v:normal"))
+        return -1.0;
+
+    auto vNormalsProp = m_Surface->get_vertex_property<pmp::vec3>("v:normal");
+    const auto cosAngle = cos(m_Settings.PointActivationAlignmentAngle);
+
+    unsigned int count = 0;
+    for (const auto v : m_Surface->vertices())
+    {
+        const auto& vPos = m_Surface->position(v);
+        auto vGrad = m_VectorInterpolate(vPos, *m_DFNegNormalizedGradient);
+        vGrad *= -1.0;
+
+        const auto& vNormal = static_cast<const pmp::vec3&>(vNormalsProp[v]); // vertex unit normal
+        const auto gradDotNormal = std::clamp(pmp::ddot(vGrad, vNormal), -1.0, 1.0);
+
+        if (gradDotNormal < cosAngle)
+            continue;
+
+        count++;
+    }
+
+    std::cout << "Alignment percentage: " << static_cast<double>(count) / static_cast<double>(m_Surface->n_vertices()) * 100 << " %.\n";
     return static_cast<double>(count) / static_cast<double>(m_Surface->n_vertices());
 }
 
@@ -307,7 +336,8 @@ std::optional<pmp::SurfaceMesh> IMB_ShrinkWrapper::Perform()
         return {};
 
     unsigned int step = 1;
-    while (GetVertexCoveragePercentage() < m_Settings.ActivatedPointPercentageThreshold ||
+    while (//GetVertexCoveragePercentage() < m_Settings.ActivatedPointPercentageThreshold &&
+        GetVertexAlignmentPercentage() < m_Settings.ActivatedPointPercentageThreshold &&
         step < m_Settings.MaxSteps)
     {
         if (!PerformEvolutionStep(step))
