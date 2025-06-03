@@ -78,7 +78,7 @@ int main()
 // ..................................................................................
         // "BPATest",
         //"IncrementalMeshBuilderTests",
-        // "2GBApollonMeshBuilderTest",
+        //"TwoGBApollonMeshBuilderTest",
         // "NanoflannDistanceTests",
         // "ApollonLSWSaliencyEval",
         // "IncrementalMeshBuilderHausdorffEval",
@@ -143,9 +143,10 @@ int main()
         //"PointCloudNormalsVCG",
         //"TestPoissonMeshingStrategy",
         //"TestPoissonMeshingWithClustering",
-        "TestIMBShrinkWrapper",
+        //"TestIMBShrinkWrapper",
         //"TestDeadlinedIMBShrinkWrapper",
         //"TestIMBShrinkWrapperNormalEstimation",
+        "SingleThreadSoftMaxUniformStrategy",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

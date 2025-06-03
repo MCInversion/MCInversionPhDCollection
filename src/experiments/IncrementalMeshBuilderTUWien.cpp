@@ -23,9 +23,13 @@
 #include "utils/TimingUtils.h"
 
 #include "geometry/GeometryIOUtils.h"
+#include "utils/FileMappingWrapper.h"
 
-#include "core/PointCloudMeshingStrategies.h"
 #include "core/IMB_ShrinkWrapper.h"
+#include "core/IncrementalProgressUtils.h"
+#include "core/IncrementalMeshFileHandler.h"
+#include "core/PointCloudMeshingStrategies.h"
+#include "core/VertexSamplingStrategies.h"
 
 #include "IOEnvironment.h"
 
@@ -356,5 +360,108 @@ void TestIMBShrinkWrapperNormalEstimation()
 	{
 		std::cerr << "Failed to export mesh data." << "\n";
 		return;
+	}
+}
+
+void SingleThreadSoftMaxUniformStrategy()
+{
+	const auto meshName = "sampledIco";
+	const auto fileName = dataDirPath + meshName + ".ply";
+	const auto fileMapping = std::make_unique<Utils::FileMappingWrapper>(fileName);
+	if (!fileMapping->IsValid())
+	{
+		std::cerr << "SingleThreadSoftMaxUniformStrategy: Error during initialization of FileMappingWrapper!\n";
+		return;
+	}
+	const char* fileStart = fileMapping->GetFileMemory();
+	const char* fileEnd = fileStart + fileMapping->GetFileSize();
+	const auto fileHandler = IMB::CreateMeshFileHandler(IMB::FileHandlerParams{ fileName, fileStart, fileEnd });
+	if (!fileHandler)
+	{
+		std::cerr << "SingleThreadSoftMaxUniformStrategy: Error during initialization of IncrementalMeshFileHandler!\n";
+		return;
+	}
+
+	constexpr unsigned int seed = 4999;
+	constexpr unsigned int nSamples = 6;
+	constexpr unsigned int maxVertexCount = 5000;
+	const auto vertexSamplingStrategy = IMB::GetVertexSelectionStrategy(
+		IMB::VertexSelectionType::SoftMaxUniform,
+		nSamples, maxVertexCount, fileHandler);
+	// to compare against
+	const auto vertexSamplingStrategy2 = IMB::GetVertexSelectionStrategy(
+		IMB::VertexSelectionType::UniformRandom,
+		nSamples, maxVertexCount, fileHandler);
+	if (!vertexSamplingStrategy || !vertexSamplingStrategy2)
+	{
+		std::cerr << "SingleThreadSoftMaxUniformStrategy: Error during initialization of VertexSamplingStrategy!\n";
+		return;
+	}
+	IMB::GeometricSamplingParams params;
+	dynamic_cast<IMB::SoftmaxUniformVertexSamplingStrategy*>(vertexSamplingStrategy.get())->Params = params;
+
+	std::vector<pmp::Point> result;
+	std::vector<pmp::Point> result2;
+	unsigned int lodIndex = 0;
+	unsigned int lodIndex2 = 0;
+	const auto lodStepCallback = [&] {
+		//const std::string outputFileName = dataOutPath + meshName + "IMB_LOD" + std::to_string(lodIndex) + ".ply";
+		//++lodIndex;
+		//if (!Geometry::Export3DPointCloudToPLY(result, outputFileName))
+		//{
+		//	std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
+		//	return;
+		//}
+
+		const auto meshingStrategy = IMB::GetReconstructionStrategy(IMB::ReconstructionFunctionType::BallPivoting);
+		Geometry::BaseMeshGeometryData mesh;
+		mesh.Vertices = result;
+		meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
+
+		const std::string outputFileName = dataOutPath + meshName + "IMB_LOD_BallPivoting" + std::to_string(lodIndex) + ".vtk";
+		++lodIndex;
+		if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
+		{
+			std::cerr << "SingleThreadSoftMaxUniformStrategy: Failed to export mesh data." << "\n";
+			return;
+		}
+	};
+	const auto lodStepCallback2 = [&] {
+		//const std::string outputFileName = dataOutPath + meshName + "IMB2_LOD" + std::to_string(lodIndex2) + ".ply";
+		//++lodIndex;
+		//if (!Geometry::Export3DPointCloudToPLY(result2, outputFileName))
+		//{
+		//	std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
+		//	return;
+		//}
+
+		const auto meshingStrategy = IMB::GetReconstructionStrategy(IMB::ReconstructionFunctionType::BallPivoting);
+		Geometry::BaseMeshGeometryData mesh;
+		mesh.Vertices = result2;
+		meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
+
+		const std::string outputFileName = dataOutPath + meshName + "IMB2_LOD_BallPivoting" + std::to_string(lodIndex2) + ".vtk";
+		++lodIndex2;
+		if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
+		{
+			std::cerr << "SingleThreadSoftMaxUniformStrategy: Failed to export mesh data." << "\n";
+			return;
+		}
+	};
+	const auto progressTracker = std::make_unique<IMB::IncrementalProgressTracker>(
+		vertexSamplingStrategy->GetVertexCountEstimate(), nSamples,
+		vertexSamplingStrategy->GetVertexCap(), vertexSamplingStrategy->GetMinVertexCount(), 
+		lodStepCallback, [](){});
+	const auto progressTracker2 = std::make_unique<IMB::IncrementalProgressTracker>(
+		vertexSamplingStrategy2->GetVertexCountEstimate(), nSamples,
+		vertexSamplingStrategy2->GetVertexCap(), vertexSamplingStrategy2->GetMinVertexCount(),
+		lodStepCallback2, []() {});
+
+	const char* verticesStart = fileHandler->GetMemoryStart();
+	const char* verticesEnd = fileHandler->GetMemoryEnd();
+	for (unsigned int i = 0; i < nSamples; ++i)
+	{
+		vertexSamplingStrategy2->Sample(verticesStart, verticesEnd, result2, seed, *progressTracker2);
+		vertexSamplingStrategy->Sample(verticesStart, verticesEnd, result, seed, *progressTracker);
 	}
 }

@@ -68,6 +68,20 @@ namespace IMB
 			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
 	};
 
+	// -------------------------------------------------------------
+	/// \brief A wrapper for geometric sampling parameters
+	// -------------------------------------------------------------
+	struct GeometricSamplingParams
+	{
+		double ErrorMetricGradientMultiplier{ 1.0 };   // >! alpha: error metric gradient multiplier
+		double DistributionMetricGradientMultiplier{ 1.0 };   // >! beta: vertex distribution metric gradient multiplier
+		double TargetVertexDensity{ 1.0 };             // >! Dtarget: target vertex density [verts/unit^2]
+		double AvgNeighborhoodDisplacementMultiplier{ 1.0 }; // >! lambda: average 1-ring neighborhood displacement multiplier
+		double SelectionSharpness{ 1.0 };               // >! gamma: softmax selection sharpness
+		double ConfidenceGM1Imax{ 0.95 };               // >! rho: confidence level of GM{1, Imax}
+		double ConfidenceNormal{ 0.95 };                // >! Z: confidence level of N(0,1)
+	};
+
 	class SoftmaxUniformVertexSamplingStrategy : public VertexSamplingStrategy
 	{
 	public:
@@ -75,6 +89,8 @@ namespace IMB
 
 		void Sample(const char* start, const char* end,
 			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
+	
+		GeometricSamplingParams Params;
 	};
 
 	class SoftmaxFeatureDetectingVertexSamplingStrategy : public VertexSamplingStrategy

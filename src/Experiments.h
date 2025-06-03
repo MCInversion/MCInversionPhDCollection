@@ -254,6 +254,7 @@ void TestPoissonMeshingWithClustering();
 void TestIMBShrinkWrapper();
 void TestDeadlinedIMBShrinkWrapper();
 void TestIMBShrinkWrapperNormalEstimation();
+void SingleThreadSoftMaxUniformStrategy();
 
 //
 // =================================================================================
@@ -395,6 +396,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestIMBShrinkWrapper", TestIMBShrinkWrapper },
     {"TestDeadlinedIMBShrinkWrapper", TestDeadlinedIMBShrinkWrapper },
     {"TestIMBShrinkWrapperNormalEstimation", TestIMBShrinkWrapperNormalEstimation },
+    {"SingleThreadSoftMaxUniformStrategy", SingleThreadSoftMaxUniformStrategy },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

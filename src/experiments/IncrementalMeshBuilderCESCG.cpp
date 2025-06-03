@@ -223,9 +223,10 @@ void TwoGBApollonMeshBuilderTest()
 	meshBuilder.Init(
 		inputFileName,
 		nUpdates,
-		IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
+		//IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
 		//IMB::ReconstructionFunctionType::BallPivoting, 
 		//IMB::ReconstructionFunctionType::None,
+		IMB::ReconstructionFunctionType::Poisson,
 		IMB::VertexSelectionType::UniformRandom,
 		//IMB::VertexSelectionType::Sequential,
 		//exportPtsToPLY,
