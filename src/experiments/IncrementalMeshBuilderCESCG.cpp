@@ -9,6 +9,8 @@
  */
  // --------------------------------------------------------------------------------
 
+#include "utils/TimingUtils.h"
+
 #include "geometry/GeometryConversionUtils.h"
 #include "geometry/MeshAnalysis.h"
 

@@ -255,6 +255,7 @@ void TestIMBShrinkWrapper();
 void TestDeadlinedIMBShrinkWrapper();
 void TestIMBShrinkWrapperNormalEstimation();
 void SingleThreadSoftMaxUniformStrategy();
+void SingleThreadPoissonDiscSamplingStrategy();
 
 //
 // =================================================================================
@@ -397,6 +398,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestDeadlinedIMBShrinkWrapper", TestDeadlinedIMBShrinkWrapper },
     {"TestIMBShrinkWrapperNormalEstimation", TestIMBShrinkWrapperNormalEstimation },
     {"SingleThreadSoftMaxUniformStrategy", SingleThreadSoftMaxUniformStrategy },
+    {"SingleThreadPoissonDiscSamplingStrategy", SingleThreadPoissonDiscSamplingStrategy },
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Register new experiments here

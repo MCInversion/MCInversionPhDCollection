@@ -1,9 +1,17 @@
-#include "GeometryUtil.h"
+﻿#include "GeometryUtil.h"
 #include "CollisionKdTree.h"
 #include "IcoSphereBuilder.h"
 
 #include "pmp/BoundingBox.h"
 #include "pmp/SurfaceMesh.h"
+#include "pmp/algorithms/DifferentialGeometry.h"
+
+#include <algorithm>
+#include <cmath>
+#include <numeric>
+#include <optional>
+#include <random>
+#include <vector>
 
 namespace Geometry
 {
@@ -1431,6 +1439,79 @@ namespace Geometry
 		const auto translationMatrix = translation_matrix(sphere.Center);
 		mesh *= translationMatrix;
 		return mesh;
+	}
+
+	pmp::Scalar CalculateNeighborhoodRingArea(const pmp::Point& center, std::vector<pmp::Point>& neighbors)
+	{
+		if (neighbors.size() < 3)
+		{
+			return 0.0;
+		}
+
+		// compute vectors from center to each neighbor
+		std::vector<pmp::vec3> vecs;
+		vecs.reserve(neighbors.size());
+		for (auto const& nb : neighbors)
+		{
+			pmp::vec3 v = nb - center;
+			vecs.push_back(v);
+		}
+
+		// find a non-degenerate normal by crossing the first vector with another
+		pmp::vec3 normal{ 0.0, 0.0, 0.0 };
+		for (size_t i = 1; i < vecs.size(); ++i)
+		{
+			normal = pmp::cross(vecs[0], vecs[i]);
+			if (pmp::norm(normal) > std::numeric_limits<pmp::Scalar>::epsilon())
+			{
+				normal /= pmp::norm(normal);
+				break;
+			}
+			if (i + 1 == vecs.size())
+			{
+				return 0.0;
+			}
+		}
+
+		// build tangent basis t1, t2
+		double proj = pmp::dot(vecs[0], normal);
+		pmp::vec3 t1 = vecs[0] - proj * normal;
+		double t1len = pmp::norm(t1);
+		if (t1len < std::numeric_limits<pmp::Scalar>::epsilon())
+		{
+			return 0.0;
+		}
+		t1 /= t1len;
+		pmp::vec3 t2 = pmp::cross(normal, t1);
+
+		// compute angles for sorting
+		struct AngledVec { pmp::Scalar theta; pmp::vec3 v; };
+		std::vector<AngledVec> angled;
+		angled.reserve(vecs.size());
+		for (auto const& v : vecs)
+		{
+			double x = pmp::dot(v, t1);
+			double y = pmp::dot(v, t2);
+			double theta = std::atan2(y, x);
+			angled.push_back({ theta, v });
+		}
+		std::ranges::sort(angled, [](auto const& a, auto const& b) { return a.theta < b.theta; });
+
+		// sum triangle areas between consecutive neighbors
+		pmp::Scalar totalArea = 0.0;
+		for (size_t i = 0; i < angled.size(); ++i)
+		{
+			const pmp::vec3& vi = angled[i].v;
+			const pmp::vec3& vj = angled[(i + 1) % angled.size()].v;
+			// triangle_area(center, center+vi, center+vj) == 0.5 * norm(cross(vi, vj))
+			pmp::Scalar area = pmp::triangle_area(
+				pmp::Point{ 0.0, 0.0, 0.0 },
+				pmp::Point{ vi[0], vi[1], vi[2] },
+				pmp::Point{ vj[0], vj[1], vj[2] });
+			totalArea += area;
+		}
+
+		return totalArea;
 	}
 
 } // namespace Geometry

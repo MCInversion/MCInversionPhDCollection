@@ -3,17 +3,55 @@
 #include <numeric>
 #include <random>
 #include <unordered_set>
+#include <fstream>
 
 #include "IncrementalProgressUtils.h"
 #include "IncrementalMeshFileHandler.h"
 
 #include "utils/IncrementalUtils.h"
 
+#include "geometry/GeometryUtil.h"
 #include "geometry/GeometryConversionUtils.h"
-
 
 namespace
 {
+	[[nodiscard]] double ComputeStdDev(const std::vector<double>& values)
+	{
+		if (values.empty())
+		{
+			return 0.0;
+		}
+		double mean = std::accumulate(values.begin(), values.end(), 0.0) / values.size();
+		double accum = 0.0;
+		for (double v : values)
+		{
+			double diff = v - mean;
+			accum += diff * diff;
+		}
+		return std::sqrt(accum / values.size());
+	}
+
+	//void LogDensities(const std::vector<double>& Dv, const std::set<size_t>& alreadyDrawn)
+	//{
+	//	if (Dv.empty())
+	//	{
+	//		return;
+	//	}
+
+	//	std::string filename = "densities_" + std::to_string(alreadyDrawn.size()) + ".txt";
+	//	std::ofstream ofs(filename);
+	//	if (!ofs)
+	//	{
+	//		return;
+	//	}
+
+	//	for (double d : Dv)
+	//	{
+	//		ofs << d << "\n";
+	//	}
+	//	ofs.close();
+	//}
+
 	/// \brief A verification utility for the uniqueness of randomly generated indices.
 	//[[nodiscard]] size_t CountNonUniqueIndices(const std::vector<size_t>& indices)
 	//{
@@ -185,68 +223,20 @@ namespace
 #endif
 	}
 
-	[[nodiscard]] double ComputeStdDev(const std::vector<double>& values)
-	{
-		if (values.empty())
-		{
-			return 0.0;
-		}
-		double mean = std::accumulate(values.begin(), values.end(), 0.0) / values.size();
-		double accum = 0.0;
-		for (double v : values)
-		{
-			double diff = v - mean;
-			accum += diff * diff;
-		}
-		return std::sqrt(accum / values.size());
-	}
-
-} // anonymous namespace
-
-	//bool IsSupersetOfAlreadyDrawnIndices(
-	//	const std::vector<size_t>& newIndices,
-	//	const std::set<size_t>& alreadyDrawn)
-	//{
-	//	if (alreadyDrawn.empty())
-	//		return false;
-
-	//	// Build a hash set of the freshly generated indices:
-	//	std::unordered_set<size_t> newSet;
-	//	newSet.reserve(newIndices.size());
-	//	for (size_t x : newIndices) {
-	//		newSet.insert(x);
-	//	}
-
-	//	// Now check that every element of alreadyDrawn appears in newSet:
-	//	return std::ranges::all_of(alreadyDrawn, [&newSet](const auto& i) { return newSet.contains(i); });
-	//}
-
-	void PrintSortedIndices(const std::vector<size_t>& indices, const size_t& amount)
-	{
-		std::cout << "sortedIndices:\n";
-
-		std::vector<size_t> sortedIndices{ indices };
-		std::ranges::sort(sortedIndices);
-
-		for (int i = 0; i < amount; ++i)
-			std::cout << "  [" << i << "]:  " << sortedIndices[i] << "\n";
-	}
-
-	// .........................................
-	// TODO: move to anonymous namespace vvvvv
-	// .........................................
 	struct KeyIdx {
 		double key;
 		size_t idx;
 	};
 
+	constexpr double MAX_AREA{ 1e+10 };
+
 	void SoftmaxUniformGeometricSampleIndices(
 		const size_t& expectedCount, const size_t& totalCount,
-		std::vector<size_t>& resultIndices, 
-		const std::optional<unsigned int>& seed, 
+		std::vector<size_t>& resultIndices,
+		const std::optional<unsigned int>& seed,
 		const std::set<size_t>& alreadyDrawn,
 		const std::vector<pmp::Point>& prevIterPts,
-		const IMB::GeometricSamplingParams& params, 
+		const IMB::GeometricSamplingParams& params,
 		IMB::IncrementalMeshFileHandler* fileHandler,
 		const char* start, const char* end)
 	{
@@ -264,7 +254,7 @@ namespace
 			// compute Dv for previous points to estimate sigma
 			std::vector<double> prevDv;
 			prevDv.reserve(prevIterPts.size());
-			const size_t kNeighbors = 6;
+			const size_t kNeighbors = 10;
 			std::vector<uint32_t> ret_idx(kNeighbors);
 			std::vector<pmp::Scalar> out_dist2(kNeighbors);
 			auto prevIndex = Geometry::Get3DPointSearchIndex(prevIterPts);
@@ -275,19 +265,24 @@ namespace
 				{
 					pmp::Scalar queryPt[3] = { pt[0], pt[1], pt[2] };
 					size_t found = prevTree.knnSearch(&queryPt[0], kNeighbors, ret_idx.data(), out_dist2.data());
-					double sumLen = 0.0;
+					double density = 0.0;
 					if (found > 1)
 					{
-						for (size_t j = 1; j < found; ++j)
-						{
-							sumLen += std::sqrt(static_cast<double>(out_dist2[j]));
-						}
-						if (found < kNeighbors)
-						{
-							sumLen *= (static_cast<double>(kNeighbors - 1) / static_cast<double>(found - 1));
-						}
+						density = static_cast<double>(found - 1);
+
+						// .... find the neighbor area patch ...
+						std::vector<pmp::Point> neighbors;
+						neighbors.reserve(found);
+						std::ranges::for_each(ret_idx, [&ret_idx, &neighbors, &prevIterPts](const auto& j) {
+							if (j == ret_idx[0])
+								return;
+							neighbors.push_back(prevIterPts[j]);
+							});
+						const auto area = Geometry::CalculateNeighborhoodRingArea(pt, neighbors);
+						density /= area < FLT_EPSILON ? MAX_AREA : area;
+						// .....................................
 					}
-					prevDv.push_back(sumLen);
+					prevDv.push_back(density);
 				}
 			}
 			else
@@ -295,6 +290,7 @@ namespace
 				prevDv.assign(prevIterPts.size(), 0.0);
 			}
 			double sigma = ComputeStdDev(prevDv);
+			//std::cout << "sigma = " << sigma << "\n";
 			double Nk = static_cast<double>(prevIterPts.size());
 			double Z = params.ConfidenceNormal;
 			double rho = params.ConfidenceGM1Imax;
@@ -348,19 +344,24 @@ namespace
 		{
 			pmp::Scalar queryPt[3] = { candidatePts[i][0], candidatePts[i][1], candidatePts[i][2] };
 			size_t found = fullTree.knnSearch(&queryPt[0], kNeighbors, ret_idx.data(), out_dist2.data());
-			double sumLen = 0.0;
+			double density = 0.0;
 			if (found > 1)
 			{
-				for (size_t j = 1; j < found; ++j)
-				{
-					sumLen += std::sqrt(static_cast<double>(out_dist2[j]));
-				}
-				if (found < kNeighbors)
-				{
-					sumLen *= (static_cast<double>(kNeighbors - 1) / static_cast<double>(found - 1));
-				}
+				density = static_cast<double>(found - 1);
+
+				// .... find the neighbor area patch ...
+				std::vector<pmp::Point> neighbors;
+				neighbors.reserve(found);
+				std::ranges::for_each(ret_idx, [&ret_idx, &neighbors, &candidatePts](const auto& j) {
+					if (j == ret_idx[0])
+						return;
+					neighbors.push_back(candidatePts[j]);
+					});
+				const auto area = Geometry::CalculateNeighborhoodRingArea(candidatePts[i], neighbors);
+				density /= area < FLT_EPSILON ? MAX_AREA : area;
+				// .....................................
 			}
-			Dv[i] = sumLen;
+			Dv[i] = density;
 		}
 
 		double D_target = params.TargetVertexDensity;
@@ -373,6 +374,7 @@ namespace
 			}
 			D_target = (Dv.empty() ? 0.0 : (accum / static_cast<double>(Dv.size())));
 		}
+		//LogDensities(Dv, alreadyDrawn);
 
 		std::mt19937_64 rng(seed ? *seed : std::random_device{}());
 		std::uniform_real_distribution<double> uniformReal(std::numeric_limits<double>::min(), 1.0);
@@ -420,6 +422,294 @@ namespace
 			std::shuffle(resultIndices.begin(), resultIndices.end(), rng);
 		}
 	}
+
+	void PoissonDiskSampleIndices_Simple(
+		size_t expectedCount,
+		size_t totalCount,
+		std::vector<size_t>& outIndices,
+		const std::set<size_t>& alreadyDrawn,
+		const std::vector<pmp::Point>& prevIterPts,
+		const std::optional<unsigned int>& seed,
+		const IMB::PoissonDiscSamplingParams& params,
+		IMB::IncrementalMeshFileHandler* fileHandler,
+		const char* start,
+		const char* end)
+	{
+		outIndices.clear();
+
+		// 1) How many remain "available"?
+		size_t excludedCount = alreadyDrawn.size();
+		size_t availableCount = (excludedCount < totalCount ? totalCount - excludedCount : 0);
+		if (availableCount == 0 || expectedCount == 0) {
+			return;
+		}
+
+		// 2) Build a list of all indices not in alreadyDrawn
+		std::vector<size_t> allAvail;
+		allAvail.reserve(availableCount);
+		for (size_t i = 0; i < totalCount; ++i) {
+			if (!alreadyDrawn.contains(i)) {
+				allAvail.push_back(i);
+			}
+		}
+
+		// 3) Shuffle that list randomly
+		std::mt19937_64 rng(seed ? static_cast<uint64_t>(*seed) : std::random_device{}());
+		std::shuffle(allAvail.begin(), allAvail.end(), rng);
+
+		// 4) Pre‐fetch 3D positions of alreadyDrawn prevIterPts into acceptedPts
+		std::vector<pmp::Point> acceptedPts{ prevIterPts };
+		acceptedPts.reserve(acceptedPts.size() + expectedCount);
+
+		// 5) For each candidate in shuffled order, accept if its distance to every acceptedPt >= radius
+		double radius = params.MinDiscRadius;
+		double r2 = radius * radius;
+
+		for (size_t idx : allAvail) {
+			if (outIndices.size() >= expectedCount) {
+				break;
+			}
+
+			// Fetch this candidate's 3D position
+			pmp::Point pt = fileHandler->SampleSinglePoint(start, end, idx);
+
+			// If no accepted points yet, accept immediately
+			if (acceptedPts.empty()) {
+				outIndices.push_back(idx);
+				acceptedPts.push_back(pt);
+				continue;
+			}
+
+			// Check distance to all previously accepted points
+			bool farEnough = true;
+			for (auto const& ap : acceptedPts) {
+				double dx = static_cast<double>(pt[0] - ap[0]);
+				double dy = static_cast<double>(pt[1] - ap[1]);
+				double dz = static_cast<double>(pt[2] - ap[2]);
+				double dist2 = dx * dx + dy * dy + dz * dz;
+				if (dist2 < r2) {
+					farEnough = false;
+					break;
+				}
+			}
+
+			if (farEnough) {
+				outIndices.push_back(idx);
+				acceptedPts.push_back(pt);
+			}
+		}
+
+		// If we somehow accepted more than expectedCount (unlikely here), truncate:
+		if (outIndices.size() > expectedCount) {
+			outIndices.resize(expectedCount);
+		}
+	}
+
+	void PoissonDiskSampleIndices(
+		size_t expectedCount,
+		size_t totalCount,
+		std::vector<size_t>& outIndices,
+		const std::set<size_t>& alreadyDrawn,
+		const std::vector<pmp::Point>& prevIterPts,
+		const std::optional<unsigned int>& seed,
+		const IMB::PoissonDiscSamplingParams& params,
+		IMB::IncrementalMeshFileHandler* fileHandler,
+		const char* start,
+		const char* end)
+	{
+		outIndices.clear();
+
+		// 1) How many remain "available" (indices not yet drawn)
+		size_t excludedCount = alreadyDrawn.size();
+		size_t availableCount = (excludedCount < totalCount ? totalCount - excludedCount : 0);
+		if (availableCount == 0 || expectedCount == 0) {
+			return;
+		}
+
+		// 2) Build list of all indices not in alreadyDrawn
+		std::vector<size_t> allAvail;
+		allAvail.reserve(availableCount);
+		for (size_t i = 0; i < totalCount; ++i) {
+			if (!alreadyDrawn.contains(i)) {
+				allAvail.push_back(i);
+			}
+		}
+
+		// 3) From allAvail, pick up to poolSize = min(allAvail.size(), ExpectedPtsMultiplier * expectedCount)
+		size_t poolSize = static_cast<size_t>(std::ceil(params.ExpectedPtsMultiplier * expectedCount));
+		if (poolSize > allAvail.size()) {
+			poolSize = allAvail.size();
+		}
+		std::mt19937_64 rng(seed ? static_cast<uint64_t>(*seed) : std::random_device{}());
+		std::shuffle(allAvail.begin(), allAvail.end(), rng);
+		std::vector<size_t> candidateIndices(allAvail.begin(), allAvail.begin() + poolSize);
+
+		// 4) Pre-load 3D positions of alreadyDrawn via prevIterPts (should match size of alreadyDrawn)
+		//    We assume prevIterPts[i] corresponds to each i in alreadyDrawn,
+		//    so nothing to "fetch" here—just copy:
+		std::vector<pmp::Point> acceptedPts = prevIterPts;
+		acceptedPts.reserve(prevIterPts.size() + expectedCount);
+
+		// 5) Build a KD-tree over acceptedPts if any
+		std::unique_ptr<Geometry::PointSearchIndex3D> acceptedIndex;
+		if (!acceptedPts.empty()) {
+			acceptedIndex = Geometry::Get3DPointSearchIndex(acceptedPts);
+		}
+
+		// 6) Precompute squared radii
+		double minR = params.MinDiscRadius;
+		double minR2 = minR * minR;
+		double maxR = params.MaxDiscRadius;
+		double maxR2 = (maxR > 0.0 ? maxR * maxR : -1.0);
+
+		// Buffers for nanoflann radiusSearch
+		std::vector<nanoflann::ResultItem<uint32_t, pmp::Scalar>> results;
+		nanoflann::SearchParameters searchParams;
+
+		// 7) Keep track of newly accepted 3D points (so we can check minR against them via brute-force)
+		std::vector<pmp::Point> newAcceptedPts;
+		newAcceptedPts.reserve(expectedCount);
+
+		// 8) Shuffle candidateIndices one more time
+		std::shuffle(candidateIndices.begin(), candidateIndices.end(), rng);
+
+		// 9) Dart-throwing loop
+		for (size_t idx : candidateIndices) {
+			if (outIndices.size() >= expectedCount) {
+				break;
+			}
+
+			// Sample candidate’s 3D position
+			pmp::Point pt = fileHandler->SampleSinglePoint(start, end, idx);
+
+			//
+			// (a) Min-radius test against acceptedPts (KD-tree) and newAcceptedPts (brute-force):
+			//
+			bool tooClose = false;
+
+			if (acceptedIndex) {
+				pmp::Scalar queryPt[3] = { pt[0], pt[1], pt[2] };
+				results.clear();
+				size_t nMatches = acceptedIndex->tree.radiusSearch(&queryPt[0], minR2, results, searchParams);
+				if (nMatches > 0) {
+					// Too close to an already-drawn point
+					continue;
+				}
+			}
+			for (auto const& ap : newAcceptedPts) {
+				double dx = static_cast<double>(pt[0] - ap[0]);
+				double dy = static_cast<double>(pt[1] - ap[1]);
+				double dz = static_cast<double>(pt[2] - ap[2]);
+				double dist2 = dx * dx + dy * dy + dz * dz;
+				if (dist2 < minR2) {
+					tooClose = true;
+					break;
+				}
+			}
+			if (tooClose) {
+				continue;
+			}
+
+			//
+			// (b) Max-radius test (only if maxR > 0): must lie within maxR of at least one accepted point
+			//     But if acceptedPts was empty (no prevIterPts), we skip this entirely so that
+			//     we can accept the very first point.
+			//
+			if (maxR > 0.0 && !acceptedPts.empty()) {
+				bool hasNeighbor = false;
+
+				// Check against already-drawn via KD-tree
+				if (acceptedIndex) {
+					pmp::Scalar queryPt[3] = { pt[0], pt[1], pt[2] };
+					results.clear();
+					size_t nMatches = acceptedIndex->tree.radiusSearch(&queryPt[0], maxR2, results, searchParams);
+					if (nMatches > 0) {
+						hasNeighbor = true;
+					}
+				}
+
+				// If still none, check against newly accepted via brute-force
+				if (!hasNeighbor) {
+					for (auto const& ap : newAcceptedPts) {
+						double dx = static_cast<double>(pt[0] - ap[0]);
+						double dy = static_cast<double>(pt[1] - ap[1]);
+						double dz = static_cast<double>(pt[2] - ap[2]);
+						double dist2 = dx * dx + dy * dy + dz * dz;
+						if (dist2 <= maxR2) {
+							hasNeighbor = true;
+							break;
+						}
+					}
+				}
+
+				if (!hasNeighbor) {
+					continue; // no neighbor within max radius
+				}
+			}
+
+			//
+			// (c) Passed both tests: accept this candidate
+			//
+			outIndices.push_back(idx);
+			newAcceptedPts.push_back(pt);
+
+			// Rebuild KD-tree to include newly accepted point
+			acceptedPts.push_back(pt);
+			acceptedIndex = Geometry::Get3DPointSearchIndex(acceptedPts);
+		}
+
+		// 10) Truncate if we accepted more than expectedCount (extra safety)
+		if (outIndices.size() > expectedCount) {
+			outIndices.resize(expectedCount);
+		}
+	}
+
+	//
+	// ======================================================================
+	//
+
+} // anonymous namespace
+
+	//bool IsSupersetOfAlreadyDrawnIndices(
+	//	const std::vector<size_t>& newIndices,
+	//	const std::set<size_t>& alreadyDrawn)
+	//{
+	//	if (alreadyDrawn.empty())
+	//		return false;
+
+	//	// Build a hash set of the freshly generated indices:
+	//	std::unordered_set<size_t> newSet;
+	//	newSet.reserve(newIndices.size());
+	//	for (size_t x : newIndices) {
+	//		newSet.insert(x);
+	//	}
+
+	//	// Now check that every element of alreadyDrawn appears in newSet:
+	//	return std::ranges::all_of(alreadyDrawn, [&newSet](const auto& i) { return newSet.contains(i); });
+	//}
+
+	//void PrintSortedIndices(const std::vector<size_t>& indices, const size_t& amount)
+	//{
+	//	std::cout << "sortedIndices:\n";
+
+	//	std::vector<size_t> sortedIndices{ indices };
+	//	std::ranges::sort(sortedIndices);
+
+	//	for (int i = 0; i < amount; ++i)
+	//		std::cout << "  [" << i << "]:  " << sortedIndices[i] << "\n";
+	//}
+
+	//// Use case:
+	//// std::cout << "----------------------------------------------\n";
+	////std::cout << "UniformRandomVertexSamplingStrategy::Sample:\n";
+	////PrintSortedIndices(indices, 8);
+	////std::cout << "----------------------------------------------\n";
+
+	// .........................................
+	// TODO: move to anonymous namespace vvvvv
+	// .........................................
+
+
 	// .........................................
 	// TODO: move to anonymous namespace ^^^^^
 	// .........................................
@@ -454,11 +744,6 @@ namespace IMB
 		std::vector<size_t> indices;
 		RandomSampleIndices(toSample, total, indices, m_AlreadyDrawnIndices, seed);
 
-		std::cout << "----------------------------------------------\n";
-		std::cout << "UniformRandomVertexSamplingStrategy::Sample:\n";
-		PrintSortedIndices(indices, 8);
-		std::cout << "----------------------------------------------\n";
-
 		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
@@ -474,11 +759,6 @@ namespace IMB
 
 		std::vector<size_t> indices;
 		SoftmaxUniformGeometricSampleIndices(toSample, total, indices, seed, m_AlreadyDrawnIndices, result, Params, m_FileHandler.get(), start, end);
-		
-		std::cout << "----------------------------------------------\n";
-		std::cout << "SoftmaxUniformVertexSamplingStrategy::Sample:\n";
-		PrintSortedIndices(indices, 8);
-		std::cout << "----------------------------------------------\n";
 		
 		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
@@ -496,6 +776,23 @@ namespace IMB
 		std::vector<size_t> indices;
 		// TODO: implement SoftmaxAdaptiveGeometricSampleIndices
 		RandomSampleIndices(toSample, total, indices, m_AlreadyDrawnIndices, seed);
+
+		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
+		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
+	}
+
+	void PoissonDiscVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
+	{
+		size_t total = m_FileHandler->GetLocalVertexCountEstimate(start, end);
+		size_t already = result.size();
+		size_t remaining = (total > already ? total - already : 0);
+		size_t toSample = already == 0 ? m_MinVertexCount : std::min(remaining, m_UpdateThreshold);
+		if (toSample == 0)
+			return;
+
+		std::vector<size_t> indices;
+		//PoissonDiskSampleIndices(toSample, total, indices, m_AlreadyDrawnIndices, result, seed, Params, m_FileHandler.get(), start, end);
+		PoissonDiskSampleIndices_Simple(toSample, total, indices, m_AlreadyDrawnIndices, result, seed, Params, m_FileHandler.get(), start, end);
 
 		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);

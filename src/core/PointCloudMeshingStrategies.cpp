@@ -28,12 +28,13 @@ namespace IMB
 		std::cerr << "EmptyMeshingStrategy::ProcessImpl: attempting to NOT triangulate a mesh with " << ioPoints.size() << " vertices.\n";
 	}
 
-	constexpr pmp::Scalar MAGIC_RADIUS_MULTIPLIER = 2.9;
+	constexpr pmp::Scalar MAGIC_RADIUS_MULTIPLIER = 1.9;
 
 	void BallPivotingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cout << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
-
+#if DEBUG_PRINT
+		DBG_OUT << "BallPivotingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
+#endif
 		// Compute an appropriate radius based on point distribution
 		const auto meanDistance = Geometry::ComputeNearestNeighborMeanInterVertexDistance(ioPoints, 10);
 		const auto ballRadius = meanDistance * MAGIC_RADIUS_MULTIPLIER;
@@ -51,8 +52,9 @@ namespace IMB
 
 	void PoissonMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cout << "PoissonMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
-
+#if DEBUG_PRINT
+		DBG_OUT << "PoissonMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";
+#endif
 		// divide points into clusters
 		const auto pt3DIndex = Geometry::Get3DPointSearchIndex(ioPoints);
 		if (!pt3DIndex)
@@ -111,8 +113,9 @@ namespace IMB
 
 	void LagrangianShrinkWrappingMeshingStrategy::ProcessImpl(std::vector<pmp::Point>& ioPoints, std::vector<std::vector<unsigned int>>& resultPolyIds)
 	{
-		std::cerr << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";	
-
+#if DEBUG_PRINT
+		DBG_OUT << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";	
+#endif
 		constexpr size_t NTimeSteps = 40;
 		constexpr unsigned int nVoxelsPerMinDimension = 40;
 		constexpr double tau = 0.1;

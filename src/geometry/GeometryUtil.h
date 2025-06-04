@@ -225,4 +225,7 @@ namespace Geometry
 	 */
 	[[nodiscard]] pmp::SurfaceMesh ConstructIcoSphere(const Sphere3D& sphere, unsigned int subdiv = 2);
 
+	/// \brief A utility for calculating neighbor ring area.
+	[[nodiscard]] pmp::Scalar CalculateNeighborhoodRingArea(const pmp::Point& center, std::vector<pmp::Point>& neighbors);
+
 } // namespace Geometry

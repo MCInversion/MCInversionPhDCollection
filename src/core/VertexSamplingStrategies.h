@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <optional>
 #include <vector>
 #include <memory>
@@ -19,6 +19,7 @@ namespace IMB
 		UniformRandom = 1, //>! selects vertices uniformly at random.
 		SoftMaxUniform = 2, //>! selects vertices using a softmax function with uniform distribution across the surface.
 		SoftMaxFeatureDetecting = 3, //>! selects vertices using a softmax function with feature detection.
+		PoissonDisc = 4, //>! selects vertices using Poisson disc sampling
 	};
 
 	class VertexSamplingStrategy
@@ -104,6 +105,28 @@ namespace IMB
 			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
 	};
 
+	// -------------------------------------------------------------
+	/// \brief A wrapper for geometric sampling parameters
+	// -------------------------------------------------------------
+	struct PoissonDiscSamplingParams
+	{
+		double MinDiscRadius{ 1.0 }; //>! Minimum geometric spacing (in mesh units) between any two sampled vertices.
+		double MaxDiscRadius{ 1.5 }; //>! Maximum geometric spacing (in mesh units) between any two sampled vertices.
+	
+		double ExpectedPtsMultiplier{ 10.0 }; // >! multiplies the extpectedCount to randomly sample available points.
+	};
+
+	class PoissonDiscVertexSamplingStrategy : public VertexSamplingStrategy
+	{
+	public:
+		using VertexSamplingStrategy::VertexSamplingStrategy;
+
+		void Sample(const char* start, const char* end,
+			std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker) override;
+
+		PoissonDiscSamplingParams Params;
+	};
+
 	inline [[nodiscard]] std::unique_ptr<VertexSamplingStrategy> GetVertexSelectionStrategy(const VertexSelectionType& vertSelType, const unsigned int& completionFrequency, const size_t& maxVertexCount, const std::shared_ptr<IncrementalMeshFileHandler>& handler)
 	{
 		if (vertSelType == VertexSelectionType::Sequential)
@@ -112,7 +135,11 @@ namespace IMB
 			return std::make_unique<UniformRandomVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
 		if (vertSelType == VertexSelectionType::SoftMaxUniform)
 			return std::make_unique<SoftmaxUniformVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
-		return std::make_unique<SoftmaxFeatureDetectingVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
+		if (vertSelType == VertexSelectionType::SoftMaxFeatureDetecting)
+			return std::make_unique<SoftmaxFeatureDetectingVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
+		if (vertSelType == VertexSelectionType::PoissonDisc)
+			return std::make_unique<PoissonDiscVertexSamplingStrategy>(completionFrequency, maxVertexCount, handler);
+		return nullptr; // not supported
 	}
 
 	inline [[nodiscard]] std::string GetVertexSelectionStrategyName(const VertexSelectionType& vertSelType)
@@ -123,7 +150,11 @@ namespace IMB
 			return "VertexSelectionType::UniformRandom";
 		if (vertSelType == VertexSelectionType::SoftMaxUniform)
 			return "VertexSelectionType::SoftMaxUniform";
-		return "VertexSelectionType::SoftMaxFeatureDetecting";
+		if (vertSelType == VertexSelectionType::SoftMaxFeatureDetecting)
+			return "VertexSelectionType::SoftMaxFeatureDetecting";
+		if (vertSelType == VertexSelectionType::PoissonDisc)
+			return "VertexSelectionType::PoissonDisc";
+		return "UNSUPPORTED!";
 	}
 
 } // namespace IMB
