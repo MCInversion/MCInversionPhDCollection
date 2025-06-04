@@ -397,8 +397,16 @@ void SingleThreadSoftMaxUniformStrategy()
 		std::cerr << "SingleThreadSoftMaxUniformStrategy: Error during initialization of VertexSamplingStrategy!\n";
 		return;
 	}
+
 	IMB::GeometricSamplingParams params;
+	params.ErrorMetricGradientMultiplier = 1.0;
+	params.DistributionMetricGradientMultiplier = 0.0001;
 	params.TargetVertexDensity = -1.0;
+	params.AvgNeighborhoodDisplacementMultiplier = 1.0;
+	params.SelectionSharpness = 0.1;
+	params.ConfidenceGM1Imax = 0.05;
+	params.ConfidenceNormal = 0.8;
+
 	dynamic_cast<IMB::SoftmaxUniformVertexSamplingStrategy*>(vertexSamplingStrategy.get())->Params = params;
 
 	std::vector<pmp::Point> result;
@@ -406,20 +414,20 @@ void SingleThreadSoftMaxUniformStrategy()
 	unsigned int lodIndex = 0;
 	unsigned int lodIndex2 = 0;
 	const auto lodStepCallback = [&] {
-		//const std::string outputFileName = dataOutPath + meshName + "IMB_LOD" + std::to_string(lodIndex) + ".ply";
+		/*const */std::string outputFileName = dataOutPath + meshName + "IMB_LOD" + std::to_string(lodIndex) + ".ply";
 		//++lodIndex;
-		//if (!Geometry::Export3DPointCloudToPLY(result, outputFileName))
-		//{
-		//	std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
-		//	return;
-		//}
+		if (!Geometry::Export3DPointCloudToPLY(result, outputFileName))
+		{
+			std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
+			return;
+		}
 
 		const auto meshingStrategy = IMB::GetReconstructionStrategy(IMB::ReconstructionFunctionType::BallPivoting);
 		Geometry::BaseMeshGeometryData mesh;
 		mesh.Vertices = result;
 		meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
 
-		const std::string outputFileName = dataOutPath + meshName + "IMB_LOD_BallPivoting" + std::to_string(lodIndex) + ".vtk";
+		/*const std::string*/ outputFileName = dataOutPath + meshName + "IMB_LOD_BallPivoting" + std::to_string(lodIndex) + ".vtk";
 		++lodIndex;
 		if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
 		{
@@ -428,20 +436,20 @@ void SingleThreadSoftMaxUniformStrategy()
 		}
 	};
 	const auto lodStepCallback2 = [&] {
-		//const std::string outputFileName = dataOutPath + meshName + "IMB2_LOD" + std::to_string(lodIndex2) + ".ply";
+		/*const */std::string outputFileName = dataOutPath + meshName + "IMB2_LOD" + std::to_string(lodIndex2) + ".ply";
 		//++lodIndex2;
-		//if (!Geometry::Export3DPointCloudToPLY(result2, outputFileName))
-		//{
-		//	std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
-		//	return;
-		//}
+		if (!Geometry::Export3DPointCloudToPLY(result2, outputFileName))
+		{
+			std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
+			return;
+		}
 
 		const auto meshingStrategy = IMB::GetReconstructionStrategy(IMB::ReconstructionFunctionType::BallPivoting);
 		Geometry::BaseMeshGeometryData mesh;
 		mesh.Vertices = result2;
 		meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
 
-		const std::string outputFileName = dataOutPath + meshName + "IMB2_LOD_BallPivoting" + std::to_string(lodIndex2) + ".vtk";
+		/*const std::string */outputFileName = dataOutPath + meshName + "IMB2_LOD_BallPivoting" + std::to_string(lodIndex2) + ".vtk";
 		++lodIndex2;
 		if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
 		{

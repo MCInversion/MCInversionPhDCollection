@@ -80,8 +80,8 @@ namespace IMB
 		double TargetVertexDensity{ 1.0 };             // >! Dtarget: target vertex density [verts/unit^2], if negative, compute as mean
 		double AvgNeighborhoodDisplacementMultiplier{ 1.0 }; // >! lambda: average 1-ring neighborhood displacement multiplier
 		double SelectionSharpness{ 1.0 };               // >! gamma: softmax selection sharpness
-		double ConfidenceGM1Imax{ 0.95 };               // >! rho: confidence level of GM{1, Imax}
-		double ConfidenceNormal{ 0.95 };                // >! Z: confidence level of N(0,1)
+		double ConfidenceGM1Imax{ 0.05 };               // >! rho: confidence level of GM{1, Imax}
+		double ConfidenceNormal{ 0.8 };                // >! Z: confidence level of N(0,1)
 	};
 
 	class SoftmaxUniformVertexSamplingStrategy : public VertexSamplingStrategy
