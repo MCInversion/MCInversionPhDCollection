@@ -1,4 +1,4 @@
-#include "VertexSamplingStrategies.h"
+﻿#include "VertexSamplingStrategies.h"
 
 #include <numeric>
 #include <random>
@@ -36,12 +36,132 @@ namespace
 		std::iota(resultIndices.begin(), resultIndices.end(), 0);
 	}
 
-	/// \brief Generates expectedCount random indices from 0 to expectedCount - 1 into resultIndices from the uniform distribution type.
-	void RandomSampleIndices(const size_t& expectedCount, std::vector<size_t>& resultIndices, const std::optional<unsigned int>& seed)
+	// \brief Fills resultIndices with expectedCount unique random indices from [0..totalCount-1]
+	///       by performing a "partial" Fisher-Yates shuffle. Requires O(totalCount) memory.
+	/// \param expectedCount  How many distinct indices to sample.
+	/// \param totalCount     The range of indices is [0..totalCount-1].
+	/// \param resultIndices  Output vector: will be resized to expectedCount and filled with the sample.
+	/// \param alreadyDrawn   The set of already drawn indices.
+	/// \param seed           Optional seed; if not provided, a random_device-seeded mt19937 is used.
+	void FisherYatesSampleIndices(
+		const size_t& expectedCount,
+		const size_t& totalCount,
+		std::vector<size_t>& resultIndices,
+		const std::set<size_t>& alreadyDrawn,
+		const std::optional<unsigned int>& seed)
 	{
-		if (expectedCount == 0)
+		// Count how many indices remain available
+		size_t excludedCount = alreadyDrawn.size();
+		if (excludedCount >= totalCount) {
+			std::cerr << "FisherYatesSampleIndices: no available indices (all already drawn)\n";
+			return;
+		}
+		size_t availableCount = totalCount - excludedCount;
+		if (expectedCount > availableCount) {
+			std::cerr << "FisherYatesSampleIndices: expectedCount > available indices\n";
+			return;
+		}
+
+		resultIndices.clear();
+		resultIndices.reserve(expectedCount);
+
+		// Build a buffer of all indices not in alreadyDrawn
+		std::vector<size_t> buffer;
+		buffer.reserve(availableCount);
+		for (size_t i = 0; i < totalCount; ++i) {
+			if (!alreadyDrawn.contains(i)) {
+				buffer.push_back(i);
+			}
+		}
+
+		// random engine
+		std::mt19937 gen(seed ? *seed : std::random_device{}());
+
+		// Perform a "partial" Fisher–Yates on buffer[0..availableCount-1]
+		// Swap only up to expectedCount
+		for (size_t i = 0; i < expectedCount; ++i) {
+			std::uniform_int_distribution<size_t> distrib(i, availableCount - 1);
+			size_t j = distrib(gen);
+			std::swap(buffer[i], buffer[j]);
+		}
+
+		// Copy out the first expectedCount entries
+		resultIndices.assign(buffer.begin(), buffer.begin() + expectedCount);
+	}
+
+	/// \brief Fills resultIndices with expectedCount unique random indices from [0..totalCount-1]
+	///        by using reservoir sampling. Requires only O(expectedCount) memory.
+	/// \param expectedCount  How many distinct indices to sample.
+	/// \param totalCount     The range of indices is [0..totalCount-1].
+	/// \param resultIndices  Output vector: will be resized to expectedCount and filled with the sample.
+	/// \param alreadyDrawn   The set of already drawn indices.
+	/// \param seed           Optional seed; if not provided, a random_device-seeded mt19937 is used.
+	void ReservoirSampleIndices(
+		const size_t& expectedCount,
+		const size_t& totalCount,
+		std::vector<size_t>& resultIndices,
+		const std::set<size_t>& alreadyDrawn,
+		const std::optional<unsigned int>& seed)
+	{
+		// Count how many indices remain available
+		size_t excludedCount = alreadyDrawn.size();
+		if (excludedCount >= totalCount) {
+			std::cerr << "ReservoirSampleIndices: no available indices (all already drawn)\n";
+			return;
+		}
+		size_t availableCount = totalCount - excludedCount;
+		if (expectedCount > availableCount) {
+			std::cerr << "ReservoirSampleIndices: expectedCount > available indices\n";
+			return;
+		}
+
+		resultIndices.clear();
+		resultIndices.reserve(expectedCount);
+
+		std::mt19937 gen(seed ? *seed : std::random_device{}());
+		size_t seen = 0;
+
+		// Iterate through the entire [0..totalCount-1], skipping alreadyDrawn
+		for (size_t i = 0; i < totalCount; ++i) {
+			if (alreadyDrawn.contains(i)) {
+				continue;
+			}
+			if (seen < expectedCount) {
+				// Fill initial reservoir
+				resultIndices.push_back(i);
+			}
+			else {
+				// Decide whether to replace one of the reservoir slots
+				std::uniform_int_distribution<size_t> distrib(0, seen);
+				size_t j = distrib(gen);
+				if (j < expectedCount) {
+					resultIndices[j] = i;
+				}
+			}
+			++seen;
+		}
+		// At this point, `seen == availableCount >= expectedCount`
+	}
+
+	/// \brief Generates expectedCount random indices from 0 to totalCount - 1 into resultIndices from the uniform distribution type.
+	void RandomSampleIndices(
+		const size_t& expectedCount, 
+		const size_t& totalCount, 
+		std::vector<size_t>& resultIndices, 
+		const std::set<size_t>& alreadyDrawn,
+		const std::optional<unsigned int>& seed)
+	{
+		// Determine how many indices remain available
+		size_t excludedCount = alreadyDrawn.size();
+		if (excludedCount >= totalCount) 
 		{
-			std::cerr << "RandomSampleIndices: expectedCount is 0!\n";
+			std::cerr << "ReservoirSampleIndices: no available indices (all already drawn)\n";
+			return;
+		}
+		size_t availableCount = totalCount - excludedCount;
+		if (expectedCount > availableCount) 
+		{
+			std::cerr << "ReservoirSampleIndices: expectedCount > available indices\n";
 			return;
 		}
 
@@ -49,21 +169,12 @@ namespace
 		DBG_OUT << "RandomSampleIndices: Starting...\n";
 #endif
 
-		resultIndices.clear();
-		resultIndices.resize(expectedCount);
-
-		// Create a generator with the given seed or a random device
-		std::mt19937 gen(seed ? *seed : std::random_device{}());
-
-		// Fill resultIndices with 0, 1, ..., expectedCount - 1
-		std::iota(resultIndices.begin(), resultIndices.end(), 0);
-
-		// Perform Fisher-Yates shuffle on resultIndices
-		for (size_t i = expectedCount - 1; i > 0; --i)
+		if (HasEnoughMemoryForFisherYates(totalCount))
 		{
-			std::uniform_int_distribution<size_t> distrib(0, i);
-			size_t j = distrib(gen);
-			std::swap(resultIndices[i], resultIndices[j]);
+			FisherYatesSampleIndices(expectedCount, totalCount, resultIndices, alreadyDrawn, seed);
+		}
+		else {
+			ReservoirSampleIndices(expectedCount, totalCount, resultIndices, alreadyDrawn, seed);
 		}
 
 #if DEBUG_PRINT
@@ -81,76 +192,122 @@ namespace
 		size_t idx;
 	};
 
-	void SoftmaxUniformGeometricSampleIndices(const size_t& expectedCount, std::vector<size_t>& resultIndices, 
-		const std::optional<unsigned int>& seed, const std::vector<pmp::Point>& prevIterPts,
+	void SoftmaxUniformGeometricSampleIndices(
+		const size_t& expectedCount, const size_t& totalCount,
+		std::vector<size_t>& resultIndices, 
+		const std::optional<unsigned int>& seed, 
+		const std::set<size_t>& alreadyDrawn,
+		const std::vector<pmp::Point>& prevIterPts,
 		const IMB::GeometricSamplingParams& params, 
 		IMB::IncrementalMeshFileHandler* fileHandler,
 		const char* start, const char* end)
 	{
+		std::vector<size_t> candidateIndices;
+		RandomSampleIndices(expectedCount, totalCount, candidateIndices, alreadyDrawn, seed);
+
 		if (prevIterPts.empty())
 		{
 			// initial sample must be random
-			RandomSampleIndices(expectedCount, resultIndices, seed);
+			resultIndices = candidateIndices;
 			return;
 		}
 
-		// Build a kdtree over prevIterPts
-		auto pt3DIndex = Geometry::Get3DPointSearchIndex(prevIterPts);
-		if (!pt3DIndex)
+		// Pick a random subset of vertices of size expectedCount
+		std::vector<pmp::Point> candidatePts;
+		candidatePts.reserve(expectedCount);
+		for (const auto& candidateId : candidateIndices)
 		{
-#if DEBUG_PRINT
-			DBG_OUT << "SoftmaxUniformGeometricSampleIndices: failed to build kdtree on prevIterPts\n";
-#endif
+			candidatePts.push_back(fileHandler->SampleSinglePoint(start, end, candidateId));
+		}
+		// Build a KD-tree over candidatePts
+		auto fullIndex = Geometry::Get3DPointSearchIndex(candidatePts);
+		if (!fullIndex) 
+		{
+			// kd-tree construction error.
+			resultIndices = candidateIndices;
+			return;
+		}
+		auto& fullTree = fullIndex->tree;
+
+		// For each candidate point, compute Dv = sum of distances to its k nearest neighbors
+		const size_t kNeighbors = 6;
+		std::vector<double> Dv(expectedCount, 0.0);
+		std::vector<uint32_t>    ret_idx(kNeighbors);
+		std::vector<pmp::Scalar> out_dist2(kNeighbors);
+
+		for (size_t i = 0; i < expectedCount; ++i) 
+		{
+			pmp::Scalar queryPt[3] = { candidatePts[i][0], candidatePts[i][1], candidatePts[i][2] };
+			size_t found = fullTree.knnSearch(&queryPt[0], kNeighbors, ret_idx.data(), out_dist2.data());
+			if (found > 1) 
+			{
+				double sumLen = 0.0;
+				for (size_t j = 1; j < found; ++j) {
+					sumLen += std::sqrt(static_cast<double>(out_dist2[j]));
+				}
+				if (found < kNeighbors) {
+					sumLen *= (static_cast<double>(kNeighbors - 1) / static_cast<double>(found - 1));
+				}
+				Dv[i] = sumLen;
+			}
+			else 
+			{
+				Dv[i] = 0.0;
+			}
 		}
 
-		auto& kdTree = pt3DIndex->tree;
+		// Determine D_target
+		double D_target = params.TargetVertexDensity;
+		if (D_target < 0.0) 
+		{
+			double accum = 0.0;
+			for (double v : Dv) accum += v;
+			D_target = accum / static_cast<double>(expectedCount);
+		}
 
-		// Evaluate vertex weights and draw indices
+		// Compute softmax-like keys and keep (key, originalIndex) pairs
 		std::mt19937_64 rng(seed ? *seed : std::random_device{}());
 		std::uniform_real_distribution<double> uniformReal(std::numeric_limits<double>::min(), 1.0);
+
 		std::vector<KeyIdx> keys;
 		keys.reserve(expectedCount);
-		for (size_t i = 0; i < expectedCount; ++i)
+
+		for (size_t i = 0; i < expectedCount; ++i) 
 		{
-			const auto v_i = fileHandler->SampleSinglePoint(start, end, i);
-			std::vector<uint32_t>    nnIdx(1);
-			std::vector<pmp::Scalar> nnDistSq(1);
-			{
-				// find nearest neighbor from existing pts
-				pmp::Scalar queryPt[3] = { v_i[0], v_i[1], v_i[2] };
-				kdTree.knnSearch(&queryPt[0], 1, nnIdx.data(), nnDistSq.data());
-			}
-
-			// score(v_i) = DistributionMetricGradientMultiplier * (d_i - TargetVertexDensity)
-			const double d_i = std::sqrt(static_cast<double>(nnDistSq[0]));
-			const double score = params.DistributionMetricGradientMultiplier * (d_i - params.TargetVertexDensity);
-
-			// clamp weight w[i] = exp(score(v_i))
+			double score = params.DistributionMetricGradientMultiplier * (Dv[i] - D_target);
 			double w_i = std::exp(score);
 			if (w_i < 1e-300) w_i = 1e-300;
 			if (w_i > 1e+300) w_i = 1e+300;
 
-			// Draw U in (0,1), compute key = exp( ln(U) / w_i )
-			const double u = uniformReal(rng);
-			const double lnU = std::log(u);
-			const double key = std::exp(lnU / w_i);
-			keys.emplace_back(key, i);
+			double u = uniformReal(rng);
+			double lnU = std::log(u);
+			double key = std::exp(lnU / w_i);
+
+			keys.emplace_back(key, candidateIndices[i]);
 		}
 
-		// Extract sorted indices into resultIndices
-		resultIndices.resize(expectedCount);
+		// Sort all candidates by descending key
 		std::ranges::sort(keys, [](const KeyIdx& a, const KeyIdx& b) { return a.key > b.key; });
-		for (size_t j = 0; j < expectedCount; ++j)
-		{
-			resultIndices[j] = keys[j].idx;
-		}
 
-		// Fisher�Yates shuffle among all expectedCount to break any ties
-		for (size_t i = expectedCount - 1; i > 0; --i)
+		// Extract the top expectedCount indices into resultIndices
+		resultIndices.resize(expectedCount);
+		for (size_t j = 0; j < expectedCount; ++j) { resultIndices[j] = keys[j].idx; }
+
+		if (HasEnoughMemoryForFisherYates(expectedCount))
 		{
-			std::uniform_int_distribution<size_t> distrib(0, i);
-			size_t swap_j = distrib(rng);
-			std::swap(resultIndices[i], resultIndices[swap_j]);
+			// Full Fisher–Yates on the `expectedCount` slots:
+			for (size_t i = expectedCount - 1; i > 0; --i)
+			{
+				std::uniform_int_distribution<size_t> distrib(0, i);
+				size_t swap_j = distrib(rng);
+				std::swap(resultIndices[i], resultIndices[swap_j]);
+			}
+		}
+		else
+		{
+			// Fallback shuffle that never allocates any extra buffer.
+			// std::shuffle is guaranteed to work in-place, touching only resultIndices itself.
+			std::shuffle(resultIndices.begin(), resultIndices.end(), rng);
 		}
 	}
 	// .........................................
@@ -162,30 +319,56 @@ namespace IMB
 	void SequentialVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		SampleIndicesSequentially(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices);
+		size_t total = m_FileHandler->GetLocalVertexCountEstimate(start, end);
+		size_t already = result.size();
+		size_t remaining = (total > already ? total - already : 0);
+		size_t toSample = std::min(remaining, m_UpdateThreshold);
+		if (toSample == 0)
+			return;
+		SampleIndicesSequentially(toSample, indices);
+		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void UniformRandomVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		RandomSampleIndices(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices, seed);
+		size_t total = m_FileHandler->GetLocalVertexCountEstimate(start, end);
+		size_t already = result.size();
+		size_t remaining = (total > already ? total - already : 0);
+		size_t toSample = std::min(remaining, m_UpdateThreshold);
+		if (toSample == 0) 
+			return;
+		RandomSampleIndices(toSample, total, indices, m_AlreadyDrawnIndices, seed);
+		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void SoftmaxUniformVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		const auto nVertsToSample = m_FileHandler->GetLocalVertexCountEstimate(start, end);
-		SoftmaxUniformGeometricSampleIndices(nVertsToSample, indices, seed, result, Params, m_FileHandler.get(), start, end);
+		size_t total = m_FileHandler->GetLocalVertexCountEstimate(start, end);
+		size_t already = result.size();
+		size_t remaining = (total > already ? total - already : 0);
+		size_t toSample = std::min(remaining, m_UpdateThreshold);
+		if (toSample == 0) 
+			return;
+		SoftmaxUniformGeometricSampleIndices(toSample, total, indices, seed, m_AlreadyDrawnIndices, result, Params, m_FileHandler.get(), start, end);
+		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
 	void SoftmaxFeatureDetectingVertexSamplingStrategy::Sample(const char* start, const char* end, std::vector<pmp::Point>& result, const std::optional<unsigned int>& seed, IncrementalProgressTracker& tracker)
 	{
 		std::vector<size_t> indices;
-		// TODO: implement index sampling
-		RandomSampleIndices(m_FileHandler->GetLocalVertexCountEstimate(start, end), indices, seed);
+		size_t total = m_FileHandler->GetLocalVertexCountEstimate(start, end);
+		size_t already = result.size();
+		size_t remaining = (total > already ? total - already : 0);
+		size_t toSample = std::min(remaining, m_UpdateThreshold);
+		if (toSample == 0)
+			return;
+		RandomSampleIndices(toSample, total, indices, m_AlreadyDrawnIndices, seed);
+		m_AlreadyDrawnIndices.insert(indices.begin(), indices.end());
 		m_FileHandler->Sample(start, end, indices, m_UpdateThreshold, result, tracker);
 	}
 
@@ -202,8 +385,7 @@ namespace IMB
 		}
 		m_VertexCap = std::min(m_FileHandler->GetGlobalVertexCountEstimate(), maxVertexCount);
 		m_MinVertexCount = static_cast<size_t>(m_VertexCap * MIN_VERTEX_FRACTION);
-		m_UpdateThreshold = static_cast<size_t>(std::round(static_cast<double>(m_VertexCap) /
-			static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER)));
+		m_UpdateThreshold = static_cast<size_t>(std::round(static_cast<double>(m_VertexCap) / static_cast<double>(completionFrequency * FREQUENCY_UPDATE_MULTIPLIER)));
 #if DEBUG_PRINT
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: completionFrequency = " << completionFrequency << " jobs per file load.\n";
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_MinVertexCount = " << m_MinVertexCount << " vertices.\n";

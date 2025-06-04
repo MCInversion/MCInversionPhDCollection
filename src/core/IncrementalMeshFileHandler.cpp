@@ -234,7 +234,7 @@ namespace IMB
 		DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Starting sample process...\n";
 #endif
 
-		// 1) Find the "vertex" element in m_Elements.
+		// Find the "vertex" element in m_Elements.
 		const PlyElement* vertexElem = nullptr;
 		for (auto const& elem : m_Elements)
 		{
@@ -249,7 +249,7 @@ namespace IMB
 			throw std::runtime_error("Sample: no \"vertex\" element in header.");
 		}
 
-		// 2) Compute byte‐offsets of x, y, z within each vertex record, and compute total record size.
+		// Compute byte‐offsets of x, y, z within each vertex record, and compute total record size.
 		size_t byteCursor = 0;
 		size_t xOffset = 0, yOffset = 0, zOffset = 0;
 		bool   foundX = false, foundY = false, foundZ = false;
@@ -306,16 +306,15 @@ namespace IMB
 		// come after x,y,z.
 		size_t vertexRecordSize = byteCursor;
 
-		// 3) Determine if we need to swap bytes (file is big‐endian and host is little‐endian).
+		// Determine if we need to swap bytes (file is big‐endian and host is little‐endian).
 		bool swapBytes = (m_Format == PlyFormat::BINARY_BIG_ENDIAN);
 
-		// 4) Reserve space in result.
-		result.clear();
-		result.reserve(m_GlobalVertexCountEstimate);
+		// Reserve space in result.
+		result.reserve(result.size() + updateThreshold);
 
 		size_t localVertexCount = 0;
 
-		// 5) Loop over each requested index, read x,y,z, and accumulate into 'result'.
+		// Loop over each requested index, read x,y,z, and accumulate into 'result'.
 		for (size_t idx : indices)
 		{
 			const char* vertexData = start + idx * vertexRecordSize;
@@ -358,27 +357,24 @@ namespace IMB
 			if (localVertexCount >= updateThreshold)
 			{
 #if DEBUG_PRINT
-				DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Updating tracker with "
-					<< localVertexCount << " vertices.\n";
+				DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Updating tracker with " << localVertexCount << " vertices.\n";
 #endif
 				tracker.Update(localVertexCount);
 				localVertexCount = 0;
 			}
 		}
 
-		// 6) Final tracker update (if any vertices remain).
+		// Final tracker update (if any vertices remain).
 		if (localVertexCount > 0)
 		{
 #if DEBUG_PRINT
-			DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Final tracker update with "
-				<< localVertexCount << " vertices.\n";
+			DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Final tracker update with " << localVertexCount << " vertices.\n";
 #endif
 			tracker.Update(localVertexCount, /*finalChunk=*/true);
 		}
 
 #if DEBUG_PRINT
-		DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Finished sampling "
-			<< result.size() << " vertices.\n";
+		DBG_OUT << "IncrementalBinaryPLYFileHandler::Sample: Finished sampling " << updateThreshold << " vertices.\n";
 #endif
 	}
 

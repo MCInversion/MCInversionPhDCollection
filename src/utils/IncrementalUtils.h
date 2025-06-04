@@ -23,3 +23,10 @@ inline [[nodiscard]] std::string FormatAddresses(const char* start, const char* 
 }
 
 constexpr unsigned int DEFAULT_MAX_VERTEX_CAPACITY = 1'000'000;
+
+// ------------------------------------------------------------------------------------------------
+/// \brief Returns true if there is enough free RAM to allocate an array of totalCount size_t elements.
+/// \param totalCount  Number of elements we would need to hold in memory (size_t each).
+/// \note On Windows uses GlobalMemoryStatusEx. On POSIX uses sysconf(_SC_AVPHYS_PAGES).
+// ------------------------------------------------------------------------------------------------
+[[nodiscard]] bool HasEnoughMemoryForFisherYates(size_t totalCount);

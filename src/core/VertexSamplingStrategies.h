@@ -2,6 +2,7 @@
 #include <optional>
 #include <vector>
 #include <memory>
+#include <set>
 
 #include "pmp/Types.h"
 
@@ -48,6 +49,7 @@ namespace IMB
 		size_t m_MinVertexCount;
 
 		std::shared_ptr<IncrementalMeshFileHandler> m_FileHandler{ nullptr };
+		std::set<size_t> m_AlreadyDrawnIndices;
 	};
 
 	class SequentialVertexSamplingStrategy : public VertexSamplingStrategy
@@ -75,7 +77,7 @@ namespace IMB
 	{
 		double ErrorMetricGradientMultiplier{ 1.0 };   // >! alpha: error metric gradient multiplier
 		double DistributionMetricGradientMultiplier{ 1.0 };   // >! beta: vertex distribution metric gradient multiplier
-		double TargetVertexDensity{ 1.0 };             // >! Dtarget: target vertex density [verts/unit^2]
+		double TargetVertexDensity{ 1.0 };             // >! Dtarget: target vertex density [verts/unit^2], if negative, compute as mean
 		double AvgNeighborhoodDisplacementMultiplier{ 1.0 }; // >! lambda: average 1-ring neighborhood displacement multiplier
 		double SelectionSharpness{ 1.0 };               // >! gamma: softmax selection sharpness
 		double ConfidenceGM1Imax{ 0.95 };               // >! rho: confidence level of GM{1, Imax}

@@ -398,6 +398,7 @@ void SingleThreadSoftMaxUniformStrategy()
 		return;
 	}
 	IMB::GeometricSamplingParams params;
+	params.TargetVertexDensity = -1.0;
 	dynamic_cast<IMB::SoftmaxUniformVertexSamplingStrategy*>(vertexSamplingStrategy.get())->Params = params;
 
 	std::vector<pmp::Point> result;
@@ -428,7 +429,7 @@ void SingleThreadSoftMaxUniformStrategy()
 	};
 	const auto lodStepCallback2 = [&] {
 		//const std::string outputFileName = dataOutPath + meshName + "IMB2_LOD" + std::to_string(lodIndex2) + ".ply";
-		//++lodIndex;
+		//++lodIndex2;
 		//if (!Geometry::Export3DPointCloudToPLY(result2, outputFileName))
 		//{
 		//	std::cout << "SingleThreadSoftMaxUniformStrategy: Failed to export sampled point data." << "\n";
