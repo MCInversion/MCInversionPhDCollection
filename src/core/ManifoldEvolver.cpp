@@ -324,9 +324,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		if (GetSettings().NormalActivation.On && m_DistanceField && !m_InnerCurvesDistanceFields.empty())
 		{
 			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
-				*m_OuterCurve,
-				*m_DistanceField, m_InnerCurvesDistanceFields, 
-				m_ScalarInterpolate, GetSettings().NormalActivation);			
+				*m_OuterCurve, m_InnerCurvesDistanceFields, 
+				m_ScalarInterpolate, GetSettings().NormalActivation);
 		}
 
 		// prepare matrix & rhs for m_OuterCurve:
@@ -496,8 +495,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		if (GetSettings().NormalActivation.On && m_DistanceField && m_OuterCurveDistanceField)
 		{
 			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
-				*m_OuterCurve,
-				*m_DistanceField, { m_OuterCurveDistanceField },
+				*m_OuterCurve, { m_OuterCurveDistanceField },
 				m_ScalarInterpolate, GetSettings().NormalActivation);
 		}
 

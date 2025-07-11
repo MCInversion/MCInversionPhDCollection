@@ -6013,4 +6013,49 @@ void TestNormalActivation()
 	{
 		std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
 	}
+
+	const auto [outerNextBoundary, outerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationOuter0Curve,
+		{ innerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+	if (!outerNextBoundary || !outerPrevBoundary)
+		return;
+
+	const auto [innerNextBoundary, innerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationInner0Curve,
+		{ outerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+	if (!innerNextBoundary || !innerPrevBoundary)
+		return;
+
+	VertexValueLogger<pmp::ManifoldCurve2D> curveLogger;
+	curveLogger.AddManifold(&pathNormalActivationOuter0Curve);
+	curveLogger.AddManifold(&pathNormalActivationInner0Curve);
+
+	std::unordered_map<pmp::ManifoldCurve2D*, std::shared_ptr<pmp::EvolvingArcLengthCalculator>> arcLengthCalculators{
+		{&pathNormalActivationOuter0Curve, std::make_shared<pmp::EvolvingArcLengthCalculator>(pathNormalActivationOuter0Curve) },
+		{&pathNormalActivationInner0Curve, std::make_shared<pmp::EvolvingArcLengthCalculator>(pathNormalActivationInner0Curve) }
+	};
+
+	curveLogger.Init(dataOutPath + "activationBoundary_log.json");
+	curveLogger.StartNewTimeStep(1);
+
+	const auto outerArcLengths = arcLengthCalculators[&pathNormalActivationOuter0Curve]->CalculateArcLengths();
+	if (!outerArcLengths.empty())
+	{
+		for (const auto v : pathNormalActivationOuter0Curve.vertices())
+		{
+			curveLogger.LogValue(&pathNormalActivationOuter0Curve, "arcLength", v.idx(), outerArcLengths[v.idx()]);
+			curveLogger.LogValue(&pathNormalActivationOuter0Curve, "nextBoundary", v.idx(), static_cast<double>((*outerNextBoundary)[v].idx()));
+			curveLogger.LogValue(&pathNormalActivationOuter0Curve, "prevBoundary", v.idx(), static_cast<double>((*outerPrevBoundary)[v].idx()));
+		}
+	}
+	const auto innerArcLengths = arcLengthCalculators[&pathNormalActivationInner0Curve]->CalculateArcLengths();
+	if (!innerArcLengths.empty())
+	{
+		for (const auto v : pathNormalActivationInner0Curve.vertices())
+		{
+			curveLogger.LogValue(&pathNormalActivationInner0Curve, "arcLength", v.idx(), innerArcLengths[v.idx()]);
+			curveLogger.LogValue(&pathNormalActivationInner0Curve, "nextBoundary", v.idx(), static_cast<double>((*innerNextBoundary)[v].idx()));
+			curveLogger.LogValue(&pathNormalActivationInner0Curve, "prevBoundary", v.idx(), static_cast<double>((*innerPrevBoundary)[v].idx()));
+		}
+	}
+
+	curveLogger.Save(false);
 }

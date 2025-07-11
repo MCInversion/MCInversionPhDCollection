@@ -509,8 +509,8 @@ std::pair<
 		return { vForwardGapBoundary, vBackwardGapBoundary };
 
 	// =========== forward pass: looking for previous boundary pts ================
-	vForwardGapBoundary = !curve.has_vertex_property("v:next_boundary") ?
-		curve.vertex_property<pmp::Vertex>("v:next_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:next_boundary");
+	vBackwardGapBoundary = !curve.has_vertex_property("v:prev_boundary") ?
+		curve.vertex_property<pmp::Vertex>("v:prev_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:prev_boundary");
 
 	pmp::Vertex currentVertex = v0;
 	pmp::Edge currentEdge = eFrom;
@@ -546,9 +546,9 @@ std::pair<
 	}
 
 	// =========== backward pass: looking for next boundary pts ===================
-	vBackwardGapBoundary = !curve.has_vertex_property("v:prev_boundary") ?
-		curve.vertex_property<pmp::Vertex>("v:prev_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:prev_boundary");
-	
+	vForwardGapBoundary = !curve.has_vertex_property("v:next_boundary") ?
+		curve.vertex_property<pmp::Vertex>("v:next_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:next_boundary");
+
 	currentVertex = v0;
 	currentEdge = eTo;
 	count = 0;
