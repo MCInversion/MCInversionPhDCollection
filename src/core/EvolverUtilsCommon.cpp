@@ -477,35 +477,110 @@ pmp::AdaptiveRemeshingSettings CollectRemeshingSettingsFromCurve(const std::shar
 //
 
 std::pair<
-	std::optional<pmp::VertexProperty<pmp::Vertex>>,
-	std::optional<pmp::VertexProperty<pmp::Vertex>>
-> GetNearestGapBoundaryVertices(
-	pmp::ManifoldCurve2D& curve,
-	const Geometry::ScalarGrid2D& targetDistanceField,
-	const std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& manifoldDistanceFields,
-	const ScalarGridInterpolationFunction2D& interpFunc,
-	const NormalActivationSettings& settings
-)
+	std::optional<pmp::VertexProperty<pmp::Vertex>>, 
+	std::optional<pmp::VertexProperty<pmp::Vertex>>> 
+	GetNearestGapBoundaryVertices(
+		pmp::ManifoldCurve2D& curve, 
+		const std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& manifoldDistanceFields, 
+		const ScalarGridInterpolationFunction2D& interpFunc, const NormalActivationSettings& settings)
 {
 	std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
 	std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
 
-	//auto vTarget = Geometry::GetVerticesWithinDistance(curve, targetDistanceField,
-	//	settings.TargetDFCriticalRadius, "v:target_activated", interpFunc);
-	//auto vManifold = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
-	//	settings.ManifoldCriticalRadius, "v:manifold_activated", interpFunc);
+	if (curve.is_empty())
+		return { vForwardGapBoundary, vBackwardGapBoundary };
+
+	// check for boundaries
+	if (!curve.is_closed())
+		return { vForwardGapBoundary, vBackwardGapBoundary };
 
 	auto vGap = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
 		settings.ManifoldCriticalRadius, "v:gap_activated", interpFunc);
+	if (std::ranges::all_of(vGap.vector(), [](const auto& item) { return !item; }))
+	{
+		// no transition points
+		return { vForwardGapBoundary, vBackwardGapBoundary };
+	}
 
-	//auto vGap = Geometry::GetExclusivityMaskForVertexProperties(curve, "v:target_activated", "v:manifold_activated", "v:gap_activated");
+	const pmp::Vertex v0{ 0 };	
+	const pmp::Edge eFrom = curve.edge_from(v0);
+	const pmp::Edge eTo = curve.edge_to(v0);
+	if (!curve.is_valid(eFrom) || !curve.is_valid(eTo))
+		return { vForwardGapBoundary, vBackwardGapBoundary };
 
-	std::tie(vForwardGapBoundary, vBackwardGapBoundary) = Geometry::MarkNearestBoundaryVertexHandles(curve,
-		"v:gap_activated", "v:next_gap_boundary", "v:prev_gap_boundary", settings.NPointsFromCriticalBound);
+	// =========== forward pass: looking for previous boundary pts ================
+	vForwardGapBoundary = !curve.has_vertex_property("v:next_boundary") ?
+		curve.vertex_property<pmp::Vertex>("v:next_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:next_boundary");
 
-	//curve.remove_vertex_property(vTarget);
-	//curve.remove_vertex_property(vManifold);
-	curve.remove_vertex_property(vGap);
+	pmp::Vertex currentVertex = v0;
+	pmp::Edge currentEdge = eFrom;
+	size_t count = 0;
+	{
+		pmp::Vertex lastOut{};
+		do
+		{
+			// Verify the start and end vertices of the current edge
+			const auto [vPrev, vNext] = curve.vertices(currentVertex);
+			if (!curve.is_valid(vPrev) || !curve.is_valid(vNext))
+				break;
+			if (vPrev == currentVertex || vNext == currentVertex)
+				break;
+
+			if (vGap[currentVertex] && !vGap[vPrev])
+				lastOut = vPrev; // we reached a forward transition into vGap, remember lastOut
+			if (vGap[currentVertex] && !vGap[vNext])
+				lastOut = pmp::Vertex{}; // we reached a forward transition outside of vGap, reset lastOut
+
+			if (vGap[currentVertex])
+			{
+				// we're in a gap region, we should mark the boundary
+				(*vBackwardGapBoundary)[currentVertex] = lastOut;
+			}
+
+			// Move to the next vertex and edge
+			currentVertex = vNext;
+			currentEdge = curve.edge_from(currentVertex);
+			count++;		
+
+		} while (count < curve.n_vertices() && currentVertex != v0);
+	}
+
+	// =========== backward pass: looking for next boundary pts ===================
+	vBackwardGapBoundary = !curve.has_vertex_property("v:prev_boundary") ?
+		curve.vertex_property<pmp::Vertex>("v:prev_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:prev_boundary");
+	
+	currentVertex = v0;
+	currentEdge = eTo;
+	count = 0;
+	{
+		pmp::Vertex lastIn{};
+		do
+		{
+			// Verify the start and end vertices of the current edge
+			const auto [vPrev, vNext] = curve.vertices(currentVertex);
+			if (!curve.is_valid(vPrev) || !curve.is_valid(vNext))
+				break;
+			if (vPrev == currentVertex || vNext == currentVertex)
+				break;
+
+			if (vGap[currentVertex] && !vGap[vNext])
+				lastIn = vNext; // we reached a backward transition into vGap, remember lastIn
+			if (vGap[currentVertex] && !vGap[vPrev])
+				lastIn = pmp::Vertex{}; // we reached a backward transition outside of vGap, reset lastIn
+
+			if (vGap[currentVertex])
+			{
+				// we're in a gap region, we should mark the boundary
+				(*vForwardGapBoundary)[currentVertex] = lastIn;
+			}
+
+			// Move to the previous vertex and edge
+			currentVertex = vPrev;
+			currentEdge = curve.edge_to(currentVertex);
+			count++;
+
+		} while (count < curve.n_vertices() && currentVertex != v0);
+	}
 
 	return { vForwardGapBoundary, vBackwardGapBoundary };
 }

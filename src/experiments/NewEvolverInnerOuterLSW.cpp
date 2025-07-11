@@ -5981,28 +5981,24 @@ void TestNormalActivation()
 	const Geometry::ManifoldCurve2DAdapter innerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationInner0Curve));
 	const auto innerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings, outerCurveDf->Box()));
 
-	const auto [outerNextBoundary, outerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationOuter0Curve, targetDf,
-		{ innerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
-	if (!outerNextBoundary || !outerPrevBoundary)
-		return;
-
-	const auto [innerNextBoundary, innerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationInner0Curve, targetDf,
-		{ outerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
-	if (!innerNextBoundary || !innerPrevBoundary)
-		return;
+	const auto vOuterGap = Geometry::GetVerticesWithinMinDistance(pathNormalActivationOuter0Curve, 
+		{ innerCurveDf }, naSettings.ManifoldCriticalRadius, "v:gap_activated", Geometry::BilinearInterpolateScalarValue);
+	const auto vInnerGap = Geometry::GetVerticesWithinMinDistance(pathNormalActivationInner0Curve,
+		{ outerCurveDf }, naSettings.ManifoldCriticalRadius, "v:gap_activated", Geometry::BilinearInterpolateScalarValue);
 
 	std::vector<pmp::Point2> outerCurveGapActivated;
 	for (const auto v : pathNormalActivationOuter0Curve.vertices())
 	{
-		if (!(*outerNextBoundary)[v].is_valid() || !(*outerPrevBoundary)[v].is_valid())
+		if (!vOuterGap[v])
 			continue;
 
 		outerCurveGapActivated.push_back(pathNormalActivationOuter0Curve.position(v));
 	}
+
 	std::vector<pmp::Point2> innerCurveGapActivated;
 	for (const auto v : pathNormalActivationInner0Curve.vertices())
 	{
-		if (!(*innerNextBoundary)[v].is_valid() || !(*innerPrevBoundary)[v].is_valid())
+		if (!vInnerGap[v])
 			continue;
 
 		innerCurveGapActivated.push_back(pathNormalActivationInner0Curve.position(v));

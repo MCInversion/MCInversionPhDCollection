@@ -132,7 +132,7 @@ int main()
         //"TestImageToDistanceField",
         //"TestImageSegmentation",
         // "TestPointCloudGaps",
-        //"TestNormalActivation",
+        "TestNormalActivation",
 
 // ------------------------- IncrementalMeshBuilderTUWien ---------------------------
 // Late Spring / Summer of 2025. TU Wien June 6th Talk.
@@ -146,7 +146,7 @@ int main()
         //"TestIMBShrinkWrapper",
         //"TestDeadlinedIMBShrinkWrapper",
         //"TestIMBShrinkWrapperNormalEstimation",
-        "SingleThreadSoftMaxUniformStrategy",
+        //"SingleThreadSoftMaxUniformStrategy",
         //"SingleThreadPoissonDiscSamplingStrategy",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
