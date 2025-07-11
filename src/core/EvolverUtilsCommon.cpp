@@ -513,15 +513,15 @@ std::pair<
 	GetNearestGapBoundaryVertices(pmp::ManifoldCurve2D& curve,
 		const pmp::VertexProperty<bool>& vGap, const NormalActivationSettings& settings)
 {
-	std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
-	std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
+	std::optional<pmp::VertexProperty<pmp::Vertex>> vNextBound{ std::nullopt };
+	std::optional<pmp::VertexProperty<pmp::Vertex>> vPrevBound{ std::nullopt };
 
 	if (curve.is_empty() || !settings.On)
-		return { vForwardGapBoundary, vBackwardGapBoundary };
+		return { vNextBound, vPrevBound };
 
 	// check for boundaries
 	if (!curve.is_closed())
-		return { vForwardGapBoundary, vBackwardGapBoundary };
+		return { vNextBound, vPrevBound };
 
 	// collect vertices into a flat vector V[0..N-1]
 	std::vector<pmp::Vertex> V;
@@ -544,64 +544,55 @@ std::pair<
 	}
 
 	// make or get our properties
-	vBackwardGapBoundary = !curve.has_vertex_property("v:prev_boundary") ?
+	vPrevBound = !curve.has_vertex_property("v:prev_boundary") ?
 		curve.vertex_property<pmp::Vertex>("v:prev_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:prev_boundary");
-	vForwardGapBoundary = !curve.has_vertex_property("v:next_boundary") ?
+	vNextBound = !curve.has_vertex_property("v:next_boundary") ?
 		curve.vertex_property<pmp::Vertex>("v:next_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:next_boundary");
 
-	// buffers to hold results
+	// 4) Scan inGap to build a list of segments [s,e]
+	std::vector<std::pair<int, int>> segs;
+	{
+		int i = 0;
+		while (i < N) {
+			while (i < N && !inGap[i]) ++i;
+			if (i >= N) break;
+			int s = i;
+			while (i < N && inGap[i]) ++i;
+			int e = i - 1;
+			segs.emplace_back(s, e);
+		}
+		if (segs.size() >= 2) {
+			auto& first = segs.front();
+			auto& last = segs.back();
+			if (first.first == 0 && last.second == N - 1) {
+				first.second = first.second + N;
+				first.first = last.first;
+				segs.pop_back();
+			}
+		}
+	}
+
+	// 5) Allocate result buffers and fill by segment
 	std::vector<pmp::Vertex> prevB(N), nextB(N);
-
-	// Step 1: forward scan to fill prevB
-	{
-		pmp::Vertex marker = pmp::Vertex();
-		for (int i = 0; i < N; ++i) {
-			int im1 = (i + N - 1) % N;  // 1-step predecessor
-			int inN = (i + N - int(n)) % N; // n-step predecessor
-			int ip1 = (i + 1) % N; // 1-step successor
-
-			// entering a gap at i?
-			if (inGap[i] && !inGap[im1]) {
-				marker = V[inN];
-			}
-			// leaving a gap at i?
-			if (inGap[i] && !inGap[ip1]) {
-				marker = pmp::Vertex();
-			}
-			if (inGap[i]) {
-				prevB[i] = marker;
-			}
+	for (auto se : segs) {
+		int s = se.first;
+		int e = se.second;
+		int sMod = (s % N + N) % N;
+		int eMod = (e % N + N) % N;
+		int prevIdx = (sMod - int(n) + N) % N;
+		int nextIdx = (eMod + int(n)) % N;
+		for (int j = s; j <= e; ++j) {
+			int idx = (j % N + N) % N;
+			prevB[idx] = V[prevIdx];
+			nextB[idx] = V[nextIdx];
 		}
 	}
 
-	// Step 2: backward scan to fill nextB
-	{
-		pmp::Vertex marker = pmp::Vertex();
-		for (int t = 0; t < N; ++t) {
-			int i = (N - t) % N;
-			int ip1 = (i + 1) % N; // 1-step successor
-			int im1 = (i + N - 1) % N; // 1-step predecessor
-			int ipN = (i + int(n)) % N; // n-step successor
-
-			// entering a gap backwards?
-			if (inGap[i] && !inGap[ip1]) {
-				marker = V[ipN];
-			}
-			// leaving a gap backwards?
-			if (inGap[i] && !inGap[im1]) {
-				marker = pmp::Vertex();
-			}
-			if (inGap[i]) {
-				nextB[i] = marker;
-			}
-		}
-	}
-
-	// Step 3: write back into the properties
+	// 6) Write back into the curve properties
 	for (int i = 0; i < N; ++i) {
-		(*vBackwardGapBoundary)[V[i]] = prevB[i];
-		(*vForwardGapBoundary)[V[i]] = nextB[i];
+		(*vPrevBound)[V[i]] = prevB[i];
+		(*vNextBound)[V[i]] = nextB[i];
 	}
 
-	return { vForwardGapBoundary, vBackwardGapBoundary };
+	return { vNextBound, vPrevBound };
 }
