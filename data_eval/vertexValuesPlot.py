@@ -215,7 +215,7 @@ def get_sorted_values(values, manifold_name):
     return normalized_x, sorted_values
 
 
-max_val = 200 #None 200
+max_val = 700 #None 200
 
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):
@@ -276,7 +276,7 @@ def visualize_opacity_interpolation(min_opacity=0.2):
 
     # Add legend on the final frame
     if frame_idx == n_steps:
-        ax.legend(loc="lower right")
+        ax.legend(loc="upper right")
 
     # Save and show the plot
     output_png_path = f"{directory}/{procedure_name}_ValueListsOpacity.png"

@@ -5973,7 +5973,7 @@ void TestNormalActivation()
 	naSettings.On = true;
 	naSettings.TargetDFCriticalRadius = 20.0;
 	naSettings.ManifoldCriticalRadius = 25.0;
-	naSettings.NPointsFromCriticalBound = 0;
+	naSettings.NPointsFromCriticalBound = 4;
 
 	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationOuter0Curve));
 	const auto outerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));
@@ -6042,8 +6042,26 @@ void TestNormalActivation()
 		for (const auto v : pathNormalActivationOuter0Curve.vertices())
 		{
 			curveLogger.LogValue(&pathNormalActivationOuter0Curve, "arcLength", v.idx(), outerArcLengths[v.idx()]);
-			curveLogger.LogValue(&pathNormalActivationOuter0Curve, "nextBoundary", v.idx(), static_cast<double>((*outerNextBoundary)[v].idx()));
-			curveLogger.LogValue(&pathNormalActivationOuter0Curve, "prevBoundary", v.idx(), static_cast<double>((*outerPrevBoundary)[v].idx()));
+
+			if ((*outerNextBoundary)[v].is_valid())
+			{
+				const auto nextBdArcLength = outerArcLengths[(*outerNextBoundary)[v].idx()];
+				curveLogger.LogValue(&pathNormalActivationOuter0Curve, "nextBoundaryArcLength", v.idx(), nextBdArcLength);
+			}
+			else
+			{
+				curveLogger.LogValue(&pathNormalActivationOuter0Curve, "nextBoundaryArcLength", v.idx(), -1.0);
+			}
+
+			if ((*outerPrevBoundary)[v].is_valid())
+			{
+				const auto prevBdArcLength = outerArcLengths[(*outerPrevBoundary)[v].idx()];
+				curveLogger.LogValue(&pathNormalActivationOuter0Curve, "prevBoundaryArcLength", v.idx(), prevBdArcLength);
+			}
+			else
+			{
+				curveLogger.LogValue(&pathNormalActivationOuter0Curve, "prevBoundaryArcLength", v.idx(), -1.0);
+			}
 		}
 	}
 	const auto innerArcLengths = arcLengthCalculators[&pathNormalActivationInner0Curve]->CalculateArcLengths();
@@ -6052,8 +6070,26 @@ void TestNormalActivation()
 		for (const auto v : pathNormalActivationInner0Curve.vertices())
 		{
 			curveLogger.LogValue(&pathNormalActivationInner0Curve, "arcLength", v.idx(), innerArcLengths[v.idx()]);
-			curveLogger.LogValue(&pathNormalActivationInner0Curve, "nextBoundary", v.idx(), static_cast<double>((*innerNextBoundary)[v].idx()));
-			curveLogger.LogValue(&pathNormalActivationInner0Curve, "prevBoundary", v.idx(), static_cast<double>((*innerPrevBoundary)[v].idx()));
+
+			if ((*innerNextBoundary)[v].is_valid())
+			{
+				const auto nextBdArcLength = innerArcLengths[(*innerNextBoundary)[v].idx()];
+				curveLogger.LogValue(&pathNormalActivationInner0Curve, "nextBoundaryArcLength", v.idx(), nextBdArcLength);
+			}
+			else
+			{
+				curveLogger.LogValue(&pathNormalActivationInner0Curve, "nextBoundaryArcLength", v.idx(), -1.0);
+			}
+
+			if ((*innerPrevBoundary)[v].is_valid())
+			{
+				const auto prevBdArcLength = innerArcLengths[(*innerPrevBoundary)[v].idx()];
+				curveLogger.LogValue(&pathNormalActivationInner0Curve, "prevBoundaryArcLength", v.idx(), prevBdArcLength);
+			}
+			else
+			{
+				curveLogger.LogValue(&pathNormalActivationInner0Curve, "prevBoundaryArcLength", v.idx(), -1.0);
+			}
 		}
 	}
 
