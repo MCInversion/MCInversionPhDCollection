@@ -10,8 +10,9 @@ from matplotlib.widgets import Slider
 #procedure_name = "equilibriumPair1"
 #procedure_name = "equilibriumPair2"
 #procedure_name = "equilibriumPair3"
-procedure_name = "roomSegment"
-#
+#procedure_name = "roomSegment"
+procedure_name = "activationBoundary"
+
 directory = "../output"  # Adjust this path accordingly
 json_file = f"{directory}/{procedure_name}_log.json"
 
@@ -214,12 +215,16 @@ def get_sorted_values(values, manifold_name):
     return normalized_x, sorted_values
 
 
+max_val = None #200
+
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):
-    selected_time_steps = [1, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500]  # Selected time steps (150, 1370, 2494)
+    selected_time_steps = [1]  #, 2, 8, 20, 50, 100, 250, 500, 1000, 1500, 2000, 2500 Selected time steps (150, 1370, 2494)
     n_steps = len(selected_time_steps)
     fig, ax = plt.subplots()
     ax.set_ylabel("Values")
+    if max_val is not None:
+        ax.set_ylim(0, max_val)
     ax.set_title(f"{procedure_name} - Increasing Opacity")
 
     frame_idx = 0  # Initialize frame index
@@ -271,7 +276,7 @@ def visualize_opacity_interpolation(min_opacity=0.2):
 
     # Add legend on the final frame
     if frame_idx == n_steps:
-        ax.legend(loc="lower center")
+        ax.legend(loc="lower right")
 
     # Save and show the plot
     output_png_path = f"{directory}/{procedure_name}_ValueListsOpacity.png"
