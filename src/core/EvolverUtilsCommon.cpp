@@ -487,7 +487,7 @@ std::pair<
 	std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
 	std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
 
-	if (curve.is_empty())
+	if (curve.is_empty() || !settings.On)
 		return { vForwardGapBoundary, vBackwardGapBoundary };
 
 	// check for boundaries
@@ -496,16 +496,37 @@ std::pair<
 
 	auto vGap = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
 		settings.ManifoldCriticalRadius, "v:gap_activated", interpFunc);
-	if (std::ranges::all_of(vGap.vector(), [](const auto& item) { return !item; }))
+	if (std::ranges::all_of(vGap.vector(), [](const auto& item) { return !item; }) ||
+		std::ranges::all_of(vGap.vector(), [](const auto& item) { return item; }))
 	{
 		// no transition points
 		return { vForwardGapBoundary, vBackwardGapBoundary };
 	}
 
-	const pmp::Vertex v0{ 0 };	
-	const pmp::Edge eFrom = curve.edge_from(v0);
-	const pmp::Edge eTo = curve.edge_to(v0);
-	if (!curve.is_valid(eFrom) || !curve.is_valid(eTo))
+
+	return GetNearestGapBoundaryVertices(curve, vGap, settings);
+}
+
+std::pair<
+	std::optional<pmp::VertexProperty<pmp::Vertex>>, 
+	std::optional<pmp::VertexProperty<pmp::Vertex>>> 
+	GetNearestGapBoundaryVertices(pmp::ManifoldCurve2D& curve, 
+		const pmp::VertexProperty<bool>& vGap, const NormalActivationSettings& settings)
+{
+	std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
+	std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
+
+	if (curve.is_empty() || !settings.On)
+		return { vForwardGapBoundary, vBackwardGapBoundary };
+
+	// check for boundaries
+	if (!curve.is_closed())
+		return { vForwardGapBoundary, vBackwardGapBoundary };
+
+	const pmp::Vertex v0{ 0 };
+	const pmp::Edge eFrom0 = curve.edge_from(v0);
+	const pmp::Edge eTo0 = curve.edge_to(v0);
+	if (!curve.is_valid(eFrom0) || !curve.is_valid(eTo0))
 		return { vForwardGapBoundary, vBackwardGapBoundary };
 
 	// =========== forward pass: looking for previous boundary pts ================
@@ -513,13 +534,13 @@ std::pair<
 		curve.vertex_property<pmp::Vertex>("v:prev_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:prev_boundary");
 
 	pmp::Vertex currentVertex = v0;
-	pmp::Edge currentEdge = eFrom;
+	pmp::Edge currentEdge = eFrom0;
 	size_t count = 0;
 	{
 		pmp::Vertex lastOut{};
 		do
 		{
-			// Verify the start and end vertices of the current edge
+			// Get the neighboring vertices in the chain
 			const auto [vPrev, vNext] = curve.vertices(currentVertex);
 			if (!curve.is_valid(vPrev) || !curve.is_valid(vNext))
 				break;
@@ -540,7 +561,7 @@ std::pair<
 			// Move to the next vertex and edge
 			currentVertex = vNext;
 			currentEdge = curve.edge_from(currentVertex);
-			count++;		
+			count++;
 
 		} while (count < curve.n_vertices() && currentVertex != v0);
 	}
@@ -550,13 +571,13 @@ std::pair<
 		curve.vertex_property<pmp::Vertex>("v:next_boundary", pmp::Vertex{}) : curve.get_vertex_property<pmp::Vertex>("v:next_boundary");
 
 	currentVertex = v0;
-	currentEdge = eTo;
+	currentEdge = eTo0;
 	count = 0;
 	{
 		pmp::Vertex lastIn{};
 		do
 		{
-			// Verify the start and end vertices of the current edge
+			// Get the neighboring vertices in the chain
 			const auto [vPrev, vNext] = curve.vertices(currentVertex);
 			if (!curve.is_valid(vPrev) || !curve.is_valid(vNext))
 				break;

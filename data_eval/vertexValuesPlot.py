@@ -215,7 +215,7 @@ def get_sorted_values(values, manifold_name):
     return normalized_x, sorted_values
 
 
-max_val = None #200
+max_val = 200 #None 200
 
 # Opacity-based interpolation plot
 def visualize_opacity_interpolation(min_opacity=0.2):

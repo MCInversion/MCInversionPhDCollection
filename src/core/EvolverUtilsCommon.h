@@ -1115,7 +1115,7 @@ struct NormalActivationSettings
 	unsigned int NPointsFromCriticalBound{ 1 }; //>! the number of point steps from the boundary of the pre-activated region which give the proper target orientation normals.
 };
 
-/// \brief A utility for computing the indices of nearest forward/backward critical points for IO-LSW evolution for target sets with gaps.
+/// \brief A utility for computing the indices of nearest forward/backward critical points for IO-LSW evolution for target sets with gaps. Uses GetVerticesWithinMinDistance internally.
 std::pair<
 	std::optional<pmp::VertexProperty<pmp::Vertex>>,
 	std::optional<pmp::VertexProperty<pmp::Vertex>>
@@ -1125,3 +1125,10 @@ std::pair<
 	const ScalarGridInterpolationFunction2D& interpFunc,
 	const NormalActivationSettings& settings
 );
+
+/// \brief A utility for computing the indices of nearest forward/backward critical points for IO-LSW evolution for target sets with gaps. Requires the result of GetVerticesWithinMinDistance.
+std::pair<
+	std::optional<pmp::VertexProperty<pmp::Vertex>>,
+	std::optional<pmp::VertexProperty<pmp::Vertex>>
+> GetNearestGapBoundaryVertices(pmp::ManifoldCurve2D& curve, 
+	const pmp::VertexProperty<bool>& vGap, const NormalActivationSettings& settings);
