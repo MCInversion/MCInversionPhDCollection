@@ -49,7 +49,7 @@ inline void DumpOutput(const char* format, ...)
 	vsprintf(buf, format, marker);
 	va_end(marker);
 
-	std::cerr << buf;
+	//std::cerr << buf;
 }
 
 inline void DumpOutput2(std::vector< char* >&, const char* format, ...)
@@ -60,7 +60,7 @@ inline void DumpOutput2(std::vector< char* >&, const char* format, ...)
 
 	vsprintf(buf, format, marker);
 	va_end(marker);
-	std::cerr << buf;
+	//std::cerr << buf;
 }
 
 #if defined( _WIN32 ) || defined( _WIN64 )
@@ -261,7 +261,7 @@ int _Execute(
 	tree.threads = pp.ThreadsVal;
 	if (pp.MaxSolveDepthVal < 0) pp.MaxSolveDepthVal = pp.MaxDepthVal;
 
-	std::cerr << "Using " << pp.ThreadsVal << " threads\n";
+	//std::cerr << "Using " << pp.ThreadsVal << " threads\n";
 	//	int kernelDepth = KernelDepth.set ? KernelDepth.value : Depth.value-2;
 	if (pp.KernelDepthVal < 0) pp.KernelDepthVal = pp.MaxDepthVal - 2;
 	if (pp.KernelDepthVal > pp.MaxDepthVal) {

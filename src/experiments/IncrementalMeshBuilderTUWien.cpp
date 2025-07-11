@@ -477,7 +477,8 @@ void SingleThreadSoftMaxUniformStrategy()
 
 void SingleThreadPoissonDiscSamplingStrategy()
 {
-	const auto meshName = "sampledIco";
+	//const auto meshName = "sampledIco";
+	const auto meshName = "Apollon_ArtecEva";
 	const auto fileName = dataDirPath + meshName + ".ply";
 	const auto fileMapping = std::make_unique<Utils::FileMappingWrapper>(fileName);
 	if (!fileMapping->IsValid())
@@ -511,8 +512,8 @@ void SingleThreadPoissonDiscSamplingStrategy()
 	}
 
 	IMB::PoissonDiscSamplingParams params;
-	params.MinDiscRadius = 1.25; //2.5;
-	params.MaxDiscRadius = 3.5;
+	params.MinDiscRadius = 5.0; // 1.25; 2.5;
+	params.MaxDiscRadius = 7.0; // 3.5;
 	params.ExpectedPtsMultiplier = 50.0;
 
 	dynamic_cast<IMB::PoissonDiscVertexSamplingStrategy*>(vertexSamplingStrategy.get())->Params = params;
@@ -535,7 +536,7 @@ void SingleThreadPoissonDiscSamplingStrategy()
 		mesh.Vertices = result;
 		meshingStrategy->Process(mesh.Vertices, mesh.PolyIndices);
 
-		/*const std::string*/ outputFileName = dataOutPath + meshName + "IMB_LOD_BallPivoting" + std::to_string(lodIndex) + ".vtk";
+		/*const std::string*/ outputFileName = dataOutPath + meshName + "IMB_LOD_LSW" + std::to_string(lodIndex) + ".vtk";
 		++lodIndex;
 		if (!Geometry::ExportBaseMeshGeometryDataToVTK(mesh, outputFileName))
 		{

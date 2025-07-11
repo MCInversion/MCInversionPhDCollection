@@ -116,9 +116,9 @@ namespace IMB
 #if DEBUG_PRINT
 		DBG_OUT << "LagrangianShrinkWrappingMeshingStrategy::ProcessImpl: attempting to triangulate a mesh with " << ioPoints.size() << " vertices.\n";	
 #endif
-		constexpr size_t NTimeSteps = 40;
-		constexpr unsigned int nVoxelsPerMinDimension = 40;
-		constexpr double tau = 0.1;
+		constexpr size_t NTimeSteps = 80;
+		constexpr unsigned int nVoxelsPerMinDimension = 30;
+		constexpr double tau = 0.2;
 		constexpr double defaultOffsetFactor = 1.0;
 
 		const pmp::BoundingBox ptCloudBBox(ioPoints);
@@ -147,7 +147,7 @@ namespace IMB
 
 		AdvectionDiffusionParameters adParams{
 			1.0, 1.0,
-			2.0, 1.0
+			1.0, 1.0
 		};
 		const double fieldIsoLevel = defaultOffsetFactor * sqrt(3.0) / 2.0 * static_cast<double>(cellSize);
 		SurfaceEvolutionSettings seSettings{
@@ -155,7 +155,7 @@ namespace IMB
 			NTimeSteps,
 			tau,
 			fieldIsoLevel,
-			2, // IcoSphereSubdivisionLevel
+			3, // IcoSphereSubdivisionLevel
 			adParams,
 			topoParams,
 			minSize, maxSize,

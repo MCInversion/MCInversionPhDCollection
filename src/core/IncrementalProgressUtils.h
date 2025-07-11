@@ -122,6 +122,24 @@ namespace IMB
             try
             {
 				m_VertexSamplingStrategy = GetVertexSelectionStrategy(selectionType, frequency, maxVertexCount, handler);
+
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // TODO: remove
+                if (selectionType == IMB::VertexSelectionType::SoftMaxUniform)
+                {
+                    IMB::GeometricSamplingParams params;
+                    params.ErrorMetricGradientMultiplier = 1.0;
+                    params.DistributionMetricGradientMultiplier = 10'000.0; //0.000'1;
+                    params.TargetVertexDensity = -1.0;
+                    params.AvgNeighborhoodDisplacementMultiplier = 1.0;
+                    params.SelectionSharpness = 0.001;
+                    params.ConfidenceGM1Imax = 0.05;
+                    params.ConfidenceNormal = 0.8;
+
+                    dynamic_cast<IMB::SoftmaxUniformVertexSamplingStrategy*>(m_VertexSamplingStrategy.get())->Params = params;
+                }
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 	            m_ProgressTracker = std::make_unique<IncrementalProgressTracker>(
                     m_VertexSamplingStrategy->GetVertexCountEstimate(), frequency, 
                     m_VertexSamplingStrategy->GetVertexCap(), m_VertexSamplingStrategy->GetMinVertexCount(),

@@ -196,48 +196,51 @@ void TwoGBApollonMeshBuilderTest()
 	//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
 	//	++lodIndex;
 	//};
-	//const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
-	//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".ply";
-	//	if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
-	//	{
-	//		std::cout << "Failed to export mesh data." << "\n";
-	//		return;
-	//	}
-	//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
-	//	++lodIndex;
-	//};
-	std::vector<std::pair<std::chrono::high_resolution_clock::time_point, size_t>> apollonTimeTicks = { {std::chrono::high_resolution_clock::now(), 0} };
-	const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &apollonTimeTicks](const Geometry::BaseMeshGeometryData& meshData) {
-		apollonTimeTicks.push_back({ std::chrono::high_resolution_clock::now(), meshData.Vertices.size() });
-		const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
-		if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
+	const IMB::MeshRenderFunction exportPtsToPLY = [&lodIndex, &meshName](const Geometry::BaseMeshGeometryData& meshData) {
+		std::cout << "LOD" << lodIndex << ": ExportPointsToPLY with " << meshData.Vertices.size() << " vertices\n";
+		const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "Pts_IMB_LOD" + std::to_string(lodIndex) + ".ply";
+		if (!Geometry::ExportPointsToPLY(meshData, outputFileName))
 		{
 			std::cout << "Failed to export mesh data." << "\n";
 			return;
 		}
 		std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
-		if (lodIndex > 5)
-			if (!ExportTimeVectorWithPointCountsInSeconds(apollonTimeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/Apollon111M_Timings.txt"))
-				throw std::logic_error("File not exported!");
 		++lodIndex;
 	};
+	//std::vector<std::pair<std::chrono::high_resolution_clock::time_point, size_t>> apollonTimeTicks = { {std::chrono::high_resolution_clock::now(), 0} };
+	//const IMB::MeshRenderFunction exportToVTK = [&lodIndex, &meshName, &apollonTimeTicks](const Geometry::BaseMeshGeometryData& meshData) {
+	//	std::cout << "LOD" << lodIndex << ": ExportBaseMeshGeometryDataToVTK with " << meshData.Vertices.size() << " vertices\n";
+	//	apollonTimeTicks.push_back({ std::chrono::high_resolution_clock::now(), meshData.Vertices.size() });
+	//	const std::string outputFileName = dataOutPath + "IncrementalMeshBuilder_" + meshName + "/" + meshName + "_IMB_LOD" + std::to_string(lodIndex) + ".vtk";
+	//	if (!Geometry::ExportBaseMeshGeometryDataToVTK(meshData, outputFileName))
+	//	{
+	//		std::cout << "Failed to export mesh data." << "\n";
+	//		return;
+	//	}
+	//	std::cout << "Mesh data exported successfully to " << outputFileName << "\n";
+
+	//	if (!ExportTimeVectorWithPointCountsInSeconds(apollonTimeTicks, dataOutPath + "IncrementalMeshBuilder_" + meshName + "/Apollon111M_Timings.txt"))
+	//		throw std::logic_error("File not exported!");
+	//	++lodIndex;
+	//};
 	auto& meshBuilder = IMB::IncrementalMeshBuilder::GetInstance();
 	meshBuilder.Init(
 		inputFileName,
 		nUpdates,
 		//IMB::ReconstructionFunctionType::LagrangianShrinkWrapping,
 		//IMB::ReconstructionFunctionType::BallPivoting, 
-		//IMB::ReconstructionFunctionType::None,
-		IMB::ReconstructionFunctionType::Poisson,
-		IMB::VertexSelectionType::UniformRandom,
-		//IMB::VertexSelectionType::Sequential,
-		//exportPtsToPLY,
+		IMB::ReconstructionFunctionType::None,
+		//IMB::ReconstructionFunctionType::Poisson,
+		//IMB::VertexSelectionType::UniformRandom,
+		IMB::VertexSelectionType::SoftMaxUniform,
+		//IMB::VertexSelectionType::PoissonDisc,
+		exportPtsToPLY,
 		//exportToOBJ,
-		exportToVTK,
+		//exportToVTK,
 		40000
 	);
 	constexpr unsigned int seed = 4999;
-	constexpr unsigned int nThreads = 4;
+	constexpr unsigned int nThreads = 16;
 	meshBuilder.DispatchAndSyncWorkers(seed, nThreads);
 }
 

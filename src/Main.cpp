@@ -146,8 +146,8 @@ int main()
         //"TestIMBShrinkWrapper",
         //"TestDeadlinedIMBShrinkWrapper",
         //"TestIMBShrinkWrapperNormalEstimation",
-        //"SingleThreadSoftMaxUniformStrategy",
-        "SingleThreadPoissonDiscSamplingStrategy",
+        "SingleThreadSoftMaxUniformStrategy",
+        //"SingleThreadPoissonDiscSamplingStrategy",
 
 // ------------------------- NEW_EXPERIMENTS ------------------------------
 // Allow new experiments here

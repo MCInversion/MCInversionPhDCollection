@@ -31,26 +31,26 @@ namespace
 		return std::sqrt(accum / values.size());
 	}
 
-	//void LogDensities(const std::vector<double>& Dv, const std::set<size_t>& alreadyDrawn)
-	//{
-	//	if (Dv.empty())
-	//	{
-	//		return;
-	//	}
+	void LogDensities(const std::vector<double>& Dv, const std::set<size_t>& alreadyDrawn)
+	{
+		if (Dv.empty())
+		{
+			return;
+		}
 
-	//	std::string filename = "densities_" + std::to_string(alreadyDrawn.size()) + ".txt";
-	//	std::ofstream ofs(filename);
-	//	if (!ofs)
-	//	{
-	//		return;
-	//	}
+		std::string filename = "densities_" + std::to_string(alreadyDrawn.size()) + ".txt";
+		std::ofstream ofs(filename);
+		if (!ofs)
+		{
+			return;
+		}
 
-	//	for (double d : Dv)
-	//	{
-	//		ofs << d << "\n";
-	//	}
-	//	ofs.close();
-	//}
+		for (double d : Dv)
+		{
+			ofs << d << "\n";
+		}
+		ofs.close();
+	}
 
 	/// \brief A verification utility for the uniqueness of randomly generated indices.
 	//[[nodiscard]] size_t CountNonUniqueIndices(const std::vector<size_t>& indices)
@@ -374,7 +374,7 @@ namespace
 			}
 			D_target = (Dv.empty() ? 0.0 : (accum / static_cast<double>(Dv.size())));
 		}
-		//LogDensities(Dv, alreadyDrawn);
+		LogDensities(Dv, alreadyDrawn);
 
 		std::mt19937_64 rng(seed ? *seed : std::random_device{}());
 		std::uniform_real_distribution<double> uniformReal(std::numeric_limits<double>::min(), 1.0);
@@ -816,6 +816,9 @@ namespace IMB
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_MinVertexCount = " << m_MinVertexCount << " vertices.\n";
 		DBG_OUT << "VertexSamplingStrategy::VertexSamplingStrategy: m_UpdateThreshold = " << m_UpdateThreshold << " vertices.\n";
 #endif
+		/*std::cout << "VertexSamplingStrategy::VertexSamplingStrategy: completionFrequency = " << completionFrequency << " jobs per file load.\n";
+		std::cout << "VertexSamplingStrategy::VertexSamplingStrategy: m_MinVertexCount = " << m_MinVertexCount << " vertices.\n";
+		std::cout << "VertexSamplingStrategy::VertexSamplingStrategy: m_UpdateThreshold = " << m_UpdateThreshold << " vertices.\n";*/
 	}
 
 	size_t VertexSamplingStrategy::GetVertexCountEstimate() const

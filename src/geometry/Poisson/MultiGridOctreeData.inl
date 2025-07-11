@@ -285,9 +285,9 @@ int Octree< Real >::init( OrientedPointStream< Real >& pointStream , LocalDepth 
 		}
 		pointStream.reset();
 	}
-	if( outOfBoundPoints  ) fprintf( stderr , "[WARNING] Found out-of-bound points: %d\n" , outOfBoundPoints );
+	/*if( outOfBoundPoints  ) fprintf( stderr , "[WARNING] Found out-of-bound points: %d\n" , outOfBoundPoints );
 	if( zeroLengthNormals ) fprintf( stderr , "[WARNING] Found zero-length normals: %d\n" , zeroLengthNormals );
-	if( undefinedNormals  ) fprintf( stderr , "[WARNING] Found undefined normals: %d\n" , undefinedNormals );
+	if( undefinedNormals  ) fprintf( stderr , "[WARNING] Found undefined normals: %d\n" , undefinedNormals );*/
 
 	memoryUsage();
 	return pointCount;
