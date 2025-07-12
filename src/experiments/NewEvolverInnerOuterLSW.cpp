@@ -5973,7 +5973,7 @@ void TestNormalActivation()
 	naSettings.On = true;
 	naSettings.TargetDFCriticalRadius = 20.0;
 	naSettings.ManifoldCriticalRadius = 25.0;
-	naSettings.NPointsFromCriticalBound = 4;
+	naSettings.NPointsFromCriticalBound = 0;
 
 	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationOuter0Curve));
 	const auto outerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));

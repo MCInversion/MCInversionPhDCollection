@@ -538,9 +538,15 @@ std::pair<
 	unsigned int n = settings.NPointsFromCriticalBound;
 
 	// pull out the gap flags
-	std::vector<bool> inGap(N);
+	std::vector<char> inGap(N, 0);
 	for (int i = 0; i < N; ++i) {
-		inGap[i] = vGap[V[i]];
+		if (vGap[V[i]]) {
+			// mark [i-n .. i+n] mod N
+			for (int d = -int(n); d <= int(n); ++d) {
+				int j = (i + d + N) % N;
+				inGap[j] = 1;
+			}
+		}
 	}
 
 	// make or get our properties
