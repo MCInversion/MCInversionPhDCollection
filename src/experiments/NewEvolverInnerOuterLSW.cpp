@@ -5816,8 +5816,9 @@ void TestImageSegmentation()
 	//strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
 	//strategySettings.DistanceBlendingRadius = 5.0;
 	strategySettings.NormalActivation.On = true;
-	strategySettings.NormalActivation.TargetDFCriticalRadius = 5.0;
-	strategySettings.NormalActivation.ManifoldCriticalRadius = 6.0;
+	strategySettings.NormalActivation.TargetDFCriticalRadius = 20.0;
+	strategySettings.NormalActivation.ManifoldCriticalRadius = 25.0;
+	strategySettings.NormalActivation.NPointsFromCriticalBound = 4;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
@@ -5973,7 +5974,7 @@ void TestNormalActivation()
 	naSettings.On = true;
 	naSettings.TargetDFCriticalRadius = 20.0;
 	naSettings.ManifoldCriticalRadius = 25.0;
-	naSettings.NPointsFromCriticalBound = 0;
+	naSettings.NPointsFromCriticalBound = 1;
 
 	const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(pathNormalActivationOuter0Curve));
 	const auto outerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));

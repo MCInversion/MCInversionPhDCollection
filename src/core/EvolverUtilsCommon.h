@@ -1106,6 +1106,7 @@ using PreStepFunction = std::function<void(unsigned int /* step */, const Surfac
 
 /**
  * \brief A wrapper for the functionality of "normal activation" during IO-LSW evolution
+ * \struct NormalActivationSettings
  */
 struct NormalActivationSettings
 {
@@ -1113,6 +1114,11 @@ struct NormalActivationSettings
 	double TargetDFCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around target set within which evolving pts become pre-activated.
 	double ManifoldCriticalRadius{ 0.0 }; //>! the radius of the tubular neighborhood around the other manifold within which evolving pts become gap-deactivated, spreading towards the nearest pre-activated pts.
 	unsigned int NPointsFromCriticalBound{ 1 }; //>! the number of point steps from the boundary of the pre-activated region which give the proper target orientation normals.
+
+	// ---------------------------------------
+
+	double BezierWeightCoefficient{ 0.8 }; //>! given the arc-length of the gap segment, how far apart should the tangent vectors to Bezier cubic be?
+	double BezierSofteningCoefficient{ 0.95 }; //>! a coefficient to ensure diagonal dominance for the Bezier segment points.
 };
 
 /// \brief A utility for computing the indices of nearest forward/backward critical points for IO-LSW evolution for target sets with gaps. Uses GetVerticesWithinMinDistance internally.
@@ -1132,3 +1138,19 @@ std::pair<
 	std::optional<pmp::VertexProperty<pmp::Vertex>>
 > GetNearestGapBoundaryVertices(pmp::ManifoldCurve2D& curve, 
 	const pmp::VertexProperty<bool>& vGap, const NormalActivationSettings& settings);
+
+/**
+ * \brief Evaluated coefficients for semi-implicit Bezier patch estimation for gap segments.
+ * \struct ImplicitBezierCurveVertexInfo
+ */
+struct ImplicitBezierCurveVertexInfo
+{
+	double PrevGapBoundaryWeight{ 0.5 }; //>! weight of the previous boundary vertex of the Bezier segment
+	double NextGapBoundaryWeight{ 0.5 }; //>! weight of the next boundary vertex of the Bezier segment
+	pmp::vec2 BezierRhs{};  //>! right-hand side of the Bezier segment (semi-implicit)
+};
+
+[[nodiscard]] ImplicitBezierCurveVertexInfo CalculateBezierVertexInfo(
+	const pmp::Point2& vNormalPrev, const pmp::Point2& vNormalNext,
+	const pmp::Scalar& vCurrentArcLength, const pmp::Scalar& vPrevArcLength, const pmp::Scalar& vNextArcLength,
+	const NormalActivationSettings& settings);

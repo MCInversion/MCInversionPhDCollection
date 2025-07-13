@@ -321,11 +321,19 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
 		std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
 
+		if (step == 100)
+		{
+			std::cout << "step " << step << "\n";
+		}
+
 		if (GetSettings().NormalActivation.On && m_DistanceField && !m_InnerCurvesDistanceFields.empty())
 		{
 			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
 				*m_OuterCurve, m_InnerCurvesDistanceFields, 
 				m_ScalarInterpolate, GetSettings().NormalActivation);
+
+			if (vForwardGapBoundary && vBackwardGapBoundary)
+				std::cout << "gap-specific behavior\n";
 		}
 
 		// prepare matrix & rhs for m_OuterCurve:
@@ -333,15 +341,54 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
 
 		std::vector<pmp::Scalar> arcLengths;
-		if (LogOuterManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()])
+		if (LogOuterManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()] || (vForwardGapBoundary && vBackwardGapBoundary))
 		{
+			// we need arc lengths for logging and for implicit Bezier patch calculation
 			arcLengths = m_ArcLengthCalculators[m_OuterCurve.get()]->CalculateArcLengths();
 		}
 
 		for (const auto v : m_OuterCurve->vertices())
 		{
+			if ((vForwardGapBoundary && vBackwardGapBoundary) &&
+				((*vForwardGapBoundary)[v].is_valid() && (*vBackwardGapBoundary)[v].is_valid()) &&
+				!arcLengths.empty())
+			{
+				// gap-specific behavior
+				const auto prevBoundaryVertex = (*vBackwardGapBoundary)[v];
+				const auto nextBoundaryVertex = (*vForwardGapBoundary)[v];
+
+				const auto& vPrev = m_OuterCurve->position(prevBoundaryVertex);
+				const auto& vNext = m_OuterCurve->position(nextBoundaryVertex);
+
+				const auto& vNormalPrev = static_cast<const pmp::vec2&>(vNormalsProp[prevBoundaryVertex]);
+				const auto& vNormalNext = static_cast<const pmp::vec2&>(vNormalsProp[nextBoundaryVertex]);
+
+				const auto currentArcLength = arcLengths[v.idx()];
+				const auto prevArcLength = arcLengths[prevBoundaryVertex.idx()];
+				const auto nextArcLength = arcLengths[nextBoundaryVertex.idx()];
+
+				const auto iBezierInfo = CalculateBezierVertexInfo(vNormalPrev, vNormalNext, currentArcLength, prevArcLength, nextArcLength, GetSettings().NormalActivation);
+
+				tripletList.emplace_back(v.idx(), prevBoundaryVertex.idx(), -iBezierInfo.PrevGapBoundaryWeight);
+				tripletList.emplace_back(v.idx(), nextBoundaryVertex.idx(), -iBezierInfo.NextGapBoundaryWeight);
+				tripletList.emplace_back(v.idx(), v.idx(), 1.0);  // keep diagonal = 1
+				sysRhs.row(v.idx()) = Eigen::Vector2d(iBezierInfo.BezierRhs);
+
+				continue;
+			}
+
 			const auto& vPosToUpdate = m_OuterCurve->position(v);
 
+			if (m_OuterCurve->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector2d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
+				continue;
+			}
+
+			// Default behavior MCF + Advection + tangential redist
 			InteractionDistanceCollector<pmp::dvec2> interaction{ *m_DistBlendStrategy };
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
@@ -364,15 +411,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 
 				if (innerDfAtVPos < vMinDistanceToInner)
 					vMinDistanceToInner = innerDfAtVPos;
-			}
-
-			if (m_OuterCurve->is_boundary(v))
-			{
-				// freeze boundary/feature vertices
-				const Eigen::Vector2d vertexRhs = vPosToUpdate;
-				sysRhs.row(v.idx()) = vertexRhs;
-				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
-				continue;
 			}
 
 			const double epsilonCtrlWeight =
@@ -504,15 +542,54 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);  // Assuming 2 entries per vertex for curves
 
 		std::vector<pmp::Scalar> arcLengths;
-		if (LogInnerManifoldValues() && m_ArcLengthCalculators[innerCurve.get()])
+		if (LogInnerManifoldValues() && m_ArcLengthCalculators[innerCurve.get()] || (vForwardGapBoundary && vBackwardGapBoundary))
 		{
+			// we need arc lengths for logging and for implicit Bezier patch calculation
 			arcLengths = m_ArcLengthCalculators[innerCurve.get()]->CalculateArcLengths();
 		}
 
 		for (const auto v : innerCurve->vertices())
 		{
+			if ((vForwardGapBoundary && vBackwardGapBoundary) &&
+				((*vForwardGapBoundary)[v].is_valid() && (*vBackwardGapBoundary)[v].is_valid()) &&
+				!arcLengths.empty())
+			{
+				// gap-specific behavior
+				const auto prevBoundaryVertex = (*vBackwardGapBoundary)[v];
+				const auto nextBoundaryVertex = (*vForwardGapBoundary)[v];
+
+				const auto& vPrev = innerCurve->position(prevBoundaryVertex);
+				const auto& vNext = innerCurve->position(nextBoundaryVertex);
+
+				const auto& vNormalPrev = static_cast<const pmp::vec2&>(vNormalsProp[prevBoundaryVertex]);
+				const auto& vNormalNext = static_cast<const pmp::vec2&>(vNormalsProp[nextBoundaryVertex]);
+
+				const auto currentArcLength = arcLengths[v.idx()];
+				const auto prevArcLength = arcLengths[prevBoundaryVertex.idx()];
+				const auto nextArcLength = arcLengths[nextBoundaryVertex.idx()];
+
+				const auto iBezierInfo = CalculateBezierVertexInfo(vNormalPrev, vNormalNext, currentArcLength, prevArcLength, nextArcLength, GetSettings().NormalActivation);
+			
+				tripletList.emplace_back(v.idx(), prevBoundaryVertex.idx(), -iBezierInfo.PrevGapBoundaryWeight);
+				tripletList.emplace_back(v.idx(), nextBoundaryVertex.idx(), -iBezierInfo.NextGapBoundaryWeight);
+				tripletList.emplace_back(v.idx(), v.idx(), 1.0);  // keep diagonal = 1
+				sysRhs.row(v.idx()) = Eigen::Vector2d(iBezierInfo.BezierRhs);
+
+				continue;
+			}
+
 			const auto& vPosToUpdate = innerCurve->position(v);
 
+			if (innerCurve->is_boundary(v))
+			{
+				// freeze boundary/feature vertices
+				const Eigen::Vector2d vertexRhs = vPosToUpdate;
+				sysRhs.row(v.idx()) = vertexRhs;
+				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
+				continue;
+			}
+
+			// Default behavior MCF + Advection + tangential redist
 			InteractionDistanceCollector<pmp::dvec2> interaction{ *m_DistBlendStrategy };
 
 			double vDistanceToTarget = m_DistanceField ? m_ScalarInterpolate(vPosToUpdate, *m_DistanceField) : DBL_MAX;
@@ -529,15 +606,6 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				const auto vNegGradDistanceToOuter = m_VectorInterpolate(vPosToUpdate, *m_OuterCurveDFNegNormalizedGradient);
 
 				interaction << InteractionDistanceRhs<pmp::dvec2>{outerDfAtVPos, vNegGradDistanceToOuter};
-			}
-
-			if (innerCurve->is_boundary(v))
-			{
-				// freeze boundary/feature vertices
-				const Eigen::Vector2d vertexRhs = vPosToUpdate;
-				sysRhs.row(v.idx()) = vertexRhs;
-				tripletList.emplace_back(Eigen::Triplet<double>(v.idx(), v.idx(), 1.0));
-				continue;
 			}
 
 			const double epsilonCtrlWeight =

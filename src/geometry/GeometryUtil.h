@@ -228,4 +228,8 @@ namespace Geometry
 	/// \brief A utility for calculating neighbor ring area.
 	[[nodiscard]] pmp::Scalar CalculateNeighborhoodRingArea(const pmp::Point& center, std::vector<pmp::Point>& neighbors);
 
+	//
+	// ======================================================================
+	//
+
 } // namespace Geometry

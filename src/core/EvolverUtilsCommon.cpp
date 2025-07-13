@@ -503,7 +503,6 @@ std::pair<
 		return { vForwardGapBoundary, vBackwardGapBoundary };
 	}
 
-
 	return GetNearestGapBoundaryVertices(curve, vGap, settings);
 }
 
@@ -537,14 +536,14 @@ std::pair<
 	int N = int(V.size());
 	unsigned int n = settings.NPointsFromCriticalBound;
 
-	// pull out the gap flags
-	std::vector<char> inGap(N, 0);
+	// extend the gap flags by the stride n
+	std::vector<bool> inGap(N, 0);
 	for (int i = 0; i < N; ++i) {
 		if (vGap[V[i]]) {
 			// mark [i-n .. i+n] mod N
 			for (int d = -int(n); d <= int(n); ++d) {
 				int j = (i + d + N) % N;
-				inGap[j] = 1;
+				inGap[j] = true;
 			}
 		}
 	}
@@ -602,3 +601,49 @@ std::pair<
 
 	return { vNextBound, vPrevBound };
 }
+
+ImplicitBezierCurveVertexInfo CalculateBezierVertexInfo(
+	const pmp::Point2& vNormalPrev, const pmp::Point2& vNormalNext, 
+	const pmp::Scalar& vCurrentArcLength, const pmp::Scalar& vPrevArcLength, const pmp::Scalar& vNextArcLength,
+	const NormalActivationSettings& settings)
+{
+	ImplicitBezierCurveVertexInfo result;
+
+	// get tangents by rotating the normals by +/- 90 degrees
+	const auto perpendicularRotPositive = pmp::rotation_matrix_2d(pmp::Point2{}, M_PI_2);
+	const auto perpendicularRotNegative = pmp::inverse(perpendicularRotPositive);
+
+	const auto T0 = pmp::affine_transform(perpendicularRotPositive, vNormalPrev);
+	const auto T1 = pmp::affine_transform(perpendicularRotNegative, vNormalNext);
+
+	// compute normalized parameter s in [0,1]
+	double totalLen = static_cast<double>(vNextArcLength - vPrevArcLength);
+	double s = 0.0;
+	if (totalLen > 0.0)
+	{
+		s = (static_cast<double>(vCurrentArcLength - vPrevArcLength) / totalLen);
+		s = std::clamp(s, 0.0, 1.0);
+	}
+
+	// cubic Bezier basis functions
+	double o = 1.0 - s;
+	double alpha = o * o * o + 3.0 * s * o * o;   // (1-s)^3 + 3 s (1-s)^2
+	double beta = 3.0 * s * s * o + s * s * s;   // 3 s^2 (1-s) + s^3
+
+	// build the two interior control point offsets 
+	double h = settings.BezierWeightCoefficient * totalLen; // how far apart the tangents reach, per settings
+	double gamma = 3.0 * s * o * o * h;  // weight for T0
+	double delta = 3.0 * s * s * o * h;  // weight for T1
+
+	const auto C = gamma * T0 - delta * T1;
+
+	// soften to restore strict diagonal dominance
+	double lambda = settings.BezierSofteningCoefficient;
+
+	result.PrevGapBoundaryWeight = lambda * alpha;
+	result.NextGapBoundaryWeight = lambda * beta;
+	result.BezierRhs = lambda * C;
+
+	return result;
+}
+
