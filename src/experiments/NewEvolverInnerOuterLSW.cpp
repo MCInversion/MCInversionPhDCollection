@@ -5818,7 +5818,7 @@ void TestImageSegmentation()
 	strategySettings.NormalActivation.On = true;
 	strategySettings.NormalActivation.TargetDFCriticalRadius = 10.0;
 	strategySettings.NormalActivation.ManifoldCriticalRadius = 15.0;
-	strategySettings.NormalActivation.NPointsFromCriticalBound = 4;
+	strategySettings.NormalActivation.NPointsFromCriticalBound = 0;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
@@ -6138,7 +6138,7 @@ void TestGapSpecificBehaviorForRealData()
 	naSettings.On = true;
 	naSettings.TargetDFCriticalRadius = 10.0;
 	naSettings.ManifoldCriticalRadius = 15.0;
-	naSettings.NPointsFromCriticalBound = 4;
+	naSettings.NPointsFromCriticalBound = 0;
 
 	for (const auto [ts0, ts1] : timeStepPairs)
 	{
