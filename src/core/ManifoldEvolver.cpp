@@ -321,7 +321,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
 		std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
 
-		//if (step == 100)
+		//if (step == 75)
 		//{
 		//	std::cout << "step " << step << "\n";
 		//}
@@ -332,8 +332,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				*m_OuterCurve, m_DistanceField, m_InnerCurvesDistanceFields,
 				m_ScalarInterpolate, GetSettings().NormalActivation);
 
-			if (vForwardGapBoundary && vBackwardGapBoundary)
-				std::cout << "gap-specific behavior\n";
+			//if (vForwardGapBoundary && vBackwardGapBoundary)
+			//	std::cout << "gap-specific behavior\n";
 		}
 
 		// prepare matrix & rhs for m_OuterCurve:
@@ -347,11 +347,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			arcLengths = m_ArcLengthCalculators[m_OuterCurve.get()]->CalculateArcLengths();
 		}
 
+		size_t nBezierVertices{ 0 };
 		for (const auto v : m_OuterCurve->vertices())
 		{
 			if ((vForwardGapBoundary && vBackwardGapBoundary) &&
 				((*vForwardGapBoundary)[v].is_valid() && (*vBackwardGapBoundary)[v].is_valid()) &&
-				!arcLengths.empty())
+				(!arcLengths.empty() && (*vForwardGapBoundary)[v] != v && (*vBackwardGapBoundary)[v] != v))
 			{
 				// gap-specific behavior
 				const auto prevBoundaryVertex = (*vBackwardGapBoundary)[v];
@@ -374,6 +375,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				tripletList.emplace_back(v.idx(), v.idx(), 1.0);  // keep diagonal = 1
 				sysRhs.row(v.idx()) = Eigen::Vector2d(iBezierInfo.BezierRhs);
 
+				++nBezierVertices;
 				continue;
 			}
 
@@ -458,6 +460,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 		}
 
+		if (nBezierVertices > 0)
+			std::cout << "\nProcessing " << nBezierVertices << " outer curve Bezier vertices...\n";
+
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
 		if (IsRemeshingNecessary(*m_OuterCurve, m_RemeshingSettings[m_OuterCurve.get()]))
@@ -469,6 +474,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		if (solver.info() != Eigen::Success)
 		{
 			PrintSparseMatrixAndRHS(sysMat, sysRhs, "outerCurve Sys");
+
+			std::cout << "IsDiagonallyDominant?: " << (IsDiagonallyDominant(sysMat) ? "true" : "false") << "\n";
 
 			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
 				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";
@@ -548,11 +555,12 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			arcLengths = m_ArcLengthCalculators[innerCurve.get()]->CalculateArcLengths();
 		}
 
+		size_t nBezierVertices{ 0 };
 		for (const auto v : innerCurve->vertices())
 		{
 			if ((vForwardGapBoundary && vBackwardGapBoundary) &&
 				((*vForwardGapBoundary)[v].is_valid() && (*vBackwardGapBoundary)[v].is_valid()) &&
-				!arcLengths.empty())
+				(!arcLengths.empty() && (*vForwardGapBoundary)[v] != v && (*vBackwardGapBoundary)[v] != v))
 			{
 				// gap-specific behavior
 				const auto prevBoundaryVertex = (*vBackwardGapBoundary)[v];
@@ -574,6 +582,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 				tripletList.emplace_back(v.idx(), nextBoundaryVertex.idx(), -iBezierInfo.NextGapBoundaryWeight);
 				tripletList.emplace_back(v.idx(), v.idx(), 1.0);  // keep diagonal = 1
 				sysRhs.row(v.idx()) = Eigen::Vector2d(iBezierInfo.BezierRhs);
+
+				++nBezierVertices;
 
 				continue;
 			}
@@ -653,6 +663,9 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 			}
 		}
 
+		if (nBezierVertices > 0)
+			std::cout << "\nProcessing " << nBezierVertices << " inner curve Bezier vertices...\n";
+
 		// After the loop
 		sysMat.setFromTriplets(tripletList.begin(), tripletList.end());
 		if (IsRemeshingNecessary(*innerCurve, m_RemeshingSettings[innerCurve.get()]))
@@ -672,6 +685,8 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		if (solver.info() != Eigen::Success)
 		{
 			PrintSparseMatrixAndRHS(sysMat, sysRhs, "innerCurve Sys");
+
+			std::cout << "IsDiagonallyDominant?: " << (IsDiagonallyDominant(sysMat) ? "true" : "false") << "\n";
 
 			const std::string msg = "\nManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep: solver.info() != Eigen::Success for time step id: "
 				+ std::to_string(step) + ", Error code: " + InterpretSolverErrorCode(solver.info()) + "\n";

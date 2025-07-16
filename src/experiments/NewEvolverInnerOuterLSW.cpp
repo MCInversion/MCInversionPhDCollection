@@ -5818,7 +5818,7 @@ void TestImageSegmentation()
 	strategySettings.NormalActivation.On = true;
 	strategySettings.NormalActivation.TargetDFCriticalRadius = 10.0;
 	strategySettings.NormalActivation.ManifoldCriticalRadius = 15.0;
-	strategySettings.NormalActivation.NPointsFromCriticalBound = 0;
+	strategySettings.NormalActivation.NPointsFromCriticalBound = 5;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;
@@ -6286,10 +6286,10 @@ void TestGapSpecificBehaviorForRealData()
 			std::cerr << "coverTimeStep: internal error for step " << ts0 << "\n";
 			continue;
 		}
-		if (!coverTimeStep(ts1))
-		{
-			std::cerr << "coverTimeStep: internal error for step " << ts1 << "\n";
-			continue;
-		}
+		//if (!coverTimeStep(ts1))
+		//{
+		//	std::cerr << "coverTimeStep: internal error for step " << ts1 << "\n";
+		//	continue;
+		//}
 	}
 }
