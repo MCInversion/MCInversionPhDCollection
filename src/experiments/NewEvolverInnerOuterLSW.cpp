@@ -5817,8 +5817,8 @@ void TestImageSegmentation()
 	//strategySettings.DistanceBlendingRadius = 5.0;
 	strategySettings.NormalActivation.On = true;
 	strategySettings.NormalActivation.TargetDFCriticalRadius = 10.0;
-	strategySettings.NormalActivation.ManifoldCriticalRadius = 15.0;
-	strategySettings.NormalActivation.NPointsFromCriticalBound = 5;
+	strategySettings.NormalActivation.ManifoldCriticalRadius = 11.0;
+	strategySettings.NormalActivation.NPointsFromCriticalBound = 1;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
 	strategySettings.ExportVariableVectorFieldsDimInfo = true;

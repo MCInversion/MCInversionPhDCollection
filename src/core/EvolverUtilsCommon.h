@@ -1117,8 +1117,8 @@ struct NormalActivationSettings
 
 	// ---------------------------------------
 
-	double BezierWeightCoefficient{ 0.8 }; //>! given the arc-length of the gap segment, how far apart should the tangent vectors to Bezier cubic be?
-	double BezierSofteningCoefficient{ 0.95 }; //>! a coefficient to ensure diagonal dominance for the Bezier segment points.
+	double BezierWeightCoefficient{ 0.25 }; //>! given the arc-length of the gap segment, how far apart should the tangent vectors to Bezier cubic be?
+	double BezierSofteningCoefficient{ 0.99 }; //>! a coefficient to ensure diagonal dominance for the Bezier segment points.
 };
 
 /// \brief A utility for computing the indices of nearest forward/backward critical points for IO-LSW evolution for target sets with gaps. Uses GetVerticesWithinMinDistance internally.
