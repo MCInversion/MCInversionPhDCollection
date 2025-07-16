@@ -5811,13 +5811,13 @@ void TestImageSegmentation()
 	strategySettings.RemeshingSettings.UseBackProjection = true;
 	strategySettings.FeatureSettings.PrincipalCurvatureFactor = 3.2;
 	strategySettings.FeatureSettings.CriticalMeanCurvatureAngle = static_cast<pmp::Scalar>(M_PI_2);
-	strategySettings.FieldSettings.NVoxelsPerMinDimension = 50;
+	strategySettings.FieldSettings.NVoxelsPerMinDimension = 40;
 
 	//strategySettings.DistanceSelection = DistanceSelectionType::QuadricBlend;
 	//strategySettings.DistanceBlendingRadius = 5.0;
 	strategySettings.NormalActivation.On = true;
-	strategySettings.NormalActivation.TargetDFCriticalRadius = 20.0;
-	strategySettings.NormalActivation.ManifoldCriticalRadius = 25.0;
+	strategySettings.NormalActivation.TargetDFCriticalRadius = 10.0;
+	strategySettings.NormalActivation.ManifoldCriticalRadius = 15.0;
 	strategySettings.NormalActivation.NPointsFromCriticalBound = 4;
 
 	strategySettings.ExportVariableScalarFieldsDimInfo = true;
@@ -5825,8 +5825,8 @@ void TestImageSegmentation()
 
 	//strategySettings.DiagSettings.LogOuterManifoldEpsilon = true;
 	//strategySettings.DiagSettings.LogInnerManifoldsEpsilon = true;
-	strategySettings.DiagSettings.LogOuterManifoldEta = true;
-	strategySettings.DiagSettings.LogInnerManifoldsEta = true;
+	//strategySettings.DiagSettings.LogOuterManifoldEta = true;
+	//strategySettings.DiagSettings.LogInnerManifoldsEta = true;
 
 	// Global settings
 	GlobalManifoldEvolutionSettings globalSettings;
@@ -5959,7 +5959,7 @@ void TestNormalActivation()
 		0.6,
 		DBL_MAX
 	};
-	const auto targetDf = SDF::PlanarPointCloudDistanceFieldGenerator::Generate(targetPtCloud, dfSettings);
+	const auto targetDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarPointCloudDistanceFieldGenerator::Generate(targetPtCloud, dfSettings));
 
 	const SDF::DistanceField2DSettings curveDFSettings{
 		cellSize,
@@ -6016,12 +6016,12 @@ void TestNormalActivation()
 	}
 
 	const auto [outerNextBoundary, outerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationOuter0Curve,
-		{ innerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+		targetDf, { innerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
 	if (!outerNextBoundary || !outerPrevBoundary)
 		return;
 
 	const auto [innerNextBoundary, innerPrevBoundary] = GetNearestGapBoundaryVertices(pathNormalActivationInner0Curve,
-		{ outerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+		targetDf, { outerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
 	if (!innerNextBoundary || !innerPrevBoundary)
 		return;
 

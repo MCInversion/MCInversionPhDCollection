@@ -481,6 +481,7 @@ std::pair<
 	std::optional<pmp::VertexProperty<pmp::Vertex>>> 
 	GetNearestGapBoundaryVertices(
 		pmp::ManifoldCurve2D& curve, 
+		const std::shared_ptr<Geometry::ScalarGrid2D>& targetDistanceField,
 		const std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& manifoldDistanceFields, 
 		const ScalarGridInterpolationFunction2D& interpFunc, const NormalActivationSettings& settings)
 {
@@ -494,8 +495,16 @@ std::pair<
 	if (!curve.is_closed())
 		return { vForwardGapBoundary, vBackwardGapBoundary };
 
-	auto vGap = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
-		settings.ManifoldCriticalRadius, "v:gap_activated", interpFunc);
+	auto vGap0 = Geometry::GetVerticesWithinMinDistance(curve, { targetDistanceField },
+		settings.ManifoldCriticalRadius, "v:target_activated", interpFunc);
+	auto vGap1 = Geometry::GetVerticesWithinMinDistance(curve, manifoldDistanceFields,
+		settings.ManifoldCriticalRadius, "v:manifold_activated", interpFunc);
+
+	auto vGap = !curve.has_vertex_property("v:gap_activated") ?
+		curve.vertex_property<bool>("v:gap_activated", false) : curve.get_vertex_property<bool>("v:gap_activated");
+	for (const auto v : curve.vertices())
+		vGap[v] = !vGap0[v] && vGap1[v];
+
 	if (std::ranges::all_of(vGap.vector(), [](const auto& item) { return !item; }) ||
 		std::ranges::all_of(vGap.vector(), [](const auto& item) { return item; }))
 	{

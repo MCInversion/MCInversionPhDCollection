@@ -1127,6 +1127,7 @@ std::pair<
 	std::optional<pmp::VertexProperty<pmp::Vertex>>
 > GetNearestGapBoundaryVertices(
 	pmp::ManifoldCurve2D& curve,
+	const std::shared_ptr<Geometry::ScalarGrid2D>& targetDistanceField,
 	const std::vector<std::shared_ptr<Geometry::ScalarGrid2D>>& manifoldDistanceFields,
 	const ScalarGridInterpolationFunction2D& interpFunc,
 	const NormalActivationSettings& settings

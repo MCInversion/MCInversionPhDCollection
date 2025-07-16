@@ -62,7 +62,7 @@ void ManifoldCurveEvolutionStrategy::Preprocess()
 
 	AssignRemeshingSettingsToEvolvingManifolds();
 
-	if (LogManifoldValues())
+	if (LogManifoldValues() || GetSettings().NormalActivation.On)
 		InitializeArcLengthCalculation();
 }
 
@@ -119,7 +119,7 @@ void CustomManifoldCurveEvolutionStrategy::Preprocess()
 	ComputeControlFunctionsLowerBounds();
 
 	AssignRemeshingSettingsToEvolvingManifolds();
-	if (LogManifoldValues())
+	if (LogManifoldValues() || GetSettings().NormalActivation.On)
 		InitializeArcLengthCalculation();
 }
 
@@ -321,15 +321,15 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		std::optional<pmp::VertexProperty<pmp::Vertex>> vForwardGapBoundary{ std::nullopt };
 		std::optional<pmp::VertexProperty<pmp::Vertex>> vBackwardGapBoundary{ std::nullopt };
 
-		if (step == 100)
-		{
-			std::cout << "step " << step << "\n";
-		}
+		//if (step == 100)
+		//{
+		//	std::cout << "step " << step << "\n";
+		//}
 
 		if (GetSettings().NormalActivation.On && m_DistanceField && !m_InnerCurvesDistanceFields.empty())
 		{
 			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
-				*m_OuterCurve, m_InnerCurvesDistanceFields, 
+				*m_OuterCurve, m_DistanceField, m_InnerCurvesDistanceFields,
 				m_ScalarInterpolate, GetSettings().NormalActivation);
 
 			if (vForwardGapBoundary && vBackwardGapBoundary)
@@ -341,7 +341,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);
 
 		std::vector<pmp::Scalar> arcLengths;
-		if (LogOuterManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()] || (vForwardGapBoundary && vBackwardGapBoundary))
+		if ((LogOuterManifoldValues() && m_ArcLengthCalculators[m_OuterCurve.get()]) || (vForwardGapBoundary && vBackwardGapBoundary))
 		{
 			// we need arc lengths for logging and for implicit Bezier patch calculation
 			arcLengths = m_ArcLengthCalculators[m_OuterCurve.get()]->CalculateArcLengths();
@@ -533,7 +533,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		if (GetSettings().NormalActivation.On && m_DistanceField && m_OuterCurveDistanceField)
 		{
 			std::tie(vForwardGapBoundary, vBackwardGapBoundary) = GetNearestGapBoundaryVertices(
-				*m_OuterCurve, { m_OuterCurveDistanceField },
+				*innerCurve, m_DistanceField, { m_OuterCurveDistanceField },
 				m_ScalarInterpolate, GetSettings().NormalActivation);
 		}
 
@@ -542,7 +542,7 @@ void ManifoldCurveEvolutionStrategy::SemiImplicitIntegrationStep(unsigned int st
 		tripletList.reserve(static_cast<size_t>(NVertices) * 2);  // Assuming 2 entries per vertex for curves
 
 		std::vector<pmp::Scalar> arcLengths;
-		if (LogInnerManifoldValues() && m_ArcLengthCalculators[innerCurve.get()] || (vForwardGapBoundary && vBackwardGapBoundary))
+		if ((LogInnerManifoldValues() && m_ArcLengthCalculators[innerCurve.get()]) || (vForwardGapBoundary && vBackwardGapBoundary))
 		{
 			// we need arc lengths for logging and for implicit Bezier patch calculation
 			arcLengths = m_ArcLengthCalculators[innerCurve.get()]->CalculateArcLengths();
