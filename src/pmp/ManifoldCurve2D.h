@@ -703,4 +703,5 @@ namespace pmp
 
     [[nodiscard]] bool write_to_ply(const ManifoldCurve2D& curve, const std::string& fileName);
 
+    [[nodiscard]] bool read_from_ply(ManifoldCurve2D& curve, const std::string& fileName);
 } // namespace pmp

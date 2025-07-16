@@ -223,6 +223,7 @@ void TestImageToDistanceField();
 void TestImageSegmentation();
 void TestPointCloudGaps();
 void TestNormalActivation();
+void TestGapSpecificBehaviorForRealData();
 
 // ------------------------- IncrementalMeshBuilderTUWien ------------------------------
 // Late Spring / Summer of 2025. TU Wien June 6th Talk.
@@ -384,6 +385,7 @@ inline std::map<std::string, std::function<void()>, std::less<>> REGISTERED_EXPE
     {"TestImageSegmentation", TestImageSegmentation },
     {"TestPointCloudGaps", TestPointCloudGaps },
     {"TestNormalActivation", TestNormalActivation },
+    {"TestGapSpecificBehaviorForRealData", TestGapSpecificBehaviorForRealData },
 
 // ------------------------- IncrementalMeshBuilderTUWien ------------------------------
 // Late Spring / Summer of 2025. TU Wien June 6th Talk.

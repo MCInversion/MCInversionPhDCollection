@@ -604,4 +604,99 @@ namespace pmp
         return true;
     }
 
+    bool read_from_ply(ManifoldCurve2D& curve, const std::string& fileName)
+    {
+        // Find the last dot after the last directory separator
+        const size_t lastSlash = fileName.find_last_of("/\\");
+        const size_t dot = fileName.rfind('.');
+
+        if (dot == std::string::npos || (lastSlash != std::string::npos && dot < lastSlash))
+        {
+            std::cerr << "pmp::read_from_ply [ERROR]: dot not found or in the wrong place!\n";
+            return "";
+        }
+
+        // Extract the extension
+        std::string ext = fileName.substr(dot + 1);
+        std::string lowerExt;
+        std::ranges::transform(ext, std::back_inserter(lowerExt),
+            [](unsigned char c) -> char { return std::tolower(c); });
+
+        if (lowerExt != "ply")
+        {
+            std::cerr << "pmp::read_from_ply: Invalid file extension!" << std::endl;
+            return false;
+        }
+
+        std::ifstream file(fileName);
+        if (!file.is_open())
+        {
+            std::cerr << "pmp::read_from_ply: Failed to open file for reading: " << fileName << std::endl;
+            return false;
+        }
+
+        // --- clear existing curve and parse header for counts ---
+        curve.clear();
+
+        size_t num_vertices = 0, num_edges = 0;
+        std::string line;
+        while (std::getline(file, line))
+        {
+            if (line.rfind("element vertex ", 0) == 0)
+            {
+                num_vertices = std::stoul(line.substr(15));
+            }
+            else if (line.rfind("element edge ", 0) == 0)
+            {
+                num_edges = std::stoul(line.substr(13));
+            }
+            else if (line == "end_header")
+            {
+                break;
+            }
+        }
+
+        // reserve space just like in the factory functions
+        curve.reserve(num_vertices, num_edges);
+
+        // --- read vertices ---
+        std::vector<Vertex> verts;
+        verts.reserve(num_vertices);
+        for (size_t i = 0; i < num_vertices; ++i)
+        {
+            double x, y, z;
+            if (!(file >> x >> y >> z))
+            {
+                std::cerr << "pmp::read_from_ply: Unexpected EOF reading vertex "
+                    << i << "\n";
+                return false;
+            }
+            // add_vertex takes a Point2 (x,y)
+            verts.push_back(curve.add_vertex(Point2{ x, y }));
+        }
+
+        // --- read edges ---
+        for (size_t i = 0; i < num_edges; ++i)
+        {
+            int vi0, vi1;
+            if (!(file >> vi0 >> vi1))
+            {
+                std::cerr << "pmp::read_from_ply: Unexpected EOF reading edge "
+                    << i << "\n";
+                return false;
+            }
+            if (vi0 < 0 || vi0 >= static_cast<int>(num_vertices) ||
+                vi1 < 0 || vi1 >= static_cast<int>(num_vertices))
+            {
+                std::cerr << "pmp::read_from_ply: Edge index out of range at edge "
+                    << i << "\n";
+                return false;
+            }
+            // use new_edge to connect the two vertices
+            curve.new_edge(verts[vi0], verts[vi1]);
+        }
+
+        return true;
+    }
+
 } // namespace pmp

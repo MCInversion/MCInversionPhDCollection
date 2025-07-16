@@ -130,9 +130,10 @@ int main()
         //"TestCurve2DRotation",
         //"TestSmoothingAdvectionEquilibrium",
         //"TestImageToDistanceField",
-        "TestImageSegmentation",
+        //"TestImageSegmentation",
         // "TestPointCloudGaps",
         //"TestNormalActivation",
+        "TestGapSpecificBehaviorForRealData",
 
 // ------------------------- IncrementalMeshBuilderTUWien ---------------------------
 // Late Spring / Summer of 2025. TU Wien June 6th Talk.

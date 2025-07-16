@@ -6096,3 +6096,200 @@ void TestNormalActivation()
 
 	curveLogger.Save(false);
 }
+
+void TestGapSpecificBehaviorForRealData()
+{
+	const std::string& imgName = "room";
+	constexpr pmp::Scalar imageScale = 2.0;
+
+	SDF::ImageDistanceField2DSettings dfSettings;
+	dfSettings.CellSize = (pmp::Scalar)1.0;
+	dfSettings.ImageScaleFactor = imageScale;
+	const auto targetDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::ImageDistanceFieldGenerator::Generate(dataDirPath + imgName + ".png", dfSettings));
+	if (!targetDf)
+	{
+		std::cerr << "SDF::ImageDistanceFieldGenerator::Generate: error!\n";
+		return;
+	}
+
+	Geometry::ExportScalarGridDimInfo2D(dataOutPath + imgName + ".gdim2d", *targetDf);
+	constexpr double colorMapPlotScaleFactor = 1.0; // scale the distance field color map down to show more detail
+	ExportScalarGrid2DToPNG(dataOutPath + imgName + "_df.png", *targetDf,
+		Geometry::BilinearInterpolateScalarValue,
+		//Geometry::GetNearestNeighborScalarValue2D,
+		10, 10, Geometry::RAINBOW_TO_WHITE_MAP * colorMapPlotScaleFactor);
+
+	const std::vector<std::pair<size_t, size_t>> timeStepPairs{
+		{75, 76},
+		{117, 118}
+	};
+
+	const pmp::Scalar cellSize = targetDf->CellSize();
+	const SDF::DistanceField2DSettings curveDFSettings{
+		cellSize,
+		1.0,
+		DBL_MAX,
+		SDF::KDTreeSplitType::Center,
+		SDF::SignComputation2D::None,
+		SDF::PreprocessingType2D::Quadtree
+	};
+
+	NormalActivationSettings naSettings;
+	naSettings.On = true;
+	naSettings.TargetDFCriticalRadius = 10.0;
+	naSettings.ManifoldCriticalRadius = 15.0;
+	naSettings.NPointsFromCriticalBound = 4;
+
+	for (const auto [ts0, ts1] : timeStepPairs)
+	{
+		const auto coverTimeStep = [&](const size_t& ts) {
+			pmp::ManifoldCurve2D outerCurve;
+			if (!pmp::read_from_ply(outerCurve, dataOutPath + "roomSegment_Outer_Evol_" + std::to_string(ts) + ".ply"))
+			{
+				std::cerr << "pmp::read_from_ply: internal error!\n";
+				return false;
+			}
+
+			pmp::ManifoldCurve2D innerCurve;
+			if (!pmp::read_from_ply(innerCurve, dataOutPath + "roomSegment_Inner0_Evol_" + std::to_string(ts) + ".ply"))
+			{
+				std::cerr << "pmp::read_from_ply: internal error!\n";
+				return false;
+			}
+
+			const Geometry::ManifoldCurve2DAdapter outerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(outerCurve));
+			const auto outerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(outerCurveAdapter, curveDFSettings));
+
+			const Geometry::ManifoldCurve2DAdapter innerCurveAdapter(std::make_shared<pmp::ManifoldCurve2D>(innerCurve));
+			const auto innerCurveDf = std::make_shared<Geometry::ScalarGrid2D>(SDF::PlanarDistanceFieldGenerator::Generate(innerCurveAdapter, curveDFSettings, outerCurveDf->Box()));
+
+			const auto vOuterGap = Geometry::GetVerticesWithinMinDistance(outerCurve,
+				{ innerCurveDf }, naSettings.ManifoldCriticalRadius, "v:gap_activated", Geometry::BilinearInterpolateScalarValue);
+			const auto vInnerGap = Geometry::GetVerticesWithinMinDistance(innerCurve,
+				{ outerCurveDf }, naSettings.ManifoldCriticalRadius, "v:gap_activated", Geometry::BilinearInterpolateScalarValue);
+
+			std::vector<pmp::Point2> outerCurveGapActivated;
+			for (const auto v : outerCurve.vertices())
+			{
+				if (!vOuterGap[v])
+					continue;
+
+				outerCurveGapActivated.push_back(outerCurve.position(v));
+			}
+
+			std::vector<pmp::Point2> innerCurveGapActivated;
+			for (const auto v : innerCurve.vertices())
+			{
+				if (!vInnerGap[v])
+					continue;
+
+				innerCurveGapActivated.push_back(innerCurve.position(v));
+			}
+
+			if (!Geometry::Export2DPointCloudToPLY(outerCurveGapActivated, dataOutPath + "outerCurveGapActivated_step" + std::to_string(ts) + ".ply"))
+			{
+				std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+				return false;
+			}
+
+			if (!Geometry::Export2DPointCloudToPLY(innerCurveGapActivated, dataOutPath + "innerCurveGapActivated_step" + std::to_string(ts) + ".ply"))
+			{
+				std::cerr << "Export2DPointCloudToPLY: internal error during export!\n";
+				return false;
+			}
+
+			const auto [outerNextBoundary, outerPrevBoundary] = GetNearestGapBoundaryVertices(outerCurve,
+				targetDf, { innerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+			if (!outerNextBoundary || !outerPrevBoundary)
+				return false;
+
+			const auto [innerNextBoundary, innerPrevBoundary] = GetNearestGapBoundaryVertices(innerCurve,
+				targetDf, { outerCurveDf }, Geometry::BilinearInterpolateScalarValue, naSettings);
+			if (!innerNextBoundary || !innerPrevBoundary)
+				return false;
+
+			VertexValueLogger<pmp::ManifoldCurve2D> curveLogger;
+			curveLogger.AddManifold(&outerCurve);
+			curveLogger.AddManifold(&innerCurve);
+
+			std::unordered_map<pmp::ManifoldCurve2D*, std::shared_ptr<pmp::EvolvingArcLengthCalculator>> arcLengthCalculators{
+				{&outerCurve, std::make_shared<pmp::EvolvingArcLengthCalculator>(outerCurve) },
+				{&innerCurve, std::make_shared<pmp::EvolvingArcLengthCalculator>(innerCurve) }
+			};
+
+			curveLogger.Init(dataOutPath + "gapBehavior_step" + std::to_string(ts) + "_log.json");
+			curveLogger.StartNewTimeStep(1);
+
+			const auto outerArcLengths = arcLengthCalculators[&outerCurve]->CalculateArcLengths();
+			if (!outerArcLengths.empty())
+			{
+				for (const auto v : outerCurve.vertices())
+				{
+					curveLogger.LogValue(&outerCurve, "arcLength", v.idx(), outerArcLengths[v.idx()]);
+
+					if ((*outerNextBoundary)[v].is_valid())
+					{
+						const auto nextBdArcLength = outerArcLengths[(*outerNextBoundary)[v].idx()];
+						curveLogger.LogValue(&outerCurve, "nextBoundaryArcLength", v.idx(), nextBdArcLength);
+					}
+					else
+					{
+						curveLogger.LogValue(&outerCurve, "nextBoundaryArcLength", v.idx(), -1.0);
+					}
+
+					if ((*outerPrevBoundary)[v].is_valid())
+					{
+						const auto prevBdArcLength = outerArcLengths[(*outerPrevBoundary)[v].idx()];
+						curveLogger.LogValue(&outerCurve, "prevBoundaryArcLength", v.idx(), prevBdArcLength);
+					}
+					else
+					{
+						curveLogger.LogValue(&outerCurve, "prevBoundaryArcLength", v.idx(), -1.0);
+					}
+				}
+			}
+			const auto innerArcLengths = arcLengthCalculators[&innerCurve]->CalculateArcLengths();
+			if (!innerArcLengths.empty())
+			{
+				for (const auto v : innerCurve.vertices())
+				{
+					curveLogger.LogValue(&innerCurve, "arcLength", v.idx(), innerArcLengths[v.idx()]);
+
+					if ((*innerNextBoundary)[v].is_valid())
+					{
+						const auto nextBdArcLength = innerArcLengths[(*innerNextBoundary)[v].idx()];
+						curveLogger.LogValue(&innerCurve, "nextBoundaryArcLength", v.idx(), nextBdArcLength);
+					}
+					else
+					{
+						curveLogger.LogValue(&innerCurve, "nextBoundaryArcLength", v.idx(), -1.0);
+					}
+
+					if ((*innerPrevBoundary)[v].is_valid())
+					{
+						const auto prevBdArcLength = innerArcLengths[(*innerPrevBoundary)[v].idx()];
+						curveLogger.LogValue(&innerCurve, "prevBoundaryArcLength", v.idx(), prevBdArcLength);
+					}
+					else
+					{
+						curveLogger.LogValue(&innerCurve, "prevBoundaryArcLength", v.idx(), -1.0);
+					}
+				}
+			}
+
+			curveLogger.Save(false);
+			return true;
+		};
+
+		if (!coverTimeStep(ts0))
+		{
+			std::cerr << "coverTimeStep: internal error for step " << ts0 << "\n";
+			continue;
+		}
+		if (!coverTimeStep(ts1))
+		{
+			std::cerr << "coverTimeStep: internal error for step " << ts1 << "\n";
+			continue;
+		}
+	}
+}
